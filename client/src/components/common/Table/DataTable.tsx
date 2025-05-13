@@ -1,0 +1,148 @@
+import { useState } from "react";
+// import React from "react";
+
+interface DataTableRow {
+  id: string | number;
+  [key: string]: unknown;
+}
+
+interface DataTableColumn<T extends DataTableRow> {
+  key: string;
+  label: string;
+  render?: (item: T) => React.ReactNode;
+  status?: boolean;
+}
+
+interface DataTableProps<T extends DataTableRow> {
+  columns: DataTableColumn<T>[];
+  data: T[];
+  onEdit?: (item: T) => void;
+  onDelete?: (item: T) => void;
+  emptyMessage?: string;
+  actions?: boolean;
+  customActions?: (item: T) => React.ReactNode;
+  getStatusColor?: (status: unknown) => string;
+  getStatusText?: (status: unknown) => string;
+}
+
+function DataTable<T extends DataTableRow>({
+  columns,
+  data,
+  onEdit,
+  onDelete,
+  emptyMessage = "No se encontraron registros",
+  actions = true,
+  customActions,
+  getStatusColor,
+  getStatusText,
+}: DataTableProps<T>) {
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const sortedData = sortKey
+    ? [...data].sort((a, b) => {
+        const aValue = a[sortKey];
+        const bValue = b[sortKey];
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+        if (aValue === bValue) return 0;
+        if (sortOrder === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      })
+    : data;
+
+  return (
+    <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+      <table className="w-full text-sm text-left text-gray-500">
+        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+          <tr>
+            {columns.map((column) => (
+              <th
+                key={column.key}
+                scope="col"
+                className="px-6 py-3 cursor-pointer select-none"
+                onClick={() => {
+                  if (sortKey === column.key) {
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortKey(column.key);
+                    setSortOrder("asc");
+                  }
+                }}
+              >
+                {column.label}
+                {sortKey === column.key && (sortOrder === "asc" ? " ▲" : " ▼")}
+              </th>
+            ))}
+            {actions && (
+              <th scope="col" className="px-6 py-3">
+                Acciones
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {sortedData.map((item) => (
+            <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
+              {columns.map((column) => (
+                <td key={column.key} className="px-6 py-4">
+                  {column.render ? (
+                    column.render(item)
+                  ) : column.status ? (
+                    <div className="flex items-center">
+                      <div
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          getStatusColor?.(item[column.key]) || "bg-gray-500"
+                        } mr-2`}
+                      ></div>
+                      {getStatusText?.(item[column.key]) ||
+                        String(item[column.key])}
+                    </div>
+                  ) : (
+                    String(item[column.key])
+                  )}
+                </td>
+              ))}
+              {actions && (
+                <td className="px-6 py-4">
+                  {customActions ? (
+                    customActions(item)
+                  ) : (
+                    <>
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="font-medium text-blue-600 hover:underline mr-4"
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(item)}
+                          className="font-medium text-red-600 hover:underline"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Mensaje cuando no hay resultados */}
+      {data.length === 0 && (
+        <div className="p-4 text-center text-gray-500">{emptyMessage}</div>
+      )}
+    </div>
+  );
+}
+
+export default DataTable;

@@ -2,9 +2,20 @@
 import api from "./api";
 import type { AxiosError } from "axios";
 
-export const getUsuarios = async (page = 1, limit = 10) => {
+export const getUsuarios = async (
+  page = 1,
+  limit = 10,
+  sortBy?: string,
+  sortOrder?: "asc" | "desc"
+) => {
+  const params: { [key: string]: string | number | undefined } = {
+    page,
+    limit,
+  };
+  if (sortBy) params.sortBy = sortBy;
+  if (sortOrder) params.sortOrder = sortOrder;
   try {
-    const response = await api.get(`/usuarios?page=${page}&limit=${limit}`);
+    const response = await api.get("/usuarios", { params });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
@@ -65,12 +76,19 @@ export const deleteUsuario = async (id: string | number) => {
 export const searchUsuarios = async (
   searchTerm: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  sortBy?: string,
+  sortOrder?: "asc" | "desc"
 ) => {
+  const params: { [key: string]: string | number | undefined } = {
+    q: searchTerm,
+    page,
+    limit,
+  };
+  if (sortBy) params.sortBy = sortBy;
+  if (sortOrder) params.sortOrder = sortOrder;
   try {
-    const response = await api.get(
-      `/usuarios/search?q=${searchTerm}&page=${page}&limit=${limit}`
-    );
+    const response = await api.get("/usuarios/search", { params });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;

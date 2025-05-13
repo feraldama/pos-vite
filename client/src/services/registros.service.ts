@@ -1,11 +1,20 @@
 import api from "./api";
 import type { AxiosError } from "axios";
 
-export const getRegistrosDiariosCaja = async (page = 1, limit = 10) => {
+export const getRegistrosDiariosCaja = async (
+  page = 1,
+  limit = 10,
+  sortBy?: string,
+  sortOrder?: "asc" | "desc"
+) => {
+  const params: { [key: string]: string | number | undefined } = {
+    page,
+    limit,
+  };
+  if (sortBy) params.sortBy = sortBy;
+  if (sortOrder) params.sortOrder = sortOrder;
   try {
-    const response = await api.get(
-      `/registrodiariocaja?page=${page}&limit=${limit}`
-    );
+    const response = await api.get("/registrodiariocaja", { params });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
@@ -20,12 +29,20 @@ export const getRegistrosDiariosCaja = async (page = 1, limit = 10) => {
 export const searchRegistrosDiariosCaja = async (
   searchTerm: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  sortBy?: string,
+  sortOrder?: "asc" | "desc"
 ) => {
+  const params: { [key: string]: string | number | undefined } = {
+    q: searchTerm,
+    page,
+    limit,
+  };
+  if (sortBy) params.sortBy = sortBy;
+  if (sortOrder) params.sortOrder = sortOrder;
   try {
-    const response = await api.get(
-      `/registrodiariocaja/search?q=${searchTerm}&page=${page}&limit=${limit}`
-    );
+    const response = await api.get(`/registrodiariocaja/search`, { params });
+    console.log("log: 🚀 response:", response.data);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;

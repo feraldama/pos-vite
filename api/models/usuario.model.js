@@ -36,17 +36,32 @@ const Usuario = {
       );
     });
   },
-  // Más métodos según necesites (create, update, delete, etc.)
-  getAllPaginated: (limit, offset) => {
+  // getAllPaginated
+  getAllPaginated: (limit, offset, sortBy = "UsuarioId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
-      // Consulta para obtener los usuarios paginados
+      const allowedSortFields = [
+        "UsuarioId",
+        "UsuarioNombre",
+        "UsuarioApellido",
+        "UsuarioCorreo",
+        "UsuarioIsAdmin",
+        "UsuarioEstado",
+        "LocalId",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "UsuarioId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
       db.query(
-        "SELECT * FROM usuario LIMIT ? OFFSET ?",
+        `SELECT * FROM usuario ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
-          // Consulta para contar el total de usuarios
           db.query(
             "SELECT COUNT(*) as total FROM usuario",
             (err, countResult) => {
@@ -63,13 +78,37 @@ const Usuario = {
     });
   },
 
-  search: (term, limit, offset) => {
+  // search
+  search: (term, limit, offset, sortBy = "UsuarioId", sortOrder = "ASC") => {
+    console.log("log: 🚀 term 22:", term);
+    console.log("log: 🚀 limit 22:", limit);
+    console.log("log: 🚀 offset 22:", offset);
+    console.log("log: 🚀 sortBy 22:", sortBy);
+    console.log("log: 🚀 sortOrder 22:", sortOrder);
     return new Promise((resolve, reject) => {
+      const allowedSortFields = [
+        "UsuarioId",
+        "UsuarioNombre",
+        "UsuarioApellido",
+        "UsuarioCorreo",
+        "UsuarioIsAdmin",
+        "UsuarioEstado",
+        "LocalId",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "UsuarioId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
       const searchQuery = `
       SELECT * FROM usuario 
       WHERE CONCAT(UsuarioNombre, ' ', UsuarioApellido) LIKE ? 
       OR UsuarioCorreo LIKE ? 
       OR UsuarioId LIKE ?
+      ORDER BY ${sortField} ${order}
       LIMIT ? OFFSET ?
     `;
       const searchValue = `%${term}%`;
@@ -80,15 +119,6 @@ const Usuario = {
         (err, results) => {
           if (err) return reject(err);
 
-          // Si no hay resultados, devolver array vacío
-          if (!results || results.length === 0) {
-            return resolve({
-              usuarios: [],
-              total: 0,
-            });
-          }
-
-          // Consulta para contar el total de resultados
           const countQuery = `
           SELECT COUNT(*) as total FROM usuario 
           WHERE CONCAT(UsuarioNombre, ' ', UsuarioApellido) LIKE ? 

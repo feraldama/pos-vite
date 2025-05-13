@@ -10,21 +10,44 @@ import MovementsList from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
 import { SuccessModal } from "../../components/common/Modal/SuccessModal";
 
+// Tipos auxiliares
+interface Movimiento {
+  id: string | number;
+  RegistroDiarioCajaId: string | number;
+  RegistroDiarioCajaFecha: string;
+  RegistroDiarioCajaDetalle: string;
+  RegistroDiarioCajaMonto: number;
+  UsuarioId: string | number;
+  CajaId: string | number;
+  TipoGastoId: string | number;
+  [key: string]: unknown;
+}
+
+interface Pagination {
+  totalItems: number;
+  totalPages: number;
+  [key: string]: unknown;
+}
+
 export default function MovementsPage() {
-  const [movimientosData, setMovimientosData] = useState({
-    movimientos: [],
-    pagination: {},
-  });
+  const [movimientosData, setMovimientosData] = useState<{
+    movimientos: Movimiento[];
+    pagination: Pagination;
+  }>({ movimientos: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [currentMovement, setCurrentMovement] = useState(null);
+  const [currentMovement, setCurrentMovement] = useState<Movimiento | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortKey, setSortKey] = useState<string | undefined>();
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const fetchMovimientos = useCallback(async () => {
     try {
@@ -34,27 +57,38 @@ export default function MovementsPage() {
         data = await searchRegistrosDiariosCaja(
           appliedSearchTerm,
           currentPage,
-          itemsPerPage
+          itemsPerPage,
+          sortKey,
+          sortOrder
         );
       } else {
-        data = await getRegistrosDiariosCaja(currentPage, itemsPerPage);
+        data = await getRegistrosDiariosCaja(
+          currentPage,
+          itemsPerPage,
+          sortKey,
+          sortOrder
+        );
       }
       setMovimientosData({
         movimientos: data.data,
         pagination: data.pagination,
       });
     } catch (err) {
-      setError(err.message);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error desconocido");
+      }
     } finally {
       setLoading(false);
     }
-  }, [currentPage, appliedSearchTerm, itemsPerPage]);
+  }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
     fetchMovimientos();
   }, [fetchMovimientos]);
 
-  const handleSearch = (term) => {
+  const handleSearch = (term: string) => {
     setSearchTerm(term);
   };
 
@@ -63,20 +97,24 @@ export default function MovementsPage() {
     setCurrentPage(1);
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       applySearch();
     }
   };
 
-  const handleDelete = async (movimiento) => {
+  const handleDelete = async (movimiento: Movimiento) => {
     try {
       await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
       setSuccessMessage("Registro eliminado exitosamente");
       setShowSuccessModal(true);
       fetchMovimientos();
     } catch (error) {
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Error desconocido");
+      }
     }
   };
 
@@ -85,12 +123,12 @@ export default function MovementsPage() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (movimiento) => {
+  const handleEdit = (movimiento: Movimiento) => {
     setCurrentMovement(movimiento);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (movementData) => {
+  const handleSubmit = async (movementData: Movimiento) => {
     try {
       if (currentMovement) {
         await updateRegistroDiarioCaja(
@@ -107,17 +145,21 @@ export default function MovementsPage() {
       setShowSuccessModal(true);
       fetchMovimientos();
     } catch (error) {
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Error desconocido");
+      }
     }
   };
 
-  const handlePageChange = (page) => {
+  const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const handleItemsPerPageChange = (newItemsPerPage) => {
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1); // Resetear a la primera página cuando cambia el número de items por página
+    setCurrentPage(1);
   };
 
   if (loading) return <div>Cargando registros...</div>;
@@ -140,6 +182,13 @@ export default function MovementsPage() {
         onCloseModal={() => setIsModalOpen(false)}
         currentMovement={currentMovement}
         onSubmit={handleSubmit}
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={(key, order) => {
+          setSortKey(key);
+          setSortOrder(order);
+          setCurrentPage(1);
+        }}
       />
       <Pagination
         currentPage={currentPage}

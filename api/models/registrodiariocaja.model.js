@@ -23,10 +23,35 @@ const RegistroDiarioCaja = {
     });
   },
 
-  getAllPaginated: (limit, offset) => {
+  getAllPaginated: (
+    limit,
+    offset,
+    sortBy = "RegistroDiarioCajaFecha",
+    sortOrder = "DESC"
+  ) => {
     return new Promise((resolve, reject) => {
+      // Sanitiza sortOrder y sortBy para evitar SQL Injection
+      const allowedSortFields = [
+        "RegistroDiarioCajaFecha",
+        "RegistroDiarioCajaMonto",
+        "RegistroDiarioCajaDetalle",
+        "TipoGastoId",
+        "TipoGastoGrupoId",
+        "UsuarioId",
+        "CajaId",
+        // agrega los campos que quieras permitir
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "RegistroDiarioCajaFecha";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "DESC";
+
       db.query(
-        "SELECT * FROM registrodiariocaja ORDER BY RegistroDiarioCajaFecha DESC LIMIT ? OFFSET ?",
+        `SELECT * FROM registrodiariocaja ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -52,39 +77,125 @@ const RegistroDiarioCaja = {
     });
   },
 
-  search: (term, limit, offset) => {
+  search: async (
+    term,
+    limit,
+    offset,
+    sortBy = "RegistroDiarioCajaFecha",
+    sortOrder = "DESC"
+  ) => {
+    console.log("Parámetros de búsqueda:", {
+      term,
+      limit,
+      offset,
+      sortBy,
+      sortOrder,
+    });
     return new Promise((resolve, reject) => {
+      // Sanitiza los campos para evitar SQL Injection
+      const allowedSortFields = [
+        "RegistroDiarioCajaId",
+        "RegistroDiarioCajaFecha",
+        "RegistroDiarioCajaMonto",
+        "RegistroDiarioCajaDetalle",
+        "TipoGastoId",
+        "TipoGastoGrupoId",
+        "UsuarioId",
+        "CajaId",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "RegistroDiarioCajaFecha";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "DESC";
+
       const searchQuery = `
-        SELECT * FROM registrodiariocaja 
-        WHERE RegistroDiarioCajaDetalle LIKE ? 
-        OR UsuarioId LIKE ?
-        LIMIT ? OFFSET ?
-      `;
+      SELECT * FROM registrodiariocaja 
+      WHERE RegistroDiarioCajaDetalle LIKE ? 
+      OR CAST(UsuarioId AS CHAR) LIKE ?
+      OR CAST(CajaId AS CHAR) LIKE ?
+      OR CAST(TipoGastoId AS CHAR) LIKE ?
+      OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
+      OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
+      OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
+      ORDER BY ${sortField} ${order}
+      LIMIT ? OFFSET ?
+    `;
       const searchValue = `%${term}%`;
+
+      console.log("Consulta SQL:", searchQuery);
+      console.log("Valores:", [
+        searchValue,
+        searchValue,
+        searchValue,
+        searchValue,
+        searchValue,
+        searchValue,
+        searchValue,
+        limit,
+        offset,
+      ]);
 
       db.query(
         searchQuery,
-        [searchValue, searchValue, limit, offset],
+        [
+          searchValue, // Detalle
+          searchValue, // UsuarioId
+          searchValue, // CajaId
+          searchValue, // TipoGastoId
+          searchValue, // TipoGastoGrupoId
+          searchValue, // Monto
+          searchValue, // Fecha
+          limit,
+          offset,
+        ],
         (err, results) => {
-          if (err) return reject(err);
+          if (err) {
+            console.error("Error en la consulta de búsqueda:", err);
+            return reject(err);
+          }
 
           const countQuery = `
-            SELECT COUNT(*) as total FROM registrodiariocaja 
-            WHERE RegistroDiarioCajaDetalle LIKE ? 
-            OR UsuarioId LIKE ?
-          `;
+          SELECT COUNT(*) as total FROM registrodiariocaja 
+          WHERE RegistroDiarioCajaDetalle LIKE ? 
+          OR CAST(UsuarioId AS CHAR) LIKE ?
+          OR CAST(CajaId AS INTEGER) LIKE ?
+          OR CAST(TipoGastoId AS INTEGER) LIKE ?
+          OR CAST(TipoGastoGrupoId AS INTEGER) LIKE ?
+          OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
+          OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
+        `;
 
           db.query(
             countQuery,
-            [searchValue, searchValue],
+            [
+              searchValue,
+              searchValue,
+              searchValue,
+              searchValue,
+              searchValue,
+              searchValue,
+              searchValue,
+            ],
             (err, countResult) => {
-              if (err) return reject(err);
+              if (err) {
+                console.error("Error en la consulta de conteo:", err);
+                return reject(err);
+              }
+
+              const total = countResult[0]?.total || 0;
+              console.log(
+                `Resultados encontrados: ${results.length} de ${total}`
+              );
 
               resolve({
                 data: results,
                 pagination: {
-                  totalItems: countResult[0]?.total || 0,
-                  totalPages: Math.ceil((countResult[0]?.total || 0) / limit),
+                  totalItems: total,
+                  totalPages: Math.ceil(total / limit),
                   currentPage: Math.floor(offset / limit) + 1,
                   itemsPerPage: limit,
                 },

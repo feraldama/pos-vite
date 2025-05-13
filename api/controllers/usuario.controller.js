@@ -2,13 +2,21 @@ const Usuario = require("../models/usuario.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// getAllUsuarios
 exports.getAllUsuarios = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || "UsuarioId";
+    const sortOrder = req.query.sortOrder || "ASC";
 
-    const { usuarios, total } = await Usuario.getAllPaginated(limit, offset);
+    const { usuarios, total } = await Usuario.getAllPaginated(
+      limit,
+      offset,
+      sortBy,
+      sortOrder
+    );
 
     res.json({
       data: usuarios,
@@ -21,6 +29,48 @@ exports.getAllUsuarios = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// searchUsuarios
+exports.searchUsuarios = async (req, res) => {
+  try {
+    const { q: searchTerm } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || "UsuarioId";
+    const sortOrder = req.query.sortOrder || "ASC";
+    console.log("log: 🚀 limit 11:", limit);
+    console.log("log: 🚀 offset 11:", offset);
+    console.log("log: 🚀 sortBy 11:", sortBy);
+    console.log("log: 🚀 sortOrder 11:", sortOrder);
+    if (!searchTerm || searchTerm.trim() === "") {
+      return res
+        .status(400)
+        .json({ error: "El término de búsqueda no puede estar vacío" });
+    }
+
+    const { usuarios, total } = await Usuario.search(
+      searchTerm,
+      limit,
+      offset,
+      sortBy,
+      sortOrder
+    );
+
+    res.json({
+      data: usuarios,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+        itemsPerPage: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Error en searchUsuarios:", error);
+    res.status(500).json({ error: "Error al buscar usuarios" });
   }
 };
 
@@ -98,36 +148,6 @@ exports.login = async (req, res) => {
       success: false,
       message: "Error en el servidor",
     });
-  }
-};
-// Más controladores según necesites
-exports.searchUsuarios = async (req, res) => {
-  try {
-    const { q: searchTerm } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
-    if (!searchTerm || searchTerm.trim() === "") {
-      return res
-        .status(400)
-        .json({ error: "El término de búsqueda no puede estar vacío" });
-    }
-
-    const { usuarios, total } = await Usuario.search(searchTerm, limit, offset);
-
-    res.json({
-      data: usuarios,
-      pagination: {
-        totalItems: total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-        itemsPerPage: limit,
-      },
-    });
-  } catch (error) {
-    console.error("Error en searchUsuarios:", error);
-    res.status(500).json({ error: "Error al buscar usuarios" });
   }
 };
 

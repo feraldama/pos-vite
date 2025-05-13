@@ -36,6 +36,9 @@ interface UsuariosListProps {
   onSubmit: (formData: Usuario) => void;
   editingPassword: boolean;
   setEditingPassword: (value: boolean) => void;
+  sortKey?: string;
+  sortOrder?: "asc" | "desc";
+  onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
 export default function UsuariosList({
@@ -54,6 +57,9 @@ export default function UsuariosList({
   onSubmit,
   editingPassword,
   setEditingPassword,
+  sortKey,
+  sortOrder,
+  onSort,
 }: UsuariosListProps) {
   const [formData, setFormData] = useState({
     id: "",
@@ -201,6 +207,9 @@ export default function UsuariosList({
         emptyMessage="No se encontraron usuarios"
         getStatusColor={getEstadoColor}
         getStatusText={getEstadoVisual}
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={onSort}
       />
 
       {/* Modal para crear/editar */}

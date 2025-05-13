@@ -45,6 +45,8 @@ export default function UsuariosPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [sortKey, setSortKey] = useState<string | undefined>();
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -54,10 +56,12 @@ export default function UsuariosPage() {
         data = await searchUsuarios(
           appliedSearchTerm,
           currentPage,
-          itemsPerPage
+          itemsPerPage,
+          sortKey,
+          sortOrder
         );
       } else {
-        data = await getUsuarios(currentPage, itemsPerPage);
+        data = await getUsuarios(currentPage, itemsPerPage, sortKey, sortOrder);
       }
       setUsuariosData({
         usuarios: data.data,
@@ -72,7 +76,7 @@ export default function UsuariosPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, appliedSearchTerm, itemsPerPage]);
+  }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
     fetchUsuarios();
@@ -180,6 +184,13 @@ export default function UsuariosPage() {
         onSubmit={handleSubmit}
         editingPassword={editingPassword}
         setEditingPassword={setEditingPassword}
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={(key, order) => {
+          setSortKey(key);
+          setSortOrder(order);
+          setCurrentPage(1);
+        }}
       />
       <Pagination
         currentPage={currentPage}

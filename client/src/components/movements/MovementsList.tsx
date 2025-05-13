@@ -27,9 +27,16 @@ interface MovementsListProps {
   onCreate?: () => void;
   pagination?: Pagination;
   onSearch: (value: string) => void;
+  isModalOpen?: boolean;
+  onCloseModal: () => void;
+  currentMovement?: Movimiento | null;
+  onSubmit: (formData: Movimiento) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
   onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  sortKey?: string;
+  sortOrder?: "asc" | "desc";
+  onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
 export default function MovementsList({
@@ -42,6 +49,9 @@ export default function MovementsList({
   searchTerm,
   onKeyPress,
   onSearchSubmit,
+  sortKey,
+  sortOrder,
+  onSort,
 }: MovementsListProps) {
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -129,6 +139,9 @@ export default function MovementsList({
         onEdit={onEdit}
         onDelete={onDelete}
         emptyMessage="No se encontraron registros"
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={onSort}
       />
     </>
   );

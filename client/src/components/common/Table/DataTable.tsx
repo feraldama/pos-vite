@@ -23,6 +23,9 @@ interface DataTableProps<T extends DataTableRow> {
   customActions?: (item: T) => React.ReactNode;
   getStatusColor?: (status: unknown) => string;
   getStatusText?: (status: unknown) => string;
+  sortKey?: string;
+  sortOrder?: "asc" | "desc";
+  onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
 function DataTable<T extends DataTableRow>({
@@ -35,48 +38,71 @@ function DataTable<T extends DataTableRow>({
   customActions,
   getStatusColor,
   getStatusText,
+  sortKey,
+  sortOrder,
+  onSort,
 }: DataTableProps<T>) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Si se pasa onSort, no ordenar localmente
+  const [localSortKey, setLocalSortKey] = useState<string | null>(null);
+  const [localSortOrder, setLocalSortOrder] = useState<"asc" | "desc">("asc");
 
-  const sortedData = sortKey
-    ? [...data].sort((a, b) => {
-        const aValue = a[sortKey];
-        const bValue = b[sortKey];
-        if (aValue == null) return 1;
-        if (bValue == null) return -1;
-        if (aValue === bValue) return 0;
-        if (sortOrder === "asc") {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      })
-    : data;
+  const sortedData =
+    !onSort && (localSortKey || localSortOrder)
+      ? [...data].sort((a, b) => {
+          const aValue = a[localSortKey!];
+          const bValue = b[localSortKey!];
+          if (aValue == null) return 1;
+          if (bValue == null) return -1;
+          if (aValue === bValue) return 0;
+          if (localSortOrder === "asc") {
+            return aValue > bValue ? 1 : -1;
+          } else {
+            return aValue < bValue ? 1 : -1;
+          }
+        })
+      : data;
 
   return (
     <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
       <table className="w-full text-sm text-left text-gray-500">
         <thead className="text-xs text-gray-700 uppercase bg-gray-50">
           <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className="px-6 py-3 cursor-pointer select-none"
-                onClick={() => {
-                  if (sortKey === column.key) {
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                  } else {
-                    setSortKey(column.key);
-                    setSortOrder("asc");
-                  }
-                }}
-              >
-                {column.label}
-                {sortKey === column.key && (sortOrder === "asc" ? " ▲" : " ▼")}
-              </th>
-            ))}
+            {columns.map((column) => {
+              const activeKey = onSort ? sortKey : localSortKey;
+              const activeOrder = onSort ? sortOrder : localSortOrder;
+              return (
+                <th
+                  key={column.key}
+                  scope="col"
+                  className="px-6 py-3 cursor-pointer select-none"
+                  onClick={() => {
+                    if (onSort) {
+                      if (sortKey === column.key) {
+                        onSort(
+                          column.key,
+                          sortOrder === "asc" ? "desc" : "asc"
+                        );
+                      } else {
+                        onSort(column.key, "asc");
+                      }
+                    } else {
+                      if (localSortKey === column.key) {
+                        setLocalSortOrder(
+                          localSortOrder === "asc" ? "desc" : "asc"
+                        );
+                      } else {
+                        setLocalSortKey(column.key);
+                        setLocalSortOrder("asc");
+                      }
+                    }
+                  }}
+                >
+                  {column.label}
+                  {activeKey === column.key &&
+                    (activeOrder === "asc" ? " ▲" : " ▼")}
+                </th>
+              );
+            })}
             {actions && (
               <th scope="col" className="px-6 py-3">
                 Acciones

@@ -2,12 +2,22 @@ const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
 
 // Obtener todos los registros con paginación
 exports.getAll = async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const offset = (page - 1) * limit;
+  const sortBy = req.query.sortBy || "RegistroDiarioCajaFecha";
+  const sortOrder = req.query.sortOrder || "DESC";
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const result = await RegistroDiarioCaja.getAllPaginated(limit, offset);
+    const result = await RegistroDiarioCaja.getAllPaginated(
+      limit,
+      offset,
+      sortBy,
+      sortOrder
+    );
     res.json(result);
   } catch (error) {
     console.error("Error al obtener registros:", error);
@@ -18,22 +28,36 @@ exports.getAll = async (req, res) => {
 // Buscar registros
 exports.search = async (req, res) => {
   try {
-    const { q } = req.query;
-    if (!q) {
-      return res
-        .status(400)
-        .json({ message: "El término de búsqueda es requerido" });
-    }
-
+    const { q: searchTerm } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || "RegistroDiarioCajaFecha";
+    const sortOrder = req.query.sortOrder || "DESC";
+    console.log("log: 🚀 page 1:", page);
+    console.log("log: 🚀 limit 1:", limit);
+    console.log("log: 🚀 offset 1:", offset);
+    console.log("log: 🚀 sortBy 1:", sortBy);
+    console.log("log: 🚀 sortOrder 1:", sortOrder);
 
-    const result = await RegistroDiarioCaja.search(q, limit, offset);
+    if (!searchTerm || searchTerm.trim() === "") {
+      return res
+        .status(400)
+        .json({ error: "El término de búsqueda no puede estar vacío" });
+    }
+
+    const result = await RegistroDiarioCaja.search(
+      searchTerm,
+      limit,
+      offset,
+      sortBy,
+      sortOrder
+    );
+
     res.json(result);
   } catch (error) {
-    console.error("Error en la búsqueda:", error);
-    res.status(500).json({ message: error.message });
+    console.error("Error en búsqueda de registros:", error);
+    res.status(500).json({ error: "Error al buscar registros" });
   }
 };
 

@@ -167,7 +167,7 @@ export default function MovementsPage() {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold mb-3">Registro Diario de Caja</h1>
+      <h1 className="text-2xl font-medium mb-3">Registro Diario de Caja</h1>
       <MovementsList
         movimientos={movimientosData.movimientos}
         onDelete={handleDelete}

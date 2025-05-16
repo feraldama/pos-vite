@@ -7,7 +7,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen font-baloo">
       {/* Navbar con altura fija */}
       <div className="flex-shrink-0">
         <Navbar setMobileOpen={setMobileOpen} />

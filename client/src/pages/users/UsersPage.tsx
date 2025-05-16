@@ -165,7 +165,7 @@ export default function UsuariosPage() {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold mb-3">Gestión de Usuarios</h1>
+      <h1 className="text-2xl font-medium mb-3">Gestión de Usuarios</h1>
       <UsersList
         usuarios={usuariosData.usuarios.map((u) => ({ ...u, id: u.UsuarioId }))}
         onDelete={(user) => handleDelete(user.UsuarioId)}

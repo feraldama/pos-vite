@@ -41,10 +41,6 @@ exports.searchUsuarios = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "UsuarioId";
     const sortOrder = req.query.sortOrder || "ASC";
-    console.log("log: 🚀 limit 11:", limit);
-    console.log("log: 🚀 offset 11:", offset);
-    console.log("log: 🚀 sortBy 11:", sortBy);
-    console.log("log: 🚀 sortOrder 11:", sortOrder);
     if (!searchTerm || searchTerm.trim() === "") {
       return res
         .status(400)

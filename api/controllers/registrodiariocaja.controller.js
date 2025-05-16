@@ -34,11 +34,6 @@ exports.search = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "RegistroDiarioCajaFecha";
     const sortOrder = req.query.sortOrder || "DESC";
-    console.log("log: 🚀 page 1:", page);
-    console.log("log: 🚀 limit 1:", limit);
-    console.log("log: 🚀 offset 1:", offset);
-    console.log("log: 🚀 sortBy 1:", sortBy);
-    console.log("log: 🚀 sortOrder 1:", sortOrder);
 
     if (!searchTerm || searchTerm.trim() === "") {
       return res

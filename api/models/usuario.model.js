@@ -80,11 +80,6 @@ const Usuario = {
 
   // search
   search: (term, limit, offset, sortBy = "UsuarioId", sortOrder = "ASC") => {
-    console.log("log: 🚀 term 22:", term);
-    console.log("log: 🚀 limit 22:", limit);
-    console.log("log: 🚀 offset 22:", offset);
-    console.log("log: 🚀 sortBy 22:", sortBy);
-    console.log("log: 🚀 sortOrder 22:", sortOrder);
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
         "UsuarioId",

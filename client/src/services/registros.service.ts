@@ -42,7 +42,6 @@ export const searchRegistrosDiariosCaja = async (
   if (sortOrder) params.sortOrder = sortOrder;
   try {
     const response = await api.get(`/registrodiariocaja/search`, { params });
-    console.log("log: 🚀 response:", response.data);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;

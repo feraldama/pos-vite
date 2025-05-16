@@ -84,13 +84,6 @@ const RegistroDiarioCaja = {
     sortBy = "RegistroDiarioCajaFecha",
     sortOrder = "DESC"
   ) => {
-    console.log("Parámetros de búsqueda:", {
-      term,
-      limit,
-      offset,
-      sortBy,
-      sortOrder,
-    });
     return new Promise((resolve, reject) => {
       // Sanitiza los campos para evitar SQL Injection
       const allowedSortFields = [
@@ -125,19 +118,6 @@ const RegistroDiarioCaja = {
       LIMIT ? OFFSET ?
     `;
       const searchValue = `%${term}%`;
-
-      console.log("Consulta SQL:", searchQuery);
-      console.log("Valores:", [
-        searchValue,
-        searchValue,
-        searchValue,
-        searchValue,
-        searchValue,
-        searchValue,
-        searchValue,
-        limit,
-        offset,
-      ]);
 
       db.query(
         searchQuery,
@@ -187,9 +167,6 @@ const RegistroDiarioCaja = {
               }
 
               const total = countResult[0]?.total || 0;
-              console.log(
-                `Resultados encontrados: ${results.length} de ${total}`
-              );
 
               resolve({
                 data: results,

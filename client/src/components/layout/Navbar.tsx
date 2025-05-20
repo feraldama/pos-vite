@@ -76,7 +76,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
               {/* Menú de perfil */}
               <Menu as="div" className="relative ml-3">
                 <div className="flex items-center">
-                  <MenuButton className="relative flex items-center gap-2 rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
+                  <MenuButton className="relative flex items-center gap-2 rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 cursor-pointer">
                     <span className="text-white">
                       Hola, {user?.nombre ?? "Usuario"}
                     </span>
@@ -123,7 +123,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
                         onClick={handleLogout}
                         className={classNames(
                           focus ? "bg-gray-100" : "",
-                          "block w-full text-left px-4 py-2 text-sm text-gray-700"
+                          "block w-full text-left px-4 py-2 text-sm text-gray-700 cursor-pointer"
                         )}
                       >
                         Cerrar sesión

@@ -88,7 +88,7 @@ export default function UsuariosList({
         UsuarioEstado: currentUser.UsuarioEstado,
         LocalId: currentUser.LocalId,
       });
-      setEditingPassword(false); // Resetear estado de edición de contraseña
+      // setEditingPassword(false); // Resetear estado de edición de contraseña
     } else {
       // Resetear para nuevo usuario
       setFormData({
@@ -215,10 +215,13 @@ export default function UsuariosList({
       {/* Modal para crear/editar */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center"
           onClick={handleBackdropClick}
         >
-          <div className="relative w-full max-w-2xl max-h-full">
+          {/* Fondo opacado */}
+          <div className="absolute inset-0 bg-black opacity-50" />
+
+          <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
               className="relative bg-white rounded-lg shadow"
@@ -273,7 +276,6 @@ export default function UsuariosList({
                       />
                     </div>
                   )}
-
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="UsuarioNombre"
@@ -291,7 +293,6 @@ export default function UsuariosList({
                       required
                     />
                   </div>
-
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="UsuarioApellido"
@@ -309,7 +310,6 @@ export default function UsuariosList({
                       required
                     />
                   </div>
-
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="UsuarioCorreo"
@@ -326,7 +326,6 @@ export default function UsuariosList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
-
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="LocalId"

@@ -67,10 +67,15 @@ export default function MovementsList({
 
   // Formatear monto
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat("es-ES", {
+    return new Intl.NumberFormat("es-PY", {
       style: "currency",
-      currency: "DOP",
-    }).format(amount);
+      currency: "PYG",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+      currencyDisplay: "code", // Muestra "PYG"
+    })
+      .format(amount)
+      .replace("PYG", "Gs."); // Reemplaza "PYG" con "Gs."
   };
 
   // Configuración de columnas para la tabla

@@ -141,7 +141,7 @@ function DataTable<T extends DataTableRow>({
                       {onEdit && (
                         <button
                           onClick={() => onEdit(item)}
-                          className="font-medium text-blue-600 hover:underline mr-4"
+                          className="font-medium text-blue-600 hover:underline mr-4 cursor-pointer"
                         >
                           Editar
                         </button>
@@ -149,7 +149,7 @@ function DataTable<T extends DataTableRow>({
                       {onDelete && (
                         <button
                           onClick={() => onDelete(item)}
-                          className="font-medium text-red-600 hover:underline"
+                          className="font-medium text-red-600 hover:underline cursor-pointer"
                         >
                           Eliminar
                         </button>

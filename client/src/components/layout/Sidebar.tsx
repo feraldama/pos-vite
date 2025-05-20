@@ -36,7 +36,7 @@ const navigation: NavigationItem[] = [
     href: "/movements",
     icon: <UserGroupIcon className="h-7 w-6" />,
     children: [
-      // { name: "Ventas", href: "/movements/sales" },
+      { name: "Cajas", href: "/movements/cajas" },
       // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
     ],

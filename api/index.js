@@ -5,6 +5,7 @@ const cors = require("cors");
 // Importar rutas
 const usuarioRoutes = require("./routes/usuario.routes");
 const registroDiarioCajaRoutes = require("./routes/registrodiariocaja.routes");
+const cajaRoutes = require("./routes/caja.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -25,6 +26,7 @@ app.use(express.json());
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/registrodiariocaja", registroDiarioCajaRoutes);
+app.use("/api/caja", cajaRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

@@ -7,11 +7,11 @@ const authMiddleware = require("../middlewares/auth");
 router.use(authMiddleware);
 
 // Rutas para registros diarios de caja
-router.get("/", registroDiarioCajaController.getAll);
-router.get("/search", registroDiarioCajaController.search);
-router.get("/:id", registroDiarioCajaController.getById);
-router.post("/", registroDiarioCajaController.create);
-router.put("/:id", registroDiarioCajaController.update);
-router.delete("/:id", registroDiarioCajaController.delete);
+router.get("/", authMiddleware, registroDiarioCajaController.getAll);
+router.get("/search", authMiddleware, registroDiarioCajaController.search);
+router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
+router.post("/", authMiddleware, registroDiarioCajaController.create);
+router.put("/:id", authMiddleware, registroDiarioCajaController.update);
+router.delete("/:id", authMiddleware, registroDiarioCajaController.delete);
 
 module.exports = router;

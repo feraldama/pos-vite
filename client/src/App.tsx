@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import UsersPage from "./pages/users/UsersPage";
 import MovementsPage from "./pages/movements/MovementsPage";
 import CajasPage from "./pages/cajas/CajasPage";
+import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/movements/summary" element={<MovementsPage />} />;
             <Route path="/movements/cajas" element={<CajasPage />} />;
+            <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
           </Route>
 
           <Route path="*" element={<NotFound />} />

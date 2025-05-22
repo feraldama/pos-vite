@@ -37,6 +37,7 @@ const navigation: NavigationItem[] = [
     icon: <UserGroupIcon className="h-7 w-6" />,
     children: [
       { name: "Cajas", href: "/movements/cajas" },
+      { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
       // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
     ],

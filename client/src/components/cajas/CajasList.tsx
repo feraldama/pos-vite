@@ -153,7 +153,7 @@ export default function CajasList({
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow"
+              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">

@@ -52,6 +52,10 @@ export default function MovementsList({
   sortKey,
   sortOrder,
   onSort,
+  isModalOpen,
+  onCloseModal,
+  currentMovement,
+  onSubmit,
 }: MovementsListProps) {
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -112,6 +116,21 @@ export default function MovementsList({
     },
   ];
 
+  const handleBackdropClick = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    if (event.target === event.currentTarget) {
+      onCloseModal();
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (currentMovement) {
+      onSubmit(currentMovement);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -148,6 +167,23 @@ export default function MovementsList({
         sortOrder={sortOrder}
         onSort={onSort}
       />
+
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={handleBackdropClick}
+        >
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <div className="relative w-full max-w-2xl max-h-full z-10">
+            <form
+              onSubmit={handleSubmit}
+              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+            >
+              {/* Rest of the component code */}
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

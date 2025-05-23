@@ -16,6 +16,7 @@ import MovementsPage from "./pages/movements/MovementsPage";
 import CajasPage from "./pages/cajas/CajasPage";
 import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
+import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
 
 function App() {
   return (
@@ -41,6 +42,10 @@ function App() {
             <Route path="/movements/cajas" element={<CajasPage />} />;
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
             <Route path="/customers" element={<CustomersPage />} />;
+            <Route
+              path="/apertura-cierre-caja"
+              element={<AperturaCierreCajaPage />}
+            />
           </Route>
 
           <Route path="*" element={<NotFound />} />

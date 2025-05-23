@@ -34,6 +34,11 @@ const navigation: NavigationItem[] = [
     icon: <HomeIcon className="h-7 w-6" />,
   },
   {
+    name: "Apertura/Cierre de Caja",
+    href: "/apertura-cierre-caja",
+    icon: <HomeIcon className="h-7 w-6" />,
+  },
+  {
     name: "Clientes",
     href: "/customers",
     icon: <UsersIcon className="h-7 w-6" />,

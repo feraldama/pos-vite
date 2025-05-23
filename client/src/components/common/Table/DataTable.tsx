@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 // import React from "react";
 
 interface DataTableRow {
@@ -142,16 +143,18 @@ function DataTable<T extends DataTableRow>({
                         <button
                           onClick={() => onEdit(item)}
                           className="font-medium text-blue-600 hover:underline mr-4 cursor-pointer"
+                          title="Editar"
                         >
-                          Editar
+                          <PencilSquareIcon className="h-5 w-5 inline" />
                         </button>
                       )}
                       {onDelete && (
                         <button
                           onClick={() => onDelete(item)}
                           className="font-medium text-red-600 hover:underline cursor-pointer"
+                          title="Eliminar"
                         >
-                          Eliminar
+                          <TrashIcon className="h-5 w-5 inline" />
                         </button>
                       )}
                     </>

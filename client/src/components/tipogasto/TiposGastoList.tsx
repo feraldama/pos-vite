@@ -3,6 +3,14 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  getTipoGastoGrupoByTipoGastoId,
+  createTipoGastoGrupo,
+  updateTipoGastoGrupo,
+  deleteTipoGastoGrupo,
+  type TipoGastoGrupo,
+} from "../../services/tipogastogrupo.service";
+import Swal from "sweetalert2";
 
 interface TipoGasto {
   id: string | number;
@@ -59,6 +67,11 @@ export default function TiposGastoList({
     TipoGastoDescripcion: "",
     TipoGastoCantGastos: 0,
   });
+  const [grupos, setGrupos] = useState<TipoGastoGrupo[]>([]);
+  const [loadingGrupos, setLoadingGrupos] = useState(false);
+  const [nuevoGrupo, setNuevoGrupo] = useState("");
+  const [editGrupoId, setEditGrupoId] = useState<string | number | null>(null);
+  const [editGrupoDesc, setEditGrupoDesc] = useState("");
 
   useEffect(() => {
     if (currentTipoGasto) {
@@ -75,6 +88,18 @@ export default function TiposGastoList({
         TipoGastoDescripcion: "",
         TipoGastoCantGastos: 0,
       });
+    }
+  }, [currentTipoGasto]);
+
+  useEffect(() => {
+    if (currentTipoGasto && currentTipoGasto.TipoGastoId) {
+      setLoadingGrupos(true);
+      getTipoGastoGrupoByTipoGastoId(currentTipoGasto.TipoGastoId)
+        .then((data) => setGrupos(data))
+        .catch(() => setGrupos([]))
+        .finally(() => setLoadingGrupos(false));
+    } else {
+      setGrupos([]);
     }
   }, [currentTipoGasto]);
 
@@ -155,7 +180,7 @@ export default function TiposGastoList({
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
                   {currentTipoGasto
-                    ? `Editar tipo de gasto: ${currentTipoGasto.TipoGastoId}`
+                    ? `Editar tipo de gasto: ${currentTipoGasto.TipoGastoDescripcion}`
                     : "Crear nuevo tipo de gasto"}
                 </h3>
                 <button
@@ -217,6 +242,232 @@ export default function TiposGastoList({
                     />
                   </div>
                 </div>
+                {/* Detalle de grupos de gasto asociados */}
+                {currentTipoGasto && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-2 text-gray-800 text-base">
+                      Grupos asociados a este tipo de gasto
+                    </h4>
+                    {loadingGrupos ? (
+                      <div className="text-gray-500 text-sm">
+                        Cargando grupos...
+                      </div>
+                    ) : (
+                      <>
+                        <ul className="divide-y divide-gray-200 mb-2">
+                          {grupos.map((g) => (
+                            <li
+                              key={g.TipoGastoGrupoId}
+                              className="py-2 px-1 flex items-center gap-2"
+                            >
+                              {editGrupoId === g.TipoGastoGrupoId ? (
+                                <>
+                                  <input
+                                    className="border rounded px-2 py-1 text-sm"
+                                    value={editGrupoDesc}
+                                    onChange={(e) =>
+                                      setEditGrupoDesc(e.target.value)
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    className="text-green-600 hover:underline text-xs"
+                                    onClick={async () => {
+                                      try {
+                                        await updateTipoGastoGrupo(
+                                          currentTipoGasto.TipoGastoId,
+                                          g.TipoGastoGrupoId,
+                                          {
+                                            TipoGastoGrupoDescripcion:
+                                              editGrupoDesc,
+                                          }
+                                        );
+                                        setEditGrupoId(null);
+                                        setEditGrupoDesc("");
+                                        setLoadingGrupos(true);
+                                        const data =
+                                          await getTipoGastoGrupoByTipoGastoId(
+                                            currentTipoGasto.TipoGastoId
+                                          );
+                                        setGrupos(data);
+                                        setLoadingGrupos(false);
+                                      } catch (error: unknown) {
+                                        const err = error as {
+                                          message?: string;
+                                        };
+                                        if (err?.message) {
+                                          Swal.fire({
+                                            icon: "warning",
+                                            title: "No permitido",
+                                            text: err.message,
+                                          });
+                                        } else {
+                                          throw error;
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    Guardar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-gray-500 hover:underline text-xs ml-2"
+                                    onClick={() => {
+                                      setEditGrupoId(null);
+                                      setEditGrupoDesc("");
+                                    }}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-gray-700 flex-1">
+                                    {g.TipoGastoGrupoId}-{" "}
+                                    {g.TipoGastoGrupoDescripcion}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 hover:underline text-xs"
+                                    onClick={() => {
+                                      setEditGrupoId(g.TipoGastoGrupoId);
+                                      setEditGrupoDesc(
+                                        g.TipoGastoGrupoDescripcion
+                                      );
+                                    }}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-red-600 hover:underline text-xs ml-2"
+                                    onClick={async () => {
+                                      const confirm = await Swal.fire({
+                                        title: "¿Estás seguro?",
+                                        text: "¡No podrás revertir esto!",
+                                        icon: "warning",
+                                        showCancelButton: true,
+                                        confirmButtonColor: "#3085d6",
+                                        cancelButtonColor: "#d33",
+                                        confirmButtonText: "Sí, eliminar!",
+                                        cancelButtonText: "Cancelar",
+                                      });
+                                      if (!confirm.isConfirmed) return;
+                                      try {
+                                        const res = await deleteTipoGastoGrupo(
+                                          currentTipoGasto.TipoGastoId,
+                                          g.TipoGastoGrupoId
+                                        );
+                                        setLoadingGrupos(true);
+                                        const data =
+                                          await getTipoGastoGrupoByTipoGastoId(
+                                            currentTipoGasto.TipoGastoId
+                                          );
+                                        setGrupos(data);
+                                        setLoadingGrupos(false);
+                                        if (
+                                          res.TipoGastoCantGastos !== undefined
+                                        ) {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            TipoGastoCantGastos:
+                                              res.TipoGastoCantGastos,
+                                          }));
+                                        } else {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            TipoGastoCantGastos: Math.max(
+                                              0,
+                                              prev.TipoGastoCantGastos - 1
+                                            ),
+                                          }));
+                                        }
+                                        Swal.fire({
+                                          position: "top-end",
+                                          icon: "success",
+                                          title: "Grupo eliminado exitosamente",
+                                          showConfirmButton: false,
+                                          timer: 1500,
+                                        });
+                                      } catch (error: unknown) {
+                                        const err = error as {
+                                          message?: string;
+                                        };
+                                        if (err?.message) {
+                                          Swal.fire({
+                                            icon: "warning",
+                                            title: "No permitido",
+                                            text: err.message,
+                                          });
+                                        } else {
+                                          throw error;
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    Eliminar
+                                  </button>
+                                </>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex gap-2 mt-2">
+                          <input
+                            className="border rounded px-2 py-1 text-sm flex-1"
+                            placeholder="Nuevo grupo..."
+                            value={nuevoGrupo}
+                            onChange={(e) => setNuevoGrupo(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-xs"
+                            onClick={async () => {
+                              if (!nuevoGrupo.trim()) return;
+                              const res = await createTipoGastoGrupo({
+                                TipoGastoId: currentTipoGasto.TipoGastoId,
+                                TipoGastoGrupoDescripcion: nuevoGrupo,
+                              });
+                              setNuevoGrupo("");
+                              setLoadingGrupos(true);
+                              const data = await getTipoGastoGrupoByTipoGastoId(
+                                currentTipoGasto.TipoGastoId
+                              );
+                              setGrupos(data);
+                              setLoadingGrupos(false);
+                              if (res.TipoGastoCantGastos !== undefined) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  TipoGastoCantGastos: res.TipoGastoCantGastos,
+                                }));
+                              } else {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  TipoGastoCantGastos:
+                                    prev.TipoGastoCantGastos + 1,
+                                }));
+                              }
+                              Swal.fire({
+                                position: "top-end",
+                                icon: "success",
+                                title: "Grupo agregado exitosamente",
+                                showConfirmButton: false,
+                                timer: 1500,
+                              });
+                            }}
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                        {grupos.length === 0 && !loadingGrupos && (
+                          <div className="text-gray-500 text-sm mt-2">
+                            No hay grupos asociados.
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <button

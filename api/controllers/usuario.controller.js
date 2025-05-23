@@ -102,6 +102,14 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (usuario.UsuarioEstado === "I") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Su usuario está inactivo. Por favor, contacte al administrador.",
+      });
+    }
+
     const contraseñaValida = await bcrypt.compare(
       password,
       usuario.UsuarioContrasena

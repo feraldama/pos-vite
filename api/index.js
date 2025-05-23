@@ -7,6 +7,7 @@ const usuarioRoutes = require("./routes/usuario.routes");
 const registroDiarioCajaRoutes = require("./routes/registrodiariocaja.routes");
 const cajaRoutes = require("./routes/caja.routes");
 const tipoGastoRoutes = require("./routes/tipogasto.routes");
+const clienteRoutes = require("./routes/cliente.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/registrodiariocaja", registroDiarioCajaRoutes);
 app.use("/api/caja", cajaRoutes);
 app.use("/api/tipogastos", tipoGastoRoutes);
+app.use("/api/clientes", clienteRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

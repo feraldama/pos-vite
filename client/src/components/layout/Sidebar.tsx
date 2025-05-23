@@ -8,9 +8,11 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   HomeIcon,
-  UserGroupIcon,
+  KeyIcon,
   CalendarDaysIcon,
   DocumentIcon,
+  UsersIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -32,9 +34,14 @@ const navigation: NavigationItem[] = [
     icon: <HomeIcon className="h-7 w-6" />,
   },
   {
+    name: "Clientes",
+    href: "/customers",
+    icon: <UsersIcon className="h-7 w-6" />,
+  },
+  {
     name: "Registro Diario",
     href: "/movements",
-    icon: <UserGroupIcon className="h-7 w-6" />,
+    icon: <PencilSquareIcon className="h-7 w-6" />,
     children: [
       { name: "Cajas", href: "/movements/cajas" },
       { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
@@ -45,7 +52,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Control de Acceso",
     href: "/access-control",
-    icon: <UserGroupIcon className="h-7 w-6" />,
+    icon: <KeyIcon className="h-7 w-6" />,
     children: [
       { name: "Usuarios", href: "/users" },
       { name: "Roles", href: "/team/roles" },

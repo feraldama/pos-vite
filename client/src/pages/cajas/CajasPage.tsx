@@ -112,12 +112,14 @@ export default function CajasPage() {
             ...prev,
             cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
           }));
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          } else {
-            setError("Error desconocido");
-          }
+        } catch (error: unknown) {
+          const err = error as { message?: string };
+          const msg = err?.message || "No se pudo eliminar la caja";
+          Swal.fire({
+            icon: "warning",
+            title: "No permitido",
+            text: msg,
+          });
         }
       }
     });

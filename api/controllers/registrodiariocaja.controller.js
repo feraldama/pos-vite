@@ -111,6 +111,16 @@ exports.delete = async (req, res) => {
     }
     res.json({ message: "Registro eliminado exitosamente" });
   } catch (error) {
+    if (
+      error &&
+      error.message &&
+      error.message.includes("a foreign key constraint fails")
+    ) {
+      return res.status(400).json({
+        message:
+          "No se puede eliminar el registro porque tiene movimientos asociados.",
+      });
+    }
     res.status(500).json({ message: error.message });
   }
 };

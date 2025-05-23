@@ -70,6 +70,16 @@ exports.delete = async (req, res) => {
     if (!tipoGastoId) return res.status(404).json({ message: "No encontrado" });
     res.json({ message: "Eliminado correctamente", TipoGastoCantGastos });
   } catch (error) {
+    if (
+      error &&
+      error.message &&
+      error.message.includes("a foreign key constraint fails")
+    ) {
+      return res.status(400).json({
+        message:
+          "No se puede eliminar el grupo porque tiene movimientos asociados.",
+      });
+    }
     if (error && error.message) {
       res.status(400).json({ message: error.message });
     } else {

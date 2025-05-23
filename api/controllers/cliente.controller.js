@@ -173,7 +173,17 @@ exports.deleteCliente = async (req, res) => {
       message: "Cliente eliminado exitosamente",
     });
   } catch (error) {
-    console.error("Error al eliminar cliente:", error);
+    if (
+      error &&
+      error.message &&
+      error.message.includes("a foreign key constraint fails")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "No se puede eliminar el cliente porque tiene movimientos asociados.",
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Error al eliminar cliente",

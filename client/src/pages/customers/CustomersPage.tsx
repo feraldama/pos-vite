@@ -119,12 +119,14 @@ export default function CustomersPage() {
               (cliente) => cliente.ClienteId !== id
             ),
           }));
-        } catch (error) {
-          if (error instanceof Error) {
-            setError(error.message);
-          } else {
-            setError("Error desconocido");
-          }
+        } catch (error: unknown) {
+          const err = error as { message?: string };
+          const msg = err?.message || "No se pudo eliminar el cliente";
+          Swal.fire({
+            icon: "warning",
+            title: "No permitido",
+            text: msg,
+          });
         }
       }
     });

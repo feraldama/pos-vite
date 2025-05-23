@@ -286,3 +286,37 @@ exports.updateUsuario = async (req, res) => {
     });
   }
 };
+
+exports.deleteUsuario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Usuario.delete(id);
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+    res.json({
+      success: true,
+      message: "Usuario eliminado exitosamente",
+    });
+  } catch (error) {
+    if (
+      error &&
+      error.message &&
+      error.message.includes("a foreign key constraint fails")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "No se puede eliminar el usuario porque tiene movimientos asociados.",
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error al eliminar usuario",
+      error: error.message,
+    });
+  }
+};

@@ -8,7 +8,7 @@ import {
 } from "../../services/cajas.service";
 import CajasList from "../../components/cajas/CajasList";
 import Pagination from "../../components/common/Pagination";
-import { SuccessModal } from "../../components/common/Modal/SuccessModal";
+import Swal from "sweetalert2";
 
 interface Caja {
   id: string | number;
@@ -38,8 +38,6 @@ export default function CajasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -93,19 +91,36 @@ export default function CajasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteCaja(id);
-      setCajasData((prev) => ({
-        ...prev,
-        cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
-      }));
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteCaja(id);
+          Swal.fire({
+            icon: "success",
+            title: "Caja eliminada exitosamente",
+          });
+          setCajasData((prev) => ({
+            ...prev,
+            cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
+          }));
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Error desconocido");
+          }
+        }
       }
-    }
+    });
   };
 
   const handleCreate = () => {
@@ -119,16 +134,23 @@ export default function CajasPage() {
   };
 
   const handleSubmit = async (cajaData: Caja) => {
+    let mensaje = "";
     try {
       if (currentCaja) {
         await updateCaja(currentCaja.CajaId, cajaData);
-        setSuccessMessage("Caja actualizada exitosamente");
+        mensaje = "Caja actualizada exitosamente";
       } else {
         const response = await createCaja(cajaData);
-        setSuccessMessage(response.message || "Caja creada exitosamente");
+        mensaje = response.message || "Caja creada exitosamente";
       }
       setIsModalOpen(false);
-      setShowSuccessModal(true);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
       fetchCajas();
     } catch (error) {
       if (error instanceof Error) {
@@ -185,12 +207,6 @@ export default function CajasPage() {
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
       />
-      {showSuccessModal && (
-        <SuccessModal
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
     </div>
   );
 }

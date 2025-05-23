@@ -8,7 +8,7 @@ import {
 } from "../../services/usuarios.service";
 import UsersList from "../../components/users/UsersList";
 import Pagination from "../../components/common/Pagination";
-import { SuccessModal } from "../../components/common/Modal/SuccessModal";
+import Swal from "sweetalert2";
 
 // Tipos auxiliares
 interface Usuario {
@@ -43,8 +43,6 @@ export default function UsuariosPage() {
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [editingPassword, setEditingPassword] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -98,19 +96,38 @@ export default function UsuariosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteUsuario(id);
-      setUsuariosData((prev) => ({
-        ...prev,
-        usuarios: prev.usuarios.filter((usuario) => usuario.UsuarioId !== id),
-      }));
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteUsuario(id);
+          Swal.fire({
+            icon: "success",
+            title: "Usuario eliminado exitosamente",
+          });
+          setUsuariosData((prev) => ({
+            ...prev,
+            usuarios: prev.usuarios.filter(
+              (usuario) => usuario.UsuarioId !== id
+            ),
+          }));
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Error desconocido");
+          }
+        }
       }
-    }
+    });
   };
 
   const handleCreate = () => {
@@ -125,21 +142,28 @@ export default function UsuariosPage() {
   };
 
   const handleSubmit = async (userData: Usuario) => {
+    let mensaje = "";
     try {
       if (currentUser) {
         await updateUsuario(currentUser.UsuarioId, userData);
-        setSuccessMessage("Usuario actualizado exitosamente");
+        mensaje = "Usuario actualizado exitosamente";
       } else {
         // Crear nuevo usuario
         if (!userData.UsuarioContrasena) {
           throw new Error("La contraseña es requerida para nuevos usuarios");
         }
         const response = await createUsuario(userData);
-        setSuccessMessage(response.message || "Usuario creado exitosamente");
+        mensaje = response.message || "Usuario creado exitosamente";
       }
 
       setIsModalOpen(false);
-      setShowSuccessModal(true);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
       setEditingPassword(false); // Resetear después de enviar
       fetchUsuarios();
     } catch (error) {
@@ -199,14 +223,6 @@ export default function UsuariosPage() {
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
       />
-
-      {/* Modal de éxito - fuera de cualquier container que limite su ancho */}
-      {showSuccessModal && (
-        <SuccessModal
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
     </div>
   );
 }

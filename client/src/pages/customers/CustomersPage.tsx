@@ -8,7 +8,7 @@ import {
 } from "../../services/clientes.service";
 import CustomersList from "../../components/customers/CustomersList";
 import Pagination from "../../components/common/Pagination";
-import { SuccessModal } from "../../components/common/Modal/SuccessModal";
+import Swal from "sweetalert2";
 
 interface Cliente {
   id: string | number;
@@ -43,8 +43,6 @@ export default function CustomersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCliente, setCurrentCliente] = useState<Cliente | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -98,19 +96,38 @@ export default function CustomersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteCliente(id);
-      setClientesData((prev) => ({
-        ...prev,
-        clientes: prev.clientes.filter((cliente) => cliente.ClienteId !== id),
-      }));
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteCliente(id);
+          Swal.fire({
+            icon: "success",
+            title: "Cliente eliminado exitosamente",
+          });
+          setClientesData((prev) => ({
+            ...prev,
+            clientes: prev.clientes.filter(
+              (cliente) => cliente.ClienteId !== id
+            ),
+          }));
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Error desconocido");
+          }
+        }
       }
-    }
+    });
   };
 
   const handleCreate = () => {
@@ -124,16 +141,23 @@ export default function CustomersPage() {
   };
 
   const handleSubmit = async (clienteData: Cliente) => {
+    let mensaje = "";
     try {
       if (currentCliente) {
         await updateCliente(currentCliente.ClienteId, clienteData);
-        setSuccessMessage("Cliente actualizado exitosamente");
+        mensaje = "Cliente actualizado exitosamente";
       } else {
         const response = await createCliente(clienteData);
-        setSuccessMessage(response.message || "Cliente creado exitosamente");
+        mensaje = response.message || "Cliente creado exitosamente";
       }
       setIsModalOpen(false);
-      setShowSuccessModal(true);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
       fetchClientes();
     } catch (error) {
       if (error instanceof Error) {
@@ -192,12 +216,6 @@ export default function CustomersPage() {
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
       />
-      {showSuccessModal && (
-        <SuccessModal
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
     </div>
   );
 }

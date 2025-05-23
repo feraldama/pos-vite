@@ -8,7 +8,7 @@ import {
 } from "../../services/registros.service";
 import MovementsList from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
-import { SuccessModal } from "../../components/common/Modal/SuccessModal";
+import Swal from "sweetalert2";
 
 // Tipos auxiliares
 interface Movimiento {
@@ -39,8 +39,6 @@ export default function MovementsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [currentMovement, setCurrentMovement] = useState<Movimiento | null>(
     null
   );
@@ -104,18 +102,33 @@ export default function MovementsPage() {
   };
 
   const handleDelete = async (movimiento: Movimiento) => {
-    try {
-      await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
-      setSuccessMessage("Registro eliminado exitosamente");
-      setShowSuccessModal(true);
-      fetchMovimientos();
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
+          Swal.fire({
+            icon: "success",
+            title: "Registro eliminado exitosamente",
+          });
+          fetchMovimientos();
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Error desconocido");
+          }
+        }
       }
-    }
+    });
   };
 
   const handleCreate = () => {
@@ -129,20 +142,27 @@ export default function MovementsPage() {
   };
 
   const handleSubmit = async (movementData: Movimiento) => {
+    let mensaje = "";
     try {
       if (currentMovement) {
         await updateRegistroDiarioCaja(
           currentMovement.RegistroDiarioCajaId,
           movementData
         );
-        setSuccessMessage("Registro actualizado exitosamente");
+        mensaje = "Registro actualizado exitosamente";
       } else {
         const response = await createRegistroDiarioCaja(movementData);
-        setSuccessMessage(response.message || "Registro creado exitosamente");
+        mensaje = response.message || "Registro creado exitosamente";
       }
 
       setIsModalOpen(false);
-      setShowSuccessModal(true);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
       fetchMovimientos();
     } catch (error) {
       if (error instanceof Error) {
@@ -197,13 +217,6 @@ export default function MovementsPage() {
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
       />
-
-      {showSuccessModal && (
-        <SuccessModal
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
     </div>
   );
 }

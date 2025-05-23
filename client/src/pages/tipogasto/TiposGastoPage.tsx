@@ -8,7 +8,7 @@ import {
 } from "../../services/tipogasto.service";
 import TiposGastoList from "../../components/tipogasto/TiposGastoList";
 import Pagination from "../../components/common/Pagination";
-import { SuccessModal } from "../../components/common/Modal/SuccessModal";
+import Swal from "sweetalert2";
 
 interface TipoGasto {
   id: string | number;
@@ -39,8 +39,6 @@ export default function TiposGastoPage() {
     null
   );
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -99,19 +97,38 @@ export default function TiposGastoPage() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteTipoGasto(id);
-      setTiposGastoData((prev) => ({
-        ...prev,
-        tiposGasto: prev.tiposGasto.filter((tipo) => tipo.TipoGastoId !== id),
-      }));
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteTipoGasto(id);
+          Swal.fire({
+            icon: "success",
+            title: "Tipo de gasto eliminado exitosamente",
+          });
+          setTiposGastoData((prev) => ({
+            ...prev,
+            tiposGasto: prev.tiposGasto.filter(
+              (tipo) => tipo.TipoGastoId !== id
+            ),
+          }));
+        } catch (error) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("Error desconocido");
+          }
+        }
       }
-    }
+    });
   };
 
   const handleCreate = () => {
@@ -125,18 +142,23 @@ export default function TiposGastoPage() {
   };
 
   const handleSubmit = async (tipoGastoData: TipoGasto) => {
+    let mensaje = "";
     try {
       if (currentTipoGasto) {
         await updateTipoGasto(currentTipoGasto.TipoGastoId, tipoGastoData);
-        setSuccessMessage("Tipo de gasto actualizado exitosamente");
+        mensaje = "Tipo de gasto actualizado exitosamente";
       } else {
         const response = await createTipoGasto(tipoGastoData);
-        setSuccessMessage(
-          response.message || "Tipo de gasto creado exitosamente"
-        );
+        mensaje = response.message || "Tipo de gasto creado exitosamente";
       }
       setIsModalOpen(false);
-      setShowSuccessModal(true);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
       fetchTiposGasto();
     } catch (error) {
       if (error instanceof Error) {
@@ -198,12 +220,6 @@ export default function TiposGastoPage() {
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
       />
-      {showSuccessModal && (
-        <SuccessModal
-          message={successMessage}
-          onClose={() => setShowSuccessModal(false)}
-        />
-      )}
     </div>
   );
 }

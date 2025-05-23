@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  PencilSquareIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import {
   getTipoGastoGrupoByTipoGastoId,
   createTipoGastoGrupo,
@@ -258,7 +262,7 @@ export default function TiposGastoList({
                           {grupos.map((g) => (
                             <li
                               key={g.TipoGastoGrupoId}
-                              className="py-2 px-1 flex items-center gap-2"
+                              className="py-2 px-1 flex items-center gap-2 hover:bg-gray-100 rounded"
                             >
                               {editGrupoId === g.TipoGastoGrupoId ? (
                                 <>
@@ -271,7 +275,7 @@ export default function TiposGastoList({
                                   />
                                   <button
                                     type="button"
-                                    className="text-green-600 hover:underline text-xs"
+                                    className="text-green-600 hover:underline text-xs cursor-pointer"
                                     onClick={async () => {
                                       try {
                                         await updateTipoGastoGrupo(
@@ -311,7 +315,7 @@ export default function TiposGastoList({
                                   </button>
                                   <button
                                     type="button"
-                                    className="text-gray-500 hover:underline text-xs ml-2"
+                                    className="text-gray-500 hover:underline text-xs ml-2 cursor-pointer"
                                     onClick={() => {
                                       setEditGrupoId(null);
                                       setEditGrupoDesc("");
@@ -328,7 +332,8 @@ export default function TiposGastoList({
                                   </span>
                                   <button
                                     type="button"
-                                    className="text-blue-600 hover:underline text-xs"
+                                    className="text-blue-600 hover:underline text-xs cursor-pointer"
+                                    title="Editar"
                                     onClick={() => {
                                       setEditGrupoId(g.TipoGastoGrupoId);
                                       setEditGrupoDesc(
@@ -336,11 +341,12 @@ export default function TiposGastoList({
                                       );
                                     }}
                                   >
-                                    Editar
+                                    <PencilSquareIcon className="h-5 w-5 inline" />
                                   </button>
                                   <button
                                     type="button"
-                                    className="text-red-600 hover:underline text-xs ml-2"
+                                    className="text-red-600 hover:underline text-xs ml-2 cursor-pointer"
+                                    title="Eliminar"
                                     onClick={async () => {
                                       const confirm = await Swal.fire({
                                         title: "¿Estás seguro?",
@@ -405,7 +411,7 @@ export default function TiposGastoList({
                                       }
                                     }}
                                   >
-                                    Eliminar
+                                    <TrashIcon className="h-5 w-5 inline" />
                                   </button>
                                 </>
                               )}
@@ -472,13 +478,13 @@ export default function TiposGastoList({
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <button
                   type="submit"
-                  className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                  className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center cursor-pointer"
                 >
                   {currentTipoGasto ? "Actualizar" : "Crear"}
                 </button>
                 <button
                   type="button"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 cursor-pointer"
                   onClick={onCloseModal}
                 >
                   Cancelar

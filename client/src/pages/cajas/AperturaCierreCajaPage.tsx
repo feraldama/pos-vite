@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { getCajas } from "../../services/cajas.service";
 import ActionButton from "../../components/common/Button/ActionButton";
+import { aperturaCierreCaja } from "../../services/registrodiariocaja.service";
+import { useAuth } from "../../contexts/useAuth";
+import Swal from "sweetalert2";
 
 interface Caja {
   id: string | number;
@@ -18,6 +21,8 @@ export default function AperturaCierreCajaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -35,23 +40,50 @@ export default function AperturaCierreCajaPage() {
     fetchCajas();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (error) {
+      Swal.fire({
+        icon: "warning",
+        title: "Aviso",
+        text: error,
+        confirmButtonColor: "#2563eb",
+      });
+      setError(null);
+    }
+  }, [error]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí iría la lógica para confirmar la apertura/cierre
-    setSuccess(
-      `Se ha ${
-        tipo === "0" ? "aperturado" : "cerrado"
-      } la caja ${cajaId} con monto ${monto}`
-    );
-    setTimeout(() => setSuccess(null), 3000);
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
+    try {
+      const result = await aperturaCierreCaja({
+        apertura: tipo === "0" ? 0 : 1,
+        CajaId: cajaId,
+        Monto: monto,
+      });
+      setSuccess(result.message || "Operación realizada correctamente");
+    } catch (err) {
+      setError(
+        (err as { message?: string })?.message || "Error en la operación"
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) return <div>Cargando cajas...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="container mx-auto px-4 max-w-xl">
       <h1 className="text-2xl font-medium mb-6">Apertura/Cierre de Caja</h1>
+      {user && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-gray-700">
+          <span className="font-semibold">Usuario:</span> {user.nombre} (
+          {user.id})
+        </div>
+      )}
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-lg shadow p-6 space-y-6"
@@ -103,7 +135,7 @@ export default function AperturaCierreCajaPage() {
           </div>
         </div>
         <div className="flex justify-end">
-          <ActionButton label="CONFIRMAR" />
+          <ActionButton label="CONFIRMAR" disabled={submitting} />
         </div>
         {success && (
           <div className="text-green-600 text-center font-medium mt-2">

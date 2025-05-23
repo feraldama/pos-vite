@@ -11,6 +11,11 @@ router.get("/", authMiddleware, registroDiarioCajaController.getAll);
 router.get("/search", authMiddleware, registroDiarioCajaController.search);
 router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
 router.post("/", authMiddleware, registroDiarioCajaController.create);
+router.post(
+  "/apertura-cierre",
+  authMiddleware,
+  registroDiarioCajaController.aperturaCierreCaja
+);
 router.put("/:id", authMiddleware, registroDiarioCajaController.update);
 router.delete("/:id", authMiddleware, registroDiarioCajaController.delete);
 

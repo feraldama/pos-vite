@@ -302,6 +302,32 @@ const RegistroDiarioCaja = {
       );
     });
   },
+
+  getUltimaApertura: (cajaId) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        `SELECT * FROM registrodiariocaja WHERE CajaId = ? AND TipoGastoId = 2 AND TipoGastoGrupoId = 2 ORDER BY RegistroDiarioCajaId DESC LIMIT 1`,
+        [cajaId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results.length > 0 ? results[0] : null);
+        }
+      );
+    });
+  },
+
+  getUltimoCierre: (cajaId) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        `SELECT * FROM registrodiariocaja WHERE CajaId = ? AND TipoGastoId = 1 AND TipoGastoGrupoId = 2 ORDER BY RegistroDiarioCajaId DESC LIMIT 1`,
+        [cajaId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results.length > 0 ? results[0] : null);
+        }
+      );
+    });
+  },
 };
 
 module.exports = RegistroDiarioCaja;

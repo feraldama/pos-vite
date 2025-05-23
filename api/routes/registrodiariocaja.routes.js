@@ -9,6 +9,10 @@ router.use(authMiddleware);
 // Rutas para registros diarios de caja
 router.get("/", authMiddleware, registroDiarioCajaController.getAll);
 router.get("/search", authMiddleware, registroDiarioCajaController.search);
+router.get(
+  "/estado-apertura",
+  registroDiarioCajaController.estadoAperturaPorUsuario
+);
 router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
 router.post("/", authMiddleware, registroDiarioCajaController.create);
 router.post(

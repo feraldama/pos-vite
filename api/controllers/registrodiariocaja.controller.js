@@ -236,3 +236,19 @@ exports.aperturaCierreCaja = async (req, res) => {
     });
   }
 };
+
+// Nuevo endpoint para saber si el usuario tiene caja aperturada
+exports.estadoAperturaPorUsuario = async (req, res) => {
+  try {
+    const usuarioId = req.query.usuarioId;
+    if (!usuarioId) {
+      return res.status(400).json({ message: "Falta el parámetro usuarioId" });
+    }
+    const estado = await RegistroDiarioCaja.getEstadoAperturaPorUsuario(
+      usuarioId
+    );
+    res.json(estado);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

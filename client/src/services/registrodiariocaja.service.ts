@@ -22,3 +22,21 @@ export const aperturaCierreCaja = async (data: {
     );
   }
 };
+
+export const getEstadoAperturaPorUsuario = async (
+  usuarioId: string | number
+) => {
+  try {
+    const response = await api.get(`/registrodiariocaja/estado-apertura`, {
+      params: { usuarioId },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al consultar estado de apertura de caja",
+      }
+    );
+  }
+};

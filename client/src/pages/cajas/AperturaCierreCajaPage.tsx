@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { getCajas } from "../../services/cajas.service";
 import ActionButton from "../../components/common/Button/ActionButton";
-import { aperturaCierreCaja } from "../../services/registrodiariocaja.service";
+import {
+  aperturaCierreCaja,
+  getEstadoAperturaPorUsuario,
+} from "../../services/registrodiariocaja.service";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
+import { formatMiles } from "../../utils/utils";
 
 interface Caja {
   id: string | number;
@@ -15,6 +19,7 @@ interface Caja {
 
 export default function AperturaCierreCajaPage() {
   const [tipo, setTipo] = useState<"0" | "1">("0");
+  const [tipoDisabled, setTipoDisabled] = useState(false);
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [cajaId, setCajaId] = useState<string | number>("");
   const [monto, setMonto] = useState<number>(0);
@@ -39,6 +44,28 @@ export default function AperturaCierreCajaPage() {
     };
     fetchCajas();
   }, []);
+
+  useEffect(() => {
+    // Lógica para detectar si el usuario tiene una caja aperturada
+    const checkCajaAperturada = async () => {
+      if (!user) return;
+      try {
+        const data = await getEstadoAperturaPorUsuario(user.id);
+        // Si apertura > cierre, forzar cierre y deshabilitar el select
+        if (data.aperturaId > data.cierreId) {
+          setTipo("1"); // Cierre
+          setTipoDisabled(true);
+          if (data.cajaId) setCajaId(data.cajaId);
+        } else {
+          setTipo("0");
+          setTipoDisabled(false);
+        }
+      } catch {
+        // Si hay error, no forzar nada
+      }
+    };
+    checkCajaAperturada();
+  }, [user]);
 
   useEffect(() => {
     if (error) {
@@ -82,6 +109,12 @@ export default function AperturaCierreCajaPage() {
         <div className="mb-4 p-3 bg-gray-100 rounded text-gray-700">
           <span className="font-semibold">Usuario:</span> {user.nombre} (
           {user.id})
+          {tipoDisabled && cajaId && (
+            <span className="ml-2 text-sm text-gray-600">
+              | Caja:{" "}
+              {cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || ""}
+            </span>
+          )}
         </div>
       )}
       <form
@@ -94,10 +127,13 @@ export default function AperturaCierreCajaPage() {
               Tipo de operación
             </label>
             <select
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                tipoDisabled ? "bg-gray-200 text-gray-500" : ""
+              }`}
               value={tipo}
               onChange={(e) => setTipo(e.target.value as "0" | "1")}
               required
+              disabled={tipoDisabled}
             >
               <option value="0">Apertura</option>
               <option value="1">Cierre</option>
@@ -125,10 +161,17 @@ export default function AperturaCierreCajaPage() {
               Monto de apertura
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              value={monto}
-              onChange={(e) => setMonto(Number(e.target.value))}
+              value={monto ? formatMiles(monto) : ""}
+              onChange={(e) => {
+                const raw = e.target.value
+                  .replace(/\./g, "")
+                  .replace(/\s/g, "");
+                const num = Number(raw);
+                if (!isNaN(num)) setMonto(num);
+              }}
               min={0}
               required
             />

@@ -328,6 +328,37 @@ const RegistroDiarioCaja = {
       );
     });
   },
+
+  getEstadoAperturaPorUsuario: (usuarioId) => {
+    return new Promise((resolve, reject) => {
+      // Buscar la última apertura del usuario
+      db.query(
+        `SELECT RegistroDiarioCajaId, CajaId FROM registrodiariocaja WHERE UsuarioId = ? AND TipoGastoId = 2 AND TipoGastoGrupoId = 2 ORDER BY RegistroDiarioCajaId DESC LIMIT 1`,
+        [usuarioId],
+        (err, aperturas) => {
+          if (err) return reject(err);
+          const apertura = aperturas[0] || {
+            RegistroDiarioCajaId: 0,
+            CajaId: null,
+          };
+          // Buscar la última cierre del usuario
+          db.query(
+            `SELECT RegistroDiarioCajaId FROM registrodiariocaja WHERE UsuarioId = ? AND TipoGastoId = 1 AND TipoGastoGrupoId = 2 ORDER BY RegistroDiarioCajaId DESC LIMIT 1`,
+            [usuarioId],
+            (err, cierres) => {
+              if (err) return reject(err);
+              const cierre = cierres[0] || { RegistroDiarioCajaId: 0 };
+              resolve({
+                aperturaId: apertura.RegistroDiarioCajaId || 0,
+                cierreId: cierre.RegistroDiarioCajaId || 0,
+                cajaId: apertura.CajaId || null,
+              });
+            }
+          );
+        }
+      );
+    });
+  },
 };
 
 module.exports = RegistroDiarioCaja;

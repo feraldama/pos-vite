@@ -50,30 +50,39 @@ const RegistroDiarioCaja = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
-      db.query(
-        `SELECT * FROM registrodiariocaja ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+      const query = `
+        SELECT r.*, 
+          c.CajaDescripcion, 
+          t.TipoGastoDescripcion, 
+          tg.TipoGastoGrupoDescripcion
+        FROM registrodiariocaja r
+        LEFT JOIN Caja c ON r.CajaId = c.CajaId
+        LEFT JOIN TipoGasto t ON r.TipoGastoId = t.TipoGastoId
+        LEFT JOIN tipogastogrupo tg ON r.TipoGastoId = tg.TipoGastoId AND r.TipoGastoGrupoId = tg.TipoGastoGrupoId
+        ORDER BY r.${sortField} ${order}
+        LIMIT ? OFFSET ?
+      `;
 
-          db.query(
-            "SELECT COUNT(*) as total FROM registrodiariocaja",
-            (err, countResult) => {
-              if (err) return reject(err);
+      db.query(query, [limit, offset], (err, results) => {
+        if (err) return reject(err);
 
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: countResult[0].total,
-                  totalPages: Math.ceil(countResult[0].total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
+        db.query(
+          "SELECT COUNT(*) as total FROM registrodiariocaja",
+          (err, countResult) => {
+            if (err) return reject(err);
+
+            resolve({
+              data: results,
+              pagination: {
+                totalItems: countResult[0].total,
+                totalPages: Math.ceil(countResult[0].total / limit),
+                currentPage: Math.floor(offset / limit) + 1,
+                itemsPerPage: limit,
+              },
+            });
+          }
+        );
+      });
     });
   },
 
@@ -106,17 +115,24 @@ const RegistroDiarioCaja = {
         : "DESC";
 
       const searchQuery = `
-      SELECT * FROM registrodiariocaja 
-      WHERE RegistroDiarioCajaDetalle LIKE ? 
-      OR CAST(UsuarioId AS CHAR) LIKE ?
-      OR CAST(CajaId AS CHAR) LIKE ?
-      OR CAST(TipoGastoId AS CHAR) LIKE ?
-      OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
-      OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
-      OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-      ORDER BY ${sortField} ${order}
-      LIMIT ? OFFSET ?
-    `;
+        SELECT r.*, 
+          c.CajaDescripcion, 
+          t.TipoGastoDescripcion, 
+          tg.TipoGastoGrupoDescripcion
+        FROM registrodiariocaja r
+        LEFT JOIN Caja c ON r.CajaId = c.CajaId
+        LEFT JOIN TipoGasto t ON r.TipoGastoId = t.TipoGastoId
+        LEFT JOIN tipogastogrupo tg ON r.TipoGastoId = tg.TipoGastoId AND r.TipoGastoGrupoId = tg.TipoGastoGrupoId
+        WHERE r.RegistroDiarioCajaDetalle LIKE ? 
+          OR CAST(r.UsuarioId AS CHAR) LIKE ?
+          OR CAST(r.CajaId AS CHAR) LIKE ?
+          OR CAST(r.TipoGastoId AS CHAR) LIKE ?
+          OR CAST(r.TipoGastoGrupoId AS CHAR) LIKE ?
+          OR CAST(r.RegistroDiarioCajaMonto AS CHAR) LIKE ?
+          OR DATE_FORMAT(r.RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
+        ORDER BY r.${sortField} ${order}
+        LIMIT ? OFFSET ?
+      `;
       const searchValue = `%${term}%`;
 
       db.query(
@@ -139,15 +155,15 @@ const RegistroDiarioCaja = {
           }
 
           const countQuery = `
-          SELECT COUNT(*) as total FROM registrodiariocaja 
-          WHERE RegistroDiarioCajaDetalle LIKE ? 
-          OR CAST(UsuarioId AS CHAR) LIKE ?
-          OR CAST(CajaId AS INTEGER) LIKE ?
-          OR CAST(TipoGastoId AS INTEGER) LIKE ?
-          OR CAST(TipoGastoGrupoId AS INTEGER) LIKE ?
-          OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
-          OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-        `;
+            SELECT COUNT(*) as total FROM registrodiariocaja 
+            WHERE RegistroDiarioCajaDetalle LIKE ? 
+              OR CAST(UsuarioId AS CHAR) LIKE ?
+              OR CAST(CajaId AS INTEGER) LIKE ?
+              OR CAST(TipoGastoId AS INTEGER) LIKE ?
+              OR CAST(TipoGastoGrupoId AS INTEGER) LIKE ?
+              OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
+              OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
+          `;
 
           db.query(
             countQuery,

@@ -12,6 +12,12 @@ interface Movimiento {
   UsuarioId: string | number;
   CajaId: string | number;
   TipoGastoId: string | number;
+  CajaDescripcion: string;
+  TipoGastoDescripcion: string;
+  TipoGastoGrupoDescripcion: string;
+  RegistroDiarioCajaMTCN: string;
+  RegistroDiarioCajaCargoEnvio: number;
+  RegistroDiarioCajaCambio: number;
   [key: string]: unknown;
 }
 
@@ -37,6 +43,7 @@ interface MovementsListProps {
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
+  disableEdit?: boolean;
 }
 
 export default function MovementsList({
@@ -56,6 +63,7 @@ export default function MovementsList({
   onCloseModal,
   currentMovement,
   onSubmit,
+  disableEdit,
 }: MovementsListProps) {
   // Formatear fecha
   const formatDate = (dateString: string) => {
@@ -89,13 +97,35 @@ export default function MovementsList({
       label: "ID",
     },
     {
+      key: "CajaDescripcion",
+      label: "Caja",
+    },
+    {
       key: "RegistroDiarioCajaFecha",
       label: "Fecha",
       render: (row: Movimiento) => formatDate(row.RegistroDiarioCajaFecha),
     },
     {
+      key: "TipoGastoDescripcion",
+      label: "Tipo Gasto",
+    },
+    {
+      key: "TipoGastoGrupoDescripcion",
+      label: "Grupo Gasto",
+    },
+    {
       key: "RegistroDiarioCajaDetalle",
       label: "Descripción",
+    },
+    {
+      key: "RegistroDiarioCajaMTCN",
+      label: "MTCN",
+    },
+    {
+      key: "RegistroDiarioCajaCargoEnvio",
+      label: "Cargo Envío",
+      render: (item: Movimiento) =>
+        formatAmount(item.RegistroDiarioCajaCargoEnvio),
     },
     {
       key: "RegistroDiarioCajaMonto",
@@ -103,16 +133,13 @@ export default function MovementsList({
       render: (item: Movimiento) => formatAmount(item.RegistroDiarioCajaMonto),
     },
     {
+      key: "RegistroDiarioCajaCambio",
+      label: "Cambio",
+      render: (item: Movimiento) => formatAmount(item.RegistroDiarioCajaCambio),
+    },
+    {
       key: "UsuarioId",
       label: "Usuario",
-    },
-    {
-      key: "CajaId",
-      label: "Caja",
-    },
-    {
-      key: "TipoGastoId",
-      label: "Tipo Gasto",
     },
   ];
 
@@ -160,7 +187,7 @@ export default function MovementsList({
       <DataTable<Movimiento>
         columns={columns}
         data={movimientos}
-        onEdit={onEdit}
+        onEdit={disableEdit ? undefined : onEdit}
         onDelete={onDelete}
         emptyMessage="No se encontraron registros"
         sortKey={sortKey}

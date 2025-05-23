@@ -20,6 +20,12 @@ interface Movimiento {
   UsuarioId: string | number;
   CajaId: string | number;
   TipoGastoId: string | number;
+  CajaDescripcion: string;
+  TipoGastoDescripcion: string;
+  TipoGastoGrupoDescripcion: string;
+  RegistroDiarioCajaMTCN: string;
+  RegistroDiarioCajaCargoEnvio: number;
+  RegistroDiarioCajaCambio: number;
   [key: string]: unknown;
 }
 
@@ -211,6 +217,7 @@ export default function MovementsPage() {
           setSortOrder(order);
           setCurrentPage(1);
         }}
+        disableEdit={true}
       />
       <Pagination
         currentPage={currentPage}

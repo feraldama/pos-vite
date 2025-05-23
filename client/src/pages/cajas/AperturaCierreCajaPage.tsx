@@ -181,7 +181,11 @@ export default function AperturaCierreCajaPage() {
           </div>
         </div>
         <div className="flex justify-end">
-          <ActionButton label="CONFIRMAR" disabled={submitting} />
+          <ActionButton
+            onClick={handleSubmit}
+            label="CONFIRMAR"
+            disabled={submitting}
+          />
         </div>
         {success && (
           <div className="text-green-600 text-center font-medium mt-2">

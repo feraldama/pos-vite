@@ -144,10 +144,13 @@ export default function AperturaCierreCajaPage() {
               Caja
             </label>
             <select
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                tipoDisabled ? "bg-gray-200 text-gray-500" : ""
+              }`}
               value={cajaId}
               onChange={(e) => setCajaId(e.target.value)}
               required
+              disabled={tipoDisabled}
             >
               {cajas.map((caja) => (
                 <option key={caja.CajaId} value={caja.CajaId}>

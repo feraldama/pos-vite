@@ -9,8 +9,6 @@ import {
   ChevronRightIcon,
   HomeIcon,
   KeyIcon,
-  CalendarDaysIcon,
-  DocumentIcon,
   UsersIcon,
   PencilSquareIcon,
   BanknotesIcon,
@@ -63,32 +61,6 @@ const navigation: NavigationItem[] = [
       { name: "Usuarios", href: "/users" },
       { name: "Roles", href: "/team/roles" },
       { name: "Estructura", href: "/team/structure" },
-    ],
-  },
-  {
-    name: "Proyectos",
-    href: "/projects",
-    icon: <DocumentIcon className="h-7 w-6" />,
-    children: [
-      { name: "Activos", href: "/projects/active" },
-      { name: "Archivados", href: "/projects/archived" },
-      {
-        name: "Reportes",
-        href: "/projects/reports",
-        children: [
-          { name: "Semanales", href: "/projects/reports/weekly" },
-          { name: "Mensuales", href: "/projects/reports/monthly" },
-        ],
-      },
-    ],
-  },
-  {
-    name: "Calendario",
-    href: "/calendar",
-    icon: <CalendarDaysIcon className="h-7 w-6" />,
-    children: [
-      { name: "Eventos", href: "/calendar/events" },
-      { name: "Recordatorios", href: "/calendar/reminders" },
     ],
   },
 ];

@@ -4,6 +4,7 @@ import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
 import ProductCard from "../../components/products/ProductCard";
+import { useAuth } from "../../contexts/useAuth";
 
 export default function Sales() {
   const [carrito, setCarrito] = useState<
@@ -27,6 +28,7 @@ export default function Sales() {
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const agregarProducto = (producto: {
     id: number;
@@ -86,70 +88,207 @@ export default function Sales() {
         <div
           style={{
             background: "#fff",
-            borderRadius: 8,
-            boxShadow: "0 2px 8px #0001",
-            padding: 16,
+            borderRadius: 12,
+            boxShadow: "0 4px 16px #0001",
+            padding: 0,
             marginBottom: 16,
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: "80vh",
+            overflow: "hidden",
           }}
         >
-          <table style={{ width: "100%" }}>
-            <thead>
-              <tr style={{ textAlign: "left" }}>
-                <th>Nombre</th>
-                <th>Cantidad</th>
-                <th>Precio Uni.</th>
-                <th>Total</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {carrito.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <img
-                      src={p.imagen}
-                      alt={p.nombre}
-                      style={{
-                        width: 32,
-                        verticalAlign: "middle",
-                        marginRight: 8,
-                      }}
-                    />
-                    {p.nombre}
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      value={p.cantidad}
-                      min={1}
-                      style={{ width: 40, textAlign: "center" }}
-                      readOnly
-                    />
-                    <button
-                      onClick={() => cambiarCantidad(p.id, p.cantidad + 1)}
-                    >
-                      +
-                    </button>
-                  </td>
-                  <td>Gs. {p.precio}</td>
-                  <td>Gs. {p.precio * p.cantidad}</td>
-                  <td>
-                    <span
-                      style={{ color: "red", cursor: "pointer" }}
-                      onClick={() => quitarProducto(p.id)}
-                    >
-                      Eliminar
-                    </span>
-                  </td>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+              }}
+            >
+              <thead>
+                <tr style={{ textAlign: "left", background: "#f5f8ff" }}>
+                  <th
+                    style={{
+                      padding: "16px 0 16px 24px",
+                      fontWeight: 600,
+                      fontSize: 15,
+                    }}
+                  >
+                    Nombre
+                  </th>
+                  <th
+                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
+                  >
+                    Cantidad
+                  </th>
+                  <th
+                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
+                  >
+                    Precio Uni.
+                  </th>
+                  <th
+                    style={{
+                      padding: "16px 24px 16px 0",
+                      fontWeight: 600,
+                      fontSize: 15,
+                    }}
+                  >
+                    Total
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {carrito.map((p, idx) => (
+                  <tr
+                    key={p.id}
+                    style={{
+                      background: "#fff",
+                      borderBottom:
+                        idx !== carrito.length - 1
+                          ? "1px solid #e5e7eb"
+                          : "none",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "20px 0 20px 24px",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 16,
+                        }}
+                      >
+                        <img
+                          src={p.imagen}
+                          alt={p.nombre}
+                          style={{
+                            width: 56,
+                            height: 56,
+                            objectFit: "contain",
+                            borderRadius: 8,
+                            background: "#f5f8ff",
+                            boxShadow: "0 1px 4px #0001",
+                          }}
+                        />
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: 17,
+                              color: "#222",
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {p.nombre}
+                          </div>
+                          <div
+                            style={{
+                              color: "#e53935",
+                              fontSize: 14,
+                              marginTop: 4,
+                              cursor: "pointer",
+                            }}
+                            onClick={() => quitarProducto(p.id)}
+                          >
+                            Eliminar
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "20px 0", verticalAlign: "middle" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <button
+                          onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            background: "#f9fafb",
+                            color: "#374151",
+                            fontSize: 18,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          value={p.cantidad}
+                          min={1}
+                          style={{
+                            width: 40,
+                            height: 32,
+                            textAlign: "center",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            background: "#f9fafb",
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: "#222",
+                            margin: "0 2px",
+                          }}
+                          readOnly
+                        />
+                        <button
+                          onClick={() => cambiarCantidad(p.id, p.cantidad + 1)}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            background: "#f9fafb",
+                            color: "#374151",
+                            fontSize: 18,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        padding: "20px 0",
+                        verticalAlign: "middle",
+                        textAlign: "right",
+                        fontWeight: 500,
+                        fontSize: 17,
+                        color: "#374151",
+                      }}
+                    >
+                      Gs. {p.precio.toLocaleString()}
+                    </td>
+                    <td
+                      style={{
+                        padding: "20px 24px 20px 0",
+                        verticalAlign: "middle",
+                        textAlign: "right",
+                        fontWeight: 500,
+                        fontSize: 17,
+                        color: "#374151",
+                      }}
+                    >
+                      Gs. {(p.precio * p.cantidad).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
         {/* Pad numérico y botón pagar */}
         <div
@@ -197,7 +336,12 @@ export default function Sales() {
       {/* Lado Derecho */}
       <div style={{ flex: 2, padding: 16 }}>
         <div
-          style={{ display: "flex", alignItems: "center", marginBottom: 16 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginBottom: 16,
+            justifyContent: "space-between",
+          }}
         >
           <SearchButton
             searchTerm={busqueda}
@@ -205,101 +349,72 @@ export default function Sales() {
             onSearchSubmit={() => {}}
             placeholder="Buscar productos"
           />
+          {user && (
+            <div
+              style={{
+                marginLeft: 24,
+                fontWeight: 600,
+                color: "#222",
+                fontSize: 16,
+              }}
+            >
+              {user.nombre}{" "}
+              <span style={{ color: "#888", fontWeight: 400, fontSize: 14 }}>
+                ({user.id})
+              </span>
+            </div>
+          )}
         </div>
+        {/* Nuevo contenedor con scroll solo para los productos */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: 16,
+            height: "calc(100vh - 120px)", // Ajusta este valor si es necesario
+            overflowY: "auto",
           }}
         >
-          {loading ? (
-            <div>Cargando productos...</div>
-          ) : (
-            // productos
-            //   .filter((p) =>
-            //     p.ProductoNombre.toLowerCase().includes(busqueda.toLowerCase())
-            //   )
-            //   .map((p) => (
-            //     <div
-            //       key={p.ProductoId}
-            //       style={{
-            //         background: "#fff",
-            //         borderRadius: 8,
-            //         boxShadow: "0 2px 8px #0001",
-            //         padding: 16,
-            //         textAlign: "center",
-            //         cursor: "pointer",
-            //       }}
-            //       onClick={() =>
-            //         agregarProducto({
-            //           id: p.ProductoId,
-            //           nombre: p.ProductoNombre,
-            //           precio: p.ProductoPrecioVenta,
-            //           imagen: p.ProductoImagen
-            //             ? `data:image/jpeg;base64,${p.ProductoImagen}`
-            //             : "https://via.placeholder.com/80x120?text=Sin+Imagen",
-            //           stock: p.ProductoStock,
-            //         })
-            //       }
-            //     >
-            //       <img
-            //         src={
-            //           p.ProductoImagen
-            //             ? `data:image/jpeg;base64,${p.ProductoImagen}`
-            //             : "https://via.placeholder.com/80x120?text=Sin+Imagen"
-            //         }
-            //         alt={p.ProductoNombre}
-            //         style={{
-            //           width: 80,
-            //           height: 120,
-            //           objectFit: "contain",
-            //           marginBottom: 8,
-            //         }}
-            //       />
-            //       <div style={{ fontWeight: "bold", fontSize: 18 }}>
-            //         {p.ProductoNombre}
-            //       </div>
-            //       <div
-            //         style={{ color: "#f60", fontWeight: "bold", fontSize: 16 }}
-            //       >
-            //         Gs. {p.ProductoPrecioVenta.toLocaleString()}
-            //       </div>
-            //       <div style={{ fontSize: 12, color: "#888" }}>
-            //         Stock: {p.ProductoStock}
-            //       </div>
-            //     </div>
-            //   ))
-            productos
-              .filter((p) =>
-                p.ProductoNombre.toLowerCase().includes(busqueda.toLowerCase())
-              )
-              .map((p) => (
-                <ProductCard
-                  key={p.ProductoId}
-                  // id={p.ProductoId}
-                  nombre={p.ProductoNombre}
-                  precio={p.ProductoPrecioVenta}
-                  imagen={
-                    p.ProductoImagen
-                      ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                      : "https://via.placeholder.com/80x120?text=Sin+Imagen"
-                  }
-                  stock={p.ProductoStock}
-                  onAdd={() =>
-                    agregarProducto({
-                      id: p.ProductoId,
-                      nombre: p.ProductoNombre,
-                      precio: p.ProductoPrecioVenta,
-                      imagen: p.ProductoImagen
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {loading ? (
+              <div>Cargando productos...</div>
+            ) : (
+              productos
+                .filter((p) =>
+                  p.ProductoNombre.toLowerCase().includes(
+                    busqueda.toLowerCase()
+                  )
+                )
+                .map((p) => (
+                  <ProductCard
+                    key={p.ProductoId}
+                    // id={p.ProductoId}
+                    nombre={p.ProductoNombre}
+                    precio={p.ProductoPrecioVenta}
+                    imagen={
+                      p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : "https://via.placeholder.com/80x120?text=Sin+Imagen",
-                      stock: p.ProductoStock,
-                    })
-                  }
-                />
-              ))
-          )}
+                        : "https://via.placeholder.com/80x120?text=Sin+Imagen"
+                    }
+                    stock={p.ProductoStock}
+                    onAdd={() =>
+                      agregarProducto({
+                        id: p.ProductoId,
+                        nombre: p.ProductoNombre,
+                        precio: p.ProductoPrecioVenta,
+                        imagen: p.ProductoImagen
+                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
+                          : "https://via.placeholder.com/80x120?text=Sin+Imagen",
+                        stock: p.ProductoStock,
+                      })
+                    }
+                  />
+                ))
+            )}
+          </div>
         </div>
       </div>
     </div>

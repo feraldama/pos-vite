@@ -33,6 +33,11 @@ const navigation: NavigationItem[] = [
     icon: <HomeIcon className="h-7 w-6" />,
   },
   {
+    name: "Ventas",
+    href: "/ventas",
+    icon: <HomeIcon className="h-7 w-6" />,
+  },
+  {
     name: "Apertura/Cierre de Caja",
     href: "/apertura-cierre-caja",
     icon: <BanknotesIcon className="h-7 w-6" />,

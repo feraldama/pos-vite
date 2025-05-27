@@ -17,6 +17,7 @@ import CajasPage from "./pages/cajas/CajasPage";
 import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
+import Sales from "./pages/dashboard/Sales";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
               path="/apertura-cierre-caja"
               element={<AperturaCierreCajaPage />}
             />
+            <Route path="/ventas" element={<Sales />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

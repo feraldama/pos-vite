@@ -5,6 +5,10 @@ import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
 import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
+import PaymentModal from "../../components/common/PaymentModal";
+import Swal from "sweetalert2";
+import axios from "axios";
+import { js2xml } from "xml-js";
 
 export default function Sales() {
   const [carrito, setCarrito] = useState<
@@ -28,7 +32,17 @@ export default function Sales() {
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
+  // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
+  const [showModal, setShowModal] = useState(false);
+  const [totalRest, setTotalRest] = useState(0);
+  const [efectivo, setEfectivo] = useState(0);
+  const [banco, setBanco] = useState(0);
+  const [bancoDebito, setBancoDebito] = useState(0);
+  const [bancoCredito, setBancoCredito] = useState(0);
+  const [cuentaCliente, setCuentaCliente] = useState(0);
+  // const [voucher, setVoucher] = useState(0);
+  const [printTicket, setPrintTicket] = useState(false);
 
   const agregarProducto = (producto: {
     id: number;
@@ -71,6 +85,137 @@ export default function Sales() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
+  const cartItems = carrito.map((p) => ({
+    id: p.id,
+    quantity: p.cantidad,
+    salePrice: p.precio,
+    price: p.precio,
+    unidad: "U",
+    totalPrice: p.precio * p.cantidad,
+  }));
+  const selectedCustomer = { ClienteId: 1, ClienteTipo: "NORMAL" };
+
+  function getSubtotal(items: Array<{ totalPrice: number }>): number {
+    return items.reduce(
+      (acc: number, item: { totalPrice: number }) => acc + item.totalPrice,
+      0
+    );
+  }
+
+  const sendRequest = async () => {
+    const fecha = new Date();
+    const dia = fecha.getDate();
+    const mes = fecha.getMonth() + 1;
+    const año = fecha.getFullYear() % 100;
+    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
+    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
+    const añoStr = año < 10 ? `0${año}` : año.toString();
+    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+
+    const SDTProductoItem = cartItems.map((producto) => ({
+      ClienteId: selectedCustomer.ClienteId,
+      Producto: {
+        ProductoId: producto.id,
+        VentaProductoCantidad: producto.quantity,
+        ProductoPrecioVenta: producto.salePrice,
+        ProductoUnidad: producto.unidad,
+        VentaProductoPrecioTotal: producto.totalPrice,
+        Combo: "N",
+        ComboPrecio: 0,
+      },
+    }));
+
+    const json = {
+      Envelope: {
+        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
+        Body: {
+          "PVentaConfirmarWS.VENTACONFIRMAR": {
+            _attributes: { xmlns: "PosViteAlonso" },
+            Sdtproducto: {
+              SDTProductoItem: SDTProductoItem,
+            },
+            Ventafechastring: fechaFormateada,
+            Almacenorigenid: 1,
+            Clientetipo: selectedCustomer.ClienteTipo,
+            Cajaid: 1,
+            Usuarioid: "vendedor",
+            Efectivo: efectivo,
+            Total2: getSubtotal(cartItems),
+            Ventatipo: "CO",
+            Pagotipo: "E",
+            Clienteid: selectedCustomer.ClienteId,
+            Efectivoreact: Number(efectivo) + Number(totalRest),
+            Bancoreact:
+              Number(banco) + Number(bancoDebito) + Number(bancoCredito),
+            Clientecuentareact: cuentaCliente,
+            // Voucherreact: voucher,
+          },
+        },
+      },
+    };
+    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
+    const config = {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    };
+    try {
+      await axios.post(
+        import.meta.env.VITE_APP_URL +
+          import.meta.env.VITE_APP_URL_GENEXUS +
+          "apventaconfirmarws",
+        xml,
+        config
+      );
+      Swal.fire("SweetAlert2 is working!");
+      // let timerInterval: ReturnType<typeof setInterval>;
+      // Swal.fire({
+      //   title: "Venta realizada con éxito!",
+      //   html: "Nueva venta en <b></b> segundos.",
+      //   timer: 3000,
+      //   timerProgressBar: true,
+      //   width: "90%",
+      //   allowOutsideClick: false,
+      //   allowEscapeKey: false,
+      //   didOpen: () => {
+      //     Swal.showLoading();
+      //     const popup = Swal.getPopup();
+      //     if (popup) {
+      //       // Verificación de null
+      //       const timer = popup.querySelector("b");
+      //       if (timer) {
+      //         // Verificación adicional por si querySelector no encuentra el elemento
+      //         timerInterval = setInterval(() => {
+      //           const secondsLeft = Math.ceil(Swal?.getTimerLeft() / 1000);
+      //           if (timer) timer.textContent = `${secondsLeft}`;
+      //         }, 100);
+      //       }
+      //     }
+      //   },
+      //   willClose: () => {
+      //     clearInterval(timerInterval);
+      //   },
+      // }).then((result) => {
+      //   if (result.dismiss === Swal.DismissReason.timer) {
+      //     window.location.reload();
+      //   }
+      // });
+    } catch (error) {
+      console.error(error);
+    }
+    // Limpiar estados de pago
+    setEfectivo(0);
+    setBanco(0);
+    setBancoDebito(0);
+    setBancoCredito(0);
+    setCuentaCliente(0);
+    // setVoucher(0);
+    setTotalRest(0);
+    setPrintTicket(false);
+    setShowModal(false);
+  };
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
@@ -304,7 +449,7 @@ export default function Sales() {
           >
             <ActionButton
               label="Pagar"
-              onClick={() => alert("Pagar")}
+              onClick={() => setShowModal(true)}
               className="text-white rounded-lg flex-shrink-0"
             />
             <div style={{ marginLeft: 24, fontSize: 24 }}>
@@ -417,6 +562,28 @@ export default function Sales() {
           </div>
         </div>
       </div>
+      <PaymentModal
+        show={showModal}
+        handleClose={() => setShowModal(false)}
+        totalCost={total}
+        totalRest={totalRest}
+        setTotalRest={setTotalRest}
+        efectivo={efectivo}
+        setEfectivo={setEfectivo}
+        setPrintTicket={setPrintTicket}
+        printTicket={printTicket}
+        banco={banco}
+        setBanco={setBanco}
+        bancoDebito={bancoDebito}
+        setBancoDebito={setBancoDebito}
+        bancoCredito={bancoCredito}
+        setBancoCredito={setBancoCredito}
+        cuentaCliente={cuentaCliente}
+        setCuentaCliente={setCuentaCliente}
+        sendRequest={sendRequest}
+        // voucher={voucher}
+        // setVoucher={setVoucher}
+      />
     </div>
   );
 }

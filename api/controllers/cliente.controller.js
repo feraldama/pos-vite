@@ -89,7 +89,6 @@ exports.createCliente = async (req, res) => {
       "ClienteNombre",
       "ClienteTipo",
       "UsuarioId",
-      "ClienteCodJSI",
     ];
     for (const campo of camposRequeridos) {
       if (!req.body[campo]) {
@@ -109,7 +108,6 @@ exports.createCliente = async (req, res) => {
       ClienteTelefono: req.body.ClienteTelefono || null,
       ClienteTipo: req.body.ClienteTipo,
       UsuarioId: req.body.UsuarioId,
-      ClienteCodJSI: req.body.ClienteCodJSI,
     });
     res.status(201).json({
       success: true,

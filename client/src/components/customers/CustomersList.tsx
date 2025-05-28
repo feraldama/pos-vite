@@ -14,7 +14,6 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
-  ClienteCodJSI: string;
   [key: string]: unknown;
 }
 
@@ -69,7 +68,6 @@ export default function CustomersList({
     ClienteTelefono: "",
     ClienteTipo: "",
     UsuarioId: "",
-    ClienteCodJSI: "",
   });
 
   useEffect(() => {
@@ -86,7 +84,6 @@ export default function CustomersList({
         ClienteTelefono: "",
         ClienteTipo: "",
         UsuarioId: "",
-        ClienteCodJSI: "",
       });
     }
   }, [currentCliente]);
@@ -121,7 +118,6 @@ export default function CustomersList({
     { key: "ClienteTelefono", label: "Teléfono" },
     { key: "ClienteTipo", label: "Tipo" },
     { key: "UsuarioId", label: "Usuario" },
-    { key: "ClienteCodJSI", label: "Cod. JSI" },
   ];
 
   return (
@@ -330,23 +326,6 @@ export default function CustomersList({
                       name="UsuarioId"
                       id="UsuarioId"
                       value={formData.UsuarioId}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ClienteCodJSI"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Código JSI
-                    </label>
-                    <input
-                      type="text"
-                      name="ClienteCodJSI"
-                      id="ClienteCodJSI"
-                      value={formData.ClienteCodJSI}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required

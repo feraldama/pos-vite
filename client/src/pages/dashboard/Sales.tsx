@@ -11,6 +11,8 @@ import { js2xml } from "xml-js";
 import logo from "../../assets/img/logo.jpg";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Cliente {
   ClienteId: number;
@@ -157,6 +159,7 @@ export default function Sales() {
   // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
   const cartItems = carrito.map((p) => ({
     id: p.id,
+    nombre: p.nombre,
     quantity: p.cantidad,
     salePrice: p.precio,
     price: p.precio,
@@ -236,6 +239,9 @@ export default function Sales() {
         xml,
         config
       );
+      if (printTicket) {
+        generateTicketPDF();
+      }
       Swal.fire("SweetAlert2 is working!");
       // let timerInterval: ReturnType<typeof setInterval>;
       // Swal.fire({
@@ -282,6 +288,100 @@ export default function Sales() {
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
+  };
+
+  const generateTicketPDF = () => {
+    // Crear una instancia de jsPDF con un tamaño personalizado (80mm de ancho)
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [80, 297], // 80mm de ancho y 297mm de alto (A4 cortado)
+    });
+
+    const fechaActual = new Date();
+    const dia = String(fechaActual.getDate()).padStart(2, "0");
+    const mes = String(fechaActual.getMonth() + 1).padStart(2, "0");
+    const año = fechaActual.getFullYear().toString().slice(-2);
+    const horas = String(fechaActual.getHours()).padStart(2, "0");
+    const minutos = String(fechaActual.getMinutes()).padStart(2, "0");
+    const segundos = String(fechaActual.getSeconds()).padStart(2, "0");
+
+    const fechaFormateada = `${dia}/${mes}/${año}`;
+    const horaFormateada = `${horas}:${minutos}:${segundos}`;
+
+    // Configuración inicial
+    doc.setFontSize(8); // Tamaño de fuente más pequeño
+    doc.setFont("helvetica", "normal");
+
+    // Encabezado del ticket
+    doc.text("Decorpar", 0, 15);
+    doc.text("PADEL", 0, 20);
+    doc.text("Carmen de Peña, Itauguá", 0, 25);
+    doc.text("Teléfono: +595 981 123456", 0, 30);
+    doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
+    doc.text(
+      clienteSeleccionado?.ClienteRUC
+        ? "RUC: " + clienteSeleccionado.ClienteRUC
+        : "RUC: SIN RUC",
+      0,
+      40
+    );
+    doc.text("Cliente: " + (clienteSeleccionado?.ClienteNombre || ""), 0, 45);
+
+    // Línea separadora
+    doc.setLineWidth(0.2); // Línea más delgada
+    doc.line(0, 48, 75, 48); // Ajustar el ancho de la línea
+
+    // Encabezados de la tabla
+    const headers = [["Desc.", "Cant", "Precio", "Total"]];
+
+    // Datos de la tabla
+    const tableData = cartItems.map((item) => [
+      item.nombre || item.id.toString(),
+      item.quantity,
+      item.unidad === "U"
+        ? item.salePrice.toLocaleString("es-ES")
+        : item.price.toLocaleString("es-ES"),
+      `Gs. ${item.totalPrice.toLocaleString("es-ES")}`,
+    ]);
+
+    // Agregar la tabla al PDF
+    autoTable(doc, {
+      head: headers,
+      body: tableData,
+      startY: 50,
+      theme: "plain",
+      styles: {
+        fontSize: 7,
+        textColor: [0, 0, 0],
+        fillColor: [255, 255, 255],
+      },
+      // headStyles: { fillColor: [200, 200, 200] },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 9 },
+        2: { cellWidth: 14 },
+        3: { cellWidth: 20 },
+      },
+      margin: { left: 0 }, // Margen izquierdo
+    });
+
+    // Total de la compra
+    const totalCost = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const lastAutoTable = (
+      doc as unknown as { lastAutoTable: { finalY: number } }
+    ).lastAutoTable;
+    doc.text(
+      `Total a Pagar Gs. ${totalCost.toLocaleString("es-ES")}`,
+      0,
+      lastAutoTable.finalY + 5
+    );
+
+    // Pie de página
+    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, lastAutoTable.finalY + 10);
+
+    // Guardar el PDF
+    doc.save("ticket_venta.pdf");
   };
 
   return (
@@ -516,7 +616,7 @@ export default function Sales() {
             {/* Botón Pagar grande */}
             <button
               className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition"
-              style={{ minHeight: 200 }}
+              style={{ minHeight: 215 }}
               onClick={() => setShowModal(true)}
             >
               Pagar

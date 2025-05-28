@@ -12,6 +12,7 @@ import {
   UsersIcon,
   PencilSquareIcon,
   BanknotesIcon,
+  CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -35,7 +36,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Ventas",
     href: "/ventas",
-    icon: <HomeIcon className="h-7 w-6" />,
+    icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
   {
     name: "Apertura/Cierre de Caja",

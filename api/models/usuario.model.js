@@ -46,7 +46,6 @@ const Usuario = {
         "UsuarioCorreo",
         "UsuarioIsAdmin",
         "UsuarioEstado",
-        "LocalId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -88,7 +87,6 @@ const Usuario = {
         "UsuarioCorreo",
         "UsuarioIsAdmin",
         "UsuarioEstado",
-        "LocalId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -153,7 +151,6 @@ const Usuario = {
         UsuarioContrasena, 
         UsuarioIsAdmin, 
         UsuarioEstado, 
-        LocalId
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -165,7 +162,6 @@ const Usuario = {
         usuarioData.UsuarioContrasena ? hashedPassword : hashedPassword,
         usuarioData.UsuarioIsAdmin,
         usuarioData.UsuarioEstado,
-        usuarioData.LocalId,
       ];
 
       db.query(query, values, (err, result) => {
@@ -177,7 +173,6 @@ const Usuario = {
           UsuarioCorreo: usuarioData.UsuarioCorreo,
           UsuarioIsAdmin: usuarioData.UsuarioIsAdmin,
           UsuarioEstado: usuarioData.UsuarioEstado,
-          LocalId: usuarioData.LocalId,
         });
       });
     });
@@ -197,7 +192,6 @@ const Usuario = {
           "UsuarioCorreo",
           "UsuarioIsAdmin",
           "UsuarioEstado",
-          "LocalId",
         ];
 
         // Si se proporciona una nueva contraseña y no está vacía, hashearla

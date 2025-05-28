@@ -89,3 +89,17 @@ export const searchClientes = async (
     throw axiosError.response?.data || { message: "Error al buscar clientes" };
   }
 };
+
+export const getAllClientesSinPaginacion = async () => {
+  try {
+    const response = await api.get("/clientes/all");
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener todos los clientes",
+      }
+    );
+  }
+};

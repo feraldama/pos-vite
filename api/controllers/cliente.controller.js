@@ -191,3 +191,13 @@ exports.deleteCliente = async (req, res) => {
     });
   }
 };
+
+// Obtener todos los clientes sin paginación
+exports.getAllClientesSinPaginacion = async (req, res) => {
+  try {
+    const clientes = await Cliente.getAll();
+    res.json({ data: clientes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

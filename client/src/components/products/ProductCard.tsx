@@ -4,6 +4,8 @@ interface ProductCardProps {
   // id: number;
   nombre: string;
   precio: number;
+  precioMayorista?: number;
+  clienteTipo?: string;
   imagen: string;
   stock: number;
   onAdd: () => void;
@@ -13,10 +15,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // id,
   nombre,
   precio,
+  precioMayorista,
+  clienteTipo,
   imagen,
   stock,
   onAdd,
 }) => {
+  const mostrarPrecio =
+    clienteTipo === "MA" && precioMayorista !== undefined
+      ? precioMayorista
+      : precio;
   return (
     <div
       style={{
@@ -86,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             marginBottom: 0,
           }}
         >
-          Gs. {precio.toLocaleString()}
+          Gs. {mostrarPrecio.toLocaleString()}
         </div>
         <div style={{ fontSize: 15, color: "#888", marginTop: 4 }}>
           Stock:{" "}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import ActionButton from "../../components/common/Button/ActionButton";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -10,6 +9,19 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import { js2xml } from "xml-js";
 import logo from "../../assets/img/logo.jpg";
+import { getAllClientesSinPaginacion } from "../../services/clientes.service";
+import ClienteModal from "../../components/common/ClienteModal";
+
+interface Cliente {
+  ClienteId: number;
+  ClienteRUC: string;
+  ClienteNombre: string;
+  ClienteApellido: string;
+  ClienteDireccion: string;
+  ClienteTelefono: string;
+  ClienteTipo: string;
+  UsuarioId: string;
+}
 
 export default function Sales() {
   const [carrito, setCarrito] = useState<
@@ -30,6 +42,7 @@ export default function Sales() {
       ProductoPrecioVenta: number;
       ProductoStock: number;
       ProductoImagen?: string;
+      ProductoPrecioVentaMayorista: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -44,14 +57,28 @@ export default function Sales() {
   const [cuentaCliente, setCuentaCliente] = useState(0);
   // const [voucher, setVoucher] = useState(0);
   const [printTicket, setPrintTicket] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [showClienteModal, setShowClienteModal] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] =
+    useState<Cliente | null>(null);
 
   const agregarProducto = (producto: {
     id: number;
     nombre: string;
     precio: number;
+    precioMayorista?: number;
     imagen: string;
     stock: number;
   }) => {
+    // Determinar el precio según el tipo de cliente
+    const tipo = clienteSeleccionado?.ClienteTipo || "MI";
+    const precioFinal =
+      tipo === "MA" && producto.precioMayorista !== undefined
+        ? producto.precioMayorista
+        : producto.precio;
+
+    const precioSeguro = precioFinal ?? 0;
+
     const existe = carrito.find((p) => p.id === producto.id);
     if (existe) {
       setCarrito(
@@ -60,7 +87,10 @@ export default function Sales() {
         )
       );
     } else {
-      setCarrito([...carrito, { ...producto, cantidad: 1 }]);
+      setCarrito([
+        ...carrito,
+        { ...producto, precio: precioSeguro, cantidad: 1 },
+      ]);
     }
   };
 
@@ -85,7 +115,44 @@ export default function Sales() {
         setProductos(data.data || []);
       })
       .finally(() => setLoading(false));
+    // Traer todos los clientes sin paginación
+    getAllClientesSinPaginacion()
+      .then((data) => {
+        setClientes(data.data || []);
+      })
+      .catch(() =>
+        setClientes([
+          {
+            ClienteId: 1,
+            ClienteRUC: "",
+            ClienteNombre: "SIN NOMBRE MINORISTA",
+            ClienteApellido: "",
+            ClienteDireccion: "",
+            ClienteTelefono: "",
+            ClienteTipo: "MI",
+            UsuarioId: "",
+          },
+        ])
+      );
   }, []);
+
+  useEffect(() => {
+    if (!clienteSeleccionado) return;
+    setCarrito((carritoActual) =>
+      carritoActual.map((item) => {
+        const productoOriginal = productos.find(
+          (p) => p.ProductoId === item.id
+        );
+        if (!productoOriginal) return item;
+        const tipo = clienteSeleccionado.ClienteTipo;
+        const nuevoPrecio =
+          tipo === "MA"
+            ? productoOriginal.ProductoPrecioVentaMayorista
+            : productoOriginal.ProductoPrecioVenta;
+        return { ...item, precio: nuevoPrecio ?? 0 };
+      })
+    );
+  }, [clienteSeleccionado, productos]);
 
   // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
   const cartItems = carrito.map((p) => ({
@@ -96,7 +163,6 @@ export default function Sales() {
     unidad: "U",
     totalPrice: p.precio * p.cantidad,
   }));
-  const selectedCustomer = { ClienteId: 1, ClienteTipo: "NORMAL" };
 
   function getSubtotal(items: Array<{ totalPrice: number }>): number {
     return items.reduce(
@@ -116,7 +182,7 @@ export default function Sales() {
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
     const SDTProductoItem = cartItems.map((producto) => ({
-      ClienteId: selectedCustomer.ClienteId,
+      ClienteId: clienteSeleccionado?.ClienteId,
       Producto: {
         ProductoId: producto.id,
         VentaProductoCantidad: producto.quantity,
@@ -139,14 +205,14 @@ export default function Sales() {
             },
             Ventafechastring: fechaFormateada,
             Almacenorigenid: 1,
-            Clientetipo: selectedCustomer.ClienteTipo,
+            Clientetipo: clienteSeleccionado?.ClienteTipo,
             Cajaid: 1,
             Usuarioid: "vendedor",
             Efectivo: efectivo,
             Total2: getSubtotal(cartItems),
             Ventatipo: "CO",
             Pagotipo: "E",
-            Clienteid: selectedCustomer.ClienteId,
+            Clienteid: clienteSeleccionado?.ClienteId,
             Efectivoreact: Number(efectivo) + Number(totalRest),
             Bancoreact:
               Number(banco) + Number(bancoDebito) + Number(bancoCredito),
@@ -436,46 +502,55 @@ export default function Sales() {
             </table>
           </div>
         </div>
-        {/* Pad numérico y botón pagar */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 8,
-            boxShadow: "0 2px 8px #0001",
-            padding: 16,
-          }}
-        >
-          <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 16 }}
-          >
-            <ActionButton
-              label="Pagar"
-              onClick={() => setShowModal(true)}
-              className="text-white rounded-lg flex-shrink-0"
-            />
-            <div style={{ marginLeft: 24, fontSize: 24 }}>
-              Total: <b>Gs. {total.toLocaleString()}</b>
-            </div>
+        {/* Pad numérico y botón pagar - NUEVO DISEÑO TAILWIND */}
+        <div className="bg-white rounded-xl shadow p-4">
+          {/* Total */}
+          <div className="flex justify-between items-center mb-3">
+            <span className="font-bold text-lg">Total</span>
+            <span className="text-blue-500 font-semibold text-lg">
+              Gs. {total.toLocaleString()}
+            </span>
           </div>
-          {/* Pad numérico simple */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 60px)",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
+          {/* Grid de botones */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {/* Botón Pagar grande */}
+            <button
+              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition"
+              style={{ minHeight: 200 }}
+              onClick={() => setShowModal(true)}
+            >
+              Pagar
+            </button>
+            {/* Números y símbolos */}
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
-              <button key={n} style={{ height: 48, fontSize: 20 }}>
+              <button
+                key={n}
+                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition"
+                style={{ minWidth: 60 }}
+              >
                 {n}
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ flex: 1 }}>Cant.</button>
-            <button style={{ flex: 1 }}>% de desc.</button>
-            <button style={{ flex: 1 }}>Borrar</button>
+          {/* Recuadro inferior para el nombre del cliente */}
+          <div className="mt-2">
+            <button
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-blue-100 transition cursor-pointer"
+              onClick={() => setShowClienteModal(true)}
+            >
+              {clienteSeleccionado?.ClienteNombre ||
+                clientes[0]?.ClienteNombre ||
+                "SIN NOMBRE MINORISTA"}
+            </button>
+            <ClienteModal
+              show={showClienteModal}
+              onClose={() => setShowClienteModal(false)}
+              clientes={clientes}
+              onSelect={(cliente: Cliente) => {
+                setClienteSeleccionado(cliente);
+                setShowClienteModal(false);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -540,6 +615,8 @@ export default function Sales() {
                     // id={p.ProductoId}
                     nombre={p.ProductoNombre}
                     precio={p.ProductoPrecioVenta}
+                    precioMayorista={p.ProductoPrecioVentaMayorista}
+                    clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
                     imagen={
                       p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
@@ -551,6 +628,7 @@ export default function Sales() {
                         id: p.ProductoId,
                         nombre: p.ProductoNombre,
                         precio: p.ProductoPrecioVenta,
+                        precioMayorista: p.ProductoPrecioVentaMayorista,
                         imagen: p.ProductoImagen
                           ? `data:image/jpeg;base64,${p.ProductoImagen}`
                           : logo, //"https://via.placeholder.com/80x120?text=Sin+Imagen",

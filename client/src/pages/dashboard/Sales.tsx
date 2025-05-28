@@ -202,7 +202,7 @@ export default function Sales() {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "PosViteAlonso" },
+            _attributes: { xmlns: "DecorparPintureria" },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },

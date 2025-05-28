@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import ActionButton from "../../components/common/Button/ActionButton";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
@@ -9,6 +9,7 @@ import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { js2xml } from "xml-js";
+import logo from "../../assets/img/logo.jpg";
 
 export default function Sales() {
   const [carrito, setCarrito] = useState<
@@ -542,7 +543,7 @@ export default function Sales() {
                     imagen={
                       p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : "https://via.placeholder.com/80x120?text=Sin+Imagen"
+                        : logo //"https://via.placeholder.com/80x120?text=Sin+Imagen"
                     }
                     stock={p.ProductoStock}
                     onAdd={() =>
@@ -552,7 +553,7 @@ export default function Sales() {
                         precio: p.ProductoPrecioVenta,
                         imagen: p.ProductoImagen
                           ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : "https://via.placeholder.com/80x120?text=Sin+Imagen",
+                          : logo, //"https://via.placeholder.com/80x120?text=Sin+Imagen",
                         stock: p.ProductoStock,
                       })
                     }

@@ -19,6 +19,7 @@ interface Usuario {
   UsuarioCorreo: string;
   UsuarioIsAdmin: "S" | "N";
   UsuarioEstado: "A" | "I";
+  LocalId: number;
   [key: string]: unknown;
 }
 

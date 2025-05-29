@@ -164,6 +164,7 @@ exports.createUsuario = async (req, res) => {
       "UsuarioContrasena",
       "UsuarioIsAdmin",
       "UsuarioEstado",
+      "LocalId",
     ];
 
     for (const campo of camposRequeridos) {
@@ -210,6 +211,14 @@ exports.createUsuario = async (req, res) => {
       });
     }
 
+    // 5. Validación de LocalId (debe ser número)
+    if (isNaN(req.body.LocalId)) {
+      return res.status(400).json({
+        success: false,
+        message: "LocalId debe ser un número",
+      });
+    }
+
     // 6. Crear el nuevo usuario
     const nuevoUsuario = await Usuario.create({
       UsuarioId: req.body.UsuarioId,
@@ -219,6 +228,7 @@ exports.createUsuario = async (req, res) => {
       UsuarioContrasena: req.body.UsuarioContrasena,
       UsuarioIsAdmin: req.body.UsuarioIsAdmin,
       UsuarioEstado: req.body.UsuarioEstado,
+      LocalId: req.body.LocalId,
     });
 
     // 7. Retornar respuesta exitosa (sin incluir la contraseña)

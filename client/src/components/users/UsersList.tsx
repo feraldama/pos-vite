@@ -12,6 +12,7 @@ interface Usuario {
   UsuarioCorreo: string;
   UsuarioIsAdmin: "S" | "N";
   UsuarioEstado: "A" | "I";
+  LocalId: number;
   [key: string]: unknown;
 }
 
@@ -69,6 +70,7 @@ export default function UsuariosList({
     UsuarioCorreo: "",
     UsuarioIsAdmin: "N" as "S" | "N",
     UsuarioEstado: "A" as "A" | "I",
+    LocalId: 1,
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -84,6 +86,7 @@ export default function UsuariosList({
         UsuarioCorreo: currentUser.UsuarioCorreo,
         UsuarioIsAdmin: currentUser.UsuarioIsAdmin,
         UsuarioEstado: currentUser.UsuarioEstado,
+        LocalId: currentUser.LocalId,
       });
       // setEditingPassword(false); // Resetear estado de edición de contraseña
     } else {
@@ -97,6 +100,7 @@ export default function UsuariosList({
         UsuarioCorreo: "",
         UsuarioIsAdmin: "N",
         UsuarioEstado: "A",
+        LocalId: 1,
       });
     }
   }, [currentUser, setEditingPassword]);
@@ -160,6 +164,10 @@ export default function UsuariosList({
       key: "UsuarioEstado",
       label: "Estado",
       status: true,
+    },
+    {
+      key: "LocalId",
+      label: "Local",
     },
   ];
 
@@ -316,6 +324,23 @@ export default function UsuariosList({
                       value={formData.UsuarioCorreo}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="LocalId"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Local ID
+                    </label>
+                    <input
+                      type="number"
+                      name="LocalId"
+                      id="LocalId"
+                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                      value={formData.LocalId}
+                      onChange={handleInputChange}
+                      required
                     />
                   </div>
 

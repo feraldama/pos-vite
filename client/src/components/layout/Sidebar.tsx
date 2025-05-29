@@ -65,6 +65,7 @@ const navigation: NavigationItem[] = [
     icon: <KeyIcon className="h-7 w-6" />,
     children: [
       { name: "Usuarios", href: "/users" },
+      { name: "Locales", href: "/locales" },
       { name: "Roles", href: "/team/roles" },
       { name: "Estructura", href: "/team/structure" },
     ],

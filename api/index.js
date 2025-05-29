@@ -10,6 +10,7 @@ const tipoGastoRoutes = require("./routes/tipogasto.routes");
 const clienteRoutes = require("./routes/cliente.routes");
 const tipogastoGrupoRoutes = require("./routes/tipogastogrupo.routes");
 const productoRoutes = require("./routes/producto.routes");
+const localRoutes = require("./routes/local.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/tipogastos", tipoGastoRoutes);
 app.use("/api/clientes", clienteRoutes);
 app.use("/api/tipogastogrupo", tipogastoGrupoRoutes);
 app.use("/api/productos", productoRoutes);
+app.use("/api/locales", localRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

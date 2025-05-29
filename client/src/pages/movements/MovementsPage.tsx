@@ -23,9 +23,6 @@ interface Movimiento {
   CajaDescripcion: string;
   TipoGastoDescripcion: string;
   TipoGastoGrupoDescripcion: string;
-  RegistroDiarioCajaMTCN: string;
-  RegistroDiarioCajaCargoEnvio: number;
-  RegistroDiarioCajaCambio: number;
   [key: string]: unknown;
 }
 

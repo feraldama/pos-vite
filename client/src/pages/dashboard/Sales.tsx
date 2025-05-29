@@ -13,6 +13,9 @@ import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
+import { getLocalById } from "../../services/locales.service";
 
 interface Cliente {
   ClienteId: number;
@@ -23,6 +26,15 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
+}
+
+interface Caja {
+  id: string | number;
+  CajaId: string | number;
+  CajaDescripcion: string;
+  CajaMonto: number;
+  CajaGastoCantidad: number;
+  [key: string]: unknown;
 }
 
 export default function Sales() {
@@ -50,6 +62,7 @@ export default function Sales() {
   const [loading, setLoading] = useState(false);
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
+  console.log("log: 🚀 user:", user);
   const [showModal, setShowModal] = useState(false);
   const [totalRest, setTotalRest] = useState(0);
   const [efectivo, setEfectivo] = useState(0);
@@ -63,6 +76,8 @@ export default function Sales() {
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>(null);
+  const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
+  const [localNombre, setLocalNombre] = useState("");
 
   const agregarProducto = (producto: {
     id: number;
@@ -207,10 +222,10 @@ export default function Sales() {
               SDTProductoItem: SDTProductoItem,
             },
             Ventafechastring: fechaFormateada,
-            Almacenorigenid: 1,
+            Almacenorigenid: user?.LocalId,
             Clientetipo: clienteSeleccionado?.ClienteTipo,
-            Cajaid: 1,
-            Usuarioid: "vendedor",
+            Cajaid: cajaAperturada?.CajaId,
+            Usuarioid: user?.id,
             Efectivo: efectivo,
             Total2: getSubtotal(cartItems),
             Ventatipo: "CO",
@@ -383,6 +398,36 @@ export default function Sales() {
     // Guardar el PDF
     doc.save("ticket_venta.pdf");
   };
+
+  useEffect(() => {
+    const fetchCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId) {
+          const caja = await getCajaById(estado.cajaId);
+          setCajaAperturada(caja);
+        } else {
+          setCajaAperturada(null);
+        }
+      } catch {
+        setCajaAperturada(null);
+      }
+    };
+    fetchCaja();
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.LocalId) {
+      getLocalById(user.LocalId)
+        .then((data) => {
+          setLocalNombre(data.LocalNombre || "");
+        })
+        .catch(() => setLocalNombre(""));
+    } else {
+      setLocalNombre("");
+    }
+  }, [user?.LocalId]);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
@@ -683,6 +728,27 @@ export default function Sales() {
               <span style={{ color: "#888", fontWeight: 400, fontSize: 14 }}>
                 ({user.id})
               </span>
+              {/* {user.LocalNombre && (
+                <span
+                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
+                >
+                  | Local: {user.LocalNombre}
+                </span>
+              )} */}
+              {localNombre && (
+                <span
+                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
+                >
+                  | Local: {localNombre}
+                </span>
+              )}
+              {cajaAperturada && (
+                <span
+                  style={{ color: "#2563eb", fontWeight: 500, marginLeft: 8 }}
+                >
+                  | Caja: {cajaAperturada.CajaDescripcion}
+                </span>
+              )}
             </div>
           )}
         </div>

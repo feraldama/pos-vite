@@ -128,6 +128,7 @@ exports.login = async (req, res) => {
       email: usuario.UsuarioCorreo,
       isAdmin: usuario.UsuarioIsAdmin,
       estado: usuario.UsuarioEstado,
+      LocalId: usuario.LocalId,
     };
 
     // Generar token
@@ -144,6 +145,7 @@ exports.login = async (req, res) => {
         nombre: usuario.UsuarioNombre,
         isAdmin: usuario.UsuarioIsAdmin,
         estado: usuario.UsuarioEstado,
+        LocalId: usuario.LocalId,
       },
     });
   } catch (error) {

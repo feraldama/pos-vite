@@ -29,6 +29,7 @@ export default function AperturaCierreCajaPage() {
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [cajaDisabled, setCajaDisabled] = useState(false);
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -52,14 +53,17 @@ export default function AperturaCierreCajaPage() {
       if (!user) return;
       try {
         const data = await getEstadoAperturaPorUsuario(user.id);
-        // Si apertura > cierre, forzar cierre y deshabilitar el select
+        // Si apertura > cierre, forzar cierre y deshabilitar el select de tipo y de caja
         if (data.aperturaId > data.cierreId) {
           setTipo("1"); // Cierre
           setTipoDisabled(true);
+          setCajaDisabled(true); // Solo puede cerrar la caja que tiene abierta
           if (data.cajaId) setCajaId(data.cajaId);
         } else {
+          // No tiene ninguna caja abierta, forzar apertura y deshabilitar solo el select de tipo
           setTipo("0");
-          setTipoDisabled(false);
+          setTipoDisabled(true);
+          setCajaDisabled(false); // Puede elegir la caja que desee
         }
       } catch {
         // Si hay error, no forzar nada
@@ -160,12 +164,12 @@ export default function AperturaCierreCajaPage() {
             </label>
             <select
               className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
-                tipoDisabled ? "bg-gray-200 text-gray-500" : ""
+                cajaDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={cajaId}
               onChange={(e) => setCajaId(e.target.value)}
               required
-              disabled={tipoDisabled}
+              disabled={cajaDisabled}
             >
               {cajas.map((caja) => (
                 <option key={caja.CajaId} value={caja.CajaId}>

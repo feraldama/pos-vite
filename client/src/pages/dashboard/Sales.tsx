@@ -16,6 +16,8 @@ import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
+import { useNavigate } from "react-router-dom";
+import ActionButton from "../../components/common/Button/ActionButton";
 
 interface Cliente {
   ClienteId: number;
@@ -86,6 +88,7 @@ export default function Sales() {
   useState<Cliente | null>(null);
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
+  const navigate = useNavigate();
 
   const agregarProducto = (producto: {
     id: number;
@@ -722,6 +725,7 @@ export default function Sales() {
             onSearch={setBusqueda}
             onSearchSubmit={() => {}}
             placeholder="Buscar productos"
+            hideButton={true}
           />
           {user && (
             <div
@@ -730,33 +734,32 @@ export default function Sales() {
                 fontWeight: 600,
                 color: "#222",
                 fontSize: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {user.nombre}{" "}
-              <span style={{ color: "#888", fontWeight: 400, fontSize: 14 }}>
-                ({user.id})
-              </span>
-              {/* {user.LocalNombre && (
-                <span
-                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
-                >
-                  | Local: {user.LocalNombre}
+              <span>
+                {user.nombre + " "}
+                <span style={{ color: "#888", fontWeight: 400 }}>
+                  ({user.id})
                 </span>
-              )} */}
+              </span>
               {localNombre && (
-                <span
-                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
-                >
+                <span style={{ color: "#e53935", fontWeight: 500 }}>
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span
-                  style={{ color: "#2563eb", fontWeight: 500, marginLeft: 8 }}
-                >
+                <span style={{ color: "#2563eb", fontWeight: 500 }}>
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}
+              <ActionButton
+                label="Apertura/Cierre"
+                onClick={() => navigate("/apertura-cierre-caja")}
+                className="bg-blue-500 hover:bg-blue-700 text-white"
+              />
             </div>
           )}
         </div>

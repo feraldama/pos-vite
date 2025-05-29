@@ -1,20 +1,19 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  getCajas,
-  deleteCaja,
-  searchCajas,
-  createCaja,
-  updateCaja,
-} from "../../services/cajas.service";
-import CajasList from "../../components/cajas/CajasList";
+  getAlmacenes,
+  deleteAlmacen,
+  searchAlmacenes,
+  createAlmacen,
+  updateAlmacen,
+} from "../../services/almacenes.service";
+import AlmacenesList from "../../components/almacenes/AlmacenesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 
-interface Caja {
+interface Almacen {
   id: string | number;
-  CajaId: string | number;
-  CajaDescripcion: string;
-  CajaMonto: number;
+  AlmacenId: string | number;
+  AlmacenNombre: string;
   [key: string]: unknown;
 }
 
@@ -24,28 +23,28 @@ interface Pagination {
   [key: string]: unknown;
 }
 
-export default function CajasPage() {
-  const [cajasData, setCajasData] = useState<{
-    cajas: Caja[];
+export default function AlmacenesPage() {
+  const [almacenesData, setAlmacenesData] = useState<{
+    almacenes: Almacen[];
     pagination: Pagination;
-  }>({ cajas: [], pagination: { totalItems: 0, totalPages: 1 } });
+  }>({ almacenes: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
+  const [currentAlmacen, setCurrentAlmacen] = useState<Almacen | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const fetchCajas = useCallback(async () => {
+  const fetchAlmacenes = useCallback(async () => {
     try {
       setLoading(true);
       let data;
       if (appliedSearchTerm) {
-        data = await searchCajas(
+        data = await searchAlmacenes(
           appliedSearchTerm,
           currentPage,
           itemsPerPage,
@@ -53,10 +52,15 @@ export default function CajasPage() {
           sortOrder
         );
       } else {
-        data = await getCajas(currentPage, itemsPerPage, sortKey, sortOrder);
+        data = await getAlmacenes(
+          currentPage,
+          itemsPerPage,
+          sortKey,
+          sortOrder
+        );
       }
-      setCajasData({
-        cajas: data.data,
+      setAlmacenesData({
+        almacenes: data.data,
         pagination: data.pagination,
       });
     } catch (err) {
@@ -71,8 +75,8 @@ export default function CajasPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchCajas();
-  }, [fetchCajas]);
+    fetchAlmacenes();
+  }, [fetchAlmacenes]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -102,18 +106,20 @@ export default function CajasPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteCaja(id);
+          await deleteAlmacen(id);
           Swal.fire({
             icon: "success",
-            title: "Caja eliminada exitosamente",
+            title: "Almacén eliminado exitosamente",
           });
-          setCajasData((prev) => ({
+          setAlmacenesData((prev) => ({
             ...prev,
-            cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
+            almacenes: prev.almacenes.filter(
+              (almacen) => almacen.AlmacenId !== id
+            ),
           }));
         } catch (error: unknown) {
           const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar la caja";
+          const msg = err?.message || "No se pudo eliminar el almacén";
           Swal.fire({
             icon: "warning",
             title: "No permitido",
@@ -125,24 +131,24 @@ export default function CajasPage() {
   };
 
   const handleCreate = () => {
-    setCurrentCaja(null);
+    setCurrentAlmacen(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (caja: Caja) => {
-    setCurrentCaja(caja);
+  const handleEdit = (almacen: Almacen) => {
+    setCurrentAlmacen(almacen);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (cajaData: Caja) => {
+  const handleSubmit = async (almacenData: Almacen) => {
     let mensaje = "";
     try {
-      if (currentCaja) {
-        await updateCaja(currentCaja.CajaId, cajaData);
-        mensaje = "Caja actualizada exitosamente";
+      if (currentAlmacen) {
+        await updateAlmacen(currentAlmacen.AlmacenId, almacenData);
+        mensaje = "Almacén actualizado exitosamente";
       } else {
-        const response = await createCaja(cajaData);
-        mensaje = response.message || "Caja creada exitosamente";
+        const response = await createAlmacen(almacenData);
+        mensaje = response.message || "Almacén creado exitosamente";
       }
       setIsModalOpen(false);
       Swal.fire({
@@ -152,7 +158,7 @@ export default function CajasPage() {
         showConfirmButton: false,
         timer: 2000,
       });
-      fetchCajas();
+      fetchAlmacenes();
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -171,26 +177,31 @@ export default function CajasPage() {
     setCurrentPage(1);
   };
 
-  if (loading) return <div>Cargando cajas...</div>;
+  if (loading) return <div>Cargando almacenes...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Cajas</h1>
-      <CajasList
-        cajas={cajasData.cajas.map((c) => ({ ...c, id: c.CajaId }))}
-        onDelete={(caja) => handleDelete(caja.CajaId as string)}
+      <h1 className="text-2xl font-medium mb-3">Gestión de Almacenes</h1>
+      <AlmacenesList
+        almacenes={almacenesData.almacenes.map((a) => ({
+          ...a,
+          id: a.AlmacenId,
+        }))}
+        onDelete={(almacen) => handleDelete(almacen.AlmacenId as string)}
         onEdit={handleEdit}
         onCreate={handleCreate}
-        pagination={cajasData.pagination}
+        pagination={almacenesData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}
         onSearchSubmit={applySearch}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
-        currentCaja={
-          currentCaja ? { ...currentCaja, id: currentCaja.CajaId } : null
+        currentAlmacen={
+          currentAlmacen
+            ? { ...currentAlmacen, id: currentAlmacen.AlmacenId }
+            : null
         }
         onSubmit={handleSubmit}
         sortKey={sortKey}
@@ -203,7 +214,7 @@ export default function CajasPage() {
       />
       <Pagination
         currentPage={currentPage}
-        totalPages={cajasData.pagination.totalPages}
+        totalPages={almacenesData.pagination.totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}

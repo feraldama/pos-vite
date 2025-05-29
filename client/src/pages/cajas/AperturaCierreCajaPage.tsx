@@ -8,13 +8,13 @@ import {
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
+import { useNavigate } from "react-router-dom";
 
 interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
-  CajaGastoCantidad: number;
 }
 
 export default function AperturaCierreCajaPage() {
@@ -28,6 +28,7 @@ export default function AperturaCierreCajaPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -90,7 +91,21 @@ export default function AperturaCierreCajaPage() {
         CajaId: cajaId,
         Monto: monto,
       });
-      setSuccess(result.message || "Operación realizada correctamente");
+
+      if (tipo === "0") {
+        // Si es apertura, mostrar SweetAlert y redirigir al confirmar
+        await Swal.fire({
+          icon: "success",
+          title: "Apertura exitosa",
+          text: result.message || "La caja se aperturó correctamente",
+          confirmButtonText: "Ir a ventas",
+          confirmButtonColor: "#2563eb",
+        });
+        navigate("/ventas");
+      } else {
+        // Si es cierre, solo mostrar mensaje de éxito normal
+        setSuccess(result.message || "Operación realizada correctamente");
+      }
     } catch (err) {
       setError(
         (err as { message?: string })?.message || "Error en la operación"

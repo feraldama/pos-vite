@@ -21,12 +21,8 @@ const Caja = {
 
   create: (cajaData) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO Caja (CajaDescripcion, CajaMonto, CajaGastoCantidad) VALUES (?, ?, ?)`;
-      const values = [
-        cajaData.CajaDescripcion,
-        cajaData.CajaMonto,
-        cajaData.CajaGastoCantidad,
-      ];
+      const query = `INSERT INTO Caja (CajaDescripcion, CajaMonto) VALUES (?, ?)`;
+      const values = [cajaData.CajaDescripcion, cajaData.CajaMonto];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
         // Obtener la caja recién creada
@@ -39,13 +35,8 @@ const Caja = {
 
   update: (id, cajaData) => {
     return new Promise((resolve, reject) => {
-      const query = `UPDATE Caja SET CajaDescripcion = ?, CajaMonto = ?, CajaGastoCantidad = ? WHERE CajaId = ?`;
-      const values = [
-        cajaData.CajaDescripcion,
-        cajaData.CajaMonto,
-        cajaData.CajaGastoCantidad,
-        id,
-      ];
+      const query = `UPDATE Caja SET CajaDescripcion = ?, CajaMonto = ? WHERE CajaId = ?`;
+      const values = [cajaData.CajaDescripcion, cajaData.CajaMonto, id];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
         if (result.affectedRows === 0) return resolve(null);
@@ -67,12 +58,7 @@ const Caja = {
 
   getAllPaginated: (limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "CajaId",
-        "CajaDescripcion",
-        "CajaMonto",
-        "CajaGastoCantidad",
-      ];
+      const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
       const order = allowedSortOrders.includes(sortOrder.toUpperCase())
@@ -100,12 +86,7 @@ const Caja = {
 
   searchCajas: (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "CajaId",
-        "CajaDescripcion",
-        "CajaMonto",
-        "CajaGastoCantidad",
-      ];
+      const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
       const order = allowedSortOrders.includes(sortOrder.toUpperCase())
@@ -116,7 +97,6 @@ const Caja = {
         SELECT * FROM Caja
         WHERE CajaDescripcion LIKE ?
         OR CAST(CajaMonto AS CHAR) LIKE ?
-        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?
         ORDER BY ${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -132,7 +112,6 @@ const Caja = {
             SELECT COUNT(*) as total FROM Caja
             WHERE CajaDescripcion LIKE ?
             OR CAST(CajaMonto AS CHAR) LIKE ?
-            OR CAST(CajaGastoCantidad AS CHAR) LIKE ?
           `;
           db.query(
             countQuery,

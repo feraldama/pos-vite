@@ -13,6 +13,7 @@ import {
   PencilSquareIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -42,6 +43,11 @@ const navigation: NavigationItem[] = [
     name: "Apertura/Cierre de Caja",
     href: "/apertura-cierre-caja",
     icon: <BanknotesIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Almacenes",
+    href: "/almacenes",
+    icon: <ArchiveBoxIcon className="h-7 w-6" />,
   },
   {
     name: "Clientes",

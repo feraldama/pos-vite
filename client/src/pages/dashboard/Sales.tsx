@@ -33,7 +33,6 @@ interface Caja {
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
-  CajaGastoCantidad: number;
   [key: string]: unknown;
 }
 

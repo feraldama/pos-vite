@@ -74,7 +74,17 @@ export default function Sales() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] =
-    useState<Cliente | null>(null);
+    useState<Cliente | null>({
+      ClienteId: 1,
+      ClienteNombre: "Sin Nombre minorista",
+      ClienteRUC: "",
+      ClienteTelefono: "",
+      ClienteTipo: "MI",
+      UsuarioId: "",
+      ClienteApellido: "",
+      ClienteDireccion: "",
+    });
+  useState<Cliente | null>(null);
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
 

@@ -62,7 +62,6 @@ export default function Sales() {
   const [loading, setLoading] = useState(false);
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
-  console.log("log: 🚀 user:", user);
   const [showModal, setShowModal] = useState(false);
   const [totalRest, setTotalRest] = useState(0);
   const [efectivo, setEfectivo] = useState(0);

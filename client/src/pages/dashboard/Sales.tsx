@@ -226,7 +226,7 @@ export default function Sales() {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "DecorparPintureria" },
+            _attributes: { xmlns: "WinnersTemple" },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },
@@ -338,7 +338,7 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Decorpar", 0, 15);
+    doc.text("Winners", 0, 15);
     doc.text("PADEL", 0, 20);
     doc.text("Carmen de Peña, Itauguá", 0, 25);
     doc.text("Teléfono: +595 981 123456", 0, 30);

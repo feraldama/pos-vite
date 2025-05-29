@@ -70,7 +70,7 @@ export default function Sales() {
   const [bancoDebito, setBancoDebito] = useState(0);
   const [bancoCredito, setBancoCredito] = useState(0);
   const [cuentaCliente, setCuentaCliente] = useState(0);
-  // const [voucher, setVoucher] = useState(0);
+  const [voucher, setVoucher] = useState(0);
   const [printTicket, setPrintTicket] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -246,7 +246,7 @@ export default function Sales() {
             Bancoreact:
               Number(banco) + Number(bancoDebito) + Number(bancoCredito),
             Clientecuentareact: cuentaCliente,
-            // Voucherreact: voucher,
+            Voucherreact: voucher,
           },
         },
       },
@@ -310,7 +310,7 @@ export default function Sales() {
     setBancoDebito(0);
     setBancoCredito(0);
     setCuentaCliente(0);
-    // setVoucher(0);
+    setVoucher(0);
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
@@ -837,8 +837,8 @@ export default function Sales() {
         cuentaCliente={cuentaCliente}
         setCuentaCliente={setCuentaCliente}
         sendRequest={sendRequest}
-        // voucher={voucher}
-        // setVoucher={setVoucher}
+        voucher={voucher}
+        setVoucher={setVoucher}
       />
     </div>
   );

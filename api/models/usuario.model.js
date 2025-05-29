@@ -47,6 +47,7 @@ const Usuario = {
         "UsuarioIsAdmin",
         "UsuarioEstado",
         "LocalId",
+        "LocalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -56,25 +57,28 @@ const Usuario = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
-      db.query(
-        `SELECT * FROM usuario ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+      const query = `
+        SELECT u.*, l.LocalNombre
+        FROM usuario u
+        LEFT JOIN local l ON u.LocalId = l.LocalId
+        ORDER BY u.${sortField} ${order}
+        LIMIT ? OFFSET ?
+      `;
+      db.query(query, [limit, offset], (err, results) => {
+        if (err) return reject(err);
 
-          db.query(
-            "SELECT COUNT(*) as total FROM usuario",
-            (err, countResult) => {
-              if (err) return reject(err);
+        db.query(
+          "SELECT COUNT(*) as total FROM usuario",
+          (err, countResult) => {
+            if (err) return reject(err);
 
-              resolve({
-                usuarios: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
+            resolve({
+              usuarios: results,
+              total: countResult[0].total,
+            });
+          }
+        );
+      });
     });
   },
 
@@ -89,6 +93,7 @@ const Usuario = {
         "UsuarioIsAdmin",
         "UsuarioEstado",
         "LocalId",
+        "LocalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -99,31 +104,36 @@ const Usuario = {
         : "ASC";
 
       const searchQuery = `
-      SELECT * FROM usuario 
-      WHERE CONCAT(UsuarioNombre, ' ', UsuarioApellido) LIKE ? 
-      OR UsuarioCorreo LIKE ? 
-      OR UsuarioId LIKE ?
-      ORDER BY ${sortField} ${order}
-      LIMIT ? OFFSET ?
-    `;
+        SELECT u.*, l.LocalNombre
+        FROM usuario u
+        LEFT JOIN local l ON u.LocalId = l.LocalId
+        WHERE CONCAT(u.UsuarioNombre, ' ', u.UsuarioApellido) LIKE ?
+        OR u.UsuarioCorreo LIKE ?
+        OR u.UsuarioId LIKE ?
+        OR l.LocalNombre LIKE ?
+        ORDER BY u.${sortField} ${order}
+        LIMIT ? OFFSET ?
+      `;
       const searchValue = `%${term}%`;
 
       db.query(
         searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
+        [searchValue, searchValue, searchValue, searchValue, limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
           const countQuery = `
-          SELECT COUNT(*) as total FROM usuario 
-          WHERE CONCAT(UsuarioNombre, ' ', UsuarioApellido) LIKE ? 
-          OR UsuarioCorreo LIKE ? 
-          OR UsuarioId LIKE ?
-        `;
+            SELECT COUNT(*) as total FROM usuario u
+            LEFT JOIN local l ON u.LocalId = l.LocalId
+            WHERE CONCAT(u.UsuarioNombre, ' ', u.UsuarioApellido) LIKE ?
+            OR u.UsuarioCorreo LIKE ?
+            OR u.UsuarioId LIKE ?
+            OR l.LocalNombre LIKE ?
+          `;
 
           db.query(
             countQuery,
-            [searchValue, searchValue, searchValue],
+            [searchValue, searchValue, searchValue, searchValue],
             (err, countResult) => {
               if (err) return reject(err);
 

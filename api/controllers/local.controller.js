@@ -88,9 +88,9 @@ exports.createLocal = async (req, res) => {
     }
     const nuevoLocal = await Local.create({
       LocalNombre: req.body.LocalNombre,
-      LocalTelefono: req.body.LocalTelefono || null,
-      LocalCelular: req.body.LocalCelular || null,
-      LocalDireccion: req.body.LocalDireccion || null,
+      LocalTelefono: req.body.LocalTelefono || "",
+      LocalCelular: req.body.LocalCelular || "",
+      LocalDireccion: req.body.LocalDireccion || "",
     });
     res.status(201).json({
       success: true,

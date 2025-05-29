@@ -3,6 +3,7 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { getLocales } from "../../services/locales.service";
 
 interface Usuario {
   id: string | number;
@@ -13,6 +14,7 @@ interface Usuario {
   UsuarioIsAdmin: "S" | "N";
   UsuarioEstado: "A" | "I";
   LocalId: number;
+  LocalNombre?: string;
   [key: string]: unknown;
 }
 
@@ -73,6 +75,9 @@ export default function UsuariosList({
     LocalId: 1,
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [locales, setLocales] = useState<
+    { LocalId: number; LocalNombre: string }[]
+  >([]);
 
   // Inicializar formData cuando currentUser cambia
   useEffect(() => {
@@ -103,6 +108,9 @@ export default function UsuariosList({
         LocalId: 1,
       });
     }
+    getLocales(1, 1000).then((res) => {
+      setLocales(res.data || []);
+    });
   }, [currentUser, setEditingPassword]);
 
   // Manejar cambios en el formulario
@@ -166,8 +174,9 @@ export default function UsuariosList({
       status: true,
     },
     {
-      key: "LocalId",
+      key: "LocalNombre",
       label: "Local",
+      render: (item: Usuario) => item.LocalNombre || item.LocalId || "-",
     },
   ];
 
@@ -331,17 +340,23 @@ export default function UsuariosList({
                       htmlFor="LocalId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Local ID
+                      Local
                     </label>
-                    <input
-                      type="number"
+                    <select
                       name="LocalId"
                       id="LocalId"
-                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                       value={formData.LocalId}
                       onChange={handleInputChange}
+                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                       required
-                    />
+                    >
+                      <option value="">Seleccione un local</option>
+                      {locales.map((local) => (
+                        <option key={local.LocalId} value={local.LocalId}>
+                          {local.LocalNombre}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">

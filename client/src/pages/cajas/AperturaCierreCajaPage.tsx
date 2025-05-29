@@ -9,12 +9,24 @@ import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
 import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
 interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
+}
+
+interface RegistroDiarioCaja {
+  RegistroDiarioCajaId: number;
+  CajaId: number;
+  UsuarioId: string;
+  RegistroDiarioCajaFecha: string;
+  RegistroDiarioCajaMonto: number;
+  TipoGastoId: number;
+  TipoGastoGrupoId: number;
 }
 
 export default function AperturaCierreCajaPage() {
@@ -30,6 +42,8 @@ export default function AperturaCierreCajaPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [cajaDisabled, setCajaDisabled] = useState(false);
+  const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
+  const [descargarPDF, setDescargarPDF] = useState(false);
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -84,6 +98,124 @@ export default function AperturaCierreCajaPage() {
     }
   }, [error]);
 
+  // Obtener registros de la caja al cerrar
+  const fetchRegistrosCaja = async () => {
+    try {
+      // Traer todos los registros de la caja seleccionada (puedes filtrar por caja y usuario si lo deseas)
+      const data = await getRegistrosDiariosCaja(1, 1000, undefined, "asc");
+      setRegistrosCaja(
+        data.data.filter((r: RegistroDiarioCaja) => r.CajaId == cajaId)
+      );
+    } catch {
+      setRegistrosCaja([]);
+    }
+  };
+
+  // Función para generar el PDF
+  function generarResumenCierrePDF() {
+    if (!user || !cajaId) return;
+    const cajaDescripcion =
+      cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || "";
+    const fecha = new Date().toLocaleDateString();
+    const hora = new Date().toLocaleTimeString();
+    const registros = registrosCaja;
+    // --- Lógica de totales ---
+    let apertura = 0;
+    let cierre = 0;
+    let egresos = 0;
+    let ingresos = 0;
+    let ingresosPOS = 0;
+    let ingresosVoucher = 0;
+    let totalReg = 0;
+    let registroAperturaId = 0;
+    // Buscar apertura
+    for (const reg of registros) {
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2) {
+        apertura = reg.RegistroDiarioCajaMonto;
+        registroAperturaId = reg.RegistroDiarioCajaId;
+        ingresos += reg.RegistroDiarioCajaMonto;
+        break;
+      }
+    }
+    // Buscar cierre y sumar egresos/ingresos
+    for (const reg of registros) {
+      if (reg.RegistroDiarioCajaId > registroAperturaId) {
+        if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId === 2) {
+          cierre = reg.RegistroDiarioCajaMonto;
+          totalReg = cierre;
+          break;
+        } else {
+          if (reg.TipoGastoId === 1) {
+            egresos += reg.RegistroDiarioCajaMonto;
+          }
+          if (
+            reg.TipoGastoId === 2 &&
+            reg.TipoGastoGrupoId !== 4 &&
+            reg.TipoGastoGrupoId !== 5
+          ) {
+            ingresos += reg.RegistroDiarioCajaMonto;
+          }
+          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
+            ingresosPOS += reg.RegistroDiarioCajaMonto;
+          }
+          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
+            ingresosVoucher += reg.RegistroDiarioCajaMonto;
+          }
+        }
+      }
+    }
+    const diferencia = ingresos - egresos;
+    const sobranteFaltante = totalReg - diferencia;
+    let txtSobranteFaltante = "";
+    if (sobranteFaltante > 0) {
+      txtSobranteFaltante = `Sobrante de: ${sobranteFaltante.toLocaleString()}`;
+    } else if (sobranteFaltante < 0) {
+      txtSobranteFaltante = `Faltante de: ${Math.abs(
+        sobranteFaltante
+      ).toLocaleString()}`;
+    } else {
+      txtSobranteFaltante = `Sobrante/Faltante: 0`;
+    }
+    // --- Generar PDF ---
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [80, 200], // 80mm de ancho, 200mm de alto
+    });
+    doc.setFontSize(16);
+    doc.text("RESUMEN CIERRE CAJA", 40, 15, { align: "center" });
+    doc.setFontSize(11);
+    doc.text(`Fecha: ${fecha} - Hora: ${hora}`, 10, 30);
+    doc.text(`Usuario: ${user.nombre}`, 10, 38);
+    doc.text(`Caja: ${cajaDescripcion}`, 10, 46);
+    doc.line(10, 50, 200, 50);
+    let y = 58;
+    doc.text(`Apertura: ${apertura.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Cierre: ${cierre.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(`Egresos: ${egresos.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos: ${ingresos.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Diferencia: ${diferencia.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(`Ingresos POS: ${ingresosPOS.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Voucher: ${ingresosVoucher.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(txtSobranteFaltante, 10, y);
+    y += 12;
+    doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
+    doc.save(`ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`);
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -95,9 +227,7 @@ export default function AperturaCierreCajaPage() {
         CajaId: cajaId,
         Monto: monto,
       });
-
       if (tipo === "0") {
-        // Si es apertura, mostrar SweetAlert y redirigir al confirmar
         await Swal.fire({
           icon: "success",
           title: "Apertura exitosa",
@@ -107,8 +237,9 @@ export default function AperturaCierreCajaPage() {
         });
         navigate("/ventas");
       } else {
-        // Si es cierre, solo mostrar mensaje de éxito normal
         setSuccess(result.message || "Operación realizada correctamente");
+        await fetchRegistrosCaja();
+        setDescargarPDF(true);
       }
     } catch (err) {
       setError(
@@ -212,6 +343,14 @@ export default function AperturaCierreCajaPage() {
           </div>
         )}
       </form>
+      {success && tipo === "1" && descargarPDF && (
+        <div className="flex justify-center mt-4">
+          <ActionButton
+            label="Descargar Resumen PDF"
+            onClick={generarResumenCierrePDF}
+          />
+        </div>
+      )}
     </div>
   );
 }

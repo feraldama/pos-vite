@@ -268,39 +268,38 @@ export default function Sales() {
       if (printTicket) {
         generateTicketPDF();
       }
-      Swal.fire("SweetAlert2 is working!");
-      // let timerInterval: ReturnType<typeof setInterval>;
-      // Swal.fire({
-      //   title: "Venta realizada con éxito!",
-      //   html: "Nueva venta en <b></b> segundos.",
-      //   timer: 3000,
-      //   timerProgressBar: true,
-      //   width: "90%",
-      //   allowOutsideClick: false,
-      //   allowEscapeKey: false,
-      //   didOpen: () => {
-      //     Swal.showLoading();
-      //     const popup = Swal.getPopup();
-      //     if (popup) {
-      //       // Verificación de null
-      //       const timer = popup.querySelector("b");
-      //       if (timer) {
-      //         // Verificación adicional por si querySelector no encuentra el elemento
-      //         timerInterval = setInterval(() => {
-      //           const secondsLeft = Math.ceil(Swal?.getTimerLeft() / 1000);
-      //           if (timer) timer.textContent = `${secondsLeft}`;
-      //         }, 100);
-      //       }
-      //     }
-      //   },
-      //   willClose: () => {
-      //     clearInterval(timerInterval);
-      //   },
-      // }).then((result) => {
-      //   if (result.dismiss === Swal.DismissReason.timer) {
-      //     window.location.reload();
-      //   }
-      // });
+      // Swal.fire("SweetAlert2 is working!");
+      let timerInterval: ReturnType<typeof setInterval>;
+      Swal.fire({
+        title: "Venta realizada con éxito!",
+        html: "Nueva venta en <b></b> segundos.",
+        timer: 3000,
+        timerProgressBar: true,
+        width: "90%",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+          const popup = Swal.getPopup();
+          if (popup) {
+            const timer = popup.querySelector("b");
+            if (timer) {
+              timerInterval = setInterval(() => {
+                const timerLeft = Swal.getTimerLeft();
+                const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
+                timer.textContent = `${secondsLeft}`;
+              }, 100);
+            }
+          }
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
+        },
+      }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.timer) {
+          window.location.reload();
+        }
+      });
     } catch (error) {
       console.error(error);
     }

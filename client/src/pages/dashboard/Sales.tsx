@@ -243,10 +243,10 @@ export default function Sales() {
             Pagotipo: "E",
             Clienteid: clienteSeleccionado?.ClienteId,
             Efectivoreact: Number(efectivo) + Number(totalRest),
-            Bancoreact:
-              Number(banco) + Number(bancoDebito) + Number(bancoCredito),
+            Bancoreact: Number(bancoDebito) + Number(bancoCredito),
             Clientecuentareact: cuentaCliente,
             Voucherreact: voucher,
+            Transferreact: Number(banco),
           },
         },
       },

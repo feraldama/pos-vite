@@ -126,6 +126,7 @@ export default function AperturaCierreCajaPage() {
     let ingresos = 0;
     let ingresosPOS = 0;
     let ingresosVoucher = 0;
+    let ingresosTransfer = 0;
     let totalReg = 0;
     let registroAperturaId = 0;
     // Buscar apertura
@@ -151,7 +152,8 @@ export default function AperturaCierreCajaPage() {
           if (
             reg.TipoGastoId === 2 &&
             reg.TipoGastoGrupoId !== 4 &&
-            reg.TipoGastoGrupoId !== 5
+            reg.TipoGastoGrupoId !== 5 &&
+            reg.TipoGastoGrupoId !== 6
           ) {
             ingresos += reg.RegistroDiarioCajaMonto;
           }
@@ -160,6 +162,9 @@ export default function AperturaCierreCajaPage() {
           }
           if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
             ingresosVoucher += reg.RegistroDiarioCajaMonto;
+          }
+          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
+            ingresosTransfer += reg.RegistroDiarioCajaMonto;
           }
         }
       }
@@ -207,6 +212,8 @@ export default function AperturaCierreCajaPage() {
     doc.text(`Ingresos POS: ${ingresosPOS.toLocaleString()}`, 10, y);
     y += 8;
     doc.text(`Ingresos Voucher: ${ingresosVoucher.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Transfer: ${ingresosTransfer.toLocaleString()}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;

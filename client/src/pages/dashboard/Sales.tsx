@@ -13,6 +13,11 @@ import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
+import { getLocalById } from "../../services/locales.service";
+import { useNavigate } from "react-router-dom";
+import ActionButton from "../../components/common/Button/ActionButton";
 
 interface Cliente {
   ClienteId: number;
@@ -23,6 +28,14 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
+}
+
+interface Caja {
+  id: string | number;
+  CajaId: string | number;
+  CajaDescripcion: string;
+  CajaMonto: number;
+  [key: string]: unknown;
 }
 
 export default function Sales() {
@@ -57,12 +70,25 @@ export default function Sales() {
   const [bancoDebito, setBancoDebito] = useState(0);
   const [bancoCredito, setBancoCredito] = useState(0);
   const [cuentaCliente, setCuentaCliente] = useState(0);
-  // const [voucher, setVoucher] = useState(0);
+  const [voucher, setVoucher] = useState(0);
   const [printTicket, setPrintTicket] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] =
-    useState<Cliente | null>(null);
+    useState<Cliente | null>({
+      ClienteId: 1,
+      ClienteNombre: "Sin Nombre minorista",
+      ClienteRUC: "",
+      ClienteTelefono: "",
+      ClienteTipo: "MI",
+      UsuarioId: "",
+      ClienteApellido: "",
+      ClienteDireccion: "",
+    });
+  useState<Cliente | null>(null);
+  const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
+  const [localNombre, setLocalNombre] = useState("");
+  const navigate = useNavigate();
 
   const agregarProducto = (producto: {
     id: number;
@@ -202,25 +228,25 @@ export default function Sales() {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "PosViteAlonso" },
+            _attributes: { xmlns: "AlonsoBodega" },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },
             Ventafechastring: fechaFormateada,
-            Almacenorigenid: 1,
+            Almacenorigenid: user?.LocalId,
             Clientetipo: clienteSeleccionado?.ClienteTipo,
-            Cajaid: 1,
-            Usuarioid: "vendedor",
+            Cajaid: cajaAperturada?.CajaId,
+            Usuarioid: user?.id,
             Efectivo: efectivo,
             Total2: getSubtotal(cartItems),
             Ventatipo: "CO",
             Pagotipo: "E",
             Clienteid: clienteSeleccionado?.ClienteId,
             Efectivoreact: Number(efectivo) + Number(totalRest),
-            Bancoreact:
-              Number(banco) + Number(bancoDebito) + Number(bancoCredito),
+            Bancoreact: Number(bancoDebito) + Number(bancoCredito),
             Clientecuentareact: cuentaCliente,
-            // Voucherreact: voucher,
+            Voucherreact: voucher,
+            Transferreact: Number(banco),
           },
         },
       },
@@ -242,39 +268,38 @@ export default function Sales() {
       if (printTicket) {
         generateTicketPDF();
       }
-      Swal.fire("SweetAlert2 is working!");
-      // let timerInterval: ReturnType<typeof setInterval>;
-      // Swal.fire({
-      //   title: "Venta realizada con éxito!",
-      //   html: "Nueva venta en <b></b> segundos.",
-      //   timer: 3000,
-      //   timerProgressBar: true,
-      //   width: "90%",
-      //   allowOutsideClick: false,
-      //   allowEscapeKey: false,
-      //   didOpen: () => {
-      //     Swal.showLoading();
-      //     const popup = Swal.getPopup();
-      //     if (popup) {
-      //       // Verificación de null
-      //       const timer = popup.querySelector("b");
-      //       if (timer) {
-      //         // Verificación adicional por si querySelector no encuentra el elemento
-      //         timerInterval = setInterval(() => {
-      //           const secondsLeft = Math.ceil(Swal?.getTimerLeft() / 1000);
-      //           if (timer) timer.textContent = `${secondsLeft}`;
-      //         }, 100);
-      //       }
-      //     }
-      //   },
-      //   willClose: () => {
-      //     clearInterval(timerInterval);
-      //   },
-      // }).then((result) => {
-      //   if (result.dismiss === Swal.DismissReason.timer) {
-      //     window.location.reload();
-      //   }
-      // });
+      // Swal.fire("SweetAlert2 is working!");
+      let timerInterval: ReturnType<typeof setInterval>;
+      Swal.fire({
+        title: "Venta realizada con éxito!",
+        html: "Nueva venta en <b></b> segundos.",
+        timer: 3000,
+        timerProgressBar: true,
+        width: "90%",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+          const popup = Swal.getPopup();
+          if (popup) {
+            const timer = popup.querySelector("b");
+            if (timer) {
+              timerInterval = setInterval(() => {
+                const timerLeft = Swal.getTimerLeft();
+                const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
+                timer.textContent = `${secondsLeft}`;
+              }, 100);
+            }
+          }
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
+        },
+      }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.timer) {
+          window.location.reload();
+        }
+      });
     } catch (error) {
       console.error(error);
     }
@@ -284,7 +309,7 @@ export default function Sales() {
     setBancoDebito(0);
     setBancoCredito(0);
     setCuentaCliente(0);
-    // setVoucher(0);
+    setVoucher(0);
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
@@ -314,7 +339,7 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Decorpar", 0, 15);
+    doc.text("Winners", 0, 15);
     doc.text("PADEL", 0, 20);
     doc.text("Carmen de Peña, Itauguá", 0, 25);
     doc.text("Teléfono: +595 981 123456", 0, 30);
@@ -383,6 +408,50 @@ export default function Sales() {
     // Guardar el PDF
     doc.save("ticket_venta.pdf");
   };
+
+  useEffect(() => {
+    const fetchCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId) {
+          const caja = await getCajaById(estado.cajaId);
+          setCajaAperturada(caja);
+        } else {
+          setCajaAperturada(null);
+        }
+      } catch {
+        setCajaAperturada(null);
+      }
+    };
+    fetchCaja();
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.LocalId) {
+      getLocalById(user.LocalId)
+        .then((data) => {
+          setLocalNombre(data.LocalNombre || "");
+        })
+        .catch(() => setLocalNombre(""));
+    } else {
+      setLocalNombre("");
+    }
+  }, [user?.LocalId]);
+
+  useEffect(() => {
+    // Solo redirigir si ya se intentó cargar la caja y no hay caja aperturada
+    if (cajaAperturada === null && !loading) {
+      Swal.fire({
+        icon: "warning",
+        title: "Caja no aperturada",
+        text: "Debes aperturar una caja antes de realizar ventas.",
+        confirmButtonColor: "#2563eb",
+      }).then(() => {
+        navigate("/apertura-cierre-caja");
+      });
+    }
+  }, [cajaAperturada, loading, navigate]);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
@@ -669,6 +738,7 @@ export default function Sales() {
             onSearch={setBusqueda}
             onSearchSubmit={() => {}}
             placeholder="Buscar productos"
+            hideButton={true}
           />
           {user && (
             <div
@@ -677,12 +747,32 @@ export default function Sales() {
                 fontWeight: 600,
                 color: "#222",
                 fontSize: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {user.nombre}{" "}
-              <span style={{ color: "#888", fontWeight: 400, fontSize: 14 }}>
-                ({user.id})
+              <span>
+                {user.nombre + " "}
+                <span style={{ color: "#888", fontWeight: 400 }}>
+                  ({user.id})
+                </span>
               </span>
+              {localNombre && (
+                <span style={{ color: "#e53935", fontWeight: 500 }}>
+                  | Local: {localNombre}
+                </span>
+              )}
+              {cajaAperturada && (
+                <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                  | Caja: {cajaAperturada.CajaDescripcion}
+                </span>
+              )}
+              <ActionButton
+                label="Apertura/Cierre"
+                onClick={() => navigate("/apertura-cierre-caja")}
+                className="bg-blue-500 hover:bg-blue-700 text-white"
+              />
             </div>
           )}
         </div>
@@ -760,8 +850,8 @@ export default function Sales() {
         cuentaCliente={cuentaCliente}
         setCuentaCliente={setCuentaCliente}
         sendRequest={sendRequest}
-        // voucher={voucher}
-        // setVoucher={setVoucher}
+        voucher={voucher}
+        setVoucher={setVoucher}
       />
     </div>
   );

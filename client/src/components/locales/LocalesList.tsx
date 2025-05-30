@@ -4,11 +4,13 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
-interface Caja {
+interface Local {
   id: string | number;
-  CajaId: string | number;
-  CajaDescripcion: string;
-  CajaMonto: number;
+  LocalId: string | number;
+  LocalNombre: string;
+  LocalTelefono?: string;
+  LocalCelular?: string;
+  LocalDireccion?: string;
   [key: string]: unknown;
 }
 
@@ -16,10 +18,10 @@ interface Pagination {
   totalItems: number;
 }
 
-interface CajasListProps {
-  cajas: Caja[];
-  onDelete?: (item: Caja) => void;
-  onEdit?: (item: Caja) => void;
+interface LocalesListProps {
+  locales: Local[];
+  onDelete?: (item: Local) => void;
+  onEdit?: (item: Local) => void;
   onCreate?: () => void;
   pagination?: Pagination;
   onSearch: (value: string) => void;
@@ -28,15 +30,15 @@ interface CajasListProps {
   onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
   isModalOpen: boolean;
   onCloseModal: () => void;
-  currentCaja?: Caja | null;
-  onSubmit: (formData: Caja) => void;
+  currentLocal?: Local | null;
+  onSubmit: (formData: Local) => void;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
-export default function CajasList({
-  cajas,
+export default function LocalesList({
+  locales,
   onDelete,
   onEdit,
   onCreate,
@@ -47,36 +49,42 @@ export default function CajasList({
   onSearchSubmit,
   isModalOpen,
   onCloseModal,
-  currentCaja,
+  currentLocal,
   onSubmit,
   sortKey,
   sortOrder,
   onSort,
-}: CajasListProps) {
-  const [formData, setFormData] = useState({
+}: LocalesListProps) {
+  const [formData, setFormData] = useState<Local>({
     id: "",
-    CajaId: "",
-    CajaDescripcion: "",
-    CajaMonto: 0,
+    LocalId: "",
+    LocalNombre: "",
+    LocalTelefono: "",
+    LocalCelular: "",
+    LocalDireccion: "",
   });
 
   useEffect(() => {
-    if (currentCaja) {
+    if (currentLocal) {
       setFormData({
-        id: String(currentCaja.id ?? currentCaja.CajaId),
-        CajaId: String(currentCaja.CajaId),
-        CajaDescripcion: currentCaja.CajaDescripcion,
-        CajaMonto: currentCaja.CajaMonto,
+        id: String(currentLocal.id ?? currentLocal.LocalId),
+        LocalId: String(currentLocal.LocalId),
+        LocalNombre: currentLocal.LocalNombre,
+        LocalTelefono: currentLocal.LocalTelefono || "",
+        LocalCelular: currentLocal.LocalCelular || "",
+        LocalDireccion: currentLocal.LocalDireccion || "",
       });
     } else {
       setFormData({
         id: "",
-        CajaId: "",
-        CajaDescripcion: "",
-        CajaMonto: 0,
+        LocalId: "",
+        LocalNombre: "",
+        LocalTelefono: "",
+        LocalCelular: "",
+        LocalDireccion: "",
       });
     }
-  }, [currentCaja]);
+  }, [currentLocal]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -84,7 +92,7 @@ export default function CajasList({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "CajaMonto" ? Number(value) : value,
+      [name]: value,
     }));
   };
 
@@ -100,9 +108,11 @@ export default function CajasList({
   };
 
   const columns = [
-    { key: "CajaId", label: "ID" },
-    { key: "CajaDescripcion", label: "Descripción" },
-    { key: "CajaMonto", label: "Monto" },
+    { key: "LocalId", label: "ID" },
+    { key: "LocalNombre", label: "Nombre" },
+    { key: "LocalTelefono", label: "Teléfono" },
+    { key: "LocalCelular", label: "Celular" },
+    { key: "LocalDireccion", label: "Dirección" },
   ];
 
   return (
@@ -114,24 +124,28 @@ export default function CajasList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar cajas"
+            placeholder="Buscar locales"
           />
         </div>
         <div className="py-4">
-          <ActionButton label="Nueva Caja" onClick={onCreate} icon={PlusIcon} />
+          <ActionButton
+            label="Nuevo Local"
+            onClick={onCreate}
+            icon={PlusIcon}
+          />
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-gray-600">
-          Mostrando {cajas.length} de {pagination?.totalItems} cajas
+          Mostrando {locales.length} de {pagination?.totalItems} locales
         </div>
       </div>
-      <DataTable<Caja>
+      <DataTable<Local>
         columns={columns}
-        data={cajas}
+        data={locales}
         onEdit={onEdit}
         onDelete={onDelete}
-        emptyMessage="No se encontraron cajas"
+        emptyMessage="No se encontraron locales"
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSort={onSort}
@@ -149,9 +163,9 @@ export default function CajasList({
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
-                  {currentCaja
-                    ? `Editar caja: ${currentCaja.CajaId}`
-                    : "Crear nueva caja"}
+                  {currentLocal
+                    ? `Editar local: ${currentLocal.LocalId}`
+                    : "Crear nuevo local"}
                 </h3>
                 <button
                   type="button"
@@ -179,16 +193,16 @@ export default function CajasList({
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="CajaDescripcion"
+                      htmlFor="LocalNombre"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Descripción
+                      Nombre <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      name="CajaDescripcion"
-                      id="CajaDescripcion"
-                      value={formData.CajaDescripcion}
+                      name="LocalNombre"
+                      id="LocalNombre"
+                      value={formData.LocalNombre}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
@@ -196,26 +210,57 @@ export default function CajasList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="CajaMonto"
+                      htmlFor="LocalTelefono"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Monto
+                      Teléfono
                     </label>
                     <input
-                      type="number"
-                      name="CajaMonto"
-                      id="CajaMonto"
-                      value={formData.CajaMonto}
+                      type="text"
+                      name="LocalTelefono"
+                      id="LocalTelefono"
+                      value={formData.LocalTelefono}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="LocalCelular"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Celular
+                    </label>
+                    <input
+                      type="text"
+                      name="LocalCelular"
+                      id="LocalCelular"
+                      value={formData.LocalCelular}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-6">
+                    <label
+                      htmlFor="LocalDireccion"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      name="LocalDireccion"
+                      id="LocalDireccion"
+                      value={formData.LocalDireccion}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
                 </div>
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <ActionButton
-                  label={currentCaja ? "Actualizar" : "Crear"}
+                  label={currentLocal ? "Actualizar" : "Crear"}
                   type="submit"
                 />
                 <ActionButton

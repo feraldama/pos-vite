@@ -26,12 +26,13 @@ const RegistroDiarioCaja = {
   getAllPaginated: (
     limit,
     offset,
-    sortBy = "RegistroDiarioCajaFecha",
+    sortBy = "RegistroDiarioCajaId",
     sortOrder = "DESC"
   ) => {
     return new Promise((resolve, reject) => {
       // Sanitiza sortOrder y sortBy para evitar SQL Injection
       const allowedSortFields = [
+        "RegistroDiarioCajaId",
         "RegistroDiarioCajaFecha",
         "RegistroDiarioCajaMonto",
         "RegistroDiarioCajaDetalle",
@@ -210,15 +211,8 @@ const RegistroDiarioCaja = {
           TipoGastoGrupoId,
           RegistroDiarioCajaDetalle,
           RegistroDiarioCajaMonto,
-          UsuarioId,
-          RegistroDiarioCajaCambio,
-          RegistroDiarioCajaPendiente1,
-          RegistroDiarioCajaPendiente2,
-          RegistroDiarioCajaPendiente3,
-          RegistroDiarioCajaPendiente4,
-          RegistroDiarioCajaMTCN,
-          RegistroDiarioCajaCargoEnvio
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          UsuarioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
       const values = [
@@ -229,13 +223,6 @@ const RegistroDiarioCaja = {
         registroData.RegistroDiarioCajaDetalle,
         registroData.RegistroDiarioCajaMonto,
         registroData.UsuarioId,
-        registroData.RegistroDiarioCajaCambio || 0,
-        registroData.RegistroDiarioCajaPendiente1 || 0,
-        registroData.RegistroDiarioCajaPendiente2 || 0,
-        registroData.RegistroDiarioCajaPendiente3 || 0,
-        registroData.RegistroDiarioCajaPendiente4 || 0,
-        registroData.RegistroDiarioCajaMTCN || 0,
-        registroData.RegistroDiarioCajaCargoEnvio || 0,
       ];
 
       db.query(query, values, (err, result) => {
@@ -263,13 +250,6 @@ const RegistroDiarioCaja = {
         "RegistroDiarioCajaDetalle",
         "RegistroDiarioCajaMonto",
         "UsuarioId",
-        "RegistroDiarioCajaCambio",
-        "RegistroDiarioCajaPendiente1",
-        "RegistroDiarioCajaPendiente2",
-        "RegistroDiarioCajaPendiente3",
-        "RegistroDiarioCajaPendiente4",
-        "RegistroDiarioCajaMTCN",
-        "RegistroDiarioCajaCargoEnvio",
       ];
 
       camposActualizables.forEach((campo) => {

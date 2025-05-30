@@ -18,6 +18,8 @@ import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
 import Sales from "./pages/dashboard/Sales";
+import LocalesPage from "./pages/locales/LocalesPage";
+import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
 
 function App() {
   return (
@@ -48,6 +50,8 @@ function App() {
               element={<AperturaCierreCajaPage />}
             />
             <Route path="/ventas" element={<Sales />} />
+            <Route path="/locales" element={<LocalesPage />} />
+            <Route path="/almacenes" element={<AlmacenesPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

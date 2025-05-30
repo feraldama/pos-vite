@@ -7,6 +7,8 @@ interface User {
   id: string;
   nombre: string;
   email: string;
+  LocalId?: number;
+  LocalNombre?: string;
   // Agrega más campos si es necesario
 }
 

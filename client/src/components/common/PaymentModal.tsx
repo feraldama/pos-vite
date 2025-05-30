@@ -19,6 +19,8 @@ interface PaymentModalProps {
   sendRequest: () => Promise<void>;
   setPrintTicket: (v: boolean) => void;
   printTicket: boolean;
+  voucher: number;
+  setVoucher: (v: number) => void;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -40,10 +42,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   sendRequest,
   setPrintTicket,
   printTicket,
+  voucher,
+  setVoucher,
 }) => {
-  const [pagoTipo, setPagoTipoLocal] = useState<"E" | "B" | "D" | "CR" | "C">(
-    "E"
-  );
+  const [pagoTipo, setPagoTipoLocal] = useState<
+    "E" | "B" | "D" | "CR" | "C" | "V"
+  >("E");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -72,6 +76,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     let deb = bancoDebito;
     let cred = bancoCredito;
     let cuentaCli = cuentaCliente;
+    let vou = voucher;
     let totalResto = 0;
 
     const append = (val: number, label: string | number) => {
@@ -82,12 +87,24 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     if (pagoTipo === "E") {
       efe = append(efectivo, label);
       totalResto =
-        totalCost - efe - banco - bancoDebito - bancoCredito - cuentaCliente;
+        totalCost -
+        efe -
+        banco -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente -
+        vou;
       setEfectivo(efe);
     } else if (pagoTipo === "B") {
       ban = append(banco, label);
       totalResto =
-        totalCost - efectivo - ban - bancoDebito - bancoCredito - cuentaCliente;
+        totalCost -
+        efectivo -
+        ban -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente -
+        vou;
       setBanco(ban);
     } else if (pagoTipo === "D") {
       deb = append(bancoDebito, label);
@@ -97,7 +114,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         banco -
         bancoCredito -
         cuentaCliente -
-        deb * 1.03;
+        deb * 1.03 -
+        vou;
       setBancoDebito(deb);
     } else if (pagoTipo === "CR") {
       cred = append(bancoCredito, label);
@@ -107,13 +125,31 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         banco -
         bancoDebito -
         cuentaCliente -
-        cred * 1.05;
+        cred * 1.05 -
+        vou;
       setBancoCredito(cred);
     } else if (pagoTipo === "C") {
       cuentaCli = append(cuentaCliente, label);
       totalResto =
-        totalCost - efectivo - banco - bancoDebito - bancoCredito - cuentaCli;
+        totalCost -
+        efectivo -
+        banco -
+        bancoDebito -
+        bancoCredito -
+        cuentaCli -
+        vou;
       setCuentaCliente(cuentaCli);
+    } else if (pagoTipo === "V") {
+      vou = append(voucher, label);
+      totalResto =
+        totalCost -
+        efectivo -
+        banco -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente -
+        vou;
+      setVoucher(vou);
     }
     setTotalRest(totalResto);
   };
@@ -122,21 +158,43 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     let totalResto = 0;
     if (pagoTipo === "E") {
       totalResto =
-        totalCost - banco - bancoDebito - bancoCredito - cuentaCliente;
+        totalCost -
+        banco -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente -
+        voucher;
       setEfectivo(0);
     } else if (pagoTipo === "B") {
       totalResto =
-        totalCost - efectivo - bancoDebito - bancoCredito - cuentaCliente;
+        totalCost -
+        efectivo -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente -
+        voucher;
       setBanco(0);
     } else if (pagoTipo === "D") {
-      totalResto = totalCost - efectivo - banco - bancoCredito - cuentaCliente;
+      totalResto =
+        totalCost - efectivo - banco - bancoCredito - cuentaCliente - voucher;
       setBancoDebito(0);
     } else if (pagoTipo === "CR") {
-      totalResto = totalCost - efectivo - banco - bancoDebito - cuentaCliente;
+      totalResto =
+        totalCost - efectivo - banco - bancoDebito - cuentaCliente - voucher;
       setBancoCredito(0);
     } else if (pagoTipo === "C") {
-      totalResto = totalCost - efectivo - banco - bancoDebito - bancoCredito;
+      totalResto =
+        totalCost - efectivo - banco - bancoDebito - bancoCredito - voucher;
       setCuentaCliente(0);
+    } else if (pagoTipo === "V") {
+      totalResto =
+        totalCost -
+        efectivo -
+        banco -
+        bancoDebito -
+        bancoCredito -
+        cuentaCliente;
+      setVoucher(0);
     }
     setTotalRest(totalResto);
   };
@@ -286,7 +344,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     banco -
                     bancoDebito -
                     bancoCredito -
-                    cuentaCliente;
+                    cuentaCliente -
+                    voucher;
                   setTotalRest(totalResto);
                 }}
                 style={{
@@ -343,7 +402,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     newValue -
                     bancoDebito -
                     bancoCredito -
-                    cuentaCliente;
+                    cuentaCliente -
+                    voucher;
                   setTotalRest(totalResto);
                 }}
                 style={{
@@ -400,7 +460,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     banco -
                     bancoCredito -
                     cuentaCliente -
-                    newValue * 1.03;
+                    newValue * 1.03 -
+                    voucher;
                   setTotalRest(totalResto);
                 }}
                 style={{
@@ -457,7 +518,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     banco -
                     bancoDebito -
                     cuentaCliente -
-                    newValue * 1.05;
+                    newValue * 1.05 -
+                    voucher;
                   setTotalRest(totalResto);
                 }}
                 style={{
@@ -514,7 +576,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     banco -
                     bancoDebito -
                     bancoCredito -
-                    newValue;
+                    newValue -
+                    voucher;
                   setTotalRest(totalResto);
                 }}
                 style={{
@@ -528,6 +591,64 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   fontSize: 16,
                   textAlign: "right",
                   background: pagoTipo === "C" ? "#f0f6ff" : "#f9fafb",
+                  outline: "none",
+                }}
+              />
+            </div>
+            {/* Voucher */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
+              <label
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  color: "#444",
+                  textAlign: "right",
+                  marginRight: 8,
+                }}
+              >
+                Voucher:
+              </label>
+              <input
+                type="text"
+                value={new Intl.NumberFormat("es-ES").format(voucher)}
+                onFocus={(e) => {
+                  setPagoTipoLocal("V");
+                  if (voucher === 0) {
+                    setVoucher(totalRest);
+                    setTotalRest(0);
+                  }
+                  e.target.select();
+                }}
+                onChange={(e) => {
+                  const newValue = Number(e.target.value.replace(/\D/g, ""));
+                  setVoucher(newValue);
+                  const totalResto =
+                    totalCost -
+                    efectivo -
+                    banco -
+                    bancoDebito -
+                    bancoCredito -
+                    cuentaCliente -
+                    newValue;
+                  setTotalRest(totalResto);
+                }}
+                style={{
+                  width: 120,
+                  padding: "6px 10px",
+                  border:
+                    pagoTipo === "V"
+                      ? "2px solid #a5b4fc"
+                      : "1px solid #cbd5e1",
+                  borderRadius: 6,
+                  fontSize: 16,
+                  textAlign: "right",
+                  background: pagoTipo === "V" ? "#f0f6ff" : "#f9fafb",
                   outline: "none",
                 }}
               />

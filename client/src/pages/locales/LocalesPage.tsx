@@ -1,20 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  getCajas,
-  deleteCaja,
-  searchCajas,
-  createCaja,
-  updateCaja,
-} from "../../services/cajas.service";
-import CajasList from "../../components/cajas/CajasList";
+  getLocales,
+  deleteLocal,
+  searchLocales,
+  createLocal,
+  updateLocal,
+} from "../../services/locales.service";
+import LocalesList from "../../components/locales/LocalesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 
-interface Caja {
+interface Local {
   id: string | number;
-  CajaId: string | number;
-  CajaDescripcion: string;
-  CajaMonto: number;
+  LocalId: string | number;
+  LocalNombre: string;
+  LocalTelefono?: string;
+  LocalCelular?: string;
+  LocalDireccion?: string;
   [key: string]: unknown;
 }
 
@@ -24,28 +26,28 @@ interface Pagination {
   [key: string]: unknown;
 }
 
-export default function CajasPage() {
-  const [cajasData, setCajasData] = useState<{
-    cajas: Caja[];
+export default function LocalesPage() {
+  const [localesData, setLocalesData] = useState<{
+    locales: Local[];
     pagination: Pagination;
-  }>({ cajas: [], pagination: { totalItems: 0, totalPages: 1 } });
+  }>({ locales: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
+  const [currentLocal, setCurrentLocal] = useState<Local | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const fetchCajas = useCallback(async () => {
+  const fetchLocales = useCallback(async () => {
     try {
       setLoading(true);
       let data;
       if (appliedSearchTerm) {
-        data = await searchCajas(
+        data = await searchLocales(
           appliedSearchTerm,
           currentPage,
           itemsPerPage,
@@ -53,10 +55,10 @@ export default function CajasPage() {
           sortOrder
         );
       } else {
-        data = await getCajas(currentPage, itemsPerPage, sortKey, sortOrder);
+        data = await getLocales(currentPage, itemsPerPage, sortKey, sortOrder);
       }
-      setCajasData({
-        cajas: data.data,
+      setLocalesData({
+        locales: data.data,
         pagination: data.pagination,
       });
     } catch (err) {
@@ -71,8 +73,8 @@ export default function CajasPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchCajas();
-  }, [fetchCajas]);
+    fetchLocales();
+  }, [fetchLocales]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -102,18 +104,18 @@ export default function CajasPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteCaja(id);
+          await deleteLocal(id);
           Swal.fire({
             icon: "success",
-            title: "Caja eliminada exitosamente",
+            title: "Local eliminado exitosamente",
           });
-          setCajasData((prev) => ({
+          setLocalesData((prev) => ({
             ...prev,
-            cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
+            locales: prev.locales.filter((local) => local.LocalId !== id),
           }));
         } catch (error: unknown) {
           const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar la caja";
+          const msg = err?.message || "No se pudo eliminar el local";
           Swal.fire({
             icon: "warning",
             title: "No permitido",
@@ -125,24 +127,24 @@ export default function CajasPage() {
   };
 
   const handleCreate = () => {
-    setCurrentCaja(null);
+    setCurrentLocal(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (caja: Caja) => {
-    setCurrentCaja(caja);
+  const handleEdit = (local: Local) => {
+    setCurrentLocal(local);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (cajaData: Caja) => {
+  const handleSubmit = async (localData: Local) => {
     let mensaje = "";
     try {
-      if (currentCaja) {
-        await updateCaja(currentCaja.CajaId, cajaData);
-        mensaje = "Caja actualizada exitosamente";
+      if (currentLocal) {
+        await updateLocal(currentLocal.LocalId, localData);
+        mensaje = "Local actualizado exitosamente";
       } else {
-        const response = await createCaja(cajaData);
-        mensaje = response.message || "Caja creada exitosamente";
+        const response = await createLocal(localData);
+        mensaje = response.message || "Local creado exitosamente";
       }
       setIsModalOpen(false);
       Swal.fire({
@@ -152,13 +154,16 @@ export default function CajasPage() {
         showConfirmButton: false,
         timer: 2000,
       });
-      fetchCajas();
+      fetchLocales();
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
-      }
+      const msg =
+        (error as { message?: string })?.message ||
+        "Error desconocido al guardar local";
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: msg,
+      });
     }
   };
 
@@ -171,26 +176,26 @@ export default function CajasPage() {
     setCurrentPage(1);
   };
 
-  if (loading) return <div>Cargando cajas...</div>;
+  if (loading) return <div>Cargando locales...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Cajas</h1>
-      <CajasList
-        cajas={cajasData.cajas.map((c) => ({ ...c, id: c.CajaId }))}
-        onDelete={(caja) => handleDelete(caja.CajaId as string)}
+      <h1 className="text-2xl font-medium mb-3">Gestión de Locales</h1>
+      <LocalesList
+        locales={localesData.locales.map((l) => ({ ...l, id: l.LocalId }))}
+        onDelete={(local) => handleDelete(local.LocalId as string)}
         onEdit={handleEdit}
         onCreate={handleCreate}
-        pagination={cajasData.pagination}
+        pagination={localesData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}
         onSearchSubmit={applySearch}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
-        currentCaja={
-          currentCaja ? { ...currentCaja, id: currentCaja.CajaId } : null
+        currentLocal={
+          currentLocal ? { ...currentLocal, id: currentLocal.LocalId } : null
         }
         onSubmit={handleSubmit}
         sortKey={sortKey}
@@ -203,7 +208,7 @@ export default function CajasPage() {
       />
       <Pagination
         currentPage={currentPage}
-        totalPages={cajasData.pagination.totalPages}
+        totalPages={localesData.pagination.totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}

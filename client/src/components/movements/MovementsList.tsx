@@ -15,9 +15,6 @@ interface Movimiento {
   CajaDescripcion: string;
   TipoGastoDescripcion: string;
   TipoGastoGrupoDescripcion: string;
-  RegistroDiarioCajaMTCN: string;
-  RegistroDiarioCajaCargoEnvio: number;
-  RegistroDiarioCajaCambio: number;
   [key: string]: unknown;
 }
 
@@ -118,24 +115,9 @@ export default function MovementsList({
       label: "Descripción",
     },
     {
-      key: "RegistroDiarioCajaMTCN",
-      label: "MTCN",
-    },
-    {
-      key: "RegistroDiarioCajaCargoEnvio",
-      label: "Cargo Envío",
-      render: (item: Movimiento) =>
-        formatAmount(item.RegistroDiarioCajaCargoEnvio),
-    },
-    {
       key: "RegistroDiarioCajaMonto",
       label: "Monto",
       render: (item: Movimiento) => formatAmount(item.RegistroDiarioCajaMonto),
-    },
-    {
-      key: "RegistroDiarioCajaCambio",
-      label: "Cambio",
-      render: (item: Movimiento) => formatAmount(item.RegistroDiarioCajaCambio),
     },
     {
       key: "UsuarioId",

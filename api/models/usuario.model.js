@@ -171,7 +171,7 @@ const Usuario = {
         usuarioData.UsuarioId,
         usuarioData.UsuarioNombre,
         usuarioData.UsuarioApellido,
-        usuarioData.UsuarioCorreo,
+        usuarioData.UsuarioCorreo ?? "",
         usuarioData.UsuarioContrasena ? hashedPassword : hashedPassword,
         usuarioData.UsuarioIsAdmin,
         usuarioData.UsuarioEstado,
@@ -184,7 +184,7 @@ const Usuario = {
           UsuarioId: usuarioData.UsuarioId,
           UsuarioNombre: usuarioData.UsuarioNombre,
           UsuarioApellido: usuarioData.UsuarioApellido,
-          UsuarioCorreo: usuarioData.UsuarioCorreo,
+          UsuarioCorreo: usuarioData.UsuarioCorreo ?? "",
           UsuarioIsAdmin: usuarioData.UsuarioIsAdmin,
           UsuarioEstado: usuarioData.UsuarioEstado,
           LocalId: usuarioData.LocalId,
@@ -196,6 +196,10 @@ const Usuario = {
   update: (id, usuarioData) => {
     return new Promise(async (resolve, reject) => {
       try {
+        // Asegurar que UsuarioCorreo nunca sea null ni undefined
+        if (usuarioData.UsuarioCorreo == null) {
+          usuarioData.UsuarioCorreo = "";
+        }
         // Construir la consulta dinámicamente basada en los campos proporcionados
         let updateFields = [];
         let values = [];

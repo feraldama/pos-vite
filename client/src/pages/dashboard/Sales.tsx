@@ -16,6 +16,8 @@ import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
+import { useNavigate } from "react-router-dom";
+import ActionButton from "../../components/common/Button/ActionButton";
 
 interface Cliente {
   ClienteId: number;
@@ -33,7 +35,6 @@ interface Caja {
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
-  CajaGastoCantidad: number;
   [key: string]: unknown;
 }
 
@@ -69,7 +70,7 @@ export default function Sales() {
   const [bancoDebito, setBancoDebito] = useState(0);
   const [bancoCredito, setBancoCredito] = useState(0);
   const [cuentaCliente, setCuentaCliente] = useState(0);
-  // const [voucher, setVoucher] = useState(0);
+  const [voucher, setVoucher] = useState(0);
   const [printTicket, setPrintTicket] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -87,6 +88,7 @@ export default function Sales() {
   useState<Cliente | null>(null);
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
+  const navigate = useNavigate();
 
   const agregarProducto = (producto: {
     id: number;
@@ -241,10 +243,10 @@ export default function Sales() {
             Pagotipo: "E",
             Clienteid: clienteSeleccionado?.ClienteId,
             Efectivoreact: Number(efectivo) + Number(totalRest),
-            Bancoreact:
-              Number(banco) + Number(bancoDebito) + Number(bancoCredito),
+            Bancoreact: Number(bancoDebito) + Number(bancoCredito),
             Clientecuentareact: cuentaCliente,
-            // Voucherreact: voucher,
+            Voucherreact: voucher,
+            Transferreact: Number(banco),
           },
         },
       },
@@ -266,39 +268,38 @@ export default function Sales() {
       if (printTicket) {
         generateTicketPDF();
       }
-      Swal.fire("SweetAlert2 is working!");
-      // let timerInterval: ReturnType<typeof setInterval>;
-      // Swal.fire({
-      //   title: "Venta realizada con éxito!",
-      //   html: "Nueva venta en <b></b> segundos.",
-      //   timer: 3000,
-      //   timerProgressBar: true,
-      //   width: "90%",
-      //   allowOutsideClick: false,
-      //   allowEscapeKey: false,
-      //   didOpen: () => {
-      //     Swal.showLoading();
-      //     const popup = Swal.getPopup();
-      //     if (popup) {
-      //       // Verificación de null
-      //       const timer = popup.querySelector("b");
-      //       if (timer) {
-      //         // Verificación adicional por si querySelector no encuentra el elemento
-      //         timerInterval = setInterval(() => {
-      //           const secondsLeft = Math.ceil(Swal?.getTimerLeft() / 1000);
-      //           if (timer) timer.textContent = `${secondsLeft}`;
-      //         }, 100);
-      //       }
-      //     }
-      //   },
-      //   willClose: () => {
-      //     clearInterval(timerInterval);
-      //   },
-      // }).then((result) => {
-      //   if (result.dismiss === Swal.DismissReason.timer) {
-      //     window.location.reload();
-      //   }
-      // });
+      // Swal.fire("SweetAlert2 is working!");
+      let timerInterval: ReturnType<typeof setInterval>;
+      Swal.fire({
+        title: "Venta realizada con éxito!",
+        html: "Nueva venta en <b></b> segundos.",
+        timer: 3000,
+        timerProgressBar: true,
+        width: "90%",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+          const popup = Swal.getPopup();
+          if (popup) {
+            const timer = popup.querySelector("b");
+            if (timer) {
+              timerInterval = setInterval(() => {
+                const timerLeft = Swal.getTimerLeft();
+                const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
+                timer.textContent = `${secondsLeft}`;
+              }, 100);
+            }
+          }
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
+        },
+      }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.timer) {
+          window.location.reload();
+        }
+      });
     } catch (error) {
       console.error(error);
     }
@@ -308,7 +309,7 @@ export default function Sales() {
     setBancoDebito(0);
     setBancoCredito(0);
     setCuentaCliente(0);
-    // setVoucher(0);
+    setVoucher(0);
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
@@ -413,10 +414,18 @@ export default function Sales() {
       if (!user?.id) return;
       try {
         const estado = await getEstadoAperturaPorUsuario(user.id);
-        if (estado.cajaId) {
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
           const caja = await getCajaById(estado.cajaId);
           setCajaAperturada(caja);
         } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de realizar ventas.",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            navigate("/apertura-cierre-caja");
+          });
           setCajaAperturada(null);
         }
       } catch {
@@ -424,7 +433,7 @@ export default function Sales() {
       }
     };
     fetchCaja();
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (user?.LocalId) {
@@ -723,6 +732,7 @@ export default function Sales() {
             onSearch={setBusqueda}
             onSearchSubmit={() => {}}
             placeholder="Buscar productos"
+            hideButton={true}
           />
           {user && (
             <div
@@ -731,33 +741,32 @@ export default function Sales() {
                 fontWeight: 600,
                 color: "#222",
                 fontSize: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {user.nombre}{" "}
-              <span style={{ color: "#888", fontWeight: 400, fontSize: 14 }}>
-                ({user.id})
-              </span>
-              {/* {user.LocalNombre && (
-                <span
-                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
-                >
-                  | Local: {user.LocalNombre}
+              <span>
+                {user.nombre + " "}
+                <span style={{ color: "#888", fontWeight: 400 }}>
+                  ({user.id})
                 </span>
-              )} */}
+              </span>
               {localNombre && (
-                <span
-                  style={{ color: "#e53935", fontWeight: 500, marginLeft: 8 }}
-                >
+                <span style={{ color: "#e53935", fontWeight: 500 }}>
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span
-                  style={{ color: "#2563eb", fontWeight: 500, marginLeft: 8 }}
-                >
+                <span style={{ color: "#2563eb", fontWeight: 500 }}>
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}
+              <ActionButton
+                label="Apertura/Cierre"
+                onClick={() => navigate("/apertura-cierre-caja")}
+                className="bg-blue-500 hover:bg-blue-700 text-white"
+              />
             </div>
           )}
         </div>
@@ -835,8 +844,8 @@ export default function Sales() {
         cuentaCliente={cuentaCliente}
         setCuentaCliente={setCuentaCliente}
         sendRequest={sendRequest}
-        // voucher={voucher}
-        // setVoucher={setVoucher}
+        voucher={voucher}
+        setVoucher={setVoucher}
       />
     </div>
   );

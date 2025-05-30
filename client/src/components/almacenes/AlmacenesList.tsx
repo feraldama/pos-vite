@@ -4,11 +4,10 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
-interface Caja {
+interface Almacen {
   id: string | number;
-  CajaId: string | number;
-  CajaDescripcion: string;
-  CajaMonto: number;
+  AlmacenId: string | number;
+  AlmacenNombre: string;
   [key: string]: unknown;
 }
 
@@ -16,10 +15,10 @@ interface Pagination {
   totalItems: number;
 }
 
-interface CajasListProps {
-  cajas: Caja[];
-  onDelete?: (item: Caja) => void;
-  onEdit?: (item: Caja) => void;
+interface AlmacenesListProps {
+  almacenes: Almacen[];
+  onDelete?: (item: Almacen) => void;
+  onEdit?: (item: Almacen) => void;
   onCreate?: () => void;
   pagination?: Pagination;
   onSearch: (value: string) => void;
@@ -28,15 +27,15 @@ interface CajasListProps {
   onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
   isModalOpen: boolean;
   onCloseModal: () => void;
-  currentCaja?: Caja | null;
-  onSubmit: (formData: Caja) => void;
+  currentAlmacen?: Almacen | null;
+  onSubmit: (formData: Almacen) => void;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
-export default function CajasList({
-  cajas,
+export default function AlmacenesList({
+  almacenes,
   onDelete,
   onEdit,
   onCreate,
@@ -47,36 +46,33 @@ export default function CajasList({
   onSearchSubmit,
   isModalOpen,
   onCloseModal,
-  currentCaja,
+  currentAlmacen,
   onSubmit,
   sortKey,
   sortOrder,
   onSort,
-}: CajasListProps) {
+}: AlmacenesListProps) {
   const [formData, setFormData] = useState({
     id: "",
-    CajaId: "",
-    CajaDescripcion: "",
-    CajaMonto: 0,
+    AlmacenId: "",
+    AlmacenNombre: "",
   });
 
   useEffect(() => {
-    if (currentCaja) {
+    if (currentAlmacen) {
       setFormData({
-        id: String(currentCaja.id ?? currentCaja.CajaId),
-        CajaId: String(currentCaja.CajaId),
-        CajaDescripcion: currentCaja.CajaDescripcion,
-        CajaMonto: currentCaja.CajaMonto,
+        id: String(currentAlmacen.id ?? currentAlmacen.AlmacenId),
+        AlmacenId: String(currentAlmacen.AlmacenId),
+        AlmacenNombre: currentAlmacen.AlmacenNombre,
       });
     } else {
       setFormData({
         id: "",
-        CajaId: "",
-        CajaDescripcion: "",
-        CajaMonto: 0,
+        AlmacenId: "",
+        AlmacenNombre: "",
       });
     }
-  }, [currentCaja]);
+  }, [currentAlmacen]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -84,13 +80,13 @@ export default function CajasList({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "CajaMonto" ? Number(value) : value,
+      [name]: value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData as Almacen);
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -100,9 +96,8 @@ export default function CajasList({
   };
 
   const columns = [
-    { key: "CajaId", label: "ID" },
-    { key: "CajaDescripcion", label: "Descripción" },
-    { key: "CajaMonto", label: "Monto" },
+    { key: "AlmacenId", label: "ID" },
+    { key: "AlmacenNombre", label: "Nombre" },
   ];
 
   return (
@@ -114,24 +109,28 @@ export default function CajasList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar cajas"
+            placeholder="Buscar almacenes"
           />
         </div>
         <div className="py-4">
-          <ActionButton label="Nueva Caja" onClick={onCreate} icon={PlusIcon} />
+          <ActionButton
+            label="Nuevo Almacén"
+            onClick={onCreate}
+            icon={PlusIcon}
+          />
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-gray-600">
-          Mostrando {cajas.length} de {pagination?.totalItems} cajas
+          Mostrando {almacenes.length} de {pagination?.totalItems} almacenes
         </div>
       </div>
-      <DataTable<Caja>
+      <DataTable<Almacen>
         columns={columns}
-        data={cajas}
+        data={almacenes}
         onEdit={onEdit}
         onDelete={onDelete}
-        emptyMessage="No se encontraron cajas"
+        emptyMessage="No se encontraron almacenes"
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSort={onSort}
@@ -149,9 +148,9 @@ export default function CajasList({
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
-                  {currentCaja
-                    ? `Editar caja: ${currentCaja.CajaId}`
-                    : "Crear nueva caja"}
+                  {currentAlmacen
+                    ? `Editar almacén: ${currentAlmacen.AlmacenId}`
+                    : "Crear nuevo almacén"}
                 </h3>
                 <button
                   type="button"
@@ -177,35 +176,18 @@ export default function CajasList({
               </div>
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6 sm:col-span-3">
+                  <div className="col-span-6 sm:col-span-6">
                     <label
-                      htmlFor="CajaDescripcion"
+                      htmlFor="AlmacenNombre"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Descripción
+                      Nombre
                     </label>
                     <input
                       type="text"
-                      name="CajaDescripcion"
-                      id="CajaDescripcion"
-                      value={formData.CajaDescripcion}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="CajaMonto"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Monto
-                    </label>
-                    <input
-                      type="number"
-                      name="CajaMonto"
-                      id="CajaMonto"
-                      value={formData.CajaMonto}
+                      name="AlmacenNombre"
+                      id="AlmacenNombre"
+                      value={formData.AlmacenNombre}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
@@ -215,7 +197,7 @@ export default function CajasList({
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <ActionButton
-                  label={currentCaja ? "Actualizar" : "Crear"}
+                  label={currentAlmacen ? "Actualizar" : "Crear"}
                   type="submit"
                 />
                 <ActionButton

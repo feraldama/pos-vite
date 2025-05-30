@@ -414,10 +414,18 @@ export default function Sales() {
       if (!user?.id) return;
       try {
         const estado = await getEstadoAperturaPorUsuario(user.id);
-        if (estado.cajaId) {
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
           const caja = await getCajaById(estado.cajaId);
           setCajaAperturada(caja);
         } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de realizar ventas.",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            navigate("/apertura-cierre-caja");
+          });
           setCajaAperturada(null);
         }
       } catch {
@@ -425,7 +433,7 @@ export default function Sales() {
       }
     };
     fetchCaja();
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (user?.LocalId) {
@@ -438,20 +446,6 @@ export default function Sales() {
       setLocalNombre("");
     }
   }, [user?.LocalId]);
-
-  useEffect(() => {
-    // Solo redirigir si ya se intentó cargar la caja y no hay caja aperturada
-    if (cajaAperturada === null && !loading) {
-      Swal.fire({
-        icon: "warning",
-        title: "Caja no aperturada",
-        text: "Debes aperturar una caja antes de realizar ventas.",
-        confirmButtonColor: "#2563eb",
-      }).then(() => {
-        navigate("/apertura-cierre-caja");
-      });
-    }
-  }, [cajaAperturada, loading, navigate]);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>

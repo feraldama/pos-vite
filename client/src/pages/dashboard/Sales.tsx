@@ -58,6 +58,7 @@ export default function Sales() {
       ProductoStock: number;
       ProductoImagen?: string;
       ProductoPrecioVentaMayorista: number;
+      LocalId: string | number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -645,7 +646,36 @@ export default function Sales() {
                         color: "#374151",
                       }}
                     >
-                      Gs. {p.precio.toLocaleString()}
+                      {p.id === 1 ? (
+                        <input
+                          type="number"
+                          value={p.precio}
+                          min={0}
+                          style={{
+                            width: 80,
+                            height: 32,
+                            textAlign: "right",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 6,
+                            background: "#f9fafb",
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: "#222",
+                          }}
+                          onChange={(e) => {
+                            const nuevoPrecio = Number(e.target.value);
+                            setCarrito(
+                              carrito.map((item) =>
+                                item.id === 1
+                                  ? { ...item, precio: nuevoPrecio }
+                                  : item
+                              )
+                            );
+                          }}
+                        />
+                      ) : (
+                        <>Gs. {p.precio.toLocaleString()}</>
+                      )}
                     </td>
                     <td
                       style={{
@@ -788,10 +818,13 @@ export default function Sales() {
               <div>Cargando productos...</div>
             ) : (
               productos
-                .filter((p) =>
-                  p.ProductoNombre.toLowerCase().includes(
-                    busqueda.toLowerCase()
-                  )
+                .filter(
+                  (p) =>
+                    p.ProductoNombre.toLowerCase().includes(
+                      busqueda.toLowerCase()
+                    ) &&
+                    (Number(p.LocalId) === 0 ||
+                      Number(p.LocalId) === Number(cajaAperturada?.CajaId))
                 )
                 .map((p) => (
                   <ProductCard

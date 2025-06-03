@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  getTiposGasto,
+  getTiposGastoPaginated,
   deleteTipoGasto,
   searchTiposGasto,
   createTipoGasto,
@@ -54,18 +54,22 @@ export default function TiposGastoPage() {
           sortKey,
           sortOrder
         );
+        setTiposGastoData({
+          tiposGasto: data.data,
+          pagination: data.pagination,
+        });
       } else {
-        data = await getTiposGasto(
+        data = await getTiposGastoPaginated(
           currentPage,
           itemsPerPage,
           sortKey,
           sortOrder
         );
+        setTiposGastoData({
+          tiposGasto: data.data,
+          pagination: data.pagination,
+        });
       }
-      setTiposGastoData({
-        tiposGasto: data.data,
-        pagination: data.pagination,
-      });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

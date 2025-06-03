@@ -18,6 +18,7 @@ import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
+import PagoModal from "../../components/common/PagoModal";
 
 interface Cliente {
   ClienteId: number;
@@ -90,6 +91,7 @@ export default function Sales() {
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
+  const [showPagoModal, setShowPagoModal] = useState(false);
 
   const agregarProducto = (producto: {
     id: number;
@@ -797,6 +799,11 @@ export default function Sales() {
                 onClick={() => navigate("/apertura-cierre-caja")}
                 className="bg-blue-500 hover:bg-blue-700 text-white"
               />
+              <ActionButton
+                label="Pagos"
+                onClick={() => setShowPagoModal(true)}
+                className="bg-green-500 hover:bg-green-700 text-white"
+              />
             </div>
           )}
         </div>
@@ -857,6 +864,12 @@ export default function Sales() {
             )}
           </div>
         </div>
+        <PagoModal
+          show={showPagoModal}
+          handleClose={() => setShowPagoModal(false)}
+          cajaAperturada={cajaAperturada}
+          usuario={user}
+        />
       </div>
       <PaymentModal
         show={showModal}

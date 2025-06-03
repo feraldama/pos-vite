@@ -33,7 +33,7 @@ app.use(express.json());
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/registrodiariocaja", registroDiarioCajaRoutes);
 app.use("/api/caja", cajaRoutes);
-app.use("/api/tipogastos", tipoGastoRoutes);
+app.use("/api/tipogasto", tipoGastoRoutes);
 app.use("/api/clientes", clienteRoutes);
 app.use("/api/tipogastogrupo", tipogastoGrupoRoutes);
 app.use("/api/productos", productoRoutes);

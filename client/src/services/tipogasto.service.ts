@@ -1,7 +1,12 @@
 import api from "./api";
 import type { AxiosError } from "axios";
 
-export const getTiposGasto = async (
+export const getTiposGasto = async () => {
+  const response = await api.get("/tipogasto");
+  return response.data;
+};
+
+export const getTiposGastoPaginated = async (
   page = 1,
   limit = 10,
   sortBy?: string,
@@ -14,13 +19,13 @@ export const getTiposGasto = async (
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
   try {
-    const response = await api.get("/tipogastos", { params });
+    const response = await api.get("/tipogasto/paginated", { params });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
     throw (
       axiosError.response?.data || {
-        message: "Error al obtener tipos de gasto",
+        message: "Error al obtener tipos de gasto paginados",
       }
     );
   }

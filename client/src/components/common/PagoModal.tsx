@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createRegistroDiarioCaja } from "../../services/registros.service";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
+import { updateCajaMonto } from "../../services/cajas.service";
 import Swal from "sweetalert2";
 
 interface TipoGasto {
@@ -64,6 +65,29 @@ const PagoModal: React.FC<PagoModalProps> = ({
         RegistroDiarioCajaMonto: monto,
         UsuarioId: usuario.id,
       });
+      // Actualizar el monto de la caja según el tipo de gasto
+      let cajaMontoActual = (cajaAperturada as { CajaMonto?: number })
+        .CajaMonto;
+      if (typeof cajaMontoActual !== "number") {
+        // Si no está disponible, obtenerlo del backend
+        const cajaActualizada = await import(
+          "../../services/cajas.service"
+        ).then((m) => m.getCajaById(cajaAperturada.CajaId));
+        cajaMontoActual = cajaActualizada.CajaMonto;
+      }
+      if (tipoGastoId === 1) {
+        // Restar el monto
+        await updateCajaMonto(
+          cajaAperturada.CajaId,
+          Number(cajaMontoActual) - Number(monto)
+        );
+      } else if (tipoGastoId === 2) {
+        // Sumar el monto
+        await updateCajaMonto(
+          cajaAperturada.CajaId,
+          Number(cajaMontoActual) + Number(monto)
+        );
+      }
       Swal.fire(
         "Pago registrado",
         "El pago fue registrado correctamente",

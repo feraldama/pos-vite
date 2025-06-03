@@ -19,7 +19,7 @@ const app = express();
 // Configuración de CORS
 const corsOptions = {
   origin: "*", // Permite todas las origenes
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   maxAge: 86400, // 24 horas

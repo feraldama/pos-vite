@@ -19,6 +19,7 @@ import { getLocalById } from "../../services/locales.service";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
+import { getCombos } from "../../services/combos.service";
 
 interface Cliente {
   ClienteId: number;
@@ -36,6 +37,15 @@ interface Caja {
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
+  [key: string]: unknown;
+}
+
+interface Combo {
+  ComboId: number;
+  ComboDescripcion: string;
+  ProductoId: number;
+  ComboCantidad: number;
+  ComboPrecio: number;
   [key: string]: unknown;
 }
 
@@ -92,6 +102,7 @@ export default function Sales() {
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
+  const [combos, setCombos] = useState<Combo[]>([]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -137,7 +148,11 @@ export default function Sales() {
     );
   };
 
-  const total = carrito.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
+  const total = carrito.reduce((acc, p) => {
+    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
+    const precioUnitario = productoOriginal?.ProductoPrecioVenta ?? p.precio;
+    return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+  }, 0);
 
   useEffect(() => {
     setLoading(true);
@@ -165,6 +180,8 @@ export default function Sales() {
           },
         ])
       );
+    // Traer combos
+    getCombos(1, 1000).then((data) => setCombos(data.data || []));
   }, []);
 
   useEffect(() => {
@@ -201,6 +218,25 @@ export default function Sales() {
       (acc: number, item: { totalPrice: number }) => acc + item.totalPrice,
       0
     );
+  }
+
+  function calcularPrecioConCombo(
+    productoId: number,
+    cantidad: number,
+    precioUnitario: number
+  ) {
+    const combo = combos.find(
+      (c) => Number(c.ProductoId) === Number(productoId)
+    );
+    if (!combo) return cantidad * precioUnitario;
+    const comboCantidad = Number(combo.ComboCantidad);
+    const comboPrecio = Number(combo.ComboPrecio);
+    if (cantidad < comboCantidad) {
+      return cantidad * precioUnitario;
+    }
+    const cantidadCombos = Math.floor(cantidad / comboCantidad);
+    const cantidadRestante = cantidad % comboCantidad;
+    return cantidadCombos * comboPrecio + cantidadRestante * precioUnitario;
   }
 
   const sendRequest = async () => {
@@ -517,182 +553,200 @@ export default function Sales() {
                 </tr>
               </thead>
               <tbody>
-                {carrito.map((p, idx) => (
-                  <tr
-                    key={p.id}
-                    style={{
-                      background: "#fff",
-                      borderBottom:
-                        idx !== carrito.length - 1
-                          ? "1px solid #e5e7eb"
-                          : "none",
-                    }}
-                  >
-                    <td
+                {carrito.map((p, idx) => {
+                  const productoOriginal = productos.find(
+                    (prod) => prod.ProductoId === p.id
+                  );
+                  const precioUnitario =
+                    productoOriginal?.ProductoPrecioVenta ?? p.precio;
+                  const precioTotal = calcularPrecioConCombo(
+                    p.id,
+                    p.cantidad,
+                    precioUnitario
+                  );
+                  return (
+                    <tr
+                      key={p.id}
                       style={{
-                        padding: "20px 0 20px 24px",
-                        verticalAlign: "middle",
+                        background: "#fff",
+                        borderBottom:
+                          idx !== carrito.length - 1
+                            ? "1px solid #e5e7eb"
+                            : "none",
                       }}
                     >
-                      <div
+                      <td
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 16,
+                          padding: "20px 0 20px 24px",
+                          verticalAlign: "middle",
                         }}
                       >
-                        <img
-                          src={p.imagen}
-                          alt={p.nombre}
+                        <div
                           style={{
-                            width: 56,
-                            height: 56,
-                            objectFit: "contain",
-                            borderRadius: 8,
-                            background: "#f5f8ff",
-                            boxShadow: "0 1px 4px #0001",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 16,
                           }}
-                        />
-                        <div>
-                          <div
+                        >
+                          <img
+                            src={p.imagen}
+                            alt={p.nombre}
                             style={{
-                              fontWeight: 700,
-                              fontSize: 17,
-                              color: "#222",
-                              lineHeight: 1.2,
+                              width: 56,
+                              height: 56,
+                              objectFit: "contain",
+                              borderRadius: 8,
+                              background: "#f5f8ff",
+                              boxShadow: "0 1px 4px #0001",
                             }}
-                          >
-                            {p.nombre}
-                          </div>
-                          <div
-                            style={{
-                              color: "#e53935",
-                              fontSize: 14,
-                              marginTop: 4,
-                              cursor: "pointer",
-                            }}
-                            onClick={() => quitarProducto(p.id)}
-                          >
-                            Eliminar
+                          />
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                fontSize: 17,
+                                color: "#222",
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {p.nombre}
+                            </div>
+                            <div
+                              style={{
+                                color: "#e53935",
+                                fontSize: 14,
+                                marginTop: 4,
+                                cursor: "pointer",
+                              }}
+                              onClick={() => quitarProducto(p.id)}
+                            >
+                              Eliminar
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: "20px 0", verticalAlign: "middle" }}>
-                      <div
+                      </td>
+                      <td
+                        style={{ padding: "20px 0", verticalAlign: "middle" }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <button
+                            onClick={() =>
+                              cambiarCantidad(p.id, p.cantidad - 1)
+                            }
+                            style={{
+                              width: 32,
+                              height: 32,
+                              border: "1px solid #d1d5db",
+                              borderRadius: 6,
+                              background: "#f9fafb",
+                              color: "#374151",
+                              fontSize: 18,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            value={p.cantidad}
+                            min={1}
+                            style={{
+                              width: 40,
+                              height: 32,
+                              textAlign: "center",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 6,
+                              background: "#f9fafb",
+                              fontSize: 16,
+                              fontWeight: 600,
+                              color: "#222",
+                              margin: "0 2px",
+                            }}
+                            readOnly
+                          />
+                          <button
+                            onClick={() =>
+                              cambiarCantidad(p.id, p.cantidad + 1)
+                            }
+                            style={{
+                              width: 32,
+                              height: 32,
+                              border: "1px solid #d1d5db",
+                              borderRadius: 6,
+                              background: "#f9fafb",
+                              color: "#374151",
+                              fontSize: 18,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
+                          padding: "20px 0",
+                          verticalAlign: "middle",
+                          textAlign: "right",
+                          fontWeight: 500,
+                          fontSize: 17,
+                          color: "#374151",
                         }}
                       >
-                        <button
-                          onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            color: "#374151",
-                            fontSize: 18,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={p.cantidad}
-                          min={1}
-                          style={{
-                            width: 40,
-                            height: 32,
-                            textAlign: "center",
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            fontSize: 16,
-                            fontWeight: 600,
-                            color: "#222",
-                            margin: "0 2px",
-                          }}
-                          readOnly
-                        />
-                        <button
-                          onClick={() => cambiarCantidad(p.id, p.cantidad + 1)}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            color: "#374151",
-                            fontSize: 18,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        padding: "20px 0",
-                        verticalAlign: "middle",
-                        textAlign: "right",
-                        fontWeight: 500,
-                        fontSize: 17,
-                        color: "#374151",
-                      }}
-                    >
-                      {p.id === 1 ? (
-                        <input
-                          type="number"
-                          value={p.precio}
-                          min={0}
-                          style={{
-                            width: 80,
-                            height: 32,
-                            textAlign: "right",
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            fontSize: 16,
-                            fontWeight: 600,
-                            color: "#222",
-                          }}
-                          onChange={(e) => {
-                            const nuevoPrecio = Number(e.target.value);
-                            setCarrito(
-                              carrito.map((item) =>
-                                item.id === 1
-                                  ? { ...item, precio: nuevoPrecio }
-                                  : item
-                              )
-                            );
-                          }}
-                        />
-                      ) : (
-                        <>Gs. {p.precio.toLocaleString()}</>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: "20px 24px 20px 0",
-                        verticalAlign: "middle",
-                        textAlign: "right",
-                        fontWeight: 500,
-                        fontSize: 17,
-                        color: "#374151",
-                      }}
-                    >
-                      Gs. {(p.precio * p.cantidad).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                        {p.id === 1 ? (
+                          <input
+                            type="number"
+                            value={p.precio}
+                            min={0}
+                            style={{
+                              width: 80,
+                              height: 32,
+                              textAlign: "right",
+                              border: "1px solid #d1d5db",
+                              borderRadius: 6,
+                              background: "#f9fafb",
+                              fontSize: 16,
+                              fontWeight: 600,
+                              color: "#222",
+                            }}
+                            onChange={(e) => {
+                              const nuevoPrecio = Number(e.target.value);
+                              setCarrito(
+                                carrito.map((item) =>
+                                  item.id === 1
+                                    ? { ...item, precio: nuevoPrecio }
+                                    : item
+                                )
+                              );
+                            }}
+                          />
+                        ) : (
+                          <>Gs. {p.precio.toLocaleString()}</>
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          padding: "20px 24px 20px 0",
+                          verticalAlign: "middle",
+                          textAlign: "right",
+                          fontWeight: 500,
+                          fontSize: 17,
+                          color: "#374151",
+                        }}
+                      >
+                        Gs. {precioTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

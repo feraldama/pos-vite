@@ -1,4 +1,5 @@
 const Caja = require("../models/caja.model");
+const db = require("../config/db");
 
 exports.getAll = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
@@ -111,5 +112,25 @@ exports.searchCajas = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Error al buscar cajas" });
+  }
+};
+
+exports.updateMonto = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { CajaMonto } = req.body;
+    if (typeof CajaMonto !== "number") {
+      return res.status(400).json({ message: "Monto inválido" });
+    }
+    await db.query("UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?", [
+      CajaMonto,
+      id,
+    ]);
+    const updatedCaja = await db.query("SELECT * FROM Caja WHERE CajaId = ?", [
+      id,
+    ]);
+    res.json(updatedCaja[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

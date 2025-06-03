@@ -83,25 +83,15 @@ exports.getClienteById = async (req, res) => {
 exports.createCliente = async (req, res) => {
   try {
     // Validación de campos requeridos
-    const camposRequeridos = [
-      "ClienteId",
-      "ClienteRUC",
-      "ClienteNombre",
-      "ClienteTipo",
-      "UsuarioId",
-    ];
-    for (const campo of camposRequeridos) {
-      if (!req.body[campo]) {
-        return res.status(400).json({
-          success: false,
-          message: `El campo ${campo} es requerido`,
-        });
-      }
+    if (!req.body.ClienteNombre) {
+      return res.status(400).json({
+        success: false,
+        message: `El campo ClienteNombre es requerido`,
+      });
     }
     // Crear el nuevo cliente
     const nuevoCliente = await Cliente.create({
-      ClienteId: req.body.ClienteId,
-      ClienteRUC: req.body.ClienteRUC,
+      ClienteRUC: req.body.ClienteRUC || "",
       ClienteNombre: req.body.ClienteNombre,
       ClienteApellido: req.body.ClienteApellido || null,
       ClienteDireccion: req.body.ClienteDireccion || null,

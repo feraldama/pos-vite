@@ -60,7 +60,6 @@ export default function CombosList({
   });
 
   useEffect(() => {
-    console.log("log: 🚀 currentCombo:", currentCombo);
     if (currentCombo && productos.length > 0) {
       setFormData({
         ...currentCombo,

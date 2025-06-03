@@ -249,18 +249,35 @@ export default function Sales() {
     const añoStr = año < 10 ? `0${año}` : año.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
-    const SDTProductoItem = cartItems.map((producto) => ({
-      ClienteId: clienteSeleccionado?.ClienteId,
-      Producto: {
-        ProductoId: producto.id,
-        VentaProductoCantidad: producto.quantity,
-        ProductoPrecioVenta: producto.salePrice,
-        ProductoUnidad: producto.unidad,
-        VentaProductoPrecioTotal: producto.totalPrice,
-        Combo: "N",
-        ComboPrecio: 0,
-      },
-    }));
+    const SDTProductoItem = cartItems.map((producto) => {
+      const combo = combos.find(
+        (c) => Number(c.ProductoId) === Number(producto.id)
+      );
+      const productoOriginal = productos.find(
+        (p) => p.ProductoId === producto.id
+      );
+      const precioUnitario =
+        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
+      const totalCombo = calcularPrecioConCombo(
+        producto.id,
+        producto.quantity,
+        precioUnitario
+      );
+      const esCombo = combo && producto.quantity >= comboCantidad;
+      return {
+        ClienteId: clienteSeleccionado?.ClienteId,
+        Producto: {
+          ProductoId: producto.id,
+          VentaProductoCantidad: producto.quantity,
+          ProductoPrecioVenta: producto.salePrice,
+          ProductoUnidad: producto.unidad,
+          VentaProductoPrecioTotal: producto.totalPrice,
+          Combo: esCombo ? "S" : "N",
+          ComboPrecio: esCombo ? totalCombo : 0,
+        },
+      };
+    });
 
     const json = {
       Envelope: {

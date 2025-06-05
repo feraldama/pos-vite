@@ -9,7 +9,7 @@ import {
 import CombosList from "../../components/combos/CombosList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
-import { getProductos } from "../../services/productos.service";
+import { getProductosAll } from "../../services/productos.service";
 
 interface Combo {
   id: string | number;
@@ -69,7 +69,7 @@ export default function CombosPage() {
 
   useEffect(() => {
     fetchCombos();
-    getProductos().then((res) => setProductos(res.data));
+    getProductosAll().then((res) => setProductos(res.data));
   }, [fetchCombos]);
 
   const handleDelete = async (id: string) => {

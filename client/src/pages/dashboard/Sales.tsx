@@ -58,6 +58,8 @@ export default function Sales() {
       imagen: string;
       stock: number;
       cantidad: number;
+      caja: boolean;
+      cartItemId: number;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
@@ -70,6 +72,7 @@ export default function Sales() {
       ProductoImagen?: string;
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
+      ProductoPrecioUnitario: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -121,43 +124,80 @@ export default function Sales() {
 
     const precioSeguro = precioFinal ?? 0;
 
-    const existe = carrito.find((p) => p.id === producto.id);
-    if (existe) {
-      setCarrito(
-        carrito.map((p) =>
-          p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
-        )
-      );
-    } else {
-      setCarrito([
-        ...carrito,
-        { ...producto, precio: precioSeguro, cantidad: 1 },
-      ]);
-    }
+    setCarrito([
+      ...carrito,
+      {
+        ...producto,
+        precio: precioSeguro,
+        cantidad: 1,
+        caja: true, // Por defecto true
+        cartItemId: Date.now() + Math.random(),
+      },
+    ]);
   };
 
-  const quitarProducto = (id: number) => {
-    setCarrito(carrito.filter((p) => p.id !== id));
+  const quitarProducto = (cartItemId: number) => {
+    setCarrito(carrito.filter((p) => p.cartItemId !== cartItemId));
   };
 
-  const cambiarCantidad = (id: number, cantidad: number) => {
+  const cambiarCantidad = (cartItemId: number, cantidad: number) => {
     setCarrito(
       carrito.map((p) =>
-        p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p
+        p.cartItemId === cartItemId
+          ? { ...p, cantidad: Math.max(1, cantidad) }
+          : p
       )
     );
   };
 
-  const total = carrito.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
+  // Función para obtener el precio unitario según el check Caja
+  const obtenerPrecio = (p: (typeof carrito)[0]) => {
+    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
+    if (!productoOriginal) return 0;
+    if (p.caja) {
+      return clienteSeleccionado?.ClienteTipo === "MA"
+        ? productoOriginal.ProductoPrecioVentaMayorista
+        : productoOriginal.ProductoPrecioVenta;
+    } else {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+      if (combo) {
+        // El precio unitario se calcula en base al combo
+        return (
+          calcularPrecioConCombo(
+            p.id,
+            p.cantidad,
+            productoOriginal.ProductoPrecioUnitario
+          ) / p.cantidad
+        );
+      }
+      return productoOriginal.ProductoPrecioUnitario;
+    }
+  };
 
-  // const total = carrito.reduce((acc, p) => {
-  //   const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-  //   const precioUnitario =
-  //     p.id === 1 || p.id === 2
-  //       ? p.precio
-  //       : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-  //   return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
-  // }, 0);
+  // Función para obtener el total según el check Caja
+  const obtenerTotal = (p: (typeof carrito)[0]) => {
+    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
+    if (!productoOriginal) return 0;
+    if (p.caja) {
+      const precio =
+        clienteSeleccionado?.ClienteTipo === "MA"
+          ? productoOriginal.ProductoPrecioVentaMayorista
+          : productoOriginal.ProductoPrecioVenta;
+      return precio * p.cantidad;
+    } else {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+      if (combo) {
+        return calcularPrecioConCombo(
+          p.id,
+          p.cantidad,
+          productoOriginal.ProductoPrecioUnitario
+        );
+      }
+      return productoOriginal.ProductoPrecioUnitario * p.cantidad;
+    }
+  };
+
+  const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
 
   useEffect(() => {
     setLoading(true);
@@ -556,6 +596,11 @@ export default function Sales() {
                   <th
                     style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
                   >
+                    Caja
+                  </th>
+                  <th
+                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
+                  >
                     Cantidad
                   </th>
                   <th
@@ -577,7 +622,7 @@ export default function Sales() {
               <tbody>
                 {carrito.map((p, idx) => (
                   <tr
-                    key={p.id}
+                    key={p.cartItemId}
                     style={{
                       background: "#fff",
                       borderBottom:
@@ -629,12 +674,33 @@ export default function Sales() {
                               marginTop: 4,
                               cursor: "pointer",
                             }}
-                            onClick={() => quitarProducto(p.id)}
+                            onClick={() => quitarProducto(p.cartItemId)}
                           >
                             Eliminar
                           </div>
                         </div>
                       </div>
+                    </td>
+                    <td
+                      style={{
+                        padding: "20px 0",
+                        verticalAlign: "middle",
+                        textAlign: "center",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={p.caja}
+                        onChange={() =>
+                          setCarrito(
+                            carrito.map((item) =>
+                              item.cartItemId === p.cartItemId
+                                ? { ...item, caja: !item.caja }
+                                : item
+                            )
+                          )
+                        }
+                      />
                     </td>
                     <td style={{ padding: "20px 0", verticalAlign: "middle" }}>
                       <div
@@ -645,7 +711,9 @@ export default function Sales() {
                         }}
                       >
                         <button
-                          onClick={() => cambiarCantidad(p.id, p.cantidad - 1)}
+                          onClick={() =>
+                            cambiarCantidad(p.cartItemId, p.cantidad - 1)
+                          }
                           style={{
                             width: 32,
                             height: 32,
@@ -679,7 +747,9 @@ export default function Sales() {
                           readOnly
                         />
                         <button
-                          onClick={() => cambiarCantidad(p.id, p.cantidad + 1)}
+                          onClick={() =>
+                            cambiarCantidad(p.cartItemId, p.cantidad + 1)
+                          }
                           style={{
                             width: 32,
                             height: 32,
@@ -706,7 +776,7 @@ export default function Sales() {
                         color: "#374151",
                       }}
                     >
-                      Gs. {p.precio.toLocaleString()}
+                      Gs. {obtenerPrecio(p).toLocaleString()}
                     </td>
                     <td
                       style={{
@@ -718,7 +788,7 @@ export default function Sales() {
                         color: "#374151",
                       }}
                     >
-                      Gs. {(p.precio * p.cantidad).toLocaleString()}
+                      Gs. {obtenerTotal(p).toLocaleString()}
                     </td>
                   </tr>
                 ))}

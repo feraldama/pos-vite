@@ -87,3 +87,22 @@ export const searchCajas = async (
     throw axiosError.response?.data || { message: "Error al buscar cajas" };
   }
 };
+
+export const updateCajaMonto = async (
+  id: string | number,
+  nuevoMonto: number
+) => {
+  try {
+    const response = await api.patch(`/caja/${id}/monto`, {
+      CajaMonto: nuevoMonto,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al actualizar el monto de la caja",
+      }
+    );
+  }
+};

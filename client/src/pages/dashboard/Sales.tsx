@@ -18,6 +18,8 @@ import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
+import PagoModal from "../../components/common/PagoModal";
+import { getCombos } from "../../services/combos.service";
 
 interface Cliente {
   ClienteId: number;
@@ -35,6 +37,15 @@ interface Caja {
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
+  [key: string]: unknown;
+}
+
+interface Combo {
+  ComboId: number;
+  ComboDescripcion: string;
+  ProductoId: number;
+  ComboCantidad: number;
+  ComboPrecio: number;
   [key: string]: unknown;
 }
 
@@ -58,6 +69,7 @@ export default function Sales() {
       ProductoStock: number;
       ProductoImagen?: string;
       ProductoPrecioVentaMayorista: number;
+      LocalId: string | number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -89,6 +101,8 @@ export default function Sales() {
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [combos, setCombos] = useState<Combo[]>([]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -136,6 +150,15 @@ export default function Sales() {
 
   const total = carrito.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
 
+  // const total = carrito.reduce((acc, p) => {
+  //   const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
+  //   const precioUnitario =
+  //     p.id === 1 || p.id === 2
+  //       ? p.precio
+  //       : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+  //   return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+  // }, 0);
+
   useEffect(() => {
     setLoading(true);
     getProductosAll()
@@ -162,6 +185,8 @@ export default function Sales() {
           },
         ])
       );
+    // Traer combos
+    getCombos(1, 1000).then((data) => setCombos(data.data || []));
   }, []);
 
   useEffect(() => {
@@ -200,6 +225,25 @@ export default function Sales() {
     );
   }
 
+  function calcularPrecioConCombo(
+    productoId: number,
+    cantidad: number,
+    precioUnitario: number
+  ) {
+    const combo = combos.find(
+      (c) => Number(c.ProductoId) === Number(productoId)
+    );
+    if (!combo) return cantidad * precioUnitario;
+    const comboCantidad = Number(combo.ComboCantidad);
+    const comboPrecio = Number(combo.ComboPrecio);
+    if (cantidad < comboCantidad) {
+      return cantidad * precioUnitario;
+    }
+    const cantidadCombos = Math.floor(cantidad / comboCantidad);
+    const cantidadRestante = cantidad % comboCantidad;
+    return cantidadCombos * comboPrecio + cantidadRestante * precioUnitario;
+  }
+
   const sendRequest = async () => {
     const fecha = new Date();
     const dia = fecha.getDate();
@@ -210,18 +254,35 @@ export default function Sales() {
     const añoStr = año < 10 ? `0${año}` : año.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
-    const SDTProductoItem = cartItems.map((producto) => ({
-      ClienteId: clienteSeleccionado?.ClienteId,
-      Producto: {
-        ProductoId: producto.id,
-        VentaProductoCantidad: producto.quantity,
-        ProductoPrecioVenta: producto.salePrice,
-        ProductoUnidad: producto.unidad,
-        VentaProductoPrecioTotal: producto.totalPrice,
-        Combo: "N",
-        ComboPrecio: 0,
-      },
-    }));
+    const SDTProductoItem = cartItems.map((producto) => {
+      const combo = combos.find(
+        (c) => Number(c.ProductoId) === Number(producto.id)
+      );
+      const productoOriginal = productos.find(
+        (p) => p.ProductoId === producto.id
+      );
+      const precioUnitario =
+        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
+      const totalCombo = calcularPrecioConCombo(
+        producto.id,
+        producto.quantity,
+        precioUnitario
+      );
+      const esCombo = combo && producto.quantity >= comboCantidad;
+      return {
+        ClienteId: clienteSeleccionado?.ClienteId,
+        Producto: {
+          ProductoId: producto.id,
+          VentaProductoCantidad: producto.quantity,
+          ProductoPrecioVenta: producto.salePrice,
+          ProductoUnidad: producto.unidad,
+          VentaProductoPrecioTotal: producto.totalPrice,
+          Combo: esCombo ? "S" : "N",
+          ComboPrecio: esCombo ? totalCombo : 0,
+        },
+      };
+    });
 
     const json = {
       Envelope: {
@@ -339,7 +400,7 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Winners", 0, 15);
+    doc.text("Alonso", 0, 15);
     doc.text("PADEL", 0, 20);
     doc.text("Carmen de Peña, Itauguá", 0, 25);
     doc.text("Teléfono: +595 981 123456", 0, 30);
@@ -767,6 +828,11 @@ export default function Sales() {
                 onClick={() => navigate("/apertura-cierre-caja")}
                 className="bg-blue-500 hover:bg-blue-700 text-white"
               />
+              <ActionButton
+                label="Pagos"
+                onClick={() => setShowPagoModal(true)}
+                className="bg-green-500 hover:bg-green-700 text-white"
+              />
             </div>
           )}
         </div>
@@ -788,10 +854,13 @@ export default function Sales() {
               <div>Cargando productos...</div>
             ) : (
               productos
-                .filter((p) =>
-                  p.ProductoNombre.toLowerCase().includes(
-                    busqueda.toLowerCase()
-                  )
+                .filter(
+                  (p) =>
+                    p.ProductoNombre.toLowerCase().includes(
+                      busqueda.toLowerCase()
+                    ) &&
+                    (Number(p.LocalId) === 0 ||
+                      Number(p.LocalId) === Number(cajaAperturada?.CajaId))
                 )
                 .map((p) => (
                   <ProductCard
@@ -824,6 +893,12 @@ export default function Sales() {
             )}
           </div>
         </div>
+        <PagoModal
+          show={showPagoModal}
+          handleClose={() => setShowPagoModal(false)}
+          cajaAperturada={cajaAperturada}
+          usuario={user}
+        />
       </div>
       <PaymentModal
         show={showModal}

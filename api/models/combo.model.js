@@ -1,9 +1,9 @@
 const db = require("../config/db");
 
-const TipoGasto = {
+const Combo = {
   getAll: () => {
     return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM tipogasto", (err, results) => {
+      db.query("SELECT * FROM combo", (err, results) => {
         if (err) reject(err);
         resolve(results);
       });
@@ -13,7 +13,7 @@ const TipoGasto = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
       db.query(
-        "SELECT * FROM TipoGasto WHERE TipoGastoId = ?",
+        "SELECT * FROM combo WHERE ComboId = ?",
         [id],
         (err, results) => {
           if (err) return reject(err);
@@ -23,28 +23,39 @@ const TipoGasto = {
     });
   },
 
-  create: (data) => {
+  create: (comboData) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO TipoGasto (TipoGastoDescripcion, TipoGastoCantGastos) VALUES (?, ?)`;
-      const values = [data.TipoGastoDescripcion, data.TipoGastoCantGastos];
+      const query = `INSERT INTO combo (ComboDescripcion, ProductoId, ComboCantidad, ComboPrecio) VALUES (?, ?, ?, ?)`;
+      const values = [
+        comboData.ComboDescripcion || "",
+        comboData.ProductoId,
+        comboData.ComboCantidad,
+        comboData.ComboPrecio,
+      ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
-        TipoGasto.getById(result.insertId)
-          .then((tipoGasto) => resolve(tipoGasto))
+        Combo.getById(result.insertId)
+          .then((combo) => resolve(combo))
           .catch((error) => reject(error));
       });
     });
   },
 
-  update: (id, data) => {
+  update: (id, comboData) => {
     return new Promise((resolve, reject) => {
-      const query = `UPDATE TipoGasto SET TipoGastoDescripcion = ?, TipoGastoCantGastos = ? WHERE TipoGastoId = ?`;
-      const values = [data.TipoGastoDescripcion, data.TipoGastoCantGastos, id];
+      const query = `UPDATE combo SET ComboDescripcion = ?, ProductoId = ?, ComboCantidad = ?, ComboPrecio = ? WHERE ComboId = ?`;
+      const values = [
+        comboData.ComboDescripcion || "",
+        comboData.ProductoId,
+        comboData.ComboCantidad,
+        comboData.ComboPrecio,
+        id,
+      ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
         if (result.affectedRows === 0) return resolve(null);
-        TipoGasto.getById(id)
-          .then((tipoGasto) => resolve(tipoGasto))
+        Combo.getById(id)
+          .then((combo) => resolve(combo))
           .catch((error) => reject(error));
       });
     });
@@ -52,50 +63,41 @@ const TipoGasto = {
 
   delete: (id) => {
     return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM TipoGasto WHERE TipoGastoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
+      db.query("DELETE FROM combo WHERE ComboId = ?", [id], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.affectedRows > 0);
+      });
     });
   },
 
-  getAllPaginated: (
-    limit,
-    offset,
-    sortBy = "TipoGastoId",
-    sortOrder = "ASC"
-  ) => {
+  getAllPaginated: (limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
-        "TipoGastoId",
-        "TipoGastoDescripcion",
-        "TipoGastoCantGastos",
+        "ComboId",
+        "ComboDescripcion",
+        "ProductoId",
+        "ComboCantidad",
+        "ComboPrecio",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "TipoGastoId";
+      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
       const order = allowedSortOrders.includes(sortOrder.toUpperCase())
         ? sortOrder.toUpperCase()
         : "ASC";
 
       db.query(
-        `SELECT * FROM TipoGasto ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT * FROM combo ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
           db.query(
-            "SELECT COUNT(*) as total FROM TipoGasto",
+            "SELECT COUNT(*) as total FROM combo",
             (err, countResult) => {
               if (err) return reject(err);
 
               resolve({
-                tipoGastos: results,
+                combos: results,
                 total: countResult[0].total,
               });
             }
@@ -105,32 +107,27 @@ const TipoGasto = {
     });
   },
 
-  searchTipoGastos: (
-    term,
-    limit,
-    offset,
-    sortBy = "TipoGastoId",
-    sortOrder = "ASC"
-  ) => {
+  search: (term, limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
-        "TipoGastoId",
-        "TipoGastoDescripcion",
-        "TipoGastoCantGastos",
+        "ComboId",
+        "ComboDescripcion",
+        "ProductoId",
+        "ComboCantidad",
+        "ComboPrecio",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "TipoGastoId";
+      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
       const order = allowedSortOrders.includes(sortOrder.toUpperCase())
         ? sortOrder.toUpperCase()
         : "ASC";
 
       const searchQuery = `
-        SELECT * FROM TipoGasto
-        WHERE TipoGastoDescripcion LIKE ?
-        OR CAST(TipoGastoCantGastos AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
+        SELECT c.ComboId, c.ComboDescripcion, c.ProductoId, c.ComboCantidad, c.ComboPrecio, p.ProductoNombre
+        FROM combo c
+        LEFT JOIN producto p ON c.ProductoId = p.ProductoId
+        WHERE c.ComboDescripcion LIKE ? OR p.ProductoNombre LIKE ?
+        ORDER BY c.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;
@@ -142,17 +139,19 @@ const TipoGasto = {
           if (err) return reject(err);
 
           const countQuery = `
-            SELECT COUNT(*) as total FROM TipoGasto
-            WHERE TipoGastoDescripcion LIKE ?
-            OR CAST(TipoGastoCantGastos AS CHAR) LIKE ?
+            SELECT COUNT(*) as total
+            FROM combo c
+            LEFT JOIN producto p ON c.ProductoId = p.ProductoId
+            WHERE c.ComboDescripcion LIKE ? OR p.ProductoNombre LIKE ?
           `;
           db.query(
             countQuery,
             [searchValue, searchValue],
             (err, countResult) => {
               if (err) return reject(err);
+
               resolve({
-                tipoGastos: results,
+                combos: results,
                 total: countResult[0]?.total || 0,
               });
             }
@@ -163,4 +162,4 @@ const TipoGasto = {
   },
 };
 
-module.exports = TipoGasto;
+module.exports = Combo;

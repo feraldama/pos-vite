@@ -14,6 +14,7 @@ import {
   BanknotesIcon,
   CurrencyDollarIcon,
   ArchiveBoxIcon,
+  RectangleGroupIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -43,6 +44,11 @@ const navigation: NavigationItem[] = [
     name: "Apertura/Cierre de Caja",
     href: "/apertura-cierre-caja",
     icon: <BanknotesIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Combos",
+    href: "/combos",
+    icon: <RectangleGroupIcon className="h-7 w-6" />,
   },
   {
     name: "Almacenes",
@@ -158,7 +164,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         >
           <div className="flex h-full flex-col bg-gray-800">
             <div className="flex h-16 shrink-0 items-center justify-between px-4 bg-gray-900">
-              <span className="text-white font-bold">WINNERS</span>
+              <span className="text-white font-bold">ALONSO</span>
               <button
                 type="button"
                 className="rounded-md text-gray-300 hover:text-white focus:outline-none"

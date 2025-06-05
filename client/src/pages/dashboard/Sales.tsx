@@ -150,7 +150,10 @@ export default function Sales() {
 
   const total = carrito.reduce((acc, p) => {
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    const precioUnitario = productoOriginal?.ProductoPrecioVenta ?? p.precio;
+    const precioUnitario =
+      p.id === 1 || p.id === 2
+        ? p.precio
+        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
     return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
   }, 0);
 
@@ -575,7 +578,9 @@ export default function Sales() {
                     (prod) => prod.ProductoId === p.id
                   );
                   const precioUnitario =
-                    productoOriginal?.ProductoPrecioVenta ?? p.precio;
+                    p.id === 1 || p.id === 2
+                      ? p.precio
+                      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
                   const precioTotal = calcularPrecioConCombo(
                     p.id,
                     p.cantidad,
@@ -718,7 +723,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        {p.id === 1 ? (
+                        {p.id === 1 || p.id === 2 ? (
                           <input
                             type="number"
                             value={p.precio}
@@ -738,7 +743,8 @@ export default function Sales() {
                               const nuevoPrecio = Number(e.target.value);
                               setCarrito(
                                 carrito.map((item) =>
-                                  item.id === 1
+                                  item.id === p.id &&
+                                  (item.id === 1 || item.id === 2)
                                     ? { ...item, precio: nuevoPrecio }
                                     : item
                                 )

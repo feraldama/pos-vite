@@ -507,7 +507,7 @@ export default function Sales() {
   }, [user?.LocalId]);
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
+    <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
       <div
         style={{
@@ -787,8 +787,7 @@ export default function Sales() {
           <div className="grid grid-cols-4 gap-2 mb-3">
             {/* Botón Pagar grande */}
             <button
-              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition"
-              style={{ minHeight: 215 }}
+              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition min-h-[215px]"
               onClick={() => setShowModal(true)}
             >
               Pagar
@@ -797,8 +796,7 @@ export default function Sales() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
               <button
                 key={n}
-                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition"
-                style={{ minWidth: 60 }}
+                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
               >
                 {n}
               </button>
@@ -827,15 +825,8 @@ export default function Sales() {
         </div>
       </div>
       {/* Lado Derecho */}
-      <div style={{ flex: 2, padding: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: 16,
-            justifyContent: "space-between",
-          }}
-        >
+      <div className="flex-[2] p-4">
+        <div className="flex items-center mb-4 justify-between">
           <SearchButton
             searchTerm={busqueda}
             onSearch={setBusqueda}
@@ -844,17 +835,7 @@ export default function Sales() {
             hideButton={true}
           />
           {user && (
-            <div
-              style={{
-                marginLeft: 24,
-                fontWeight: 600,
-                color: "#222",
-                fontSize: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
+            <div className="ml-6 font-semibold text-[#222] text-[16px] flex items-center gap-2">
               <span>
                 {user.nombre + " "}
                 <span style={{ color: "#888", fontWeight: 400 }}>
@@ -862,12 +843,12 @@ export default function Sales() {
                 </span>
               </span>
               {localNombre && (
-                <span style={{ color: "#e53935", fontWeight: 500 }}>
+                <span className="text-red-600 font-medium">
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                <span className="text-blue-600 font-medium">
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}
@@ -886,16 +867,13 @@ export default function Sales() {
         </div>
         {/* Nuevo contenedor con scroll solo para los productos */}
         <div
-          style={{
-            height: "calc(100vh - 120px)", // Ajusta este valor si es necesario
-            overflowY: "auto",
-          }}
+          className="overflow-y-auto"
+          style={{ height: "calc(100vh - 120px)" }}
         >
           <div
+            className="grid gap-4"
             style={{
-              display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16,
             }}
           >
             {loading ? (
@@ -913,7 +891,6 @@ export default function Sales() {
                 .map((p) => (
                   <ProductCard
                     key={p.ProductoId}
-                    // id={p.ProductoId}
                     nombre={p.ProductoNombre}
                     precio={p.ProductoPrecioVenta}
                     precioMayorista={p.ProductoPrecioVentaMayorista}

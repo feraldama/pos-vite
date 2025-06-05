@@ -462,14 +462,46 @@ export default function Sales() {
     const headers = [["Desc.", "Cant", "Precio", "Total"]];
 
     // Datos de la tabla
-    const tableData = cartItems.map((item) => [
-      item.nombre || item.id.toString(),
-      item.quantity,
-      item.unidad === "U"
-        ? item.salePrice.toLocaleString("es-ES")
-        : item.price.toLocaleString("es-ES"),
-      `Gs. ${item.totalPrice.toLocaleString("es-ES")}`,
-    ]);
+    const tableData = carrito.map((p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
+      let precioUnitario = 0;
+      let precioLabel = "";
+      let totalLinea = 0;
+      if (p.caja) {
+        // Caja: precio minorista o mayorista
+        precioUnitario =
+          clienteSeleccionado?.ClienteTipo === "MA"
+            ? productoOriginal.ProductoPrecioVentaMayorista
+            : productoOriginal.ProductoPrecioVenta;
+        precioLabel = `Caja (${
+          clienteSeleccionado?.ClienteTipo === "MA" ? "Mayorista" : "Minorista"
+        })`;
+        totalLinea = precioUnitario * p.cantidad;
+      } else {
+        // Unidad: puede aplicar combo
+        const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+        if (combo && p.cantidad >= combo.ComboCantidad) {
+          // Aplica combo
+          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioLabel = `Unidad (Combo)`;
+          totalLinea = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+        } else {
+          // Solo unidad
+          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioLabel = `Unidad`;
+          totalLinea = precioUnitario * p.cantidad;
+        }
+      }
+      return [
+        p.nombre,
+        p.cantidad,
+        `Gs. ${precioUnitario.toLocaleString("es-ES")}\n${precioLabel}`,
+        `Gs. ${totalLinea.toLocaleString("es-ES")}`,
+      ];
+    });
 
     // Agregar la tabla al PDF
     autoTable(doc, {
@@ -549,131 +581,48 @@ export default function Sales() {
   }, [user?.LocalId]);
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
+    <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
-      <div
-        style={{
-          flex: 1,
-          background: "#f5f8ff",
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 4px 16px #0001",
-            padding: 0,
-            marginBottom: 16,
-            display: "flex",
-            flexDirection: "column",
-            maxHeight: "80vh",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-              }}
-            >
+      <div className="flex-1 bg-[#f5f8ff] p-4 flex flex-col justify-between">
+        <div className="bg-white rounded-xl shadow-lg p-0 mb-4 flex flex-col max-h-[80vh] overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <table className="w-full border-separate border-spacing-0">
               <thead>
-                <tr style={{ textAlign: "left", background: "#f5f8ff" }}>
-                  <th
-                    style={{
-                      padding: "16px 0 16px 24px",
-                      fontWeight: 600,
-                      fontSize: 15,
-                    }}
-                  >
+                <tr className="text-left bg-[#f5f8ff]">
+                  <th className="py-4 pl-6 font-semibold text-[15px]">
                     Nombre
                   </th>
-                  <th
-                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
-                  >
-                    Caja
-                  </th>
-                  <th
-                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
-                  >
-                    Cantidad
-                  </th>
-                  <th
-                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
-                  >
+                  <th className="py-4 font-semibold text-[15px]">Caja</th>
+                  <th className="py-4 font-semibold text-[15px]">Cantidad</th>
+                  <th className="py-4 font-semibold text-[15px]">
                     Precio Uni.
                   </th>
-                  <th
-                    style={{
-                      padding: "16px 24px 16px 0",
-                      fontWeight: 600,
-                      fontSize: 15,
-                    }}
-                  >
-                    Total
-                  </th>
+                  <th className="py-4 pr-6 font-semibold text-[15px]">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {carrito.map((p, idx) => (
                   <tr
                     key={p.cartItemId}
-                    style={{
-                      background: "#fff",
-                      borderBottom:
-                        idx !== carrito.length - 1
-                          ? "1px solid #e5e7eb"
-                          : "none",
-                    }}
+                    className={`bg-white ${
+                      idx !== carrito.length - 1
+                        ? "border-b border-gray-200"
+                        : ""
+                    }`}
                   >
-                    <td
-                      style={{
-                        padding: "20px 0 20px 24px",
-                        verticalAlign: "middle",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 16,
-                        }}
-                      >
+                    <td className="py-5 pl-6 align-middle">
+                      <div className="flex items-center gap-4">
                         <img
                           src={p.imagen}
                           alt={p.nombre}
-                          style={{
-                            width: 56,
-                            height: 56,
-                            objectFit: "contain",
-                            borderRadius: 8,
-                            background: "#f5f8ff",
-                            boxShadow: "0 1px 4px #0001",
-                          }}
+                          className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
                         <div>
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              fontSize: 17,
-                              color: "#222",
-                              lineHeight: 1.2,
-                            }}
-                          >
+                          <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
                           <div
-                            style={{
-                              color: "#e53935",
-                              fontSize: 14,
-                              marginTop: 4,
-                              cursor: "pointer",
-                            }}
+                            className="text-red-600 text-sm mt-1 cursor-pointer"
                             onClick={() => quitarProducto(p.cartItemId)}
                           >
                             Eliminar
@@ -681,13 +630,7 @@ export default function Sales() {
                         </div>
                       </div>
                     </td>
-                    <td
-                      style={{
-                        padding: "20px 0",
-                        verticalAlign: "middle",
-                        textAlign: "center",
-                      }}
-                    >
+                    <td className="py-5 align-middle text-center">
                       <input
                         type="checkbox"
                         checked={p.caja}
@@ -702,29 +645,13 @@ export default function Sales() {
                         }
                       />
                     </td>
-                    <td style={{ padding: "20px 0", verticalAlign: "middle" }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
+                    <td className="py-5 align-middle">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() =>
                             cambiarCantidad(p.cartItemId, p.cantidad - 1)
                           }
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            color: "#374151",
-                            fontSize: 18,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                         >
                           -
                         </button>
@@ -732,62 +659,23 @@ export default function Sales() {
                           type="number"
                           value={p.cantidad}
                           min={1}
-                          style={{
-                            width: 40,
-                            height: 32,
-                            textAlign: "center",
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            fontSize: 16,
-                            fontWeight: 600,
-                            color: "#222",
-                            margin: "0 2px",
-                          }}
+                          className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
                           readOnly
                         />
                         <button
                           onClick={() =>
                             cambiarCantidad(p.cartItemId, p.cantidad + 1)
                           }
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            color: "#374151",
-                            fontSize: 18,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                         >
                           +
                         </button>
                       </div>
                     </td>
-                    <td
-                      style={{
-                        padding: "20px 0",
-                        verticalAlign: "middle",
-                        textAlign: "right",
-                        fontWeight: 500,
-                        fontSize: 17,
-                        color: "#374151",
-                      }}
-                    >
+                    <td className="py-5 align-middle text-right font-medium text-[17px] text-gray-700">
                       Gs. {obtenerPrecio(p).toLocaleString()}
                     </td>
-                    <td
-                      style={{
-                        padding: "20px 24px 20px 0",
-                        verticalAlign: "middle",
-                        textAlign: "right",
-                        fontWeight: 500,
-                        fontSize: 17,
-                        color: "#374151",
-                      }}
-                    >
+                    <td className="py-5 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
                       Gs. {obtenerTotal(p).toLocaleString()}
                     </td>
                   </tr>
@@ -809,8 +697,7 @@ export default function Sales() {
           <div className="grid grid-cols-4 gap-2 mb-3">
             {/* Botón Pagar grande */}
             <button
-              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition"
-              style={{ minHeight: 215 }}
+              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition min-h-[215px]"
               onClick={() => setShowModal(true)}
             >
               Pagar
@@ -819,8 +706,7 @@ export default function Sales() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
               <button
                 key={n}
-                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition"
-                style={{ minWidth: 60 }}
+                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
               >
                 {n}
               </button>
@@ -849,15 +735,8 @@ export default function Sales() {
         </div>
       </div>
       {/* Lado Derecho */}
-      <div style={{ flex: 2, padding: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: 16,
-            justifyContent: "space-between",
-          }}
-        >
+      <div className="flex-[2] p-4">
+        <div className="flex items-center mb-4 justify-between">
           <SearchButton
             searchTerm={busqueda}
             onSearch={setBusqueda}
@@ -866,17 +745,7 @@ export default function Sales() {
             hideButton={true}
           />
           {user && (
-            <div
-              style={{
-                marginLeft: 24,
-                fontWeight: 600,
-                color: "#222",
-                fontSize: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
+            <div className="ml-6 font-semibold text-[#222] text-[16px] flex items-center gap-2">
               <span>
                 {user.nombre + " "}
                 <span style={{ color: "#888", fontWeight: 400 }}>
@@ -884,12 +753,12 @@ export default function Sales() {
                 </span>
               </span>
               {localNombre && (
-                <span style={{ color: "#e53935", fontWeight: 500 }}>
+                <span className="text-red-600 font-medium">
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                <span className="text-blue-600 font-medium">
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}
@@ -908,16 +777,13 @@ export default function Sales() {
         </div>
         {/* Nuevo contenedor con scroll solo para los productos */}
         <div
-          style={{
-            height: "calc(100vh - 120px)", // Ajusta este valor si es necesario
-            overflowY: "auto",
-          }}
+          className="overflow-y-auto"
+          style={{ height: "calc(100vh - 120px)" }}
         >
           <div
+            className="grid gap-4"
             style={{
-              display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16,
             }}
           >
             {loading ? (
@@ -935,7 +801,6 @@ export default function Sales() {
                 .map((p) => (
                   <ProductCard
                     key={p.ProductoId}
-                    // id={p.ProductoId}
                     nombre={p.ProductoNombre}
                     precio={p.ProductoPrecioVenta}
                     precioMayorista={p.ProductoPrecioVentaMayorista}

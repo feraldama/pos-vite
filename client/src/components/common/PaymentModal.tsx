@@ -767,16 +767,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             Cancelar
           </button>
           <button
-            style={{
-              background: "#93c5fd",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 18,
-              borderRadius: 8,
-              padding: "10px 32px",
-              border: "none",
-              cursor: "pointer",
-            }}
+            className={`px-8 py-2.5 rounded-lg font-bold text-lg border-none transition-colors duration-200
+              ${
+                isSubmitting || totalRest > 0
+                  ? "bg-blue-200 text-white cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              }
+            `}
             onClick={handleSendRequest}
             disabled={isSubmitting || totalRest > 0}
           >

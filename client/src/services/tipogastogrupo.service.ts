@@ -89,3 +89,8 @@ export const deleteTipoGastoGrupo = async (
     throw axiosError.response?.data || { message: "Error al eliminar grupo" };
   }
 };
+
+export const getTiposGastoGrupo = async () => {
+  const response = await api.get("/tipogastogrupo");
+  return response.data;
+};

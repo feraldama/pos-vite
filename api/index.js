@@ -9,6 +9,10 @@ const cajaRoutes = require("./routes/caja.routes");
 const tipoGastoRoutes = require("./routes/tipogasto.routes");
 const clienteRoutes = require("./routes/cliente.routes");
 const tipogastoGrupoRoutes = require("./routes/tipogastogrupo.routes");
+const productoRoutes = require("./routes/producto.routes");
+const localRoutes = require("./routes/local.routes");
+const almacenRoutes = require("./routes/almacen.routes");
+const comboRoutes = require("./routes/combo.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -16,7 +20,7 @@ const app = express();
 // Configuración de CORS
 const corsOptions = {
   origin: "*", // Permite todas las origenes
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   maxAge: 86400, // 24 horas
@@ -30,9 +34,13 @@ app.use(express.json());
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/registrodiariocaja", registroDiarioCajaRoutes);
 app.use("/api/caja", cajaRoutes);
-app.use("/api/tipogastos", tipoGastoRoutes);
+app.use("/api/tipogasto", tipoGastoRoutes);
 app.use("/api/clientes", clienteRoutes);
 app.use("/api/tipogastogrupo", tipogastoGrupoRoutes);
+app.use("/api/productos", productoRoutes);
+app.use("/api/locales", localRoutes);
+app.use("/api/almacen", almacenRoutes);
+app.use("/api/combo", comboRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

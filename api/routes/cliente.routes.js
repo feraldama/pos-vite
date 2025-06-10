@@ -5,6 +5,11 @@ const authMiddleware = require("../middlewares/auth");
 
 // Rutas protegidas (requieren autenticación)
 router.get("/", authMiddleware, clienteController.getAllClientes);
+router.get(
+  "/all",
+  authMiddleware,
+  clienteController.getAllClientesSinPaginacion
+);
 router.get("/search", authMiddleware, clienteController.searchClientes);
 router.get("/:id", authMiddleware, clienteController.getClienteById);
 router.post("/", authMiddleware, clienteController.createCliente);

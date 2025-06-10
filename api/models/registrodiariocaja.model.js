@@ -26,12 +26,13 @@ const RegistroDiarioCaja = {
   getAllPaginated: (
     limit,
     offset,
-    sortBy = "RegistroDiarioCajaFecha",
+    sortBy = "RegistroDiarioCajaId",
     sortOrder = "DESC"
   ) => {
     return new Promise((resolve, reject) => {
       // Sanitiza sortOrder y sortBy para evitar SQL Injection
       const allowedSortFields = [
+        "RegistroDiarioCajaId",
         "RegistroDiarioCajaFecha",
         "RegistroDiarioCajaMonto",
         "RegistroDiarioCajaDetalle",

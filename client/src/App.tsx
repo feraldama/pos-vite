@@ -17,6 +17,10 @@ import CajasPage from "./pages/cajas/CajasPage";
 import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
+import Sales from "./pages/dashboard/Sales";
+import LocalesPage from "./pages/locales/LocalesPage";
+import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
+import CombosPage from "./pages/combos/CombosPage";
 
 function App() {
   return (
@@ -46,6 +50,10 @@ function App() {
               path="/apertura-cierre-caja"
               element={<AperturaCierreCajaPage />}
             />
+            <Route path="/ventas" element={<Sales />} />
+            <Route path="/locales" element={<LocalesPage />} />
+            <Route path="/almacenes" element={<AlmacenesPage />} />
+            <Route path="/combos" element={<CombosPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

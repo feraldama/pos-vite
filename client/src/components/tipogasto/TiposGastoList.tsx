@@ -26,6 +26,7 @@ interface TipoGasto {
 
 interface Pagination {
   totalItems: number;
+  totalPages: number;
 }
 
 interface TiposGastoListProps {

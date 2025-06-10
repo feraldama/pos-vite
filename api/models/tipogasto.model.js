@@ -3,7 +3,7 @@ const db = require("../config/db");
 const TipoGasto = {
   getAll: () => {
     return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM TipoGasto", (err, results) => {
+      db.query("SELECT * FROM tipogasto", (err, results) => {
         if (err) reject(err);
         resolve(results);
       });

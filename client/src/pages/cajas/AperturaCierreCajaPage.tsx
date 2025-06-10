@@ -8,13 +8,25 @@ import {
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
+import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
 interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
-  CajaGastoCantidad: number;
+}
+
+interface RegistroDiarioCaja {
+  RegistroDiarioCajaId: number;
+  CajaId: number;
+  UsuarioId: string;
+  RegistroDiarioCajaFecha: string;
+  RegistroDiarioCajaMonto: number;
+  TipoGastoId: number;
+  TipoGastoGrupoId: number;
 }
 
 export default function AperturaCierreCajaPage() {
@@ -28,6 +40,10 @@ export default function AperturaCierreCajaPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [cajaDisabled, setCajaDisabled] = useState(false);
+  const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
+  const [descargarPDF, setDescargarPDF] = useState(false);
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -51,14 +67,17 @@ export default function AperturaCierreCajaPage() {
       if (!user) return;
       try {
         const data = await getEstadoAperturaPorUsuario(user.id);
-        // Si apertura > cierre, forzar cierre y deshabilitar el select
+        // Si apertura > cierre, forzar cierre y deshabilitar el select de tipo y de caja
         if (data.aperturaId > data.cierreId) {
           setTipo("1"); // Cierre
           setTipoDisabled(true);
+          setCajaDisabled(true); // Solo puede cerrar la caja que tiene abierta
           if (data.cajaId) setCajaId(data.cajaId);
         } else {
+          // No tiene ninguna caja abierta, forzar apertura y deshabilitar solo el select de tipo
           setTipo("0");
-          setTipoDisabled(false);
+          setTipoDisabled(true);
+          setCajaDisabled(false); // Puede elegir la caja que desee
         }
       } catch {
         // Si hay error, no forzar nada
@@ -79,6 +98,149 @@ export default function AperturaCierreCajaPage() {
     }
   }, [error]);
 
+  // Obtener registros de la caja al cerrar
+  const fetchRegistrosCaja = async () => {
+    try {
+      // Traer todos los registros de la caja seleccionada (puedes filtrar por caja y usuario si lo deseas)
+      const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
+      setRegistrosCaja(
+        data.data.filter((r: RegistroDiarioCaja) => r.CajaId == cajaId)
+      );
+    } catch {
+      setRegistrosCaja([]);
+    }
+  };
+
+  // Función para generar el PDF
+  function generarResumenCierrePDF() {
+    if (!user || !cajaId) return;
+    const cajaDescripcion =
+      cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || "";
+    const fecha = new Date().toLocaleDateString();
+    const hora = new Date().toLocaleTimeString();
+    // --- Nueva lógica: buscar última apertura y cierre del usuario ---
+    const registros = registrosCaja.filter((r) => r.UsuarioId == user.id);
+    // Buscar la última apertura del usuario
+    const aperturaReg = registros.find(
+      (reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2
+    );
+    if (!aperturaReg) {
+      Swal.fire({
+        icon: "warning",
+        title: "No se encontró apertura",
+        text: "No se encontró una apertura de caja para este usuario.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+    // Buscar el primer cierre posterior a la apertura
+    const cierreReg = registros.find(
+      (reg) =>
+        reg.TipoGastoId === 1 &&
+        reg.TipoGastoGrupoId === 2 &&
+        reg.RegistroDiarioCajaId > aperturaReg.RegistroDiarioCajaId
+    );
+    if (!cierreReg) {
+      Swal.fire({
+        icon: "warning",
+        title: "No se encontró cierre",
+        text: "No se encontró un cierre de caja posterior a la apertura para este usuario.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+    // Filtrar los registros entre apertura y cierre (inclusive)
+    const registrosFiltrados = registrosCaja.filter(
+      (reg) =>
+        reg.UsuarioId == user.id &&
+        reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
+        reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
+    );
+    // Calcular totales
+    const apertura = aperturaReg.RegistroDiarioCajaMonto;
+    const cierre = cierreReg.RegistroDiarioCajaMonto;
+    let egresos = 0;
+    let ingresos = 0;
+    let ingresosPOS = 0;
+    let ingresosVoucher = 0;
+    let ingresosTransfer = 0;
+    for (const reg of registrosFiltrados) {
+      if (
+        reg.TipoGastoId === 2 &&
+        reg.TipoGastoGrupoId !== 2 &&
+        reg.TipoGastoGrupoId !== 4 &&
+        reg.TipoGastoGrupoId !== 5 &&
+        reg.TipoGastoGrupoId !== 6
+      ) {
+        ingresos += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
+        egresos += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
+        ingresosPOS += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
+        ingresosVoucher += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
+        ingresosTransfer += reg.RegistroDiarioCajaMonto;
+      }
+    }
+    const diferencia = ingresos - egresos;
+    const sobranteFaltante = ingresos + apertura - (cierre + egresos);
+    let txtSobranteFaltante = "";
+    if (sobranteFaltante > 0) {
+      txtSobranteFaltante = `Sobrante de: ${sobranteFaltante.toLocaleString()}`;
+    } else if (sobranteFaltante < 0) {
+      txtSobranteFaltante = `Faltante de: ${Math.abs(
+        sobranteFaltante
+      ).toLocaleString()}`;
+    } else {
+      txtSobranteFaltante = `Sobrante/Faltante: 0`;
+    }
+    // --- Generar PDF ---
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [80, 200], // 80mm de ancho, 200mm de alto
+    });
+    doc.setFontSize(16);
+    doc.text("RESUMEN CIERRE CAJA", 40, 15, { align: "center" });
+    doc.setFontSize(11);
+    doc.text(`Fecha: ${fecha} - Hora: ${hora}`, 10, 30);
+    doc.text(`Usuario: ${user.nombre}`, 10, 38);
+    doc.text(`Caja: ${cajaDescripcion}`, 10, 46);
+    doc.line(10, 50, 200, 50);
+    let y = 58;
+    doc.text(`Apertura: ${apertura.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Cierre: ${cierre.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(`Egresos: ${egresos.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos: ${ingresos.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Diferencia: ${diferencia.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(`Ingresos POS: ${ingresosPOS.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Voucher: ${ingresosVoucher.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Transfer: ${ingresosTransfer.toLocaleString()}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(txtSobranteFaltante, 10, y);
+    y += 12;
+    doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
+    doc.save(`ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`);
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -90,7 +252,20 @@ export default function AperturaCierreCajaPage() {
         CajaId: cajaId,
         Monto: monto,
       });
-      setSuccess(result.message || "Operación realizada correctamente");
+      if (tipo === "0") {
+        await Swal.fire({
+          icon: "success",
+          title: "Apertura exitosa",
+          text: result.message || "La caja se aperturó correctamente",
+          confirmButtonText: "Ir a ventas",
+          confirmButtonColor: "#2563eb",
+        });
+        navigate("/ventas");
+      } else {
+        setSuccess(result.message || "Operación realizada correctamente");
+        await fetchRegistrosCaja();
+        setDescargarPDF(true);
+      }
     } catch (err) {
       setError(
         (err as { message?: string })?.message || "Error en la operación"
@@ -145,12 +320,12 @@ export default function AperturaCierreCajaPage() {
             </label>
             <select
               className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
-                tipoDisabled ? "bg-gray-200 text-gray-500" : ""
+                cajaDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={cajaId}
               onChange={(e) => setCajaId(e.target.value)}
               required
-              disabled={tipoDisabled}
+              disabled={cajaDisabled}
             >
               {cajas.map((caja) => (
                 <option key={caja.CajaId} value={caja.CajaId}>
@@ -193,6 +368,14 @@ export default function AperturaCierreCajaPage() {
           </div>
         )}
       </form>
+      {success && tipo === "1" && descargarPDF && (
+        <div className="flex justify-center mt-4">
+          <ActionButton
+            label="Descargar Resumen PDF"
+            onClick={generarResumenCierrePDF}
+          />
+        </div>
+      )}
     </div>
   );
 }

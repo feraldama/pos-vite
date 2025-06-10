@@ -83,26 +83,15 @@ exports.getClienteById = async (req, res) => {
 exports.createCliente = async (req, res) => {
   try {
     // Validación de campos requeridos
-    const camposRequeridos = [
-      "ClienteId",
-      "ClienteRUC",
-      "ClienteNombre",
-      "ClienteTipo",
-      "UsuarioId",
-      "ClienteCodJSI",
-    ];
-    for (const campo of camposRequeridos) {
-      if (!req.body[campo]) {
-        return res.status(400).json({
-          success: false,
-          message: `El campo ${campo} es requerido`,
-        });
-      }
+    if (!req.body.ClienteNombre) {
+      return res.status(400).json({
+        success: false,
+        message: `El campo ClienteNombre es requerido`,
+      });
     }
     // Crear el nuevo cliente
     const nuevoCliente = await Cliente.create({
-      ClienteId: req.body.ClienteId,
-      ClienteRUC: req.body.ClienteRUC,
+      ClienteRUC: req.body.ClienteRUC || "",
       ClienteNombre: req.body.ClienteNombre,
       ClienteApellido: req.body.ClienteApellido || null,
       ClienteDireccion: req.body.ClienteDireccion || null,
@@ -189,5 +178,15 @@ exports.deleteCliente = async (req, res) => {
       message: "Error al eliminar cliente",
       error: error.message,
     });
+  }
+};
+
+// Obtener todos los clientes sin paginación
+exports.getAllClientesSinPaginacion = async (req, res) => {
+  try {
+    const clientes = await Cliente.getAll();
+    res.json({ data: clientes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

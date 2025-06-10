@@ -34,7 +34,6 @@ const Cliente = {
         "ClienteTelefono",
         "ClienteTipo",
         "UsuarioId",
-        "ClienteCodJSI",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -77,7 +76,6 @@ const Cliente = {
         "ClienteTelefono",
         "ClienteTipo",
         "UsuarioId",
-        "ClienteCodJSI",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -131,31 +129,27 @@ const Cliente = {
     return new Promise((resolve, reject) => {
       const query = `
         INSERT INTO clientes (
-          ClienteId,
           ClienteRUC,
           ClienteNombre,
           ClienteApellido,
           ClienteDireccion,
           ClienteTelefono,
           ClienteTipo,
-          UsuarioId,
-          ClienteCodJSI
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          UsuarioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
-        clienteData.ClienteId,
-        clienteData.ClienteRUC,
+        clienteData.ClienteRUC || "",
         clienteData.ClienteNombre,
-        clienteData.ClienteApellido,
-        clienteData.ClienteDireccion,
-        clienteData.ClienteTelefono,
-        clienteData.ClienteTipo,
-        clienteData.UsuarioId,
-        clienteData.ClienteCodJSI,
+        clienteData.ClienteApellido || "",
+        clienteData.ClienteDireccion || "",
+        clienteData.ClienteTelefono || "",
+        clienteData.ClienteTipo || "",
+        clienteData.UsuarioId || "",
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
-        resolve({ ...clienteData });
+        resolve({ ...clienteData, ClienteId: result.insertId });
       });
     });
   },
@@ -172,7 +166,6 @@ const Cliente = {
         "ClienteTelefono",
         "ClienteTipo",
         "UsuarioId",
-        "ClienteCodJSI",
       ];
       camposActualizables.forEach((campo) => {
         if (clienteData[campo] !== undefined) {

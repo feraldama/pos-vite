@@ -8,6 +8,7 @@ interface SearchButtonProps {
   onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
   placeholder?: string;
   className?: string;
+  hideButton?: boolean;
 }
 
 export default function SearchButton({
@@ -16,6 +17,7 @@ export default function SearchButton({
   onKeyPress,
   onSearchSubmit,
   placeholder = "Buscar...",
+  hideButton = false,
 }: SearchButtonProps) {
   return (
     <div className="flex items-center flex-row flex-wrap py-4 bg-white sm:max-w-full lg:max-w-xl gap-2">
@@ -47,11 +49,13 @@ export default function SearchButton({
           onKeyDown={onKeyPress}
         />
       </div>
-      <ActionButton
-        label="Buscar"
-        onClick={onSearchSubmit}
-        className="text-white rounded-lg flex-shrink-0"
-      />
+      {!hideButton && (
+        <ActionButton
+          label="Buscar"
+          onClick={onSearchSubmit}
+          className="text-white rounded-lg flex-shrink-0"
+        />
+      )}
     </div>
   );
 }

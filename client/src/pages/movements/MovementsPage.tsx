@@ -50,7 +50,7 @@ export default function MovementsPage() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string | undefined>();
+  const [sortKey, setSortKey] = useState<string>("RegistroDiarioCajaId");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const fetchMovimientos = useCallback(async () => {

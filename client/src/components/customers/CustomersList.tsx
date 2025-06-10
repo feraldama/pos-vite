@@ -3,6 +3,7 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/useAuth";
 
 interface Cliente {
   id: string | number;
@@ -72,6 +73,8 @@ export default function CustomersList({
     ClienteCodJSI: "",
   });
 
+  const { user } = useAuth();
+
   useEffect(() => {
     if (currentCliente) {
       setFormData({ ...currentCliente });
@@ -84,12 +87,12 @@ export default function CustomersList({
         ClienteApellido: "",
         ClienteDireccion: "",
         ClienteTelefono: "",
-        ClienteTipo: "",
-        UsuarioId: "",
+        ClienteTipo: "MI",
+        UsuarioId: user?.id || "",
         ClienteCodJSI: "",
       });
     }
-  }, [currentCliente]);
+  }, [currentCliente, user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -200,25 +203,6 @@ export default function CustomersList({
               </div>
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-6 gap-6">
-                  {!currentCliente && (
-                    <div className="col-span-6 sm:col-span-3">
-                      <label
-                        htmlFor="ClienteId"
-                        className="block mb-2 text-sm font-medium text-gray-900"
-                      >
-                        ID de Cliente
-                      </label>
-                      <input
-                        type="text"
-                        name="ClienteId"
-                        id="ClienteId"
-                        value={formData.ClienteId}
-                        onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                        required
-                      />
-                    </div>
-                  )}
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="ClienteRUC"
@@ -233,7 +217,6 @@ export default function CustomersList({
                       value={formData.ClienteRUC}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -308,32 +291,17 @@ export default function CustomersList({
                     >
                       Tipo
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="ClienteTipo"
                       id="ClienteTipo"
                       value={formData.ClienteTipo}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="UsuarioId"
-                      className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Usuario ID
-                    </label>
-                    <input
-                      type="text"
-                      name="UsuarioId"
-                      id="UsuarioId"
-                      value={formData.UsuarioId}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
+                      <option value="MI">Minorista</option>
+                      <option value="MA">Mayorista</option>
+                    </select>
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
@@ -349,8 +317,24 @@ export default function CustomersList({
                       value={formData.ClienteCodJSI}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
                     />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="UsuarioId"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Usuario ID
+                    </label>
+                    <input
+                      type="text"
+                      name="UsuarioId"
+                      id="UsuarioId"
+                      value={formData.UsuarioId}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                    />{" "}
                   </div>
                 </div>
               </div>

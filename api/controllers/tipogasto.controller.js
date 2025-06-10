@@ -1,12 +1,21 @@
 const TipoGasto = require("../models/tipogasto.model");
 
 exports.getAll = async (req, res) => {
-  const limit = parseInt(req.query.limit) || 10;
-  const page = parseInt(req.query.page) || 1;
-  const offset = (page - 1) * limit;
-  const sortBy = req.query.sortBy || "TipoGastoId";
-  const sortOrder = req.query.sortOrder || "ASC";
   try {
+    const tipos = await TipoGasto.getAll();
+    res.json(tipos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getAllPaginated = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || "TipoGastoId";
+    const sortOrder = req.query.sortOrder || "ASC";
     const result = await TipoGasto.getAllPaginated(
       limit,
       offset,

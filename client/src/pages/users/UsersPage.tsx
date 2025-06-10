@@ -9,6 +9,7 @@ import {
 import UsersList from "../../components/users/UsersList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 // Tipos auxiliares
 interface Usuario {
@@ -45,6 +46,11 @@ export default function UsuariosPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("USUARIOS", "crear");
+  const puedeEditar = usePermiso("USUARIOS", "editar");
+  const puedeEliminar = usePermiso("USUARIOS", "eliminar");
+  const puedeLeer = usePermiso("USUARIOS", "leer");
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -186,6 +192,8 @@ export default function UsuariosPage() {
     setCurrentPage(1); // Resetear a la primera página cuando cambia el número de items por página
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver los usuarios</div>;
+
   if (loading) return <div>Cargando usuarios...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -194,9 +202,11 @@ export default function UsuariosPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Usuarios</h1>
       <UsersList
         usuarios={usuariosData.usuarios.map((u) => ({ ...u, id: u.UsuarioId }))}
-        onDelete={(user) => handleDelete(user.UsuarioId)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar ? (user) => handleDelete(user.UsuarioId) : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={usuariosData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

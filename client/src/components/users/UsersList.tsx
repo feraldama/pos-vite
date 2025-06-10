@@ -45,7 +45,7 @@ interface UsuariosListProps {
 
 export default function UsuariosList({
   usuarios,
-  // onDelete,
+  onDelete,
   onEdit,
   onCreate,
   pagination,
@@ -194,11 +194,13 @@ export default function UsuariosList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Usuario"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Usuario"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
 
@@ -213,6 +215,7 @@ export default function UsuariosList({
         columns={columns}
         data={usuarios}
         onEdit={onEdit}
+        onDelete={onDelete}
         emptyMessage="No se encontraron usuarios"
         getStatusColor={getEstadoColor}
         getStatusText={getEstadoVisual}

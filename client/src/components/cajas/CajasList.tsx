@@ -118,7 +118,13 @@ export default function CajasList({
           />
         </div>
         <div className="py-4">
-          <ActionButton label="Nueva Caja" onClick={onCreate} icon={PlusIcon} />
+          {onCreate && (
+            <ActionButton
+              label="Nueva Caja"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">

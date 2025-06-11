@@ -113,11 +113,13 @@ export default function AlmacenesList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Almacén"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Almacén"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">

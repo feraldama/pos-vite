@@ -136,11 +136,13 @@ export default function CustomersList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Cliente"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Cliente"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">

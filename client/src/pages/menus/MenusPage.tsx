@@ -87,7 +87,13 @@ export default function MenusPage() {
       if (result.isConfirmed) {
         try {
           await deleteMenu(id);
-          Swal.fire({ icon: "success", title: "Menú eliminado" });
+          Swal.fire({
+            position: "top-end",
+            icon: "success",
+            title: "Menú eliminado",
+            showConfirmButton: false,
+            timer: 2000,
+          });
           fetchMenus();
         } catch (error: unknown) {
           const err = error as { message?: string };
@@ -106,10 +112,22 @@ export default function MenusPage() {
     try {
       if (currentMenu) {
         await updateMenu(currentMenu.MenuId, { ...menuData });
-        Swal.fire({ icon: "success", title: "Menú actualizado" });
+        Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: "Menú actualizado",
+          showConfirmButton: false,
+          timer: 2000,
+        });
       } else {
         await createMenu({ ...menuData });
-        Swal.fire({ icon: "success", title: "Menú creado" });
+        Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: "Menú creado",
+          showConfirmButton: false,
+          timer: 2000,
+        });
       }
       setIsModalOpen(false);
       fetchMenus();

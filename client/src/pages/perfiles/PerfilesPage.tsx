@@ -13,6 +13,7 @@ import {
 import PerfilesList from "../../components/perfiles/PerfilesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Perfil {
   PerfilId: number;
@@ -40,6 +41,11 @@ export default function PerfilesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
+
+  const puedeCrear = usePermiso("PERFILES", "crear");
+  const puedeEditar = usePermiso("PERFILES", "editar");
+  const puedeEliminar = usePermiso("PERFILES", "eliminar");
+  const puedeLeer = usePermiso("PERFILES", "leer");
 
   const fetchPerfiles = useCallback(async () => {
     try {
@@ -170,6 +176,7 @@ export default function PerfilesPage() {
     perfil.PerfilDescripcion.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (!puedeLeer) return <div>No tienes permiso para ver los perfiles</div>;
   if (loading) return <div>Cargando perfiles...</div>;
   if (error) return <div>{error}</div>;
 
@@ -178,9 +185,9 @@ export default function PerfilesPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Perfiles</h1>
       <PerfilesList
         perfiles={filteredPerfiles.map((p) => ({ ...p, id: p.PerfilId }))}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onCreate={handleCreate}
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onDelete={puedeEliminar ? handleDelete : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
         currentPerfil={currentPerfil}

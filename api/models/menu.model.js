@@ -67,11 +67,11 @@ const Menu = {
   create: (data) => {
     return new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO menu (MenuNombre) VALUES (?)",
-        [data.MenuNombre],
+        "INSERT INTO menu (MenuId, MenuNombre) VALUES (?, ?)",
+        [data.MenuId, data.MenuNombre],
         (err, result) => {
           if (err) return reject(err);
-          resolve({ MenuId: result.insertId, ...data });
+          resolve({ MenuId: data.MenuId, ...data });
         }
       );
     });

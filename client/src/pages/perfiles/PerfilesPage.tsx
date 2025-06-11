@@ -5,6 +5,11 @@ import {
   updatePerfil,
   deletePerfil,
 } from "../../services/perfiles.service";
+import {
+  createPerfilMenu,
+  getPermisosByPerfil,
+  deletePerfilMenu,
+} from "../../services/perfilmenu.service";
 import PerfilesList from "../../components/perfiles/PerfilesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
@@ -83,7 +88,13 @@ export default function PerfilesPage() {
       if (result.isConfirmed) {
         try {
           await deletePerfil(id);
-          Swal.fire({ icon: "success", title: "Perfil eliminado" });
+          Swal.fire({
+            position: "top-end",
+            icon: "success",
+            title: "Perfil eliminado",
+            showConfirmButton: false,
+            timer: 2000,
+          });
           fetchPerfiles();
         } catch {
           Swal.fire({ icon: "error", title: "No se pudo eliminar" });
@@ -92,14 +103,44 @@ export default function PerfilesPage() {
     });
   };
 
-  const handleSubmit = async (perfilData: Perfil) => {
+  const handleSubmit = async (
+    perfilData: Perfil & { menusSeleccionados?: number[] }
+  ) => {
     try {
+      let perfilId = perfilData.PerfilId;
       if (currentPerfil) {
         await updatePerfil(currentPerfil.PerfilId, { ...perfilData });
-        Swal.fire({ icon: "success", title: "Perfil actualizado" });
+        perfilId = currentPerfil.PerfilId;
+        Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: "Perfil actualizado",
+          showConfirmButton: false,
+          timer: 2000,
+        });
       } else {
-        await createPerfil({ ...perfilData });
-        Swal.fire({ icon: "success", title: "Perfil creado" });
+        const res = await createPerfil({ ...perfilData });
+        perfilId = res.PerfilId;
+        Swal.fire({
+          position: "top-end",
+          icon: "success",
+          title: "Perfil creado",
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      }
+      // Asignar menús
+      if (perfilData.menusSeleccionados) {
+        const actuales = await getPermisosByPerfil(perfilId);
+        const arr = Array.isArray(actuales) ? actuales : actuales.data;
+        if (Array.isArray(arr)) {
+          for (const rel of arr) {
+            await deletePerfilMenu(perfilId, rel.MenuId);
+          }
+        }
+        for (const menuId of perfilData.menusSeleccionados) {
+          await createPerfilMenu({ PerfilId: perfilId, MenuId: menuId });
+        }
       }
       setIsModalOpen(false);
       fetchPerfiles();

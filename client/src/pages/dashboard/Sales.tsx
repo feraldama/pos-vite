@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -103,6 +103,16 @@ export default function Sales() {
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
+  const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+
+  useEffect(() => {
+    if (selectedProductId !== null && cantidadRefs.current[selectedProductId]) {
+      cantidadRefs.current[selectedProductId]?.focus();
+    }
+  }, [selectedProductId, carrito.length]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -128,11 +138,13 @@ export default function Sales() {
           p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
         )
       );
+      setSelectedProductId(producto.id);
     } else {
       setCarrito([
         ...carrito,
         { ...producto, precio: precioSeguro, cantidad: 1 },
       ]);
+      setSelectedProductId(producto.id);
     }
   };
 
@@ -506,6 +518,74 @@ export default function Sales() {
     }
   }, [user?.LocalId]);
 
+  const handleTecladoNumerico = (valor: string | number) => {
+    if (selectedProductId === null) return;
+    setCarrito((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedProductId) return item;
+        let nuevaCantidad = String(item.cantidad);
+        if (valor === "C" || valor === "c") {
+          nuevaCantidad = "0";
+        } else if (valor === "←") {
+          nuevaCantidad =
+            nuevaCantidad.length > 1 ? nuevaCantidad.slice(0, -1) : "0";
+        } else {
+          // Solo permitir números
+          if (/^\d+$/.test(String(valor))) {
+            nuevaCantidad = nuevaCantidad + valor;
+          }
+        }
+        return { ...item, cantidad: Math.max(0, Number(nuevaCantidad)) };
+      })
+    );
+  };
+
+  // --- Generar PDF de Presupuesto ---
+  const handlePresupuestoPDF = () => {
+    const doc = new jsPDF();
+    const cliente = clienteSeleccionado
+      ? `${clienteSeleccionado.ClienteNombre} ${clienteSeleccionado.ClienteApellido}`.trim()
+      : "SIN NOMBRE";
+    doc.setFontSize(22);
+    doc.text("Presupuesto", 14, 20);
+    doc.setFontSize(14);
+    doc.text(`Cliente:    ${cliente}`, 14, 32);
+
+    // Tabla de productos
+    const headers = [["Producto", "Cantidad", "Precio Unitario", "Total"]];
+    const body = carrito.map((item) => [
+      item.nombre,
+      String(item.cantidad),
+      `Gs. ${item.precio.toLocaleString()}`,
+      `Gs. ${(item.precio * item.cantidad).toLocaleString()}`,
+    ]);
+    autoTable(doc, {
+      head: headers,
+      body: body,
+      startY: 40,
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      bodyStyles: { fontSize: 12 },
+      styles: { cellPadding: 2 },
+      theme: "grid",
+      margin: { left: 14, right: 14 },
+    });
+    // Calcular total
+    const subtotal = carrito.reduce(
+      (acc, item) => acc + item.precio * item.cantidad,
+      0
+    );
+    const finalY =
+      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY || 60;
+    doc.setFontSize(16);
+    doc.text(`Total: Gs. ${subtotal.toLocaleString()}`, 14, finalY + 16);
+    doc.save("presupuesto.pdf");
+  };
+
   return (
     <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
@@ -596,6 +676,12 @@ export default function Sales() {
                             ? "1px solid #e5e7eb"
                             : "none",
                       }}
+                      onClick={() => {
+                        setSelectedProductId(p.id);
+                        setTimeout(() => {
+                          cantidadRefs.current[p.id]?.focus();
+                        }, 0);
+                      }}
                     >
                       <td
                         style={{
@@ -640,7 +726,10 @@ export default function Sales() {
                                 marginTop: 4,
                                 cursor: "pointer",
                               }}
-                              onClick={() => quitarProducto(p.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quitarProducto(p.id);
+                              }}
                             >
                               Eliminar
                             </div>
@@ -658,9 +747,11 @@ export default function Sales() {
                           }}
                         >
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad - 1)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.id, p.cantidad - 1);
+                              setSelectedProductId(p.id);
+                            }}
                             style={{
                               width: 32,
                               height: 32,
@@ -678,7 +769,7 @@ export default function Sales() {
                           <input
                             type="number"
                             value={p.cantidad}
-                            min={1}
+                            min={0}
                             style={{
                               width: 40,
                               height: 32,
@@ -692,11 +783,37 @@ export default function Sales() {
                               margin: "0 2px",
                             }}
                             readOnly
+                            ref={(el) => {
+                              cantidadRefs.current[p.id] = el || null;
+                            }}
+                            tabIndex={0}
+                            onFocus={() => setSelectedProductId(p.id)}
+                            onKeyDown={(e) => {
+                              if (selectedProductId !== p.id) return;
+                              if (e.key >= "0" && e.key <= "9") {
+                                e.preventDefault();
+                                handleTecladoNumerico(e.key);
+                              } else if (e.key === "Backspace") {
+                                e.preventDefault();
+                                handleTecladoNumerico("←");
+                              } else if (e.key.toLowerCase() === "c") {
+                                e.preventDefault();
+                                handleTecladoNumerico("C");
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                cambiarCantidad(p.id, p.cantidad + 1);
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                cambiarCantidad(p.id, p.cantidad - 1);
+                              }
+                            }}
                           />
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad + 1)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.id, p.cantidad + 1);
+                              setSelectedProductId(p.id);
+                            }}
                             style={{
                               width: 32,
                               height: 32,
@@ -793,14 +910,28 @@ export default function Sales() {
               Pagar
             </button>
             {/* Números y símbolos */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
               <button
                 key={n}
                 className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+                onClick={() => handleTecladoNumerico(n)}
               >
                 {n}
               </button>
             ))}
+            {/* Botón borrar y limpiar */}
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={() => handleTecladoNumerico("←")}
+            >
+              ←
+            </button>
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={handlePresupuestoPDF}
+            >
+              Presupuesto
+            </button>
           </div>
           {/* Recuadro inferior para el nombre del cliente */}
           <div className="mt-2">

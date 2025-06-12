@@ -305,30 +305,27 @@ export default function Sales() {
     const añoStr = año < 10 ? `0${año}` : año.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
-    const SDTProductoItem = cartItems.map((producto) => {
-      const combo = combos.find(
-        (c) => Number(c.ProductoId) === Number(producto.id)
-      );
+    const SDTProductoItem = carrito.map((p) => {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
       const productoOriginal = productos.find(
-        (p) => p.ProductoId === producto.id
+        (prod) => p.id === prod.ProductoId
       );
-      const precioUnitario =
-        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const precioUnitario = productoOriginal?.ProductoPrecioVenta ?? p.precio;
       const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
       const totalCombo = calcularPrecioConCombo(
-        producto.id,
-        producto.quantity,
+        p.id,
+        p.cantidad,
         precioUnitario
       );
-      const esCombo = combo && producto.quantity >= comboCantidad;
+      const esCombo = combo && p.cantidad >= comboCantidad;
       return {
         ClienteId: clienteSeleccionado?.ClienteId,
         Producto: {
-          ProductoId: producto.id,
-          VentaProductoCantidad: producto.quantity,
-          ProductoPrecioVenta: producto.salePrice,
-          ProductoUnidad: producto.unidad,
-          VentaProductoPrecioTotal: producto.totalPrice,
+          ProductoId: p.id,
+          VentaProductoCantidad: p.cantidad,
+          ProductoPrecioVenta: p.precio,
+          ProductoUnidad: p.caja ? "C" : "U",
+          VentaProductoPrecioTotal: obtenerTotal(p),
           Combo: esCombo ? "S" : "N",
           ComboPrecio: esCombo ? totalCombo : 0,
         },

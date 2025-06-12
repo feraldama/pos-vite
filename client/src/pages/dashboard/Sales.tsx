@@ -671,7 +671,6 @@ export default function Sales() {
                   <th className="py-4 pl-6 font-semibold text-[15px]">
                     Nombre
                   </th>
-                  <th className="py-4 font-semibold text-[15px]">Caja</th>
                   <th className="py-4 font-semibold text-[15px]">Cantidad</th>
                   <th className="py-4 font-semibold text-[15px]">
                     Precio Uni.
@@ -683,11 +682,13 @@ export default function Sales() {
                 {carrito.map((p, idx) => (
                   <tr
                     key={p.cartItemId}
-                    className={`bg-white ${
-                      idx !== carrito.length - 1
+                    className={`${
+                      p.cartItemId === selectedProductId
+                        ? "bg-gray-50 border-gray-300"
+                        : idx !== carrito.length - 1
                         ? "border-b border-gray-200"
                         : ""
-                    }`}
+                    } transition-colors`}
                     onClick={() => {
                       setSelectedProductId(p.cartItemId);
                       setTimeout(() => {
@@ -695,7 +696,7 @@ export default function Sales() {
                       }, 0);
                     }}
                   >
-                    <td className="py-5 pl-6 align-middle">
+                    <td className="py-3 pl-6 align-middle">
                       <div className="flex items-center gap-4">
                         <img
                           src={p.imagen}
@@ -718,80 +719,90 @@ export default function Sales() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-5 align-middle text-center">
-                      <input
-                        type="checkbox"
-                        checked={p.caja}
-                        onChange={() =>
-                          setCarrito(
-                            carrito.map((item) =>
-                              item.cartItemId === p.cartItemId
-                                ? { ...item, caja: !item.caja }
-                                : item
-                            )
-                          )
-                        }
-                      />
-                    </td>
-                    <td className="py-5 align-middle">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidad(p.cartItemId, p.cantidad - 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={p.cantidad}
-                          min={0}
-                          className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
-                          readOnly
-                          ref={(el) => {
-                            cantidadRefs.current[p.cartItemId] = el || null;
-                          }}
-                          tabIndex={0}
-                          onFocus={() => setSelectedProductId(p.cartItemId)}
-                          onKeyDown={(e) => {
-                            if (selectedProductId !== p.cartItemId) return;
-                            if (e.key >= "0" && e.key <= "9") {
-                              e.preventDefault();
-                              handleTecladoNumerico(e.key);
-                            } else if (e.key === "Backspace") {
-                              e.preventDefault();
-                              handleTecladoNumerico("←");
-                            } else if (e.key.toLowerCase() === "c") {
-                              e.preventDefault();
-                              handleTecladoNumerico("C");
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              cambiarCantidad(p.cartItemId, p.cantidad + 1);
-                            } else if (e.key === "ArrowDown") {
-                              e.preventDefault();
+                    <td className="py-3 align-middle">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               cambiarCantidad(p.cartItemId, p.cantidad - 1);
+                              setSelectedProductId(p.cartItemId);
+                            }}
+                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            value={p.cantidad}
+                            min={0}
+                            className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
+                            readOnly
+                            ref={(el) => {
+                              cantidadRefs.current[p.cartItemId] = el || null;
+                            }}
+                            tabIndex={0}
+                            onFocus={() => setSelectedProductId(p.cartItemId)}
+                            onKeyDown={(e) => {
+                              if (selectedProductId !== p.cartItemId) return;
+                              if (e.key >= "0" && e.key <= "9") {
+                                e.preventDefault();
+                                handleTecladoNumerico(e.key);
+                              } else if (e.key === "Backspace") {
+                                e.preventDefault();
+                                handleTecladoNumerico("←");
+                              } else if (e.key.toLowerCase() === "c") {
+                                e.preventDefault();
+                                handleTecladoNumerico("C");
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                cambiarCantidad(p.cartItemId, p.cantidad + 1);
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                cambiarCantidad(p.cartItemId, p.cantidad - 1);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.cartItemId, p.cantidad + 1);
+                              setSelectedProductId(p.cartItemId);
+                            }}
+                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <input
+                            type="checkbox"
+                            id={`caja-checkbox-${p.cartItemId}`}
+                            checked={p.caja}
+                            onChange={() =>
+                              setCarrito(
+                                carrito.map((item) =>
+                                  item.cartItemId === p.cartItemId
+                                    ? { ...item, caja: !item.caja }
+                                    : item
+                                )
+                              )
                             }
-                          }}
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidad(p.cartItemId, p.cantidad + 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
-                        >
-                          +
-                        </button>
+                            className="cursor-pointer"
+                          />
+                          <label
+                            htmlFor={`caja-checkbox-${p.cartItemId}`}
+                            className="text-lg text-gray-700 cursor-pointer select-none font-medium"
+                          >
+                            Caja
+                          </label>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-5 align-middle text-right font-medium text-[17px] text-gray-700">
+                    <td className="py-3 align-middle text-right font-medium text-[17px] text-gray-700">
                       <>Gs. {obtenerPrecio(p).toLocaleString()}</>
                     </td>
-                    <td className="py-5 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
+                    <td className="py-3 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
                       Gs. {obtenerTotal(p).toLocaleString()}
                     </td>
                   </tr>

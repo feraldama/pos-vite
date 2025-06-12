@@ -89,7 +89,7 @@ export default function Sales() {
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>({
       ClienteId: 1,
-      ClienteNombre: "Sin Nombre minorista",
+      ClienteNombre: "SIN NOMBRE MINORISTA",
       ClienteRUC: "",
       ClienteTelefono: "",
       ClienteTipo: "MI",
@@ -431,15 +431,24 @@ export default function Sales() {
     // Encabezados de la tabla
     const headers = [["Desc.", "Cant", "Precio", "Total"]];
 
-    // Datos de la tabla
-    const tableData = cartItems.map((item) => [
-      item.nombre || item.id.toString(),
-      item.quantity,
-      item.unidad === "U"
-        ? item.salePrice.toLocaleString("es-ES")
-        : item.price.toLocaleString("es-ES"),
-      `Gs. ${item.totalPrice.toLocaleString("es-ES")}`,
-    ]);
+    // Datos de la tabla para el PDF
+    const tableData = carrito.map((p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
+      const precioUnitario =
+        p.id === 1 || p.id === 2
+          ? p.precio
+          : productoOriginal.ProductoPrecioVenta ?? p.precio;
+      const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+      return [
+        p.nombre,
+        p.cantidad,
+        `Gs. ${precioUnitario.toLocaleString("es-ES")}`,
+        `Gs. ${subtotal.toLocaleString("es-ES")}`,
+      ];
+    });
 
     // Agregar la tabla al PDF
     autoTable(doc, {
@@ -462,8 +471,17 @@ export default function Sales() {
       margin: { left: 0 }, // Margen izquierdo
     });
 
-    // Total de la compra
-    const totalCost = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    // Total de la compra para el PDF
+    const totalCost = carrito.reduce((sum, p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      const precioUnitario =
+        p.id === 1 || p.id === 2
+          ? p.precio
+          : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+    }, 0);
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;

@@ -61,9 +61,23 @@ export default function CombosList({
 
   useEffect(() => {
     if (currentCombo && productos.length > 0) {
+      let productoId = currentCombo.ProductoId;
+
+      // Si ProductoId no es un número, buscar por nombre
+      if (isNaN(Number(productoId))) {
+        const productoEncontrado = productos.find(
+          (p) => p.ProductoNombre === productoId
+        );
+        productoId = productoEncontrado
+          ? String(productoEncontrado.ProductoId)
+          : "";
+      } else {
+        productoId = String(productoId);
+      }
+
       setFormData({
         ...currentCombo,
-        ProductoId: String(currentCombo.ProductoId),
+        ProductoId: productoId,
       });
     } else if (!currentCombo) {
       setFormData({
@@ -151,7 +165,7 @@ export default function CombosList({
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
                   {currentCombo
-                    ? `Editar combo: ${currentCombo.ComboId}`
+                    ? `Editar combo: ${currentCombo.ComboDescripcion}`
                     : "Crear nuevo combo"}
                 </h3>
                 <button

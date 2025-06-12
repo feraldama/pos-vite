@@ -451,10 +451,10 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Alonso", 0, 15);
-    doc.text("PADEL", 0, 20);
-    doc.text("Carmen de Peña, Itauguá", 0, 25);
-    doc.text("Teléfono: +595 981 123456", 0, 30);
+    doc.text("Auto Shop Alonso", 0, 15);
+    doc.text("BODEGA", 0, 20);
+    doc.text("Bernardino Caballero c/ Antequera, Ypacaraí", 0, 25);
+    doc.text("Teléfono: +595 892 784989", 0, 30);
     doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
     doc.text(
       clienteSeleccionado?.ClienteRUC

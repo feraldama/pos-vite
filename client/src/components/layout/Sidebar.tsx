@@ -15,6 +15,7 @@ import {
   CurrencyDollarIcon,
   ArchiveBoxIcon,
   RectangleGroupIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -59,6 +60,11 @@ const navigation: NavigationItem[] = [
     name: "Clientes",
     href: "/customers",
     icon: <UsersIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Productos",
+    href: "/products",
+    icon: <CubeIcon className="h-7 w-6" />,
   },
   {
     name: "Registro Diario",

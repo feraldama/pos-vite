@@ -45,6 +45,8 @@ const Producto = {
         "ProductoStockMinimo",
         "ProductoImagen",
         "ProductoImagen_GXI",
+        "LocalId",
+        "LocalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -55,7 +57,7 @@ const Producto = {
         : "ASC";
 
       db.query(
-        `SELECT * FROM producto ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT p.*, l.LocalNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -93,6 +95,8 @@ const Producto = {
         "ProductoStockMinimo",
         "ProductoImagen",
         "ProductoImagen_GXI",
+        "LocalId",
+        "LocalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -103,29 +107,33 @@ const Producto = {
         : "ASC";
 
       const searchQuery = `
-        SELECT * FROM producto 
-        WHERE ProductoNombre LIKE ? 
-        OR ProductoCodigo LIKE ? 
-        ORDER BY ${sortField} ${order}
+        SELECT p.*, l.LocalNombre FROM producto p
+        LEFT JOIN local l ON p.LocalId = l.LocalId
+        WHERE p.ProductoNombre LIKE ? 
+        OR p.ProductoCodigo LIKE ? 
+        OR l.LocalNombre LIKE ?
+        ORDER BY p.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;
 
       db.query(
         searchQuery,
-        [searchValue, searchValue, limit, offset],
+        [searchValue, searchValue, searchValue, limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
           const countQuery = `
-            SELECT COUNT(*) as total FROM producto 
-            WHERE ProductoNombre LIKE ? 
-            OR ProductoCodigo LIKE ?
+            SELECT COUNT(*) as total FROM producto p
+            LEFT JOIN local l ON p.LocalId = l.LocalId
+            WHERE p.ProductoNombre LIKE ? 
+            OR p.ProductoCodigo LIKE ? 
+            OR l.LocalNombre LIKE ?
           `;
 
           db.query(
             countQuery,
-            [searchValue, searchValue],
+            [searchValue, searchValue, searchValue],
             (err, countResult) => {
               if (err) return reject(err);
 
@@ -156,8 +164,9 @@ const Producto = {
           ProductoIVA,
           ProductoStockMinimo,
           ProductoImagen,
-          ProductoImagen_GXI
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ProductoImagen_GXI,
+          LocalId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
         productoData.ProductoCodigo,
@@ -173,6 +182,7 @@ const Producto = {
         productoData.ProductoStockMinimo,
         productoData.ProductoImagen,
         productoData.ProductoImagen_GXI,
+        productoData.LocalId,
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -202,6 +212,7 @@ const Producto = {
         "ProductoStockMinimo",
         "ProductoImagen",
         "ProductoImagen_GXI",
+        "LocalId",
       ];
       camposActualizables.forEach((campo) => {
         if (productoData[campo] !== undefined) {

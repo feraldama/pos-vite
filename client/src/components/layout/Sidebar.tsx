@@ -47,24 +47,24 @@ const navigation: NavigationItem[] = [
     icon: <BanknotesIcon className="h-7 w-6" />,
   },
   {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
-  },
-  {
     name: "Almacenes",
     href: "/almacenes",
     icon: <ArchiveBoxIcon className="h-7 w-6" />,
   },
   {
-    name: "Clientes",
-    href: "/customers",
-    icon: <UsersIcon className="h-7 w-6" />,
-  },
-  {
     name: "Productos",
     href: "/products",
     icon: <CubeIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Combos",
+    href: "/combos",
+    icon: <RectangleGroupIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Clientes",
+    href: "/customers",
+    icon: <UsersIcon className="h-7 w-6" />,
   },
   {
     name: "Registro Diario",

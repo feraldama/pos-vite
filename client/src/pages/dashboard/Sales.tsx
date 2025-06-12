@@ -125,7 +125,6 @@ export default function Sales() {
     imagen: string;
     stock: number;
   }) => {
-    // Determinar el precio según el tipo de cliente
     const tipo = clienteSeleccionado?.ClienteTipo || "MI";
     const precioFinal =
       tipo === "MA" && producto.precioMayorista !== undefined
@@ -134,6 +133,7 @@ export default function Sales() {
 
     const precioSeguro = precioFinal ?? 0;
 
+    const nuevoCartItemId = Date.now() + Math.random();
     setCarrito([
       ...carrito,
       {
@@ -141,9 +141,10 @@ export default function Sales() {
         precio: precioSeguro,
         cantidad: 1,
         caja: true, // Por defecto true
-        cartItemId: Date.now() + Math.random(),
+        cartItemId: nuevoCartItemId,
       },
     ]);
+    setSelectedProductId(nuevoCartItemId); // Focus en el input de cantidad del producto nuevo
   };
 
   const quitarProducto = (cartItemId: number) => {
@@ -535,7 +536,10 @@ export default function Sales() {
     });
 
     // Total de la compra
-    const totalCost = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const totalCost = carrito.reduce(
+      (sum, item) => sum + obtenerTotal(item),
+      0
+    );
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
@@ -594,7 +598,7 @@ export default function Sales() {
     if (selectedProductId === null) return;
     setCarrito((prev) =>
       prev.map((item) => {
-        if (item.id !== selectedProductId) return item;
+        if (item.cartItemId !== selectedProductId) return item;
         let nuevaCantidad = String(item.cantidad);
         if (valor === "C" || valor === "c") {
           nuevaCantidad = "0";
@@ -687,6 +691,12 @@ export default function Sales() {
                         ? "border-b border-gray-200"
                         : ""
                     }`}
+                    onClick={() => {
+                      setSelectedProductId(p.cartItemId);
+                      setTimeout(() => {
+                        cantidadRefs.current[p.cartItemId]?.focus();
+                      }, 0);
+                    }}
                   >
                     <td className="py-5 pl-6 align-middle">
                       <div className="flex items-center gap-4">
@@ -701,7 +711,10 @@ export default function Sales() {
                           </div>
                           <div
                             className="text-red-600 text-sm mt-1 cursor-pointer"
-                            onClick={() => quitarProducto(p.cartItemId)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              quitarProducto(p.cartItemId);
+                            }}
                           >
                             Eliminar
                           </div>
@@ -728,20 +741,10 @@ export default function Sales() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            cambiarCantidad(p.id, p.cantidad - 1);
-                            setSelectedProductId(p.id);
+                            cambiarCantidad(p.cartItemId, p.cantidad - 1);
+                            setSelectedProductId(p.cartItemId);
                           }}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 6,
-                            background: "#f9fafb",
-                            color: "#374151",
-                            fontSize: 18,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                         >
                           -
                         </button>
@@ -752,12 +755,12 @@ export default function Sales() {
                           className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
                           readOnly
                           ref={(el) => {
-                            cantidadRefs.current[p.id] = el || null;
+                            cantidadRefs.current[p.cartItemId] = el || null;
                           }}
                           tabIndex={0}
-                          onFocus={() => setSelectedProductId(p.id)}
+                          onFocus={() => setSelectedProductId(p.cartItemId)}
                           onKeyDown={(e) => {
-                            if (selectedProductId !== p.id) return;
+                            if (selectedProductId !== p.cartItemId) return;
                             if (e.key >= "0" && e.key <= "9") {
                               e.preventDefault();
                               handleTecladoNumerico(e.key);
@@ -769,18 +772,18 @@ export default function Sales() {
                               handleTecladoNumerico("C");
                             } else if (e.key === "ArrowUp") {
                               e.preventDefault();
-                              cambiarCantidad(p.id, p.cantidad + 1);
+                              cambiarCantidad(p.cartItemId, p.cantidad + 1);
                             } else if (e.key === "ArrowDown") {
                               e.preventDefault();
-                              cambiarCantidad(p.id, p.cantidad - 1);
+                              cambiarCantidad(p.cartItemId, p.cantidad - 1);
                             }
                           }}
                         />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            cambiarCantidad(p.id, p.cantidad + 1);
-                            setSelectedProductId(p.id);
+                            cambiarCantidad(p.cartItemId, p.cantidad + 1);
+                            setSelectedProductId(p.cartItemId);
                           }}
                           className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                         >
@@ -789,7 +792,7 @@ export default function Sales() {
                       </div>
                     </td>
                     <td className="py-5 align-middle text-right font-medium text-[17px] text-gray-700">
-                      Gs. {obtenerPrecio(p).toLocaleString()}
+                      <>Gs. {obtenerPrecio(p).toLocaleString()}</>
                     </td>
                     <td className="py-5 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
                       Gs. {obtenerTotal(p).toLocaleString()}
@@ -819,7 +822,7 @@ export default function Sales() {
               Pagar
             </button>
             {/* Números y símbolos */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
               <button
                 key={n}
                 className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"

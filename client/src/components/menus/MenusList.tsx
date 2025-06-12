@@ -1,103 +1,85 @@
 import { useEffect, useState } from "react";
-import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
+import SearchButton from "../common/Input/SearchButton";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import Swal from "sweetalert2";
 
-interface Almacen {
-  id: string | number;
-  AlmacenId: string | number;
-  AlmacenNombre: string;
+interface Menu {
+  id: string;
+  MenuId: string;
+  MenuNombre: string;
   [key: string]: unknown;
 }
 
-interface Pagination {
-  totalItems: number;
-}
-
-interface AlmacenesListProps {
-  almacenes: Almacen[];
-  onDelete?: (item: Almacen) => void;
-  onEdit?: (item: Almacen) => void;
+interface MenusListProps {
+  menus: Menu[];
+  onEdit?: (menu: Menu) => void;
+  onDelete?: (id: string) => void;
   onCreate?: () => void;
-  pagination?: Pagination;
-  onSearch: (value: string) => void;
-  searchTerm: string;
-  onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
   isModalOpen: boolean;
   onCloseModal: () => void;
-  currentAlmacen?: Almacen | null;
-  onSubmit: (formData: Almacen) => void;
-  sortKey?: string;
-  sortOrder?: "asc" | "desc";
-  onSort?: (key: string, order: "asc" | "desc") => void;
+  currentMenu: Menu | null;
+  onSubmit: (menu: Menu) => void;
+  searchTerm: string;
+  onSearch: (value: string) => void;
+  onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
+  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
 }
 
-export default function AlmacenesList({
-  almacenes,
-  onDelete,
+export default function MenusList({
+  menus,
   onEdit,
+  onDelete,
   onCreate,
-  pagination,
-  onSearch,
-  searchTerm,
-  onKeyPress,
-  onSearchSubmit,
   isModalOpen,
   onCloseModal,
-  currentAlmacen,
+  currentMenu,
   onSubmit,
-  sortKey,
-  sortOrder,
-  onSort,
-}: AlmacenesListProps) {
+  searchTerm,
+  onSearch,
+  onKeyPress,
+  onSearchSubmit,
+}: MenusListProps) {
   const [formData, setFormData] = useState({
-    id: "",
-    AlmacenId: "",
-    AlmacenNombre: "",
+    MenuId: "",
+    MenuNombre: "",
   });
 
   useEffect(() => {
-    if (currentAlmacen) {
+    if (currentMenu) {
       setFormData({
-        id: String(currentAlmacen.id ?? currentAlmacen.AlmacenId),
-        AlmacenId: String(currentAlmacen.AlmacenId),
-        AlmacenNombre: currentAlmacen.AlmacenNombre,
+        MenuId: currentMenu.MenuId,
+        MenuNombre: currentMenu.MenuNombre,
       });
     } else {
-      setFormData({
-        id: "",
-        AlmacenId: "",
-        AlmacenNombre: "",
-      });
+      setFormData({ MenuId: "", MenuNombre: "" });
     }
-  }, [currentAlmacen]);
+  }, [currentMenu]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "MenuNombre" ? value.toUpperCase() : value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData as Almacen);
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onCloseModal();
-    }
+    onSubmit({ ...currentMenu, ...formData } as Menu);
+    Swal.fire({
+      position: "top-end",
+      icon: "success",
+      title: currentMenu ? "Menú actualizado" : "Menú creado",
+      showConfirmButton: false,
+      timer: 2000,
+    });
   };
 
   const columns = [
-    { key: "AlmacenId", label: "ID" },
-    { key: "AlmacenNombre", label: "Nombre" },
+    { key: "MenuId", label: "ID" },
+    { key: "MenuNombre", label: "Nombre" },
   ];
 
   return (
@@ -109,50 +91,45 @@ export default function AlmacenesList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar almacenes"
+            placeholder="Buscar menús"
           />
         </div>
         <div className="py-4">
           {onCreate && (
             <ActionButton
-              label="Nuevo Almacén"
+              label="Nuevo Menú"
               onClick={onCreate}
               icon={PlusIcon}
             />
           )}
         </div>
       </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {almacenes.length} de {pagination?.totalItems} almacenes
-        </div>
-      </div>
-      <DataTable<Almacen>
+      <DataTable<Menu>
         columns={columns}
-        data={almacenes}
+        data={menus}
         onEdit={onEdit}
-        onDelete={onDelete}
-        emptyMessage="No se encontraron almacenes"
-        sortKey={sortKey}
-        sortOrder={sortOrder}
-        onSort={onSort}
+        onDelete={onDelete ? (item) => onDelete(item.MenuId) : undefined}
+        emptyMessage="No se encontraron menús"
       />
       {isModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={handleBackdropClick}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onCloseModal();
+          }}
         >
           <div className="absolute inset-0 bg-black opacity-50" />
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
               className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
-                  {currentAlmacen
-                    ? `Editar almacén: ${currentAlmacen.AlmacenId}`
-                    : "Crear nuevo almacén"}
+                  {currentMenu
+                    ? `Editar menú: ${currentMenu.MenuNombre}`
+                    : "Crear nuevo menú"}
                 </h3>
                 <button
                   type="button"
@@ -178,28 +155,39 @@ export default function AlmacenesList({
               </div>
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6 sm:col-span-6">
-                    <label
-                      htmlFor="AlmacenNombre"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
+                  <div className="col-span-6 sm:col-span-3">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      ID
+                    </label>
+                    <input
+                      type="text"
+                      name="MenuId"
+                      value={formData.MenuId}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
+                      disabled={!!currentMenu}
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
                       Nombre
                     </label>
                     <input
                       type="text"
-                      name="AlmacenNombre"
-                      id="AlmacenNombre"
-                      value={formData.AlmacenNombre}
+                      name="MenuNombre"
+                      value={formData.MenuNombre}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
+                      style={{ textTransform: "uppercase" }}
                     />
                   </div>
                 </div>
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <ActionButton
-                  label={currentAlmacen ? "Actualizar" : "Crear"}
+                  label={currentMenu ? "Actualizar" : "Crear"}
                   type="submit"
                 />
                 <ActionButton

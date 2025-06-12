@@ -116,11 +116,13 @@ export default function CombosList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Combo"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Combo"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <DataTable<Combo>
@@ -131,10 +133,11 @@ export default function CombosList({
             productos.find((p) => p.ProductoId === combo.ProductoId)
               ?.ProductoNombre || combo.ProductoId,
         }))}
-        onEdit={(row) => {
-          const originalCombo = combos.find((c) => c.ComboId === row.ComboId);
-          if (originalCombo) onEdit?.(originalCombo);
-        }}
+        onEdit={onEdit}
+        // onEdit={(row) => {
+        //   const originalCombo = combos.find((c) => c.ComboId === row.ComboId);
+        //   if (originalCombo) onEdit?.(originalCombo);
+        // }}
         onDelete={onDelete}
         emptyMessage="No se encontraron combos"
       />

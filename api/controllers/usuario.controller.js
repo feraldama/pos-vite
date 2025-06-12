@@ -1,6 +1,7 @@
 const Usuario = require("../models/usuario.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const PerfilMenu = require("../models/perfilmenu.model");
 
 // getAllUsuarios
 exports.getAllUsuarios = async (req, res) => {
@@ -136,6 +137,24 @@ exports.login = async (req, res) => {
       expiresIn: "20m",
     });
 
+    // Obtener permisos del usuario
+    let permisos;
+    if (usuario.UsuarioIsAdmin === "S") {
+      const Menu = require("../models/menu.model");
+      const menus = await Menu.getAll();
+      permisos = {};
+      menus.forEach((menu) => {
+        permisos[menu.MenuNombre] = {
+          crear: true,
+          editar: true,
+          eliminar: true,
+          leer: true,
+        };
+      });
+    } else {
+      permisos = await PerfilMenu.getPermisosByUsuarioId(usuario.UsuarioId);
+    }
+
     res.json({
       success: true,
       token,
@@ -147,6 +166,7 @@ exports.login = async (req, res) => {
         estado: usuario.UsuarioEstado,
         LocalId: usuario.LocalId,
       },
+      permisos,
     });
   } catch (error) {
     console.error("Error en login:", error);

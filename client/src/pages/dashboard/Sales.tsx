@@ -92,7 +92,7 @@ export default function Sales() {
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>({
       ClienteId: 1,
-      ClienteNombre: "Sin Nombre minorista",
+      ClienteNombre: "SIN NOMBRE MINORISTA",
       ClienteRUC: "",
       ClienteTelefono: "",
       ClienteTipo: "MI",

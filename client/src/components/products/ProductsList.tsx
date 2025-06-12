@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
@@ -84,6 +84,7 @@ export default function ProductsList({
   const [locales, setLocales] = useState<
     { LocalId: number; LocalNombre: string }[]
   >([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (currentProduct) {
@@ -137,10 +138,40 @@ export default function ProductsList({
     }));
   };
 
+  // Manejar cambios en el nombre del producto (forzar mayúsculas)
+  const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setFormData((prev) => ({
+      ...prev,
+      ProductoNombre: value,
+    }));
+  };
+
+  // Manejar cambio de imagen (file input)
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData((prev) => ({
+        ...prev,
+        ProductoImagen: (reader.result as string).split(",")[1] || "",
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Eliminar imagen
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, ProductoImagen: "" }));
+  };
+
   // Enviar formulario
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { ProductoImagen_GXI, ...cleanFormData } = formData; // Limpiamos ProductoImagen_GXI antes de enviar
+    onSubmit(cleanFormData);
   };
 
   // Configuración de columnas para la tabla
@@ -289,8 +320,8 @@ export default function ProductsList({
                       name="ProductoNombre"
                       id="ProductoNombre"
                       value={formData.ProductoNombre}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      onChange={handleNombreChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 uppercase"
                       required
                     />
                   </div>
@@ -299,7 +330,7 @@ export default function ProductsList({
                       htmlFor="ProductoPrecioVenta"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Precio Venta
+                      Precio Minorista
                     </label>
                     <input
                       type="number"
@@ -310,46 +341,6 @@ export default function ProductsList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStock"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStock"
-                      id="ProductoStock"
-                      value={formData.ProductoStock}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="LocalId"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Local
-                    </label>
-                    <select
-                      name="LocalId"
-                      id="LocalId"
-                      value={formData.LocalId}
-                      onChange={handleInputChange}
-                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
-                      required
-                    >
-                      <option value="">Seleccione un local</option>
-                      {locales.map((local) => (
-                        <option key={local.LocalId} value={local.LocalId}>
-                          {local.LocalNombre}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                   {/* Campos adicionales opcionales */}
                   <div className="col-span-6 sm:col-span-3">
@@ -398,6 +389,23 @@ export default function ProductsList({
                       value={formData.ProductoPrecioPromedio}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ProductoStock"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Stock
+                    </label>
+                    <input
+                      type="number"
+                      name="ProductoStock"
+                      id="ProductoStock"
+                      value={formData.ProductoStock}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -464,19 +472,67 @@ export default function ProductsList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="LocalId"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Local
+                    </label>
+                    <select
+                      name="LocalId"
+                      id="LocalId"
+                      value={formData.LocalId}
+                      onChange={handleInputChange}
+                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                      required
+                    >
+                      <option value="">Seleccione un local</option>
+                      {locales.map((local) => (
+                        <option key={local.LocalId} value={local.LocalId}>
+                          {local.LocalNombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {/* Imagen: solo mostrar base64 si existe */}
-                  {formData.ProductoImagen && (
-                    <div className="col-span-6">
-                      <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Imagen actual
-                      </label>
-                      <img
-                        src={`data:image/jpeg;base64,${formData.ProductoImagen}`}
-                        alt="Imagen producto"
-                        className="w-32 h-32 object-contain border rounded"
+                  <div className="col-span-6">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Imagen del producto
+                    </label>
+                    <div className="flex items-center gap-4 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium"
+                      >
+                        Seleccionar imagen
+                      </button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                        ref={fileInputRef}
                       />
+                      {formData.ProductoImagen && (
+                        <>
+                          <img
+                            src={`data:image/jpeg;base64,${formData.ProductoImagen}`}
+                            alt="Imagen producto"
+                            className="w-32 h-32 object-contain border rounded"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRemoveImage}
+                            className="text-red-600 hover:text-red-800 border border-red-300 bg-white rounded px-3 py-1 text-sm"
+                          >
+                            Eliminar imagen
+                          </button>
+                        </>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 

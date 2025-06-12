@@ -13,7 +13,7 @@ const Producto = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
       db.query(
-        "SELECT * FROM producto WHERE ProductoId = ?",
+        "SELECT p.*, l.LocalNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId WHERE p.ProductoId = ?",
         [id],
         (err, results) => {
           if (err) return reject(err);
@@ -150,6 +150,9 @@ const Producto = {
 
   create: (productoData) => {
     return new Promise((resolve, reject) => {
+      const imagenBuffer = productoData.ProductoImagen
+        ? Buffer.from(productoData.ProductoImagen, "base64")
+        : null;
       const query = `
         INSERT INTO producto (
           ProductoCodigo,
@@ -180,8 +183,8 @@ const Producto = {
         productoData.ProductoCantidadCaja,
         productoData.ProductoIVA,
         productoData.ProductoStockMinimo,
-        productoData.ProductoImagen,
-        productoData.ProductoImagen_GXI,
+        imagenBuffer,
+        productoData.ProductoImagen_GXI || null,
         productoData.LocalId,
       ];
       db.query(query, values, (err, result) => {
@@ -215,7 +218,16 @@ const Producto = {
         "LocalId",
       ];
       camposActualizables.forEach((campo) => {
-        if (productoData[campo] !== undefined) {
+        if (campo === "ProductoImagen_GXI") {
+          updateFields.push(`${campo} = ?`);
+          values.push(productoData.ProductoImagen_GXI || null);
+        } else if (campo === "ProductoImagen") {
+          const imagenBuffer = productoData.ProductoImagen
+            ? Buffer.from(productoData.ProductoImagen, "base64")
+            : null;
+          updateFields.push(`${campo} = ?`);
+          values.push(imagenBuffer);
+        } else if (productoData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
           values.push(productoData[campo]);
         }

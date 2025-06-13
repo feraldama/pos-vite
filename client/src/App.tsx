@@ -23,6 +23,7 @@ import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
 import CombosPage from "./pages/combos/CombosPage";
 import PerfilesPage from "./pages/perfiles/PerfilesPage";
 import MenusPage from "./pages/menus/MenusPage";
+import ProductsPage from "./pages/products/ProductsPage";
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
             <Route path="/combos" element={<CombosPage />} />
             <Route path="/perfiles" element={<PerfilesPage />} />
             <Route path="/menus" element={<MenusPage />} />
+            <Route path="/products" element={<ProductsPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

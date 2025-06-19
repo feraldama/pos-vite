@@ -3,8 +3,12 @@ import {
   getVentasPaginated,
   searchVentas,
   type Venta,
+  getProductosByVentaId,
+  type VentaProducto,
 } from "../../services/venta.service";
 import { getClienteById } from "../../services/clientes.service";
+import { getProductoById } from "../../services/productos.service";
+import { getAlmacenById } from "../../services/almacenes.service";
 import VentasList from "../../components/ventas/VentasList";
 import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/utils";
@@ -110,42 +114,134 @@ export default function VentasPage() {
     }
   };
 
-  const handleViewDetails = (venta: Venta) => {
-    const clienteInfo = venta.ClienteNombre
-      ? `${venta.ClienteNombre} ${venta.ClienteApellido}`
-      : `Cliente #${venta.ClienteId}`;
+  const handleViewDetails = async (venta: Venta) => {
+    try {
+      // Obtener los productos de la venta
+      const ventaProductos = await getProductosByVentaId(venta.VentaId);
 
-    const getTipoVentaText = (tipo: string) => {
-      switch (tipo) {
-        case "CO":
-          return "Contado";
-        case "CR":
-          return "Crédito";
-        case "PO":
-          return "POS";
-        case "TR":
-          return "Transfer";
-        default:
-          return tipo;
-      }
-    };
+      // Obtener los detalles de cada producto
+      const productosConDetalles = await Promise.all(
+        ventaProductos.map(async (ventaProducto: VentaProducto) => {
+          const producto = await getProductoById(ventaProducto.ProductoId);
+          return {
+            ...ventaProducto,
+            ProductoNombre: producto.ProductoNombre,
+            PromedioTotal:
+              ventaProducto.VentaProductoPrecioPromedio *
+              ventaProducto.VentaProductoCantidad,
+          };
+        })
+      );
 
-    Swal.fire({
-      title: `Venta #${venta.VentaId}`,
-      html: `
-        <div class="text-left">
-          <p><strong>Cliente:</strong> ${clienteInfo}</p>
-          <p><strong>Fecha:</strong> ${new Date(
-            venta.VentaFecha
-          ).toLocaleString()}</p>
-          <p><strong>Total:</strong> ${formatCurrency(venta.Total)}</p>
-          <p><strong>Tipo:</strong> ${getTipoVentaText(venta.VentaTipo)}</p>
-          <p><strong>Usuario:</strong> ${venta.VentaUsuario}</p>
-        </div>
-      `,
-      icon: "info",
-      confirmButtonText: "Cerrar",
-    });
+      // Obtener los detalles del almacén
+      const almacen = await getAlmacenById(venta.AlmacenId);
+
+      const clienteInfo = venta.ClienteNombre
+        ? `${venta.ClienteNombre} ${venta.ClienteApellido}`
+        : `Cliente #${venta.ClienteId}`;
+
+      const getTipoVentaText = (tipo: string) => {
+        switch (tipo) {
+          case "CO":
+            return "Contado";
+          case "CR":
+            return "Crédito";
+          case "PO":
+            return "POS";
+          case "TR":
+            return "Transfer";
+          default:
+            return tipo;
+        }
+      };
+
+      // Crear la tabla HTML de productos
+      const productosTable = `
+        <table class="w-full mt-4" style="min-width: 1200px">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="text-left py-2 px-4" style="min-width: 200px">Producto</th>
+              <th class="text-right py-2 px-4" style="min-width: 120px">Cantidad</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Precio Unit.</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Precio Prom.</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Prom. Total</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Precio</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Precio Total</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productosConDetalles
+              .map(
+                (prod) => `
+              <tr class="border-b hover:bg-gray-50">
+                <td class="py-2 px-4">${prod.ProductoNombre}</td>
+                <td class="text-right py-2 px-4">${
+                  prod.VentaProductoCantidad
+                }</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.VentaProductoPrecio
+                )}</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.VentaProductoPrecioPromedio
+                )}</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.PromedioTotal
+                )}</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.VentaProductoPrecio
+                )}</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.VentaProductoPrecioTotal
+                )}</td>
+                <td class="text-right py-2 px-4">${formatCurrency(
+                  prod.VentaProductoPrecioTotal
+                )}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `;
+
+      Swal.fire({
+        title: `Venta #${venta.VentaId}`,
+        html: `
+          <div class="text-left" style="overflow-x: auto;">
+            <p><strong>Cliente:</strong> ${clienteInfo}</p>
+            <p><strong>Fecha:</strong> ${new Date(
+              venta.VentaFecha
+            ).toLocaleString()}</p>
+            <p><strong>Tipo:</strong> ${getTipoVentaText(venta.VentaTipo)}</p>
+            <p><strong>Almacén:</strong> ${almacen.AlmacenNombre}</p>
+            <p><strong>Usuario:</strong> ${venta.VentaUsuario}</p>
+            <div class="mt-4">
+              <h3 class="font-bold mb-2">Detalle de Productos</h3>
+              ${productosTable}
+            </div>
+            <p class="text-right mt-4 pr-4"><strong>Total:</strong> ${formatCurrency(
+              venta.Total
+            )}</p>
+          </div>
+        `,
+        width: "1400px",
+        icon: "info",
+        confirmButtonText: "Cerrar",
+        customClass: {
+          container: "swal2-container-custom",
+          popup: "swal2-popup-custom",
+          htmlContainer: "swal2-html-container-custom",
+        },
+      });
+    } catch (error) {
+      console.error("Error al cargar los detalles de la venta:", error);
+      Swal.fire({
+        title: "Error",
+        text: "No se pudieron cargar los detalles de la venta",
+        icon: "error",
+      });
+    }
   };
 
   const handlePageChange = (page: number) => {

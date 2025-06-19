@@ -322,6 +322,40 @@ const Venta = {
       });
     });
   },
+
+  // Obtener ventas pendientes por cliente
+  getVentasPendientesPorCliente: (clienteId) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          v.VentaId,
+          v.VentaFecha,
+          CAST(v.Total AS DECIMAL(10,2)) as Total,
+          CAST(COALESCE(v.VentaEntrega, 0) AS DECIMAL(10,2)) as VentaEntrega,
+          CAST((v.Total - COALESCE(v.VentaEntrega, 0)) AS DECIMAL(10,2)) as Saldo
+        FROM venta v
+        WHERE v.ClienteId = ? 
+        AND v.VentaTipo = 'CR'
+        HAVING Saldo > 0
+        ORDER BY v.VentaFecha ASC
+      `;
+
+      db.query(query, [clienteId], (err, results) => {
+        if (err) {
+          console.error("Error en getVentasPendientesPorCliente:", err);
+          return reject(err);
+        }
+        // Convertir explícitamente los valores a número
+        const processedResults = results.map((row) => ({
+          ...row,
+          Total: Number(row.Total),
+          VentaEntrega: Number(row.VentaEntrega),
+          Saldo: Number(row.Saldo),
+        }));
+        resolve(processedResults);
+      });
+    });
+  },
 };
 
 module.exports = Venta;

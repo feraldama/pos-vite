@@ -25,6 +25,7 @@ import PerfilesPage from "./pages/perfiles/PerfilesPage";
 import MenusPage from "./pages/menus/MenusPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
+import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
             <Route path="/menus" element={<MenusPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/modifications/ventas" element={<VentasPage />} />
+            <Route path="/credito-pagos" element={<CreditoPagosPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

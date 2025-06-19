@@ -135,3 +135,29 @@ exports.searchVentas = async (req, res) => {
     res.status(500).json({ error: "Error al buscar ventas" });
   }
 };
+
+// Obtener ventas pendientes por cliente
+exports.getVentasPendientesPorCliente = async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    if (!clienteId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID del cliente es requerido",
+      });
+    }
+
+    const ventas = await Venta.getVentasPendientesPorCliente(clienteId);
+    res.json({
+      success: true,
+      data: ventas,
+    });
+  } catch (error) {
+    console.error("Error al obtener ventas pendientes:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener ventas pendientes",
+      error: error.message,
+    });
+  }
+};

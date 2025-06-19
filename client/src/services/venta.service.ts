@@ -217,3 +217,17 @@ export const getProductosByVentaId = async (ventaId: string | number) => {
     );
   }
 };
+
+export const getVentasPendientesPorCliente = async (clienteId: number) => {
+  try {
+    const response = await api.get(`/venta/pendientes/${clienteId}`);
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener ventas pendientes",
+      }
+    );
+  }
+};

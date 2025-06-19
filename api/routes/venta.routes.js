@@ -5,6 +5,11 @@ const authMiddleware = require("../middlewares/auth");
 
 router.use(authMiddleware);
 
+router.get(
+  "/pendientes/:clienteId",
+  authMiddleware,
+  ventaController.getVentasPendientesPorCliente
+);
 router.get("/search", authMiddleware, ventaController.searchVentas);
 router.get("/", authMiddleware, ventaController.getAll);
 router.get("/paginated", authMiddleware, ventaController.getAllPaginated);

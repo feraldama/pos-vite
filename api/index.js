@@ -19,6 +19,8 @@ const perfilMenuRoutes = require("./routes/perfilmenu.routes");
 const usuarioPerfilRoutes = require("./routes/usuarioperfil.routes");
 const ventaProductoRoutes = require("./routes/ventaproducto.routes");
 const ventaRoutes = require("./routes/venta.routes");
+const ventaCreditoRoutes = require("./routes/ventacredito.routes");
+const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -54,6 +56,8 @@ app.use("/api/perfilmenu", perfilMenuRoutes);
 app.use("/api/usuarioperfil", usuarioPerfilRoutes);
 app.use("/api/ventaproducto", ventaProductoRoutes);
 app.use("/api/venta", ventaRoutes);
+app.use("/api/ventacredito", ventaCreditoRoutes);
+app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

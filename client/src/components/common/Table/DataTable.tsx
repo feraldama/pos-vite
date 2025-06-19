@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  CreditCardIcon,
+} from "@heroicons/react/24/outline";
 // import React from "react";
 
 interface DataTableRow {
@@ -19,6 +23,7 @@ interface DataTableProps<T extends DataTableRow> {
   data: T[];
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  onViewCredit?: (item: T) => void;
   emptyMessage?: string;
   actions?: boolean;
   customActions?: (item: T) => React.ReactNode;
@@ -34,6 +39,7 @@ function DataTable<T extends DataTableRow>({
   data,
   onEdit,
   onDelete,
+  onViewCredit,
   emptyMessage = "No se encontraron registros",
   actions = true,
   customActions,
@@ -138,14 +144,23 @@ function DataTable<T extends DataTableRow>({
                   {customActions ? (
                     customActions(item)
                   ) : (
-                    <>
+                    <div className="flex gap-2">
                       {onEdit && (
                         <button
                           onClick={() => onEdit(item)}
-                          className="font-medium text-blue-600 hover:underline mr-4 cursor-pointer"
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
                           title="Editar"
                         >
                           <PencilSquareIcon className="h-5 w-5 inline" />
+                        </button>
+                      )}
+                      {onViewCredit && item.VentaTipo === "CR" && (
+                        <button
+                          onClick={() => onViewCredit(item)}
+                          className="font-medium text-green-600 hover:underline cursor-pointer"
+                          title="Ver Detalles de Crédito"
+                        >
+                          <CreditCardIcon className="h-5 w-5 inline" />
                         </button>
                       )}
                       {onDelete && (
@@ -157,7 +172,7 @@ function DataTable<T extends DataTableRow>({
                           <TrashIcon className="h-5 w-5 inline" />
                         </button>
                       )}
-                    </>
+                    </div>
                   )}
                 </td>
               )}

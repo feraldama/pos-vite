@@ -78,6 +78,15 @@ const navigation: NavigationItem[] = [
     ],
   },
   {
+    name: "Modificaciones",
+    href: "/modifications",
+    icon: <PencilSquareIcon className="h-7 w-6" />,
+    children: [
+      { name: "Ventas", href: "/modifications/ventas" },
+      { name: "Cobro de Créditos", href: "/credito-pagos" },
+    ],
+  },
+  {
     name: "Control de Acceso",
     href: "/access-control",
     icon: <KeyIcon className="h-7 w-6" />,

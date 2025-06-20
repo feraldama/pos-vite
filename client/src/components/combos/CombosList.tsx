@@ -148,10 +148,6 @@ export default function CombosList({
               ?.ProductoNombre || combo.ProductoId,
         }))}
         onEdit={onEdit}
-        // onEdit={(row) => {
-        //   const originalCombo = combos.find((c) => c.ComboId === row.ComboId);
-        //   if (originalCombo) onEdit?.(originalCombo);
-        // }}
         onDelete={onDelete}
         emptyMessage="No se encontraron combos"
       />

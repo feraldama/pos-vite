@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -865,8 +866,8 @@ export default function Sales() {
                       >
                         {p.id === 1 || p.id === 2 ? (
                           <input
-                            type="number"
-                            value={p.precio}
+                            type="text"
+                            value={formatMiles(p.precio)}
                             min={0}
                             style={{
                               width: 80,
@@ -878,25 +879,32 @@ export default function Sales() {
                               fontSize: 16,
                               fontWeight: 600,
                               color: "#222",
+                              paddingRight: 8,
                             }}
                             ref={(el) => {
                               precioRefs.current[p.id] = el || null;
                             }}
                             onFocus={() => setSelectedProductId(p.id)}
                             onChange={(e) => {
-                              const nuevoPrecio = Number(e.target.value);
-                              setCarrito(
-                                carrito.map((item) =>
-                                  item.id === p.id &&
-                                  (item.id === 1 || item.id === 2)
-                                    ? { ...item, precio: nuevoPrecio }
-                                    : item
-                                )
+                              const valorSinPuntos = e.target.value.replace(
+                                /\./g,
+                                ""
                               );
+                              const nuevoPrecio = Number(valorSinPuntos);
+                              if (!isNaN(nuevoPrecio)) {
+                                setCarrito(
+                                  carrito.map((item) =>
+                                    item.id === p.id &&
+                                    (item.id === 1 || item.id === 2)
+                                      ? { ...item, precio: nuevoPrecio }
+                                      : item
+                                  )
+                                );
+                              }
                             }}
                           />
                         ) : (
-                          <>Gs. {p.precio.toLocaleString()}</>
+                          <>Gs. {formatMiles(p.precio)}</>
                         )}
                       </td>
                       <td
@@ -909,7 +917,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        Gs. {precioTotal.toLocaleString()}
+                        Gs. {formatMiles(precioTotal)}
                       </td>
                     </tr>
                   );
@@ -924,7 +932,7 @@ export default function Sales() {
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
             <span className="text-blue-500 font-semibold text-lg">
-              Gs. {total.toLocaleString()}
+              Gs. {formatMiles(total)}
             </span>
           </div>
           {/* Grid de botones */}

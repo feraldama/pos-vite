@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { js2xml } from "xml-js";
+import Swal from "sweetalert2";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import { formatCurrency, formatMiles } from "../../utils/utils";
 import { getVentasPendientesPorCliente } from "../../services/venta.service";
+import { useAuth } from "../../contexts/useAuth";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
 
 interface Cliente {
   ClienteId: number;
@@ -15,6 +22,14 @@ interface VentaPendiente {
   Total: number;
   VentaEntrega: number;
   Saldo: number;
+}
+
+interface Caja {
+  id: string | number;
+  CajaId: string | number;
+  CajaDescripcion: string;
+  CajaMonto: number;
+  [key: string]: unknown;
 }
 
 const TIPOS_PAGO = [
@@ -36,6 +51,35 @@ const CreditoPagosPage = () => {
     new Date().toISOString().split("T")[0]
   );
   const [totalDeuda, setTotalDeuda] = useState<number>(0);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
+
+  useEffect(() => {
+    const fetchCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
+          const caja = await getCajaById(estado.cajaId);
+          setCajaAperturada(caja);
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de registrar un pago.",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            navigate("/apertura-cierre-caja");
+          });
+          setCajaAperturada(null);
+        }
+      } catch {
+        setCajaAperturada(null);
+      }
+    };
+    fetchCaja();
+  }, [user, navigate]);
 
   useEffect(() => {
     const cargarClientes = async () => {
@@ -96,28 +140,115 @@ const CreditoPagosPage = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedCliente) {
+      Swal.fire("Error", "Seleccione un cliente.", "error");
+      return;
+    }
     if (montoPago <= 0) {
-      alert("Ingrese un monto a cobrar");
+      Swal.fire("Error", "Ingrese un monto a cobrar", "error");
       return;
     }
     if (montoPago > totalDeuda) {
-      alert("El monto a cobrar no puede ser mayor al saldo total");
+      Swal.fire(
+        "Error",
+        "El monto a cobrar no puede ser mayor al saldo total",
+        "error"
+      );
       return;
     }
-    // Aquí irá la lógica para procesar el pago
-    console.log({
-      clienteId: selectedCliente,
-      tipoPago,
-      montoPago,
-      fecha,
-    });
+    if (!cajaAperturada) {
+      Swal.fire("Error", "No hay una caja aperturada.", "error");
+      return;
+    }
+
+    const fechaDate = new Date(fecha + "T00:00:00");
+    const dia = fechaDate.getDate();
+    const mes = fechaDate.getMonth() + 1;
+    const año = fechaDate.getFullYear() % 100;
+    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
+    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
+    const añoStr = año < 10 ? `0${año}` : año.toString();
+    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+
+    const json = {
+      Envelope: {
+        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
+        Body: {
+          "PCreditoWS.VENTACONFIRMAR": {
+            _attributes: { xmlns: "WinnersTemple" },
+            Tipo: "V",
+            Clienteid: Number(selectedCliente),
+            Montorecibido: montoPago,
+            Cajaid: cajaAperturada.CajaId,
+            Usuarioid: user?.id,
+            Fechastring: fechaFormateada,
+            Ventapagotipo: tipoPago,
+          },
+        },
+      },
+    };
+
+    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
+    const config = {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    };
+
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_APP_URL}${
+          import.meta.env.VITE_APP_URL_GENEXUS
+        }apcreditows`,
+        xml,
+        config
+      );
+
+      let timerInterval: ReturnType<typeof setInterval>;
+      Swal.fire({
+        title: "Pago cargado con éxito!",
+        html: "Actualizando en <b></b> segundos.",
+        timer: 2000,
+        timerProgressBar: true,
+        width: "90%",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+          const popup = Swal.getPopup();
+          if (popup) {
+            const timer = popup.querySelector("b");
+            if (timer) {
+              timerInterval = setInterval(() => {
+                const timerLeft = Swal.getTimerLeft();
+                const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
+                if (timer.textContent) {
+                  timer.textContent = `${secondsLeft}`;
+                }
+              }, 100);
+            }
+          }
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
+        },
+      }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.timer) {
+          handleClienteChange(selectedCliente);
+          setMontoPago(0);
+        }
+      });
+    } catch (error) {
+      console.error("Error al procesar el pago:", error);
+      Swal.fire("Error", "Hubo un problema al procesar el pago.", "error");
+    }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">COBRO de Créditos</h1>
+    <div className="container mx-auto px-4">
+      <h1 className="text-2xl font-medium mb-3">Cobro de Créditos</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Formulario de pago */}

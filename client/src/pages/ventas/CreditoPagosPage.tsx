@@ -34,7 +34,6 @@ interface Caja {
 
 const TIPOS_PAGO = [
   { value: "CO", label: "Contado" },
-  { value: "CR", label: "Crédito" },
   { value: "PO", label: "POS" },
   { value: "TR", label: "Transfer" },
 ];
@@ -177,7 +176,7 @@ const CreditoPagosPage = () => {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PCreditoWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "WinnersTemple" },
+            _attributes: { xmlns: "PosViteAlonso" },
             Tipo: "V",
             Clienteid: Number(selectedCliente),
             Montorecibido: montoPago,
@@ -261,7 +260,7 @@ const CreditoPagosPage = () => {
               <select
                 value={selectedCliente}
                 onChange={(e) => handleClienteChange(e.target.value)}
-                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 pl-2"
               >
                 <option value="">Seleccione un cliente</option>
                 {clientes.map((cliente) => (
@@ -280,7 +279,7 @@ const CreditoPagosPage = () => {
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 pl-2"
               />
             </div>
 
@@ -291,7 +290,7 @@ const CreditoPagosPage = () => {
               <select
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value)}
-                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 pl-2"
               >
                 {TIPOS_PAGO.map((tipo) => (
                   <option key={tipo.value} value={tipo.value}>
@@ -315,7 +314,7 @@ const CreditoPagosPage = () => {
                   const num = Number(raw);
                   if (!isNaN(num)) setMontoPago(num);
                 }}
-                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 pl-2"
                 placeholder="0"
               />
             </div>

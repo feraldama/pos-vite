@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -337,7 +338,7 @@ export default function Sales() {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "AlonsoBodega" },
+            _attributes: { xmlns: "PosViteAlonso" },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },
@@ -800,10 +801,10 @@ export default function Sales() {
                       </div>
                     </td>
                     <td className="py-3 align-middle text-right font-medium text-[17px] text-gray-700">
-                      <>Gs. {obtenerPrecio(p).toLocaleString()}</>
+                      <>Gs. {formatMiles(obtenerPrecio(p))}</>
                     </td>
                     <td className="py-3 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
-                      Gs. {obtenerTotal(p).toLocaleString()}
+                      Gs. {formatMiles(obtenerTotal(p))}
                     </td>
                   </tr>
                 ))}
@@ -817,7 +818,7 @@ export default function Sales() {
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
             <span className="text-blue-500 font-semibold text-lg">
-              Gs. {total.toLocaleString()}
+              Gs. {formatMiles(total)}
             </span>
           </div>
           {/* Grid de botones */}

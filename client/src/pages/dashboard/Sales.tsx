@@ -107,12 +107,20 @@ export default function Sales() {
     null
   );
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+  const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   useEffect(() => {
-    if (selectedProductId !== null && cantidadRefs.current[selectedProductId]) {
-      cantidadRefs.current[selectedProductId]?.focus();
-    }
-  }, [selectedProductId, carrito.length]);
+    if (selectedProductId === null) return;
+    const isSpecialProduct = selectedProductId === 1 || selectedProductId === 2;
+    setTimeout(() => {
+      if (isSpecialProduct && precioRefs.current[selectedProductId]) {
+        precioRefs.current[selectedProductId]?.select();
+      } else if (cantidadRefs.current[selectedProductId]) {
+        cantidadRefs.current[selectedProductId]?.focus();
+        cantidadRefs.current[selectedProductId]?.select();
+      }
+    }, 0);
+  }, [selectedProductId]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -696,9 +704,6 @@ export default function Sales() {
                       }}
                       onClick={() => {
                         setSelectedProductId(p.id);
-                        setTimeout(() => {
-                          cantidadRefs.current[p.id]?.focus();
-                        }, 0);
                       }}
                     >
                       <td
@@ -874,6 +879,10 @@ export default function Sales() {
                               fontWeight: 600,
                               color: "#222",
                             }}
+                            ref={(el) => {
+                              precioRefs.current[p.id] = el || null;
+                            }}
+                            onFocus={() => setSelectedProductId(p.id)}
                             onChange={(e) => {
                               const nuevoPrecio = Number(e.target.value);
                               setCarrito(

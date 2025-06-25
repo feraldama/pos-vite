@@ -9,6 +9,12 @@ import {
 import UsersList from "../../components/users/UsersList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
+import {
+  createUsuarioPerfil,
+  getPerfilesByUsuario,
+  deleteUsuarioPerfil,
+} from "../../services/usuarioperfil.service";
 
 // Tipos auxiliares
 interface Usuario {
@@ -29,6 +35,8 @@ interface Pagination {
   [key: string]: unknown;
 }
 
+type UsuarioConPerfiles = Usuario & { perfilesSeleccionados?: number[] };
+
 export default function UsuariosPage() {
   const [usuariosData, setUsuariosData] = useState<{
     usuarios: Usuario[];
@@ -45,6 +53,11 @@ export default function UsuariosPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("USUARIOS", "crear");
+  const puedeEditar = usePermiso("USUARIOS", "editar");
+  const puedeEliminar = usePermiso("USUARIOS", "eliminar");
+  const puedeLeer = usePermiso("USUARIOS", "leer");
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -143,21 +156,40 @@ export default function UsuariosPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (userData: Usuario) => {
+  const handleSubmit = async (userData: UsuarioConPerfiles) => {
     let mensaje = "";
     try {
+      let usuarioId = userData.UsuarioId;
       if (currentUser) {
         await updateUsuario(currentUser.UsuarioId, userData);
         mensaje = "Usuario actualizado exitosamente";
       } else {
-        // Crear nuevo usuario
         if (!userData.UsuarioContrasena) {
           throw new Error("La contraseña es requerida para nuevos usuarios");
         }
         const response = await createUsuario(userData);
+        usuarioId = response.data?.UsuarioId || userData.UsuarioId;
         mensaje = response.message || "Usuario creado exitosamente";
       }
-
+      // Asignar perfiles
+      if (userData.perfilesSeleccionados) {
+        // 1. Obtener los perfiles actuales del usuario
+        const actuales = await getPerfilesByUsuario(usuarioId);
+        if (Array.isArray(actuales)) {
+          // 2. Eliminar todos los perfiles actuales
+          for (const rel of actuales) {
+            await deleteUsuarioPerfil(usuarioId, rel.PerfilId);
+          }
+        }
+        // 3. Insertar los nuevos perfiles seleccionados
+        const payload = userData.perfilesSeleccionados.map((pid) => ({
+          UsuarioId: usuarioId,
+          PerfilId: pid,
+        }));
+        for (const rel of payload) {
+          await createUsuarioPerfil(rel);
+        }
+      }
       setIsModalOpen(false);
       Swal.fire({
         position: "top-end",
@@ -166,7 +198,7 @@ export default function UsuariosPage() {
         showConfirmButton: false,
         timer: 2000,
       });
-      setEditingPassword(false); // Resetear después de enviar
+      setEditingPassword(false);
       fetchUsuarios();
     } catch (error) {
       if (error instanceof Error) {
@@ -186,6 +218,8 @@ export default function UsuariosPage() {
     setCurrentPage(1); // Resetear a la primera página cuando cambia el número de items por página
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver los usuarios</div>;
+
   if (loading) return <div>Cargando usuarios...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -194,9 +228,11 @@ export default function UsuariosPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Usuarios</h1>
       <UsersList
         usuarios={usuariosData.usuarios.map((u) => ({ ...u, id: u.UsuarioId }))}
-        onDelete={(user) => handleDelete(user.UsuarioId)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar ? (user) => handleDelete(user.UsuarioId) : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={usuariosData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

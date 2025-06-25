@@ -10,13 +10,6 @@ import { useAuth } from "../../contexts/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", current: true },
-  { name: "Team", href: "#", current: false },
-  { name: "Projects", href: "#", current: false },
-  { name: "Calendar", href: "/calendario", current: false },
-];
-
 function classNames(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(" ");
 }
@@ -26,13 +19,23 @@ interface NavbarProps {
 }
 
 export default function Navbar({ setMobileOpen }: NavbarProps) {
-  const { user, logout } = useAuth();
+  const { user, permisos, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  // Generar navegación dinámica según permisos
+  const navigation = Object.entries(permisos || {})
+    .filter(([, acciones]) => acciones.leer)
+    .map(([menu]) => {
+      let href = "/" + menu.toLowerCase();
+      if (menu === "Dashboard") href = "/dashboard";
+      return { name: menu, href };
+    });
+
   return (
     <Disclosure as="nav" className="bg-gray-800">
       <div className="sticky top-0 z-30 bg-gray-800">
@@ -57,12 +60,15 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
                     <Link
                       key={item.name}
                       to={item.href}
-                      aria-current={item.current ? "page" : undefined}
                       className={classNames(
-                        item.current
-                          ? "bg-gray-900 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                        "text-gray-300 hover:bg-gray-700 hover:text-white",
                         "rounded-md px-3 py-2 text-sm font-medium"
+                        // aria-current={item.current ? "page" : undefined}
+                        // className={classNames(
+                        //   item.current
+                        //     ? "bg-gray-900 text-white"
+                        //     : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                        //   "rounded-md px-3 py-2 text-sm font-medium"
                       )}
                     >
                       {item.name}

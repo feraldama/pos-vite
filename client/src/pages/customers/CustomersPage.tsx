@@ -9,6 +9,7 @@ import {
 import CustomersList from "../../components/customers/CustomersList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Cliente {
   id: string | number;
@@ -45,6 +46,11 @@ export default function CustomersPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("CLIENTES", "crear");
+  const puedeEditar = usePermiso("CLIENTES", "editar");
+  const puedeEliminar = usePermiso("CLIENTES", "eliminar");
+  const puedeLeer = usePermiso("CLIENTES", "leer");
 
   const fetchClientes = useCallback(async () => {
     try {
@@ -181,15 +187,20 @@ export default function CustomersPage() {
 
   if (loading) return <div>Cargando clientes...</div>;
   if (error) return <div>Error: {error}</div>;
+  if (!puedeLeer) return <div>No tienes permiso para ver los clientes</div>;
 
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-medium mb-3">Gestión de Clientes</h1>
       <CustomersList
         clientes={clientesData.clientes.map((c) => ({ ...c, id: c.ClienteId }))}
-        onDelete={(cliente) => handleDelete(cliente.ClienteId)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (cliente) => handleDelete(cliente.ClienteId)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={clientesData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

@@ -140,11 +140,13 @@ export default function CustomersList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Cliente"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Cliente"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">
@@ -334,7 +336,7 @@ export default function CustomersList({
                       readOnly
                       disabled
                       className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
-                    />{" "}
+                    />
                   </div>
                 </div>
               </div>

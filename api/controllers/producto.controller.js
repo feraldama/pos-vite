@@ -8,14 +8,12 @@ exports.getAllProductos = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "ProductoId";
     const sortOrder = req.query.sortOrder || "ASC";
-
     const { productos, total } = await Producto.getAllPaginated(
       limit,
       offset,
       sortBy,
       sortOrder
     );
-
     convertirImagenes(productos);
     res.json({
       data: productos,
@@ -45,7 +43,6 @@ exports.searchProductos = async (req, res) => {
         .status(400)
         .json({ error: "El término de búsqueda no puede estar vacío" });
     }
-
     const { productos, total } = await Producto.search(
       searchTerm,
       limit,
@@ -53,7 +50,6 @@ exports.searchProductos = async (req, res) => {
       sortBy,
       sortOrder
     );
-
     convertirImagenes(productos);
     res.json({
       data: productos,
@@ -92,6 +88,7 @@ exports.createProducto = async (req, res) => {
       "ProductoNombre",
       "ProductoPrecioVenta",
       "ProductoStock",
+      "LocalId",
     ];
     for (const campo of camposRequeridos) {
       if (!req.body[campo]) {

@@ -1,0 +1,17 @@
+const express = require("express");
+const router = express.Router();
+const cajagastoController = require("../controllers/cajagasto.controller");
+const authMiddleware = require("../middlewares/auth");
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(authMiddleware);
+
+// Rutas para CajaGasto
+router.get("/", authMiddleware, cajagastoController.getAll);
+router.get("/:id", authMiddleware, cajagastoController.getById);
+router.get("/caja/:cajaId", authMiddleware, cajagastoController.getByCajaId);
+router.post("/", authMiddleware, cajagastoController.create);
+router.put("/:id", authMiddleware, cajagastoController.update);
+router.delete("/:id", authMiddleware, cajagastoController.delete);
+
+module.exports = router;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -58,6 +59,8 @@ export default function Sales() {
       imagen: string;
       stock: number;
       cantidad: number;
+      caja: boolean;
+      cartItemId: number;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
@@ -70,6 +73,7 @@ export default function Sales() {
       ProductoImagen?: string;
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
+      ProductoPrecioUnitario: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +93,7 @@ export default function Sales() {
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>({
       ClienteId: 1,
-      ClienteNombre: "Sin Nombre minorista",
+      ClienteNombre: "SIN NOMBRE MINORISTA",
       ClienteRUC: "",
       ClienteTelefono: "",
       ClienteTipo: "MI",
@@ -103,6 +107,16 @@ export default function Sales() {
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
+  const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+
+  useEffect(() => {
+    if (selectedProductId !== null && cantidadRefs.current[selectedProductId]) {
+      cantidadRefs.current[selectedProductId]?.focus();
+    }
+  }, [selectedProductId, carrito.length]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -112,7 +126,6 @@ export default function Sales() {
     imagen: string;
     stock: number;
   }) => {
-    // Determinar el precio según el tipo de cliente
     const tipo = clienteSeleccionado?.ClienteTipo || "MI";
     const precioFinal =
       tipo === "MA" && producto.precioMayorista !== undefined
@@ -121,41 +134,82 @@ export default function Sales() {
 
     const precioSeguro = precioFinal ?? 0;
 
-    const existe = carrito.find((p) => p.id === producto.id);
-    if (existe) {
-      setCarrito(
-        carrito.map((p) =>
-          p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
-        )
-      );
-    } else {
-      setCarrito([
-        ...carrito,
-        { ...producto, precio: precioSeguro, cantidad: 1 },
-      ]);
-    }
+    const nuevoCartItemId = Date.now() + Math.random();
+    setCarrito([
+      ...carrito,
+      {
+        ...producto,
+        precio: precioSeguro,
+        cantidad: 1,
+        caja: true, // Por defecto true
+        cartItemId: nuevoCartItemId,
+      },
+    ]);
+    setSelectedProductId(nuevoCartItemId); // Focus en el input de cantidad del producto nuevo
   };
 
-  const quitarProducto = (id: number) => {
-    setCarrito(carrito.filter((p) => p.id !== id));
+  const quitarProducto = (cartItemId: number) => {
+    setCarrito(carrito.filter((p) => p.cartItemId !== cartItemId));
   };
 
-  const cambiarCantidad = (id: number, cantidad: number) => {
+  const cambiarCantidad = (cartItemId: number, cantidad: number) => {
     setCarrito(
       carrito.map((p) =>
-        p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p
+        p.cartItemId === cartItemId
+          ? { ...p, cantidad: Math.max(1, cantidad) }
+          : p
       )
     );
   };
 
-  const total = carrito.reduce((acc, p) => {
+  // Función para obtener el precio unitario según el check Caja
+  const obtenerPrecio = (p: (typeof carrito)[0]) => {
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    const precioUnitario =
-      p.id === 1 || p.id === 2
-        ? p.precio
-        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-    return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
-  }, 0);
+    if (!productoOriginal) return 0;
+    if (p.caja) {
+      return clienteSeleccionado?.ClienteTipo === "MA"
+        ? productoOriginal.ProductoPrecioVentaMayorista
+        : productoOriginal.ProductoPrecioVenta;
+    } else {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+      if (combo) {
+        // El precio unitario se calcula en base al combo
+        return (
+          calcularPrecioConCombo(
+            p.id,
+            p.cantidad,
+            productoOriginal.ProductoPrecioUnitario
+          ) / p.cantidad
+        );
+      }
+      return productoOriginal.ProductoPrecioUnitario;
+    }
+  };
+
+  // Función para obtener el total según el check Caja
+  const obtenerTotal = (p: (typeof carrito)[0]) => {
+    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
+    if (!productoOriginal) return 0;
+    if (p.caja) {
+      const precio =
+        clienteSeleccionado?.ClienteTipo === "MA"
+          ? productoOriginal.ProductoPrecioVentaMayorista
+          : productoOriginal.ProductoPrecioVenta;
+      return precio * p.cantidad;
+    } else {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+      if (combo) {
+        return calcularPrecioConCombo(
+          p.id,
+          p.cantidad,
+          productoOriginal.ProductoPrecioUnitario
+        );
+      }
+      return productoOriginal.ProductoPrecioUnitario * p.cantidad;
+    }
+  };
+
+  const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
 
   useEffect(() => {
     setLoading(true);
@@ -252,30 +306,27 @@ export default function Sales() {
     const añoStr = año < 10 ? `0${año}` : año.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
-    const SDTProductoItem = cartItems.map((producto) => {
-      const combo = combos.find(
-        (c) => Number(c.ProductoId) === Number(producto.id)
-      );
+    const SDTProductoItem = carrito.map((p) => {
+      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
       const productoOriginal = productos.find(
-        (p) => p.ProductoId === producto.id
+        (prod) => p.id === prod.ProductoId
       );
-      const precioUnitario =
-        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const precioUnitario = productoOriginal?.ProductoPrecioVenta ?? p.precio;
       const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
       const totalCombo = calcularPrecioConCombo(
-        producto.id,
-        producto.quantity,
+        p.id,
+        p.cantidad,
         precioUnitario
       );
-      const esCombo = combo && producto.quantity >= comboCantidad;
+      const esCombo = combo && p.cantidad >= comboCantidad;
       return {
         ClienteId: clienteSeleccionado?.ClienteId,
         Producto: {
-          ProductoId: producto.id,
-          VentaProductoCantidad: producto.quantity,
-          ProductoPrecioVenta: producto.salePrice,
-          ProductoUnidad: producto.unidad,
-          VentaProductoPrecioTotal: producto.totalPrice,
+          ProductoId: p.id,
+          VentaProductoCantidad: p.cantidad,
+          ProductoPrecioVenta: p.precio,
+          ProductoUnidad: p.caja ? "C" : "U",
+          VentaProductoPrecioTotal: obtenerTotal(p),
           Combo: esCombo ? "S" : "N",
           ComboPrecio: esCombo ? totalCombo : 0,
         },
@@ -287,7 +338,7 @@ export default function Sales() {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "CobranzaAmimar" },
+            _attributes: { xmlns: "PosViteAlonso" },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },
@@ -398,10 +449,10 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Amimar", 0, 15);
-    doc.text("PADEL", 0, 20);
-    doc.text("Carmen de Peña, Itauguá", 0, 25);
-    doc.text("Teléfono: +595 981 123456", 0, 30);
+    doc.text("Auto Shop Alonso", 0, 15);
+    doc.text("BODEGA", 0, 20);
+    doc.text("Bernardino Caballero c/ Antequera, Ypacaraí", 0, 25);
+    doc.text("Teléfono: +595 892 784989", 0, 30);
     doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
     doc.text(
       clienteSeleccionado?.ClienteRUC
@@ -420,14 +471,46 @@ export default function Sales() {
     const headers = [["Desc.", "Cant", "Precio", "Total"]];
 
     // Datos de la tabla
-    const tableData = cartItems.map((item) => [
-      item.nombre || item.id.toString(),
-      item.quantity,
-      item.unidad === "U"
-        ? item.salePrice.toLocaleString("es-ES")
-        : item.price.toLocaleString("es-ES"),
-      `Gs. ${item.totalPrice.toLocaleString("es-ES")}`,
-    ]);
+    const tableData = carrito.map((p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
+      let precioUnitario = 0;
+      let precioLabel = "";
+      let totalLinea = 0;
+      if (p.caja) {
+        // Caja: precio minorista o mayorista
+        precioUnitario =
+          clienteSeleccionado?.ClienteTipo === "MA"
+            ? productoOriginal.ProductoPrecioVentaMayorista
+            : productoOriginal.ProductoPrecioVenta;
+        precioLabel = `Caja (${
+          clienteSeleccionado?.ClienteTipo === "MA" ? "Mayorista" : "Minorista"
+        })`;
+        totalLinea = precioUnitario * p.cantidad;
+      } else {
+        // Unidad: puede aplicar combo
+        const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
+        if (combo && p.cantidad >= combo.ComboCantidad) {
+          // Aplica combo
+          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioLabel = `Unidad (Combo)`;
+          totalLinea = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+        } else {
+          // Solo unidad
+          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioLabel = `Unidad`;
+          totalLinea = precioUnitario * p.cantidad;
+        }
+      }
+      return [
+        p.nombre,
+        p.cantidad,
+        `Gs. ${precioUnitario.toLocaleString("es-ES")}\n${precioLabel}`,
+        `Gs. ${totalLinea.toLocaleString("es-ES")}`,
+      ];
+    });
 
     // Agregar la tabla al PDF
     autoTable(doc, {
@@ -451,7 +534,10 @@ export default function Sales() {
     });
 
     // Total de la compra
-    const totalCost = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const totalCost = carrito.reduce(
+      (sum, item) => sum + obtenerTotal(item),
+      0
+    );
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
@@ -506,270 +592,222 @@ export default function Sales() {
     }
   }, [user?.LocalId]);
 
+  const handleTecladoNumerico = (valor: string | number) => {
+    if (selectedProductId === null) return;
+    setCarrito((prev) =>
+      prev.map((item) => {
+        if (item.cartItemId !== selectedProductId) return item;
+        let nuevaCantidad = String(item.cantidad);
+        if (valor === "C" || valor === "c") {
+          nuevaCantidad = "0";
+        } else if (valor === "←") {
+          nuevaCantidad =
+            nuevaCantidad.length > 1 ? nuevaCantidad.slice(0, -1) : "0";
+        } else {
+          // Solo permitir números
+          if (/^\d+$/.test(String(valor))) {
+            nuevaCantidad = nuevaCantidad + valor;
+          }
+        }
+        return { ...item, cantidad: Math.max(0, Number(nuevaCantidad)) };
+      })
+    );
+  };
+
+  // --- Generar PDF de Presupuesto ---
+  const handlePresupuestoPDF = () => {
+    const doc = new jsPDF();
+    const cliente = clienteSeleccionado
+      ? `${clienteSeleccionado.ClienteNombre} ${clienteSeleccionado.ClienteApellido}`.trim()
+      : "SIN NOMBRE";
+    doc.setFontSize(22);
+    doc.text("Presupuesto", 14, 20);
+    doc.setFontSize(14);
+    doc.text(`Cliente:    ${cliente}`, 14, 32);
+
+    // Tabla de productos
+    const headers = [["Producto", "Cantidad", "Precio Unitario", "Total"]];
+    const body = carrito.map((item) => [
+      item.nombre,
+      String(item.cantidad),
+      `Gs. ${item.precio.toLocaleString()}`,
+      `Gs. ${(item.precio * item.cantidad).toLocaleString()}`,
+    ]);
+    autoTable(doc, {
+      head: headers,
+      body: body,
+      startY: 40,
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      bodyStyles: { fontSize: 12 },
+      styles: { cellPadding: 2 },
+      theme: "grid",
+      margin: { left: 14, right: 14 },
+    });
+    // Calcular total
+    const subtotal = carrito.reduce(
+      (acc, item) => acc + item.precio * item.cantidad,
+      0
+    );
+    const finalY =
+      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY || 60;
+    doc.setFontSize(16);
+    doc.text(`Total: Gs. ${subtotal.toLocaleString()}`, 14, finalY + 16);
+    doc.save("presupuesto.pdf");
+  };
+
   return (
     <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
-      <div
-        style={{
-          flex: 1,
-          background: "#f5f8ff",
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 4px 16px #0001",
-            padding: 0,
-            marginBottom: 16,
-            display: "flex",
-            flexDirection: "column",
-            maxHeight: "80vh",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-              }}
-            >
+      <div className="flex-1 bg-[#f5f8ff] p-4 flex flex-col justify-between">
+        <div className="bg-white rounded-xl shadow-lg p-0 mb-4 flex flex-col max-h-[80vh] overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <table className="w-full border-separate border-spacing-0">
               <thead>
-                <tr style={{ textAlign: "left", background: "#f5f8ff" }}>
-                  <th
-                    style={{
-                      padding: "16px 0 16px 24px",
-                      fontWeight: 600,
-                      fontSize: 15,
-                    }}
-                  >
+                <tr className="text-left bg-[#f5f8ff]">
+                  <th className="py-4 pl-6 font-semibold text-[15px]">
                     Nombre
                   </th>
-                  <th
-                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
-                  >
-                    Cantidad
-                  </th>
-                  <th
-                    style={{ padding: "16px 0", fontWeight: 600, fontSize: 15 }}
-                  >
+                  <th className="py-4 font-semibold text-[15px]">Cantidad</th>
+                  <th className="py-4 font-semibold text-[15px]">
                     Precio Uni.
                   </th>
-                  <th
-                    style={{
-                      padding: "16px 24px 16px 0",
-                      fontWeight: 600,
-                      fontSize: 15,
-                    }}
-                  >
-                    Total
-                  </th>
+                  <th className="py-4 pr-6 font-semibold text-[15px]">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {carrito.map((p, idx) => {
-                  const productoOriginal = productos.find(
-                    (prod) => prod.ProductoId === p.id
-                  );
-                  const precioUnitario =
-                    p.id === 1 || p.id === 2
-                      ? p.precio
-                      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-                  const precioTotal = calcularPrecioConCombo(
-                    p.id,
-                    p.cantidad,
-                    precioUnitario
-                  );
-                  return (
-                    <tr
-                      key={p.id}
-                      style={{
-                        background: "#fff",
-                        borderBottom:
-                          idx !== carrito.length - 1
-                            ? "1px solid #e5e7eb"
-                            : "none",
-                      }}
-                    >
-                      <td
-                        style={{
-                          padding: "20px 0 20px 24px",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 16,
-                          }}
-                        >
-                          <img
-                            src={p.imagen}
-                            alt={p.nombre}
-                            style={{
-                              width: 56,
-                              height: 56,
-                              objectFit: "contain",
-                              borderRadius: 8,
-                              background: "#f5f8ff",
-                              boxShadow: "0 1px 4px #0001",
+                {carrito.map((p, idx) => (
+                  <tr
+                    key={p.cartItemId}
+                    className={`${
+                      p.cartItemId === selectedProductId
+                        ? "bg-gray-50 border-gray-300"
+                        : idx !== carrito.length - 1
+                        ? "border-b border-gray-200"
+                        : ""
+                    } transition-colors`}
+                    onClick={() => {
+                      setSelectedProductId(p.cartItemId);
+                      setTimeout(() => {
+                        cantidadRefs.current[p.cartItemId]?.focus();
+                      }, 0);
+                    }}
+                  >
+                    <td className="py-3 pl-6 align-middle">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={p.imagen}
+                          alt={p.nombre}
+                          className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
+                        />
+                        <div>
+                          <div className="font-bold text-[17px] text-[#222] leading-tight">
+                            {p.nombre}
+                          </div>
+                          <div
+                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              quitarProducto(p.cartItemId);
                             }}
-                          />
-                          <div>
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                fontSize: 17,
-                                color: "#222",
-                                lineHeight: 1.2,
-                              }}
-                            >
-                              {p.nombre}
-                            </div>
-                            <div
-                              style={{
-                                color: "#e53935",
-                                fontSize: 14,
-                                marginTop: 4,
-                                cursor: "pointer",
-                              }}
-                              onClick={() => quitarProducto(p.id)}
-                            >
-                              Eliminar
-                            </div>
+                          >
+                            Eliminar
                           </div>
                         </div>
-                      </td>
-                      <td
-                        style={{ padding: "20px 0", verticalAlign: "middle" }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
+                      </div>
+                    </td>
+                    <td className="py-3 align-middle">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad - 1)
-                            }
-                            style={{
-                              width: 32,
-                              height: 32,
-                              border: "1px solid #d1d5db",
-                              borderRadius: 6,
-                              background: "#f9fafb",
-                              color: "#374151",
-                              fontSize: 18,
-                              fontWeight: 600,
-                              cursor: "pointer",
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.cartItemId, p.cantidad - 1);
+                              setSelectedProductId(p.cartItemId);
                             }}
+                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                           >
                             -
                           </button>
                           <input
                             type="number"
                             value={p.cantidad}
-                            min={1}
-                            style={{
-                              width: 40,
-                              height: 32,
-                              textAlign: "center",
-                              border: "1px solid #d1d5db",
-                              borderRadius: 6,
-                              background: "#f9fafb",
-                              fontSize: 16,
-                              fontWeight: 600,
-                              color: "#222",
-                              margin: "0 2px",
-                            }}
+                            min={0}
+                            className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
                             readOnly
+                            ref={(el) => {
+                              cantidadRefs.current[p.cartItemId] = el || null;
+                            }}
+                            tabIndex={0}
+                            onFocus={() => setSelectedProductId(p.cartItemId)}
+                            onKeyDown={(e) => {
+                              if (selectedProductId !== p.cartItemId) return;
+                              if (e.key >= "0" && e.key <= "9") {
+                                e.preventDefault();
+                                handleTecladoNumerico(e.key);
+                              } else if (e.key === "Backspace") {
+                                e.preventDefault();
+                                handleTecladoNumerico("←");
+                              } else if (e.key.toLowerCase() === "c") {
+                                e.preventDefault();
+                                handleTecladoNumerico("C");
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                cambiarCantidad(p.cartItemId, p.cantidad + 1);
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                cambiarCantidad(p.cartItemId, p.cantidad - 1);
+                              }
+                            }}
                           />
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad + 1)
-                            }
-                            style={{
-                              width: 32,
-                              height: 32,
-                              border: "1px solid #d1d5db",
-                              borderRadius: 6,
-                              background: "#f9fafb",
-                              color: "#374151",
-                              fontSize: 18,
-                              fontWeight: 600,
-                              cursor: "pointer",
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.cartItemId, p.cantidad + 1);
+                              setSelectedProductId(p.cartItemId);
                             }}
+                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
                           >
                             +
                           </button>
                         </div>
-                      </td>
-                      <td
-                        style={{
-                          padding: "20px 0",
-                          verticalAlign: "middle",
-                          textAlign: "right",
-                          fontWeight: 500,
-                          fontSize: 17,
-                          color: "#374151",
-                        }}
-                      >
-                        {p.id === 1 || p.id === 2 ? (
+                        <div className="flex items-center mt-1">
                           <input
-                            type="number"
-                            value={p.precio}
-                            min={0}
-                            style={{
-                              width: 80,
-                              height: 32,
-                              textAlign: "right",
-                              border: "1px solid #d1d5db",
-                              borderRadius: 6,
-                              background: "#f9fafb",
-                              fontSize: 16,
-                              fontWeight: 600,
-                              color: "#222",
-                            }}
-                            onChange={(e) => {
-                              const nuevoPrecio = Number(e.target.value);
+                            type="checkbox"
+                            id={`caja-checkbox-${p.cartItemId}`}
+                            checked={p.caja}
+                            onChange={() =>
                               setCarrito(
                                 carrito.map((item) =>
-                                  item.id === p.id &&
-                                  (item.id === 1 || item.id === 2)
-                                    ? { ...item, precio: nuevoPrecio }
+                                  item.cartItemId === p.cartItemId
+                                    ? { ...item, caja: !item.caja }
                                     : item
                                 )
-                              );
-                            }}
+                              )
+                            }
+                            className="cursor-pointer"
                           />
-                        ) : (
-                          <>Gs. {p.precio.toLocaleString()}</>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          padding: "20px 24px 20px 0",
-                          verticalAlign: "middle",
-                          textAlign: "right",
-                          fontWeight: 500,
-                          fontSize: 17,
-                          color: "#374151",
-                        }}
-                      >
-                        Gs. {precioTotal.toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })}
+                          <label
+                            htmlFor={`caja-checkbox-${p.cartItemId}`}
+                            className="text-lg text-gray-700 cursor-pointer select-none font-medium"
+                          >
+                            Caja
+                          </label>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 align-middle text-right font-medium text-[17px] text-gray-700">
+                      <>Gs. {formatMiles(obtenerPrecio(p))}</>
+                    </td>
+                    <td className="py-3 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
+                      Gs. {formatMiles(obtenerTotal(p))}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -780,7 +818,7 @@ export default function Sales() {
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
             <span className="text-blue-500 font-semibold text-lg">
-              Gs. {total.toLocaleString()}
+              Gs. {formatMiles(total)}
             </span>
           </div>
           {/* Grid de botones */}
@@ -793,14 +831,28 @@ export default function Sales() {
               Pagar
             </button>
             {/* Números y símbolos */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
               <button
                 key={n}
                 className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+                onClick={() => handleTecladoNumerico(n)}
               >
                 {n}
               </button>
             ))}
+            {/* Botón borrar y limpiar */}
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={() => handleTecladoNumerico("←")}
+            >
+              ←
+            </button>
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={handlePresupuestoPDF}
+            >
+              Presupuesto
+            </button>
           </div>
           {/* Recuadro inferior para el nombre del cliente */}
           <div className="mt-2">

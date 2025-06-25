@@ -9,6 +9,7 @@ import {
 import CajasList from "../../components/cajas/CajasList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Caja {
   id: string | number;
@@ -40,6 +41,11 @@ export default function CajasPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("CAJAS", "crear");
+  const puedeEditar = usePermiso("CAJAS", "editar");
+  const puedeEliminar = usePermiso("CAJAS", "eliminar");
+  const puedeLeer = usePermiso("CAJAS", "leer");
 
   const fetchCajas = useCallback(async () => {
     try {
@@ -172,6 +178,8 @@ export default function CajasPage() {
     setCurrentPage(1);
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver las cajas</div>;
+
   if (loading) return <div>Cargando cajas...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -180,9 +188,13 @@ export default function CajasPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Cajas</h1>
       <CajasList
         cajas={cajasData.cajas.map((c) => ({ ...c, id: c.CajaId }))}
-        onDelete={(caja) => handleDelete(caja.CajaId as string)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (caja) => handleDelete(caja.CajaId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={cajasData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

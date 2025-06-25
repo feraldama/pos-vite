@@ -15,6 +15,7 @@ import {
   CurrencyDollarIcon,
   ArchiveBoxIcon,
   RectangleGroupIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -46,14 +47,19 @@ const navigation: NavigationItem[] = [
     icon: <BanknotesIcon className="h-7 w-6" />,
   },
   {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
-  },
-  {
     name: "Almacenes",
     href: "/almacenes",
     icon: <ArchiveBoxIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Productos",
+    href: "/products",
+    icon: <CubeIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Combos",
+    href: "/combos",
+    icon: <RectangleGroupIcon className="h-7 w-6" />,
   },
   {
     name: "Clientes",
@@ -72,14 +78,23 @@ const navigation: NavigationItem[] = [
     ],
   },
   {
+    name: "Modificaciones",
+    href: "/modifications",
+    icon: <PencilSquareIcon className="h-7 w-6" />,
+    children: [
+      { name: "Ventas", href: "/modifications/ventas" },
+      { name: "Cobro de Créditos", href: "/credito-pagos" },
+    ],
+  },
+  {
     name: "Control de Acceso",
     href: "/access-control",
     icon: <KeyIcon className="h-7 w-6" />,
     children: [
-      { name: "Usuarios", href: "/users" },
       { name: "Locales", href: "/locales" },
-      { name: "Roles", href: "/team/roles" },
-      { name: "Estructura", href: "/team/structure" },
+      { name: "Usuarios", href: "/users" },
+      { name: "Perfiles", href: "/perfiles" },
+      { name: "Menús", href: "/menus" },
     ],
   },
 ];

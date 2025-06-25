@@ -3,6 +3,7 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import CajaGastosList from "./CajaGastosList";
 
 interface Caja {
   id: string | number;
@@ -251,6 +252,15 @@ export default function CajasList({
                     />
                   </div>
                 </div>
+                {/* Detalle: gastos de la caja */}
+                {currentCaja && (
+                  <div className="mt-8">
+                    <h4 className="text-lg font-semibold mb-2">
+                      Gastos asignados a la caja
+                    </h4>
+                    <CajaGastosList cajaId={currentCaja.CajaId} />
+                  </div>
+                )}
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <ActionButton

@@ -19,7 +19,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ setMobileOpen }: NavbarProps) {
-  const { user, permisos, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -27,14 +27,13 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
     navigate("/login");
   };
 
-  // Generar navegación dinámica según permisos
-  const navigation = Object.entries(permisos || {})
-    .filter(([, acciones]) => acciones.leer)
-    .map(([menu]) => {
-      let href = "/" + menu.toLowerCase();
-      if (menu === "Dashboard") href = "/dashboard";
-      return { name: menu, href };
-    });
+  // Navegación fija
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Apertura de caja", href: "/apertura-cierre-caja" },
+    { name: "Ventas", href: "/ventas" },
+    { name: "Clientes", href: "/customers" },
+  ];
 
   return (
     <Disclosure as="nav" className="bg-gray-800">
@@ -63,12 +62,6 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
                       className={classNames(
                         "text-gray-300 hover:bg-gray-700 hover:text-white",
                         "rounded-md px-3 py-2 text-sm font-medium"
-                        // aria-current={item.current ? "page" : undefined}
-                        // className={classNames(
-                        //   item.current
-                        //     ? "bg-gray-900 text-white"
-                        //     : "text-gray-300 hover:bg-gray-700 hover:text-white",
-                        //   "rounded-md px-3 py-2 text-sm font-medium"
                       )}
                     >
                       {item.name}

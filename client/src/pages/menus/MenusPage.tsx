@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { usePermiso } from "../../hooks/usePermiso";
 import {
   getMenus,
   createMenu,
@@ -35,6 +36,11 @@ export default function MenusPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
+
+  const puedeCrear = usePermiso("MENUS", "crear");
+  const puedeEditar = usePermiso("MENUS", "editar");
+  const puedeEliminar = usePermiso("MENUS", "eliminar");
+  const puedeLeer = usePermiso("MENUS", "leer");
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -153,6 +159,7 @@ export default function MenusPage() {
     if (e.key === "Enter") handleSearchSubmit();
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver los menús.</div>;
   if (loading) return <div>Cargando menús...</div>;
   if (error) return <div>{error}</div>;
 
@@ -161,9 +168,9 @@ export default function MenusPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Menús</h1>
       <MenusList
         menus={menusData.menus.map((m) => ({ ...m, id: m.MenuId }))}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onCreate={handleCreate}
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onDelete={puedeEliminar ? handleDelete : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
         currentMenu={currentMenu}

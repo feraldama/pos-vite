@@ -15,6 +15,9 @@ import {
   CurrencyDollarIcon,
   ArchiveBoxIcon,
   RectangleGroupIcon,
+  CubeIcon,
+  WrenchIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -36,24 +39,34 @@ const navigation: NavigationItem[] = [
     icon: <HomeIcon className="h-7 w-6" />,
   },
   {
+    name: "Apertura/Cierre de Caja",
+    href: "/apertura-cierre-caja",
+    icon: <LockClosedIcon className="h-7 w-6" />,
+  },
+  {
     name: "Ventas",
     href: "/ventas",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
   {
-    name: "Apertura/Cierre de Caja",
-    href: "/apertura-cierre-caja",
+    name: "Cobro de Créditos",
+    href: "/credito-pagos",
     icon: <BanknotesIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
   },
   {
     name: "Almacenes",
     href: "/almacenes",
     icon: <ArchiveBoxIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Productos",
+    href: "/products",
+    icon: <CubeIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Combos",
+    href: "/combos",
+    icon: <RectangleGroupIcon className="h-7 w-6" />,
   },
   {
     name: "Clientes",
@@ -72,14 +85,20 @@ const navigation: NavigationItem[] = [
     ],
   },
   {
+    name: "Modificaciones",
+    href: "/modifications",
+    icon: <WrenchIcon className="h-7 w-6" />,
+    children: [{ name: "Ventas", href: "/modifications/ventas" }],
+  },
+  {
     name: "Control de Acceso",
     href: "/access-control",
     icon: <KeyIcon className="h-7 w-6" />,
     children: [
-      { name: "Usuarios", href: "/users" },
       { name: "Locales", href: "/locales" },
-      { name: "Roles", href: "/team/roles" },
-      { name: "Estructura", href: "/team/structure" },
+      { name: "Usuarios", href: "/users" },
+      { name: "Perfiles", href: "/perfiles" },
+      { name: "Menús", href: "/menus" },
     ],
   },
 ];

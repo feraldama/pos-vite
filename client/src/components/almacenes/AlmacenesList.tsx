@@ -113,11 +113,13 @@ export default function AlmacenesList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Almacén"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Almacén"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
       <div className="flex justify-between items-center mb-4">
@@ -188,7 +190,15 @@ export default function AlmacenesList({
                       name="AlmacenNombre"
                       id="AlmacenNombre"
                       value={formData.AlmacenNombre}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        handleInputChange({
+                          target: {
+                            name: "AlmacenNombre",
+                            value: value,
+                          },
+                        } as React.ChangeEvent<HTMLInputElement>);
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />

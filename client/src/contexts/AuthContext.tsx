@@ -9,6 +9,7 @@ interface User {
   email: string;
   LocalId?: number;
   LocalNombre?: string;
+  isAdmin?: string;
   // Agrega más campos si es necesario
 }
 
@@ -17,8 +18,18 @@ interface Credentials {
   password: string;
 }
 
+interface PermisosPorMenu {
+  [menu: string]: {
+    crear: boolean;
+    editar: boolean;
+    eliminar: boolean;
+    leer: boolean;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
+  permisos: PermisosPorMenu;
   login: (credentials: Credentials) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -36,6 +47,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(() => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
+  });
+  const [permisos, setPermisos] = useState<PermisosPorMenu>(() => {
+    const storedPerms = localStorage.getItem("permisos");
+    return storedPerms ? JSON.parse(storedPerms) : {};
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -62,7 +77,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("permisos", JSON.stringify(data.permisos || {}));
       setUser(data.user);
+      setPermisos(data.permisos || {});
     } finally {
       setLoading(false);
     }
@@ -71,12 +88,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("permisos");
     setUser(null);
+    setPermisos({});
     navigate("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, permisos, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

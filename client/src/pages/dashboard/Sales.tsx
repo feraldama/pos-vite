@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -89,7 +90,7 @@ export default function Sales() {
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>({
       ClienteId: 1,
-      ClienteNombre: "Sin Nombre minorista",
+      ClienteNombre: "SIN NOMBRE MINORISTA",
       ClienteRUC: "",
       ClienteTelefono: "",
       ClienteTipo: "MI",
@@ -103,6 +104,24 @@ export default function Sales() {
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
+  const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+  const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+
+  useEffect(() => {
+    if (selectedProductId === null) return;
+    const isSpecialProduct = selectedProductId === 1;
+    setTimeout(() => {
+      if (isSpecialProduct && precioRefs.current[selectedProductId]) {
+        precioRefs.current[selectedProductId]?.select();
+      } else if (cantidadRefs.current[selectedProductId]) {
+        cantidadRefs.current[selectedProductId]?.focus();
+        cantidadRefs.current[selectedProductId]?.select();
+      }
+    }, 0);
+  }, [selectedProductId]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -128,11 +147,13 @@ export default function Sales() {
           p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
         )
       );
+      setSelectedProductId(producto.id);
     } else {
       setCarrito([
         ...carrito,
         { ...producto, precio: precioSeguro, cantidad: 1 },
       ]);
+      setSelectedProductId(producto.id);
     }
   };
 
@@ -397,7 +418,7 @@ export default function Sales() {
 
     // Encabezado del ticket
     doc.text("Decorpar", 0, 15);
-    doc.text("PADEL", 0, 20);
+    doc.text("Pinturería", 0, 20);
     doc.text("Carmen de Peña, Itauguá", 0, 25);
     doc.text("Teléfono: +595 981 123456", 0, 30);
     doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
@@ -417,15 +438,24 @@ export default function Sales() {
     // Encabezados de la tabla
     const headers = [["Desc.", "Cant", "Precio", "Total"]];
 
-    // Datos de la tabla
-    const tableData = cartItems.map((item) => [
-      item.nombre || item.id.toString(),
-      item.quantity,
-      item.unidad === "U"
-        ? item.salePrice.toLocaleString("es-ES")
-        : item.price.toLocaleString("es-ES"),
-      `Gs. ${item.totalPrice.toLocaleString("es-ES")}`,
-    ]);
+    // Datos de la tabla para el PDF
+    const tableData = carrito.map((p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
+      const precioUnitario =
+        p.id === 1
+          ? p.precio
+          : productoOriginal.ProductoPrecioVenta ?? p.precio;
+      const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+      return [
+        p.nombre,
+        p.cantidad,
+        `Gs. ${precioUnitario.toLocaleString("es-ES")}`,
+        `Gs. ${subtotal.toLocaleString("es-ES")}`,
+      ];
+    });
 
     // Agregar la tabla al PDF
     autoTable(doc, {
@@ -448,8 +478,17 @@ export default function Sales() {
       margin: { left: 0 }, // Margen izquierdo
     });
 
-    // Total de la compra
-    const totalCost = cartItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    // Total de la compra para el PDF
+    const totalCost = carrito.reduce((sum, p) => {
+      const productoOriginal = productos.find(
+        (prod) => prod.ProductoId === p.id
+      );
+      const precioUnitario =
+        p.id === 1
+          ? p.precio
+          : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+    }, 0);
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
@@ -504,8 +543,76 @@ export default function Sales() {
     }
   }, [user?.LocalId]);
 
+  const handleTecladoNumerico = (valor: string | number) => {
+    if (selectedProductId === null) return;
+    setCarrito((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedProductId) return item;
+        let nuevaCantidad = String(item.cantidad);
+        if (valor === "C" || valor === "c") {
+          nuevaCantidad = "0";
+        } else if (valor === "←") {
+          nuevaCantidad =
+            nuevaCantidad.length > 1 ? nuevaCantidad.slice(0, -1) : "0";
+        } else {
+          // Solo permitir números
+          if (/^\d+$/.test(String(valor))) {
+            nuevaCantidad = nuevaCantidad + valor;
+          }
+        }
+        return { ...item, cantidad: Math.max(0, Number(nuevaCantidad)) };
+      })
+    );
+  };
+
+  // --- Generar PDF de Presupuesto ---
+  const handlePresupuestoPDF = () => {
+    const doc = new jsPDF();
+    const cliente = clienteSeleccionado
+      ? `${clienteSeleccionado.ClienteNombre} ${clienteSeleccionado.ClienteApellido}`.trim()
+      : "SIN NOMBRE";
+    doc.setFontSize(22);
+    doc.text("Presupuesto", 14, 20);
+    doc.setFontSize(14);
+    doc.text(`Cliente:    ${cliente}`, 14, 32);
+
+    // Tabla de productos
+    const headers = [["Producto", "Cantidad", "Precio Unitario", "Total"]];
+    const body = carrito.map((item) => [
+      item.nombre,
+      String(item.cantidad),
+      `Gs. ${item.precio.toLocaleString()}`,
+      `Gs. ${(item.precio * item.cantidad).toLocaleString()}`,
+    ]);
+    autoTable(doc, {
+      head: headers,
+      body: body,
+      startY: 40,
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      bodyStyles: { fontSize: 12 },
+      styles: { cellPadding: 2 },
+      theme: "grid",
+      margin: { left: 14, right: 14 },
+    });
+    // Calcular total
+    const subtotal = carrito.reduce(
+      (acc, item) => acc + item.precio * item.cantidad,
+      0
+    );
+    const finalY =
+      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY || 60;
+    doc.setFontSize(16);
+    doc.text(`Total: Gs. ${subtotal.toLocaleString()}`, 14, finalY + 16);
+    doc.save("presupuesto.pdf");
+  };
+
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f5f8ff" }}>
+    <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
       <div
         style={{
@@ -594,6 +701,9 @@ export default function Sales() {
                             ? "1px solid #e5e7eb"
                             : "none",
                       }}
+                      onClick={() => {
+                        setSelectedProductId(p.id);
+                      }}
                     >
                       <td
                         style={{
@@ -638,7 +748,10 @@ export default function Sales() {
                                 marginTop: 4,
                                 cursor: "pointer",
                               }}
-                              onClick={() => quitarProducto(p.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quitarProducto(p.id);
+                              }}
                             >
                               Eliminar
                             </div>
@@ -656,9 +769,11 @@ export default function Sales() {
                           }}
                         >
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad - 1)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.id, p.cantidad - 1);
+                              setSelectedProductId(p.id);
+                            }}
                             style={{
                               width: 32,
                               height: 32,
@@ -676,7 +791,7 @@ export default function Sales() {
                           <input
                             type="number"
                             value={p.cantidad}
-                            min={1}
+                            min={0}
                             style={{
                               width: 40,
                               height: 32,
@@ -690,11 +805,37 @@ export default function Sales() {
                               margin: "0 2px",
                             }}
                             readOnly
+                            ref={(el) => {
+                              cantidadRefs.current[p.id] = el || null;
+                            }}
+                            tabIndex={0}
+                            onFocus={() => setSelectedProductId(p.id)}
+                            onKeyDown={(e) => {
+                              if (selectedProductId !== p.id) return;
+                              if (e.key >= "0" && e.key <= "9") {
+                                e.preventDefault();
+                                handleTecladoNumerico(e.key);
+                              } else if (e.key === "Backspace") {
+                                e.preventDefault();
+                                handleTecladoNumerico("←");
+                              } else if (e.key.toLowerCase() === "c") {
+                                e.preventDefault();
+                                handleTecladoNumerico("C");
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                cambiarCantidad(p.id, p.cantidad + 1);
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                cambiarCantidad(p.id, p.cantidad - 1);
+                              }
+                            }}
                           />
                           <button
-                            onClick={() =>
-                              cambiarCantidad(p.id, p.cantidad + 1)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cambiarCantidad(p.id, p.cantidad + 1);
+                              setSelectedProductId(p.id);
+                            }}
                             style={{
                               width: 32,
                               height: 32,
@@ -723,8 +864,8 @@ export default function Sales() {
                       >
                         {p.id === 1 ? (
                           <input
-                            type="number"
-                            value={p.precio}
+                            type="text"
+                            value={formatMiles(p.precio)}
                             min={0}
                             style={{
                               width: 80,
@@ -736,20 +877,31 @@ export default function Sales() {
                               fontSize: 16,
                               fontWeight: 600,
                               color: "#222",
+                              paddingRight: 8,
                             }}
+                            ref={(el) => {
+                              precioRefs.current[p.id] = el || null;
+                            }}
+                            onFocus={() => setSelectedProductId(p.id)}
                             onChange={(e) => {
-                              const nuevoPrecio = Number(e.target.value);
-                              setCarrito(
-                                carrito.map((item) =>
-                                  item.id === p.id && item.id === 1
-                                    ? { ...item, precio: nuevoPrecio }
-                                    : item
-                                )
+                              const valorSinPuntos = e.target.value.replace(
+                                /\./g,
+                                ""
                               );
+                              const nuevoPrecio = Number(valorSinPuntos);
+                              if (!isNaN(nuevoPrecio)) {
+                                setCarrito(
+                                  carrito.map((item) =>
+                                    item.id === p.id && item.id === 1
+                                      ? { ...item, precio: nuevoPrecio }
+                                      : item
+                                  )
+                                );
+                              }
                             }}
                           />
                         ) : (
-                          <>Gs. {p.precio.toLocaleString()}</>
+                          <>Gs. {formatMiles(p.precio)}</>
                         )}
                       </td>
                       <td
@@ -762,7 +914,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        Gs. {precioTotal.toLocaleString()}
+                        Gs. {formatMiles(precioTotal)}
                       </td>
                     </tr>
                   );
@@ -777,29 +929,41 @@ export default function Sales() {
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
             <span className="text-blue-500 font-semibold text-lg">
-              Gs. {total.toLocaleString()}
+              Gs. {formatMiles(total)}
             </span>
           </div>
           {/* Grid de botones */}
           <div className="grid grid-cols-4 gap-2 mb-3">
             {/* Botón Pagar grande */}
             <button
-              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition"
-              style={{ minHeight: 215 }}
+              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition min-h-[215px]"
               onClick={() => setShowModal(true)}
             >
               Pagar
             </button>
             {/* Números y símbolos */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, ","].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
               <button
                 key={n}
-                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition"
-                style={{ minWidth: 60 }}
+                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+                onClick={() => handleTecladoNumerico(n)}
               >
                 {n}
               </button>
             ))}
+            {/* Botón borrar y limpiar */}
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={() => handleTecladoNumerico("←")}
+            >
+              ←
+            </button>
+            <button
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              onClick={handlePresupuestoPDF}
+            >
+              Presupuesto
+            </button>
           </div>
           {/* Recuadro inferior para el nombre del cliente */}
           <div className="mt-2">
@@ -824,15 +988,8 @@ export default function Sales() {
         </div>
       </div>
       {/* Lado Derecho */}
-      <div style={{ flex: 2, padding: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: 16,
-            justifyContent: "space-between",
-          }}
-        >
+      <div className="flex-[2] p-4">
+        <div className="flex items-center mb-4 justify-between">
           <SearchButton
             searchTerm={busqueda}
             onSearch={setBusqueda}
@@ -841,17 +998,7 @@ export default function Sales() {
             hideButton={true}
           />
           {user && (
-            <div
-              style={{
-                marginLeft: 24,
-                fontWeight: 600,
-                color: "#222",
-                fontSize: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
+            <div className="ml-6 font-semibold text-[#222] text-[16px] flex items-center gap-2">
               <span>
                 {user.nombre + " "}
                 <span style={{ color: "#888", fontWeight: 400 }}>
@@ -859,12 +1006,12 @@ export default function Sales() {
                 </span>
               </span>
               {localNombre && (
-                <span style={{ color: "#e53935", fontWeight: 500 }}>
+                <span className="text-red-600 font-medium">
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                <span className="text-blue-600 font-medium">
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}
@@ -883,16 +1030,13 @@ export default function Sales() {
         </div>
         {/* Nuevo contenedor con scroll solo para los productos */}
         <div
-          style={{
-            height: "calc(100vh - 120px)", // Ajusta este valor si es necesario
-            overflowY: "auto",
-          }}
+          className="overflow-y-auto"
+          style={{ height: "calc(100vh - 120px)" }}
         >
           <div
+            className="grid gap-4"
             style={{
-              display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16,
             }}
           >
             {loading ? (
@@ -910,7 +1054,6 @@ export default function Sales() {
                 .map((p) => (
                   <ProductCard
                     key={p.ProductoId}
-                    // id={p.ProductoId}
                     nombre={p.ProductoNombre}
                     precio={p.ProductoPrecioVenta}
                     precioMayorista={p.ProductoPrecioVentaMayorista}

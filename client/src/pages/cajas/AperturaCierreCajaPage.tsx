@@ -102,7 +102,7 @@ export default function AperturaCierreCajaPage() {
   const fetchRegistrosCaja = async () => {
     try {
       // Traer todos los registros de la caja seleccionada (puedes filtrar por caja y usuario si lo deseas)
-      const data = await getRegistrosDiariosCaja(1, 1000, undefined, "asc");
+      const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
       setRegistrosCaja(
         data.data.filter((r: RegistroDiarioCaja) => r.CajaId == cajaId)
       );
@@ -118,59 +118,77 @@ export default function AperturaCierreCajaPage() {
       cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || "";
     const fecha = new Date().toLocaleDateString();
     const hora = new Date().toLocaleTimeString();
-    const registros = registrosCaja;
-    // --- Lógica de totales ---
-    let apertura = 0;
-    let cierre = 0;
+    // --- Nueva lógica: buscar última apertura y cierre del usuario ---
+    const registros = registrosCaja.filter((r) => r.UsuarioId == user.id);
+    // Buscar la última apertura del usuario
+    const aperturaReg = registros.find(
+      (reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2
+    );
+    if (!aperturaReg) {
+      Swal.fire({
+        icon: "warning",
+        title: "No se encontró apertura",
+        text: "No se encontró una apertura de caja para este usuario.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+    // Buscar el primer cierre posterior a la apertura
+    const cierreReg = registros.find(
+      (reg) =>
+        reg.TipoGastoId === 1 &&
+        reg.TipoGastoGrupoId === 2 &&
+        reg.RegistroDiarioCajaId > aperturaReg.RegistroDiarioCajaId
+    );
+    if (!cierreReg) {
+      Swal.fire({
+        icon: "warning",
+        title: "No se encontró cierre",
+        text: "No se encontró un cierre de caja posterior a la apertura para este usuario.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+    // Filtrar los registros entre apertura y cierre (inclusive)
+    const registrosFiltrados = registrosCaja.filter(
+      (reg) =>
+        reg.UsuarioId == user.id &&
+        reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
+        reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
+    );
+    // Calcular totales
+    const apertura = aperturaReg.RegistroDiarioCajaMonto;
+    const cierre = cierreReg.RegistroDiarioCajaMonto;
     let egresos = 0;
     let ingresos = 0;
     let ingresosPOS = 0;
     let ingresosVoucher = 0;
     let ingresosTransfer = 0;
-    let totalReg = 0;
-    let registroAperturaId = 0;
-    // Buscar apertura
-    for (const reg of registros) {
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2) {
-        apertura = reg.RegistroDiarioCajaMonto;
-        registroAperturaId = reg.RegistroDiarioCajaId;
+    for (const reg of registrosFiltrados) {
+      if (
+        reg.TipoGastoId === 2 &&
+        reg.TipoGastoGrupoId !== 2 &&
+        reg.TipoGastoGrupoId !== 4 &&
+        reg.TipoGastoGrupoId !== 5 &&
+        reg.TipoGastoGrupoId !== 6
+      ) {
         ingresos += reg.RegistroDiarioCajaMonto;
-        break;
       }
-    }
-    // Buscar cierre y sumar egresos/ingresos
-    for (const reg of registros) {
-      if (reg.RegistroDiarioCajaId > registroAperturaId) {
-        if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId === 2) {
-          cierre = reg.RegistroDiarioCajaMonto;
-          totalReg = cierre;
-          break;
-        } else {
-          if (reg.TipoGastoId === 1) {
-            egresos += reg.RegistroDiarioCajaMonto;
-          }
-          if (
-            reg.TipoGastoId === 2 &&
-            reg.TipoGastoGrupoId !== 4 &&
-            reg.TipoGastoGrupoId !== 5 &&
-            reg.TipoGastoGrupoId !== 6
-          ) {
-            ingresos += reg.RegistroDiarioCajaMonto;
-          }
-          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
-            ingresosPOS += reg.RegistroDiarioCajaMonto;
-          }
-          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
-            ingresosVoucher += reg.RegistroDiarioCajaMonto;
-          }
-          if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
-            ingresosTransfer += reg.RegistroDiarioCajaMonto;
-          }
-        }
+      if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
+        egresos += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
+        ingresosPOS += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
+        ingresosVoucher += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
+        ingresosTransfer += reg.RegistroDiarioCajaMonto;
       }
     }
     const diferencia = ingresos - egresos;
-    const sobranteFaltante = totalReg - diferencia;
+    const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
       txtSobranteFaltante = `Sobrante de: ${sobranteFaltante.toLocaleString()}`;

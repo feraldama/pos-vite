@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { usePermiso } from "../../hooks/usePermiso";
 import {
   getTiposGastoPaginated,
   deleteTipoGasto,
@@ -41,6 +42,10 @@ export default function TiposGastoPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const puedeCrear = usePermiso("TIPOSGASTO", "crear");
+  const puedeEditar = usePermiso("TIPOSGASTO", "editar");
+  const puedeEliminar = usePermiso("TIPOSGASTO", "eliminar");
+  const puedeLeer = usePermiso("TIPOSGASTO", "leer");
 
   const fetchTiposGasto = useCallback(async () => {
     try {
@@ -184,6 +189,8 @@ export default function TiposGastoPage() {
     setCurrentPage(1);
   };
 
+  if (!puedeLeer)
+    return <div>No tienes permiso para ver los tipos de gasto.</div>;
   if (loading) return <div>Cargando tipos de gasto...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -195,9 +202,13 @@ export default function TiposGastoPage() {
           ...t,
           id: t.TipoGastoId,
         }))}
-        onDelete={(tipo) => handleDelete(tipo.TipoGastoId as string)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (tipo) => handleDelete(tipo.TipoGastoId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={tiposGastoData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

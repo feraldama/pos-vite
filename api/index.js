@@ -13,6 +13,14 @@ const productoRoutes = require("./routes/producto.routes");
 const localRoutes = require("./routes/local.routes");
 const almacenRoutes = require("./routes/almacen.routes");
 const comboRoutes = require("./routes/combo.routes");
+const perfilRoutes = require("./routes/perfil.routes");
+const menuRoutes = require("./routes/menu.routes");
+const perfilMenuRoutes = require("./routes/perfilmenu.routes");
+const usuarioPerfilRoutes = require("./routes/usuarioperfil.routes");
+const ventaProductoRoutes = require("./routes/ventaproducto.routes");
+const ventaRoutes = require("./routes/venta.routes");
+const ventaCreditoRoutes = require("./routes/ventacredito.routes");
+const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -28,7 +36,8 @@ const corsOptions = {
 
 // Middlewares
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Rutas
 app.use("/api/usuarios", usuarioRoutes);
@@ -41,6 +50,14 @@ app.use("/api/productos", productoRoutes);
 app.use("/api/locales", localRoutes);
 app.use("/api/almacen", almacenRoutes);
 app.use("/api/combo", comboRoutes);
+app.use("/api/perfiles", perfilRoutes);
+app.use("/api/menus", menuRoutes);
+app.use("/api/perfilmenu", perfilMenuRoutes);
+app.use("/api/usuarioperfil", usuarioPerfilRoutes);
+app.use("/api/ventaproducto", ventaProductoRoutes);
+app.use("/api/venta", ventaRoutes);
+app.use("/api/ventacredito", ventaCreditoRoutes);
+app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

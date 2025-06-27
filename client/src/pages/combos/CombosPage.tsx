@@ -9,7 +9,8 @@ import {
 import CombosList from "../../components/combos/CombosList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
-import { getProductos } from "../../services/productos.service";
+import { getProductosAll } from "../../services/productos.service";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Combo {
   id: string | number;
@@ -47,6 +48,11 @@ export default function CombosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
 
+  const puedeCrear = usePermiso("COMBOS", "crear");
+  const puedeEditar = usePermiso("COMBOS", "editar");
+  const puedeEliminar = usePermiso("COMBOS", "eliminar");
+  const puedeLeer = usePermiso("COMBOS", "leer");
+
   const fetchCombos = useCallback(async () => {
     try {
       setLoading(true);
@@ -69,7 +75,7 @@ export default function CombosPage() {
 
   useEffect(() => {
     fetchCombos();
-    getProductos().then((res) => setProductos(res.data));
+    getProductosAll().then((res) => setProductos(res.data));
   }, [fetchCombos]);
 
   const handleDelete = async (id: string) => {
@@ -162,6 +168,7 @@ export default function CombosPage() {
 
   if (loading) return <div>Cargando combos...</div>;
   if (error) return <div>Error: {error}</div>;
+  if (!puedeLeer) return <div>No tienes permiso para ver los combos</div>;
 
   return (
     <div className="container mx-auto px-4">
@@ -169,9 +176,13 @@ export default function CombosPage() {
       <CombosList
         combos={combosData.combos.map((c) => ({ ...c, id: c.ComboId }))}
         productos={productos}
-        onDelete={(combo) => handleDelete(combo.ComboId as string)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (combo) => handleDelete(combo.ComboId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
         currentCombo={

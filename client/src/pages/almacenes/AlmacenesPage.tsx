@@ -9,6 +9,7 @@ import {
 import AlmacenesList from "../../components/almacenes/AlmacenesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Almacen {
   id: string | number;
@@ -38,6 +39,11 @@ export default function AlmacenesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("ALMACENES", "crear");
+  const puedeEditar = usePermiso("ALMACENES", "editar");
+  const puedeEliminar = usePermiso("ALMACENES", "eliminar");
+  const puedeLeer = usePermiso("ALMACENES", "leer");
 
   const fetchAlmacenes = useCallback(async () => {
     try {
@@ -179,6 +185,7 @@ export default function AlmacenesPage() {
 
   if (loading) return <div>Cargando almacenes...</div>;
   if (error) return <div>Error: {error}</div>;
+  if (!puedeLeer) return <div>No tienes permiso para ver los almacenes</div>;
 
   return (
     <div className="container mx-auto px-4">
@@ -188,9 +195,13 @@ export default function AlmacenesPage() {
           ...a,
           id: a.AlmacenId,
         }))}
-        onDelete={(almacen) => handleDelete(almacen.AlmacenId as string)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (almacen) => handleDelete(almacen.AlmacenId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={almacenesData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

@@ -4,6 +4,8 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
+import { getPerfiles } from "../../services/perfiles.service";
+import { getPerfilesByUsuario } from "../../services/usuarioperfil.service";
 
 interface Usuario {
   id: string | number;
@@ -45,7 +47,7 @@ interface UsuariosListProps {
 
 export default function UsuariosList({
   usuarios,
-  // onDelete,
+  onDelete,
   onEdit,
   onCreate,
   pagination,
@@ -78,6 +80,12 @@ export default function UsuariosList({
   const [locales, setLocales] = useState<
     { LocalId: number; LocalNombre: string }[]
   >([]);
+  const [perfiles, setPerfiles] = useState<
+    { PerfilId: number; PerfilDescripcion: string }[]
+  >([]);
+  const [perfilesSeleccionados, setPerfilesSeleccionados] = useState<number[]>(
+    []
+  );
 
   // Inicializar formData cuando currentUser cambia
   useEffect(() => {
@@ -113,6 +121,24 @@ export default function UsuariosList({
     });
   }, [currentUser, setEditingPassword]);
 
+  useEffect(() => {
+    if (isModalOpen) {
+      getPerfiles(1, 1000).then((res) => setPerfiles(res.data || []));
+      if (currentUser) {
+        getPerfilesByUsuario(currentUser.UsuarioId).then((res) => {
+          const perfilesArray = Array.isArray(res) ? res : res.data;
+          setPerfilesSeleccionados(
+            Array.isArray(perfilesArray)
+              ? perfilesArray.map((p) => p.PerfilId)
+              : []
+          );
+        });
+      } else {
+        setPerfilesSeleccionados([]);
+      }
+    }
+  }, [isModalOpen, currentUser]);
+
   // Manejar cambios en el formulario
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -127,7 +153,7 @@ export default function UsuariosList({
   // Enviar formulario
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({ ...formData, perfilesSeleccionados });
   };
 
   // Determinar el estado visual
@@ -144,6 +170,14 @@ export default function UsuariosList({
     if (e.target === e.currentTarget) {
       onCloseModal();
     }
+  };
+
+  const handlePerfilChange = (perfilId: number) => {
+    setPerfilesSeleccionados((prev) =>
+      prev.includes(perfilId)
+        ? prev.filter((id) => id !== perfilId)
+        : [...prev, perfilId]
+    );
   };
 
   // Configuración de columnas para la tabla
@@ -194,11 +228,13 @@ export default function UsuariosList({
           />
         </div>
         <div className="py-4">
-          <ActionButton
-            label="Nuevo Usuario"
-            onClick={onCreate}
-            icon={PlusIcon}
-          />
+          {onCreate && (
+            <ActionButton
+              label="Nuevo Usuario"
+              onClick={onCreate}
+              icon={PlusIcon}
+            />
+          )}
         </div>
       </div>
 
@@ -213,6 +249,7 @@ export default function UsuariosList({
         columns={columns}
         data={usuarios}
         onEdit={onEdit}
+        onDelete={onDelete}
         emptyMessage="No se encontraron usuarios"
         getStatusColor={getEstadoColor}
         getStatusText={getEstadoVisual}
@@ -297,7 +334,15 @@ export default function UsuariosList({
                       name="UsuarioNombre"
                       id="UsuarioNombre"
                       value={formData.UsuarioNombre}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        handleInputChange({
+                          target: {
+                            name: "UsuarioNombre",
+                            value: value,
+                          },
+                        } as React.ChangeEvent<HTMLInputElement>);
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />
@@ -314,7 +359,15 @@ export default function UsuariosList({
                       name="UsuarioApellido"
                       id="UsuarioApellido"
                       value={formData.UsuarioApellido}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase();
+                        handleInputChange({
+                          target: {
+                            name: "UsuarioApellido",
+                            value: value,
+                          },
+                        } as React.ChangeEvent<HTMLInputElement>);
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
@@ -447,6 +500,40 @@ export default function UsuariosList({
                       </div>
                     </div>
                   )}
+                  <div className="col-span-6">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Perfiles
+                    </label>
+                    <div className="flex flex-col gap-0">
+                      {perfiles.map((perfil) => {
+                        const checkboxId = `perfil-checkbox-${perfil.PerfilId}`;
+                        return (
+                          <div
+                            className="flex items-center mb-2"
+                            key={perfil.PerfilId}
+                          >
+                            <input
+                              id={checkboxId}
+                              type="checkbox"
+                              checked={perfilesSeleccionados.includes(
+                                perfil.PerfilId
+                              )}
+                              onChange={() =>
+                                handlePerfilChange(perfil.PerfilId)
+                              }
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            />
+                            <label
+                              htmlFor={checkboxId}
+                              className="ms-2 text-sm font-medium text-gray-900"
+                            >
+                              {perfil.PerfilDescripcion}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 

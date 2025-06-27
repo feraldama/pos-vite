@@ -21,6 +21,11 @@ import Sales from "./pages/dashboard/Sales";
 import LocalesPage from "./pages/locales/LocalesPage";
 import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
 import CombosPage from "./pages/combos/CombosPage";
+import PerfilesPage from "./pages/perfiles/PerfilesPage";
+import MenusPage from "./pages/menus/MenusPage";
+import ProductsPage from "./pages/products/ProductsPage";
+import VentasPage from "./pages/ventas/VentasPage";
+import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 
 function App() {
   return (
@@ -54,6 +59,11 @@ function App() {
             <Route path="/locales" element={<LocalesPage />} />
             <Route path="/almacenes" element={<AlmacenesPage />} />
             <Route path="/combos" element={<CombosPage />} />
+            <Route path="/perfiles" element={<PerfilesPage />} />
+            <Route path="/menus" element={<MenusPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/modifications/ventas" element={<VentasPage />} />
+            <Route path="/credito-pagos" element={<CreditoPagosPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

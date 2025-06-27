@@ -66,7 +66,7 @@ export default function ProductsList({
   onSort,
 }: ProductsListProps) {
   const [formData, setFormData] = useState<Producto>({
-    ProductoCodigo: "",
+    ProductoCodigo: "0",
     ProductoNombre: "",
     ProductoPrecioVenta: 0,
     ProductoPrecioVentaMayorista: 0,
@@ -74,7 +74,7 @@ export default function ProductsList({
     ProductoPrecioPromedio: 0,
     ProductoStock: 0,
     ProductoStockUnitario: 0,
-    ProductoCantidadCaja: 0,
+    ProductoCantidadCaja: 1,
     ProductoIVA: 0,
     ProductoStockMinimo: 0,
     ProductoImagen: "",
@@ -106,7 +106,7 @@ export default function ProductsList({
       });
     } else {
       setFormData({
-        ProductoCodigo: "",
+        ProductoCodigo: "0",
         ProductoNombre: "",
         ProductoPrecioVenta: 0,
         ProductoPrecioVentaMayorista: 0,
@@ -114,7 +114,7 @@ export default function ProductsList({
         ProductoPrecioPromedio: 0,
         ProductoStock: 0,
         ProductoStockUnitario: 0,
-        ProductoCantidadCaja: 0,
+        ProductoCantidadCaja: 1,
         ProductoIVA: 0,
         ProductoStockMinimo: 0,
         ProductoImagen: "",
@@ -258,7 +258,7 @@ export default function ProductsList({
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow"
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -289,7 +289,7 @@ export default function ProductsList({
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-3">
                     <label
@@ -380,7 +380,7 @@ export default function ProductsList({
                       htmlFor="ProductoPrecioPromedio"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Precio Promedio
+                      Precio Costo
                     </label>
                     <input
                       type="number"
@@ -504,7 +504,7 @@ export default function ProductsList({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium"
+                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium cursor-pointer"
                       >
                         Seleccionar imagen
                       </button>

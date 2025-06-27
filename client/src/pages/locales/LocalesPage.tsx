@@ -9,6 +9,7 @@ import {
 import LocalesList from "../../components/locales/LocalesList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 interface Local {
   id: string | number;
@@ -41,6 +42,10 @@ export default function LocalesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const puedeCrear = usePermiso("LOCALES", "crear");
+  const puedeEditar = usePermiso("LOCALES", "editar");
+  const puedeEliminar = usePermiso("LOCALES", "eliminar");
+  const puedeLeer = usePermiso("LOCALES", "leer");
 
   const fetchLocales = useCallback(async () => {
     try {
@@ -176,6 +181,7 @@ export default function LocalesPage() {
     setCurrentPage(1);
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver los locales.</div>;
   if (loading) return <div>Cargando locales...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -184,9 +190,13 @@ export default function LocalesPage() {
       <h1 className="text-2xl font-medium mb-3">Gestión de Locales</h1>
       <LocalesList
         locales={localesData.locales.map((l) => ({ ...l, id: l.LocalId }))}
-        onDelete={(local) => handleDelete(local.LocalId as string)}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={
+          puedeEliminar
+            ? (local) => handleDelete(local.LocalId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={localesData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

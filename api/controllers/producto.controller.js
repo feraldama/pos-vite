@@ -87,7 +87,6 @@ exports.createProducto = async (req, res) => {
       "ProductoCodigo",
       "ProductoNombre",
       "ProductoPrecioVenta",
-      "ProductoStock",
       "LocalId",
     ];
     for (const campo of camposRequeridos) {

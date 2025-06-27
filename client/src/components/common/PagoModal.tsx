@@ -4,6 +4,7 @@ import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
 import { updateCajaMonto } from "../../services/cajas.service";
 import Swal from "sweetalert2";
+import { formatMiles } from "../../utils/utils";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -188,11 +189,20 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 Monto
               </label>
               <input
-                type="number"
-                value={monto}
-                onChange={(e) => setMonto(Number(e.target.value))}
+                type="text"
+                value={monto !== "" ? formatMiles(monto) : ""}
+                onChange={(e) => {
+                  // Eliminar puntos y formatear correctamente
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setMonto(isNaN(num) ? "" : num);
+                }}
                 required
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+                inputMode="numeric"
+                pattern="[0-9.]*"
               />
             </div>
           </div>

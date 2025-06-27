@@ -16,6 +16,8 @@ import {
   ArchiveBoxIcon,
   RectangleGroupIcon,
   CubeIcon,
+  WrenchIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -37,13 +39,18 @@ const navigation: NavigationItem[] = [
     icon: <HomeIcon className="h-7 w-6" />,
   },
   {
+    name: "Apertura/Cierre de Caja",
+    href: "/apertura-cierre-caja",
+    icon: <LockClosedIcon className="h-7 w-6" />,
+  },
+  {
     name: "Ventas",
     href: "/ventas",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
   {
-    name: "Apertura/Cierre de Caja",
-    href: "/apertura-cierre-caja",
+    name: "Cobro de Créditos",
+    href: "/credito-pagos",
     icon: <BanknotesIcon className="h-7 w-6" />,
   },
   {
@@ -80,11 +87,8 @@ const navigation: NavigationItem[] = [
   {
     name: "Modificaciones",
     href: "/modifications",
-    icon: <PencilSquareIcon className="h-7 w-6" />,
-    children: [
-      { name: "Ventas", href: "/modifications/ventas" },
-      { name: "Cobro de Créditos", href: "/credito-pagos" },
-    ],
+    icon: <WrenchIcon className="h-7 w-6" />,
+    children: [{ name: "Ventas", href: "/modifications/ventas" }],
   },
   {
     name: "Control de Acceso",

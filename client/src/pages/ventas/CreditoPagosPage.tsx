@@ -34,6 +34,7 @@ interface Caja {
 
 const TIPOS_PAGO = [
   { value: "CO", label: "Contado" },
+  { value: "CR", label: "Crédito" },
   { value: "PO", label: "POS" },
   { value: "TR", label: "Transfer" },
 ];

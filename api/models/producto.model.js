@@ -152,7 +152,7 @@ const Producto = {
     return new Promise((resolve, reject) => {
       const imagenBuffer = productoData.ProductoImagen
         ? Buffer.from(productoData.ProductoImagen, "base64")
-        : null;
+        : Buffer.from([]);
       const query = `
         INSERT INTO producto (
           ProductoCodigo,

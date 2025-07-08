@@ -4,6 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Producto {
   ProductoId?: number;
@@ -102,7 +103,7 @@ export default function ProductsList({
         ProductoStockMinimo: currentProduct.ProductoStockMinimo || 0,
         ProductoImagen: currentProduct.ProductoImagen || "",
         ProductoImagen_GXI: currentProduct.ProductoImagen_GXI || "",
-        LocalId: currentProduct.LocalId || 1,
+        LocalId: currentProduct.LocalId,
       });
     } else {
       setFormData({
@@ -333,11 +334,18 @@ export default function ProductsList({
                       Precio Minorista
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioVenta"
                       id="ProductoPrecioVenta"
-                      value={formData.ProductoPrecioVenta}
-                      onChange={handleInputChange}
+                      value={formatMiles(formData.ProductoPrecioVenta)}
+                      onChange={(e) => {
+                        // Eliminar puntos y formatear a número
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioVenta: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />
@@ -351,11 +359,19 @@ export default function ProductsList({
                       Precio Mayorista
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioVentaMayorista"
                       id="ProductoPrecioVentaMayorista"
-                      value={formData.ProductoPrecioVentaMayorista}
-                      onChange={handleInputChange}
+                      value={formatMiles(
+                        formData.ProductoPrecioVentaMayorista || 0
+                      )}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioVentaMayorista: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
@@ -383,11 +399,17 @@ export default function ProductsList({
                       Precio Costo
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioPromedio"
                       id="ProductoPrecioPromedio"
-                      value={formData.ProductoPrecioPromedio}
-                      onChange={handleInputChange}
+                      value={formatMiles(formData.ProductoPrecioPromedio || 0)}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioPromedio: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>

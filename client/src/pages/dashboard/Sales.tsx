@@ -461,7 +461,14 @@ export default function Sales() {
       0,
       40
     );
-    doc.text("Cliente: " + (clienteSeleccionado?.ClienteNombre || ""), 0, 45);
+    doc.text(
+      "Cliente: " +
+        (clienteSeleccionado?.ClienteNombre +
+          " " +
+          clienteSeleccionado?.ClienteApellido || ""),
+      0,
+      45
+    );
 
     // Línea separadora
     doc.setLineWidth(0.2); // Línea más delgada

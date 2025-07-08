@@ -245,8 +245,8 @@ exports.createUsuario = async (req, res) => {
     const nuevoUsuario = await Usuario.create({
       UsuarioId: req.body.UsuarioId,
       UsuarioNombre: req.body.UsuarioNombre,
-      UsuarioApellido: req.body.UsuarioApellido || null,
-      UsuarioCorreo: req.body.UsuarioCorreo || null,
+      UsuarioApellido: req.body.UsuarioApellido || "",
+      UsuarioCorreo: req.body.UsuarioCorreo || "",
       UsuarioContrasena: req.body.UsuarioContrasena,
       UsuarioIsAdmin: req.body.UsuarioIsAdmin,
       UsuarioEstado: req.body.UsuarioEstado,

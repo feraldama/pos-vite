@@ -112,7 +112,8 @@ export default function Sales() {
 
   useEffect(() => {
     if (selectedProductId === null) return;
-    const isSpecialProduct = selectedProductId === 1;
+    const isSpecialProduct =
+      selectedProductId === 1 || selectedProductId === 836;
     setTimeout(() => {
       if (isSpecialProduct && precioRefs.current[selectedProductId]) {
         precioRefs.current[selectedProductId]?.select();
@@ -172,7 +173,9 @@ export default function Sales() {
   const total = carrito.reduce((acc, p) => {
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
     const precioUnitario =
-      p.id === 1 ? p.precio : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      p.id === 1 || p.id === 836
+        ? p.precio
+        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
     return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
   }, 0);
 
@@ -452,7 +455,7 @@ export default function Sales() {
       );
       if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
       const precioUnitario =
-        p.id === 1
+        p.id === 1 || p.id === 836
           ? p.precio
           : productoOriginal.ProductoPrecioVenta ?? p.precio;
       const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
@@ -491,7 +494,7 @@ export default function Sales() {
         (prod) => prod.ProductoId === p.id
       );
       const precioUnitario =
-        p.id === 1
+        p.id === 1 || p.id === 836
           ? p.precio
           : productoOriginal?.ProductoPrecioVenta ?? p.precio;
       return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
@@ -690,7 +693,7 @@ export default function Sales() {
                     (prod) => prod.ProductoId === p.id
                   );
                   const precioUnitario =
-                    p.id === 1
+                    p.id === 1 || p.id === 836
                       ? p.precio
                       : productoOriginal?.ProductoPrecioVenta ?? p.precio;
                   const precioTotal = calcularPrecioConCombo(
@@ -869,7 +872,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        {p.id === 1 ? (
+                        {p.id === 1 || p.id === 836 ? (
                           <input
                             type="text"
                             value={formatMiles(p.precio)}
@@ -899,7 +902,8 @@ export default function Sales() {
                               if (!isNaN(nuevoPrecio)) {
                                 setCarrito(
                                   carrito.map((item) =>
-                                    item.id === p.id && item.id === 1
+                                    item.id === p.id &&
+                                    (item.id === 1 || item.id === 836)
                                       ? { ...item, precio: nuevoPrecio }
                                       : item
                                   )

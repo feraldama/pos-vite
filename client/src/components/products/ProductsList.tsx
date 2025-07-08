@@ -103,7 +103,7 @@ export default function ProductsList({
         ProductoStockMinimo: currentProduct.ProductoStockMinimo || 0,
         ProductoImagen: currentProduct.ProductoImagen || "",
         ProductoImagen_GXI: currentProduct.ProductoImagen_GXI || "",
-        LocalId: currentProduct.LocalId || 1,
+        LocalId: currentProduct.LocalId,
       });
     } else {
       setFormData({

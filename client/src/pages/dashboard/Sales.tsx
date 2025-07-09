@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -110,9 +110,13 @@ export default function Sales() {
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
+  // Array de productos con precio editable
+  const productosPrecioEditable = useMemo(() => [1, 2], []);
+
   useEffect(() => {
     if (selectedProductId === null) return;
-    const isSpecialProduct = selectedProductId === 1 || selectedProductId === 2;
+    const isSpecialProduct =
+      productosPrecioEditable.includes(selectedProductId);
     setTimeout(() => {
       if (isSpecialProduct && precioRefs.current[selectedProductId]) {
         precioRefs.current[selectedProductId]?.select();
@@ -121,7 +125,7 @@ export default function Sales() {
         cantidadRefs.current[selectedProductId]?.select();
       }
     }, 0);
-  }, [selectedProductId]);
+  }, [selectedProductId, productosPrecioEditable]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -171,10 +175,9 @@ export default function Sales() {
 
   const total = carrito.reduce((acc, p) => {
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    const precioUnitario =
-      p.id === 1 || p.id === 2
-        ? p.precio
-        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+    const precioUnitario = productosPrecioEditable.includes(p.id)
+      ? p.precio
+      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
     return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
   }, 0);
 
@@ -280,8 +283,9 @@ export default function Sales() {
       const productoOriginal = productos.find(
         (p) => p.ProductoId === producto.id
       );
-      const precioUnitario =
-        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const precioUnitario = productosPrecioEditable.includes(producto.id)
+        ? producto.price
+        : productoOriginal?.ProductoPrecioVenta ?? producto.price;
       const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
       const totalCombo = calcularPrecioConCombo(
         producto.id,
@@ -382,6 +386,12 @@ export default function Sales() {
       });
     } catch (error) {
       console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al realizar la venta",
+        text: "No se pudo completar la venta. Por favor, contacte con el administrador.",
+        confirmButtonColor: "#2563eb",
+      });
     }
     // Limpiar estados de pago
     setEfectivo(0);
@@ -453,10 +463,9 @@ export default function Sales() {
         (prod) => prod.ProductoId === p.id
       );
       if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
-      const precioUnitario =
-        p.id === 1 || p.id === 2
-          ? p.precio
-          : productoOriginal.ProductoPrecioVenta ?? p.precio;
+      const precioUnitario = productosPrecioEditable.includes(p.id)
+        ? p.precio
+        : productoOriginal.ProductoPrecioVenta ?? p.precio;
       const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
       return [
         p.nombre,
@@ -492,10 +501,9 @@ export default function Sales() {
       const productoOriginal = productos.find(
         (prod) => prod.ProductoId === p.id
       );
-      const precioUnitario =
-        p.id === 1 || p.id === 2
-          ? p.precio
-          : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      const precioUnitario = productosPrecioEditable.includes(p.id)
+        ? p.precio
+        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
       return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
     }, 0);
     const lastAutoTable = (
@@ -691,10 +699,9 @@ export default function Sales() {
                   const productoOriginal = productos.find(
                     (prod) => prod.ProductoId === p.id
                   );
-                  const precioUnitario =
-                    p.id === 1 || p.id === 2
-                      ? p.precio
-                      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+                  const precioUnitario = productosPrecioEditable.includes(p.id)
+                    ? p.precio
+                    : productoOriginal?.ProductoPrecioVenta ?? p.precio;
                   const precioTotal = calcularPrecioConCombo(
                     p.id,
                     p.cantidad,
@@ -871,7 +878,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        {p.id === 1 || p.id === 2 ? (
+                        {productosPrecioEditable.includes(p.id) ? (
                           <input
                             type="text"
                             value={formatMiles(p.precio)}
@@ -902,7 +909,7 @@ export default function Sales() {
                                 setCarrito(
                                   carrito.map((item) =>
                                     item.id === p.id &&
-                                    (item.id === 1 || item.id === 2)
+                                    productosPrecioEditable.includes(item.id)
                                       ? { ...item, precio: nuevoPrecio }
                                       : item
                                   )

@@ -1,4 +1,5 @@
 import React from "react";
+import { formatMiles } from "../../utils/utils";
 
 interface ProductCardProps {
   // id: number;
@@ -94,7 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             marginBottom: 0,
           }}
         >
-          Gs. {mostrarPrecio.toLocaleString()}
+          Gs. {formatMiles(mostrarPrecio)}
         </div>
         <div style={{ fontSize: 15, color: "#888", marginTop: 4 }}>
           Stock:{" "}

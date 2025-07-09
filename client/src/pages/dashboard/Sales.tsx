@@ -110,10 +110,13 @@ export default function Sales() {
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
+  // Array de productos con precio editable
+  const productosPrecioEditable = [1, 836, 850];
+
   useEffect(() => {
     if (selectedProductId === null) return;
     const isSpecialProduct =
-      selectedProductId === 1 || selectedProductId === 836;
+      productosPrecioEditable.includes(selectedProductId);
     setTimeout(() => {
       if (isSpecialProduct && precioRefs.current[selectedProductId]) {
         precioRefs.current[selectedProductId]?.select();
@@ -172,10 +175,9 @@ export default function Sales() {
 
   const total = carrito.reduce((acc, p) => {
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    const precioUnitario =
-      p.id === 1 || p.id === 836
-        ? p.precio
-        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+    const precioUnitario = productosPrecioEditable.includes(p.id)
+      ? p.precio
+      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
     return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
   }, 0);
 
@@ -281,8 +283,9 @@ export default function Sales() {
       const productoOriginal = productos.find(
         (p) => p.ProductoId === producto.id
       );
-      const precioUnitario =
-        productoOriginal?.ProductoPrecioVenta ?? producto.price;
+      const precioUnitario = productosPrecioEditable.includes(producto.id)
+        ? producto.price
+        : productoOriginal?.ProductoPrecioVenta ?? producto.price;
       const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
       const totalCombo = calcularPrecioConCombo(
         producto.id,
@@ -454,10 +457,9 @@ export default function Sales() {
         (prod) => prod.ProductoId === p.id
       );
       if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
-      const precioUnitario =
-        p.id === 1 || p.id === 836
-          ? p.precio
-          : productoOriginal.ProductoPrecioVenta ?? p.precio;
+      const precioUnitario = productosPrecioEditable.includes(p.id)
+        ? p.precio
+        : productoOriginal.ProductoPrecioVenta ?? p.precio;
       const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
       return [
         p.nombre,
@@ -493,10 +495,9 @@ export default function Sales() {
       const productoOriginal = productos.find(
         (prod) => prod.ProductoId === p.id
       );
-      const precioUnitario =
-        p.id === 1 || p.id === 836
-          ? p.precio
-          : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      const precioUnitario = productosPrecioEditable.includes(p.id)
+        ? p.precio
+        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
       return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
     }, 0);
     const lastAutoTable = (
@@ -692,10 +693,9 @@ export default function Sales() {
                   const productoOriginal = productos.find(
                     (prod) => prod.ProductoId === p.id
                   );
-                  const precioUnitario =
-                    p.id === 1 || p.id === 836
-                      ? p.precio
-                      : productoOriginal?.ProductoPrecioVenta ?? p.precio;
+                  const precioUnitario = productosPrecioEditable.includes(p.id)
+                    ? p.precio
+                    : productoOriginal?.ProductoPrecioVenta ?? p.precio;
                   const precioTotal = calcularPrecioConCombo(
                     p.id,
                     p.cantidad,
@@ -872,7 +872,7 @@ export default function Sales() {
                           color: "#374151",
                         }}
                       >
-                        {p.id === 1 || p.id === 836 ? (
+                        {productosPrecioEditable.includes(p.id) ? (
                           <input
                             type="text"
                             value={formatMiles(p.precio)}
@@ -903,7 +903,7 @@ export default function Sales() {
                                 setCarrito(
                                   carrito.map((item) =>
                                     item.id === p.id &&
-                                    (item.id === 1 || item.id === 836)
+                                    productosPrecioEditable.includes(item.id)
                                       ? { ...item, precio: nuevoPrecio }
                                       : item
                                   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
 import { getProductosAll } from "../../services/productos.service";
@@ -111,7 +111,7 @@ export default function Sales() {
   const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   // Array de productos con precio editable
-  const productosPrecioEditable = [1, 836, 850];
+  const productosPrecioEditable = useMemo(() => [1, 836, 850], []);
 
   useEffect(() => {
     if (selectedProductId === null) return;
@@ -125,7 +125,7 @@ export default function Sales() {
         cantidadRefs.current[selectedProductId]?.select();
       }
     }, 0);
-  }, [selectedProductId]);
+  }, [selectedProductId, productosPrecioEditable]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -386,6 +386,12 @@ export default function Sales() {
       });
     } catch (error) {
       console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al realizar la venta",
+        text: "No se pudo completar la venta. Por favor, contacte con el administrador.",
+        confirmButtonColor: "#2563eb",
+      });
     }
     // Limpiar estados de pago
     setEfectivo(0);

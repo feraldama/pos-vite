@@ -187,7 +187,6 @@ export default function AperturaCierreCajaPage() {
         ingresosTransfer += reg.RegistroDiarioCajaMonto;
       }
     }
-    const diferencia = ingresos - egresos;
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
@@ -213,29 +212,44 @@ export default function AperturaCierreCajaPage() {
     doc.text(`Caja: ${cajaDescripcion}`, 10, 46);
     doc.line(10, 50, 200, 50);
     let y = 58;
-    doc.text(`Apertura: ${apertura.toLocaleString()}`, 10, y);
+    doc.text(`Apertura: ${formatMiles(apertura)}`, 10, y);
     y += 8;
-    doc.text(`Cierre: ${cierre.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    doc.text(`Egresos: ${egresos.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos: ${ingresos.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Diferencia: ${diferencia.toLocaleString()}`, 10, y);
+    doc.text(`Cierre: ${formatMiles(cierre)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    doc.text(`Ingresos POS: ${ingresosPOS.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos Voucher: ${ingresosVoucher.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos Transfer: ${ingresosTransfer.toLocaleString()}`, 10, y);
+    doc.text(`Egresos: ${formatMiles(egresos)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    doc.text(txtSobranteFaltante, 10, y);
+    doc.text(`Ingresos Efectivo: ${formatMiles(ingresos)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos POS: ${formatMiles(ingresosPOS)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Voucher: ${formatMiles(ingresosVoucher)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Transfer: ${formatMiles(ingresosTransfer)}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    const totalIngresos =
+      ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
+    doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
+    y += 8;
+    // Línea nueva para Total Egresos
+    doc.text(`Total Egresos: ${formatMiles(egresos)}`, 10, y);
+    y += 8;
+    // Línea nueva para Diferencia
+    const diferencia = totalIngresos - egresos;
+    doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    doc.text(
+      txtSobranteFaltante.replace(/([0-9]+)/g, (m) => formatMiles(Number(m))),
+      10,
+      y
+    );
     y += 12;
     doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
     doc.save(`ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`);

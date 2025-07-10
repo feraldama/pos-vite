@@ -8,7 +8,7 @@ import {
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
@@ -41,6 +41,7 @@ export default function AperturaCierreCajaPage() {
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [cajaDisabled, setCajaDisabled] = useState(false);
   const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
   const [descargarPDF, setDescargarPDF] = useState(false);
@@ -84,7 +85,7 @@ export default function AperturaCierreCajaPage() {
       }
     };
     checkCajaAperturada();
-  }, [user]);
+  }, [user, location.pathname]);
 
   useEffect(() => {
     if (error) {

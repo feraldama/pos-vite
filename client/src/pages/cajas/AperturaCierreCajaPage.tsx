@@ -190,13 +190,13 @@ export default function AperturaCierreCajaPage() {
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
-      txtSobranteFaltante = `Sobrante de: ${sobranteFaltante.toLocaleString()}`;
+      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(sobranteFaltante)}`;
     } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Faltante de: ${Math.abs(
-        sobranteFaltante
-      ).toLocaleString()}`;
+      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(
+        Math.abs(sobranteFaltante)
+      )}`;
     } else {
-      txtSobranteFaltante = `Sobrante/Faltante: 0`;
+      txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
     }
     // --- Generar PDF ---
     const doc = new jsPDF({
@@ -245,11 +245,7 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    doc.text(
-      txtSobranteFaltante.replace(/([0-9]+)/g, (m) => formatMiles(Number(m))),
-      10,
-      y
-    );
+    doc.text(txtSobranteFaltante, 10, y);
     y += 12;
     doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
     doc.save(`ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`);

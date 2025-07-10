@@ -142,7 +142,7 @@ export default function Sales() {
         ...producto,
         precio: precioSeguro,
         cantidad: 1,
-        caja: true, // Por defecto true
+        caja: false,
         cartItemId: nuevoCartItemId,
       },
     ]);

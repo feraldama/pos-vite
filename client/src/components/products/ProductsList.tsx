@@ -375,22 +375,6 @@ export default function ProductsList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
-                  {/* <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoPrecioUnitario"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Precio Unitario
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoPrecioUnitario"
-                      id="ProductoPrecioUnitario"
-                      value={formData.ProductoPrecioUnitario}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div> */}
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="ProductoPrecioPromedio"
@@ -430,54 +414,6 @@ export default function ProductsList({
                       required
                     />
                   </div>
-                  {/* <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStockUnitario"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock Unitario
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStockUnitario"
-                      id="ProductoStockUnitario"
-                      value={formData.ProductoStockUnitario}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div> */}
-                  {/* <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoCantidadCaja"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Cantidad por Caja
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoCantidadCaja"
-                      id="ProductoCantidadCaja"
-                      value={formData.ProductoCantidadCaja}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div> */}
-                  {/* <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoIVA"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      IVA
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoIVA"
-                      id="ProductoIVA"
-                      value={formData.ProductoIVA}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div> */}
                   <div className="col-span-6 sm:col-span-3">
                     <label
                       htmlFor="ProductoStockMinimo"

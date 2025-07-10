@@ -18,6 +18,7 @@ import {
   CubeIcon,
   WrenchIcon,
   LockClosedIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -72,6 +73,11 @@ const navigation: NavigationItem[] = [
     name: "Clientes",
     href: "/customers",
     icon: <UsersIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Reportes",
+    href: "/reportes",
+    icon: <ChartBarIcon className="h-7 w-6" />,
   },
   {
     name: "Registro Diario",

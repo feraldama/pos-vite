@@ -74,6 +74,7 @@ export default function Sales() {
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
       ProductoPrecioUnitario: number;
+      ProductoStockUnitario?: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -957,7 +958,7 @@ export default function Sales() {
                     imagen={
                       p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo //"https://via.placeholder.com/80x120?text=Sin+Imagen"
+                        : logo
                     }
                     stock={p.ProductoStock}
                     onAdd={() =>
@@ -968,10 +969,12 @@ export default function Sales() {
                         precioMayorista: p.ProductoPrecioVentaMayorista,
                         imagen: p.ProductoImagen
                           ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo, //"https://via.placeholder.com/80x120?text=Sin+Imagen",
+                          : logo,
                         stock: p.ProductoStock,
                       })
                     }
+                    precioUnitario={p.ProductoPrecioUnitario}
+                    stockUnitario={p.ProductoStockUnitario}
                   />
                 ))
             )}

@@ -219,7 +219,7 @@ export default function PerfilesList({
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
@@ -250,7 +250,7 @@ export default function PerfilesList({
                   </svg>
                 </button>
               </div>
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto max-h-[60vh]">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-3">
                     <label className="block mb-2 text-sm font-medium text-gray-900">

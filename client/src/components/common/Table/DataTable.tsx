@@ -147,7 +147,6 @@ function DataTable<T extends DataTableRow>({
                     <div className="flex gap-2">
                       {onEdit && (
                         <button
-                          type="button"
                           onClick={() => onEdit(item)}
                           className="font-medium text-blue-600 hover:underline cursor-pointer"
                           title="Editar"
@@ -157,7 +156,6 @@ function DataTable<T extends DataTableRow>({
                       )}
                       {onViewCredit && item.VentaTipo === "CR" && (
                         <button
-                          type="button"
                           onClick={() => onViewCredit(item)}
                           className="font-medium text-green-600 hover:underline cursor-pointer"
                           title="Ver Detalles de Crédito"
@@ -167,7 +165,6 @@ function DataTable<T extends DataTableRow>({
                       )}
                       {onDelete && (
                         <button
-                          type="button"
                           onClick={() => onDelete(item)}
                           className="font-medium text-red-600 hover:underline cursor-pointer"
                           title="Eliminar"

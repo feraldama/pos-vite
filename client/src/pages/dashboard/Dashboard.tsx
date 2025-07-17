@@ -54,7 +54,10 @@ function Dashboard() {
             </div>
           </div>
         </Link>
-        <div className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100">
+        <Link
+          to="/reportes"
+          className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100 no-underline"
+        >
           <DocumentChartBarIcon className="w-14 text-gray-600" />
           <div className="ml-3">
             <div className="font-medium leading-6 text-gray-600">Reportes</div>
@@ -62,7 +65,7 @@ function Dashboard() {
               Generación de reportes
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100">
           <Cog6ToothIcon className="w-14 text-gray-600" />

@@ -9,7 +9,7 @@ router.use(authMiddleware);
 // Rutas para Caja
 router.get("/search", authMiddleware, cajaController.searchCajas);
 router.get("/", authMiddleware, cajaController.getAll);
-router.patch("/:id/monto", authMiddleware, cajaController.updateMonto);
+router.put("/:id/monto", authMiddleware, cajaController.updateMonto);
 router.get("/:id", authMiddleware, cajaController.getById);
 router.post("/", authMiddleware, cajaController.create);
 router.put("/:id", authMiddleware, cajaController.update);

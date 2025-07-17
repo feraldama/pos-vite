@@ -3,7 +3,10 @@ import { createRegistroDiarioCaja } from "../../services/registros.service";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
 import { updateCajaMonto } from "../../services/cajas.service";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
 import Swal from "sweetalert2";
+import { formatMiles } from "../../utils/utils";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -65,26 +68,21 @@ const PagoModal: React.FC<PagoModalProps> = ({
         RegistroDiarioCajaMonto: monto,
         UsuarioId: usuario.id,
       });
-      // Actualizar el monto de la caja según el tipo de gasto
-      let cajaMontoActual = (cajaAperturada as { CajaMonto?: number })
-        .CajaMonto;
-      if (typeof cajaMontoActual !== "number") {
-        // Si no está disponible, obtenerlo del backend
-        const cajaActualizada = await import(
-          "../../services/cajas.service"
-        ).then((m) => m.getCajaById(cajaAperturada.CajaId));
-        cajaMontoActual = cajaActualizada.CajaMonto;
-      }
+      // Obtener el monto actualizado de la caja aperturada por el usuario
+      const estado = await getEstadoAperturaPorUsuario(usuario.id);
+      const cajaAperturadaId = estado.cajaId;
+      const cajaActualizada = await getCajaById(cajaAperturadaId);
+      const cajaMontoActual = cajaActualizada.CajaMonto;
       if (tipoGastoId === 1) {
         // Restar el monto
         await updateCajaMonto(
-          cajaAperturada.CajaId,
+          cajaAperturadaId,
           Number(cajaMontoActual) - Number(monto)
         );
       } else if (tipoGastoId === 2) {
         // Sumar el monto
         await updateCajaMonto(
-          cajaAperturada.CajaId,
+          cajaAperturadaId,
           Number(cajaMontoActual) + Number(monto)
         );
       }
@@ -188,11 +186,20 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 Monto
               </label>
               <input
-                type="number"
-                value={monto}
-                onChange={(e) => setMonto(Number(e.target.value))}
+                type="text"
+                value={monto !== "" ? formatMiles(monto) : ""}
+                onChange={(e) => {
+                  // Eliminar puntos y formatear correctamente
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setMonto(isNaN(num) ? "" : num);
+                }}
                 required
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+                inputMode="numeric"
+                pattern="[0-9.]*"
               />
             </div>
           </div>

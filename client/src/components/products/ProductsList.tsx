@@ -4,6 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Producto {
   ProductoId?: number;
@@ -66,7 +67,7 @@ export default function ProductsList({
   onSort,
 }: ProductsListProps) {
   const [formData, setFormData] = useState<Producto>({
-    ProductoCodigo: "",
+    ProductoCodigo: "0",
     ProductoNombre: "",
     ProductoPrecioVenta: 0,
     ProductoPrecioVentaMayorista: 0,
@@ -74,7 +75,7 @@ export default function ProductsList({
     ProductoPrecioPromedio: 0,
     ProductoStock: 0,
     ProductoStockUnitario: 0,
-    ProductoCantidadCaja: 0,
+    ProductoCantidadCaja: 1,
     ProductoIVA: 0,
     ProductoStockMinimo: 0,
     ProductoImagen: "",
@@ -102,11 +103,11 @@ export default function ProductsList({
         ProductoStockMinimo: currentProduct.ProductoStockMinimo || 0,
         ProductoImagen: currentProduct.ProductoImagen || "",
         ProductoImagen_GXI: currentProduct.ProductoImagen_GXI || "",
-        LocalId: currentProduct.LocalId || 1,
+        LocalId: currentProduct.LocalId,
       });
     } else {
       setFormData({
-        ProductoCodigo: "",
+        ProductoCodigo: "0",
         ProductoNombre: "",
         ProductoPrecioVenta: 0,
         ProductoPrecioVentaMayorista: 0,
@@ -114,7 +115,7 @@ export default function ProductsList({
         ProductoPrecioPromedio: 0,
         ProductoStock: 0,
         ProductoStockUnitario: 0,
-        ProductoCantidadCaja: 0,
+        ProductoCantidadCaja: 1,
         ProductoIVA: 0,
         ProductoStockMinimo: 0,
         ProductoImagen: "",
@@ -258,7 +259,7 @@ export default function ProductsList({
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow"
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -289,7 +290,7 @@ export default function ProductsList({
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-3">
                     <label
@@ -333,11 +334,18 @@ export default function ProductsList({
                       Precio Minorista
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioVenta"
                       id="ProductoPrecioVenta"
-                      value={formData.ProductoPrecioVenta}
-                      onChange={handleInputChange}
+                      value={formatMiles(formData.ProductoPrecioVenta)}
+                      onChange={(e) => {
+                        // Eliminar puntos y formatear a número
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioVenta: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />
@@ -351,11 +359,19 @@ export default function ProductsList({
                       Precio Mayorista
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioVentaMayorista"
                       id="ProductoPrecioVentaMayorista"
-                      value={formData.ProductoPrecioVentaMayorista}
-                      onChange={handleInputChange}
+                      value={formatMiles(
+                        formData.ProductoPrecioVentaMayorista || 0
+                      )}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioVentaMayorista: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
@@ -380,14 +396,20 @@ export default function ProductsList({
                       htmlFor="ProductoPrecioPromedio"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Precio Promedio
+                      Precio Costo
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="ProductoPrecioPromedio"
                       id="ProductoPrecioPromedio"
-                      value={formData.ProductoPrecioPromedio}
-                      onChange={handleInputChange}
+                      value={formatMiles(formData.ProductoPrecioPromedio || 0)}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\./g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          ProductoPrecioPromedio: Number(raw),
+                        }));
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
@@ -504,7 +526,7 @@ export default function ProductsList({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium"
+                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium cursor-pointer"
                       >
                         Seleccionar imagen
                       </button>

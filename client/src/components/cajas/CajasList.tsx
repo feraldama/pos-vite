@@ -4,6 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import CajaGastosList from "./CajaGastosList";
+import { formatMiles } from "../../utils/utils";
 
 interface Caja {
   id: string | number;
@@ -110,7 +111,11 @@ export default function CajasList({
   const columns = [
     { key: "CajaId", label: "ID" },
     { key: "CajaDescripcion", label: "Descripción" },
-    { key: "CajaMonto", label: "Monto" },
+    {
+      key: "CajaMonto",
+      label: "Monto",
+      render: (caja: Caja) => `Gs. ${formatMiles(caja.CajaMonto)}`,
+    },
     { key: "CajaGastoCantidad", label: "Gasto Cantidad" },
   ];
 
@@ -225,11 +230,21 @@ export default function CajasList({
                       Monto
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="CajaMonto"
                       id="CajaMonto"
-                      value={formData.CajaMonto}
-                      onChange={handleInputChange}
+                      value={
+                        formData.CajaMonto ? formatMiles(formData.CajaMonto) : 0
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value
+                          .replace(/\./g, "")
+                          .replace(/\s/g, "");
+                        const num = Number(raw);
+                        if (!isNaN(num)) {
+                          setFormData((prev) => ({ ...prev, CajaMonto: num }));
+                        }
+                      }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />

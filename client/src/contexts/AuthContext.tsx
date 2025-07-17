@@ -9,6 +9,7 @@ interface User {
   email: string;
   LocalId?: number;
   LocalNombre?: string;
+  isAdmin?: string;
   // Agrega más campos si es necesario
 }
 

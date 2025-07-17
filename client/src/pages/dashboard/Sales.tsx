@@ -74,6 +74,7 @@ export default function Sales() {
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
       ProductoPrecioUnitario: number;
+      ProductoStockUnitario?: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -141,7 +142,7 @@ export default function Sales() {
         ...producto,
         precio: precioSeguro,
         cantidad: 1,
-        caja: true, // Por defecto true
+        caja: false,
         cartItemId: nuevoCartItemId,
       },
     ]);
@@ -461,7 +462,14 @@ export default function Sales() {
       0,
       40
     );
-    doc.text("Cliente: " + (clienteSeleccionado?.ClienteNombre || ""), 0, 45);
+    doc.text(
+      "Cliente: " +
+        (clienteSeleccionado?.ClienteNombre +
+          " " +
+          clienteSeleccionado?.ClienteApellido || ""),
+      0,
+      45
+    );
 
     // Línea separadora
     doc.setLineWidth(0.2); // Línea más delgada
@@ -950,7 +958,7 @@ export default function Sales() {
                     imagen={
                       p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo //"https://via.placeholder.com/80x120?text=Sin+Imagen"
+                        : logo
                     }
                     stock={p.ProductoStock}
                     onAdd={() =>
@@ -961,10 +969,12 @@ export default function Sales() {
                         precioMayorista: p.ProductoPrecioVentaMayorista,
                         imagen: p.ProductoImagen
                           ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo, //"https://via.placeholder.com/80x120?text=Sin+Imagen",
+                          : logo,
                         stock: p.ProductoStock,
                       })
                     }
+                    precioUnitario={p.ProductoPrecioUnitario}
+                    stockUnitario={p.ProductoStockUnitario}
                   />
                 ))
             )}

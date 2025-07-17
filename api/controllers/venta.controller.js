@@ -161,3 +161,18 @@ exports.getVentasPendientesPorCliente = async (req, res) => {
     });
   }
 };
+
+// Obtener deudas pendientes agrupadas por cliente
+exports.getDeudasPendientesPorCliente = async (req, res) => {
+  try {
+    const deudas = await Venta.getDeudasPendientesPorCliente();
+    res.json({ success: true, data: deudas });
+  } catch (error) {
+    console.error("Error al obtener deudas pendientes por cliente:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener deudas pendientes por cliente",
+      error: error.message,
+    });
+  }
+};

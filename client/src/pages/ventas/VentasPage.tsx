@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { usePermiso } from "../../hooks/usePermiso";
 import {
   getVentasPaginated,
   searchVentas,
@@ -33,6 +34,9 @@ export default function VentasPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string>("VentaFecha");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  const puedeCrear = usePermiso("VENTAS", "crear");
+  const puedeLeer = usePermiso("VENTAS", "leer");
 
   const loadClientesData = async (ventasData: Venta[]) => {
     try {
@@ -258,6 +262,7 @@ export default function VentasPage() {
     console.log("Crear nueva venta");
   };
 
+  if (!puedeLeer) return <div>No tienes permiso para ver las ventas.</div>;
   if (loading) return <div>Cargando ventas...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -267,7 +272,7 @@ export default function VentasPage() {
       <VentasList
         ventas={ventasData.ventas}
         onViewDetails={handleViewDetails}
-        onCreate={handleCreateVenta}
+        onCreate={puedeCrear ? handleCreateVenta : undefined}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}

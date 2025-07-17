@@ -87,11 +87,14 @@ exports.createProducto = async (req, res) => {
       "ProductoCodigo",
       "ProductoNombre",
       "ProductoPrecioVenta",
-      "ProductoStock",
       "LocalId",
     ];
     for (const campo of camposRequeridos) {
-      if (!req.body[campo]) {
+      if (
+        req.body[campo] === undefined ||
+        req.body[campo] === null ||
+        (typeof req.body[campo] === "string" && req.body[campo].trim() === "")
+      ) {
         return res.status(400).json({
           success: false,
           message: `El campo ${campo} es requerido`,

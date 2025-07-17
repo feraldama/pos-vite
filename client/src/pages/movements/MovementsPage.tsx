@@ -9,6 +9,7 @@ import {
 import MovementsList from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
 
 // Tipos auxiliares
 interface Movimiento {
@@ -52,6 +53,10 @@ export default function MovementsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string>("RegistroDiarioCajaId");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const puedeCrear = usePermiso("REGISTRODIARIOCAJA", "crear");
+  const puedeEditar = usePermiso("REGISTRODIARIOCAJA", "editar");
+  const puedeEliminar = usePermiso("REGISTRODIARIOCAJA", "eliminar");
+  const puedeLeer = usePermiso("REGISTRODIARIOCAJA", "leer");
 
   const fetchMovimientos = useCallback(async () => {
     try {
@@ -190,6 +195,8 @@ export default function MovementsPage() {
     setCurrentPage(1);
   };
 
+  if (!puedeLeer)
+    return <div>No tienes permiso para ver los registros diarios de caja.</div>;
   if (loading) return <div>Cargando registros...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -198,9 +205,9 @@ export default function MovementsPage() {
       <h1 className="text-2xl font-medium mb-3">Registro Diario de Caja</h1>
       <MovementsList
         movimientos={movimientosData.movimientos}
-        onDelete={handleDelete}
-        onEdit={handleEdit}
-        onCreate={handleCreate}
+        onDelete={puedeEliminar ? handleDelete : undefined}
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
         pagination={movimientosData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

@@ -132,7 +132,6 @@ export default function TiposGastoList({
   const columns = [
     { key: "TipoGastoId", label: "ID" },
     { key: "TipoGastoDescripcion", label: "Descripción" },
-    { key: "TipoGastoCantGastos", label: "Cantidad de Gastos" },
   ];
 
   return (
@@ -224,23 +223,6 @@ export default function TiposGastoList({
                       name="TipoGastoDescripcion"
                       id="TipoGastoDescripcion"
                       value={formData.TipoGastoDescripcion}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-2">
-                    <label
-                      htmlFor="TipoGastoCantGastos"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Cantidad de Gastos
-                    </label>
-                    <input
-                      type="number"
-                      name="TipoGastoCantGastos"
-                      id="TipoGastoCantGastos"
-                      value={formData.TipoGastoCantGastos}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required

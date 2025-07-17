@@ -356,6 +356,30 @@ const Venta = {
       });
     });
   },
+
+  // Obtener deudas pendientes agrupadas por cliente
+  getDeudasPendientesPorCliente: () => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          c.ClienteId,
+          CONCAT(TRIM(c.ClienteNombre), ' ', TRIM(c.ClienteApellido)) AS Cliente,
+          SUM(v.Total) AS TotalVentas,
+          SUM(COALESCE(v.VentaEntrega,0)) AS TotalEntregado,
+          SUM(v.Total - COALESCE(v.VentaEntrega,0)) AS Saldo
+        FROM venta v
+        JOIN clientes c ON v.ClienteId = c.ClienteId
+        WHERE v.VentaTipo = 'CR'
+        GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
+        HAVING Saldo > 0
+        ORDER BY Cliente
+      `;
+      db.query(query, (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
 };
 
 module.exports = Venta;

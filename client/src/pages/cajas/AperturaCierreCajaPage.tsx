@@ -8,7 +8,7 @@ import {
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
@@ -41,6 +41,7 @@ export default function AperturaCierreCajaPage() {
   const [submitting, setSubmitting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [cajaDisabled, setCajaDisabled] = useState(false);
   const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
   const [descargarPDF, setDescargarPDF] = useState(false);
@@ -84,7 +85,7 @@ export default function AperturaCierreCajaPage() {
       }
     };
     checkCajaAperturada();
-  }, [user]);
+  }, [user, location.pathname]);
 
   useEffect(() => {
     if (error) {
@@ -187,17 +188,16 @@ export default function AperturaCierreCajaPage() {
         ingresosTransfer += reg.RegistroDiarioCajaMonto;
       }
     }
-    const diferencia = ingresos - egresos;
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
-      txtSobranteFaltante = `Sobrante de: ${sobranteFaltante.toLocaleString()}`;
+      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(sobranteFaltante)}`;
     } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Faltante de: ${Math.abs(
-        sobranteFaltante
-      ).toLocaleString()}`;
+      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(
+        Math.abs(sobranteFaltante)
+      )}`;
     } else {
-      txtSobranteFaltante = `Sobrante/Faltante: 0`;
+      txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
     }
     // --- Generar PDF ---
     const doc = new jsPDF({
@@ -213,25 +213,36 @@ export default function AperturaCierreCajaPage() {
     doc.text(`Caja: ${cajaDescripcion}`, 10, 46);
     doc.line(10, 50, 200, 50);
     let y = 58;
-    doc.text(`Apertura: ${apertura.toLocaleString()}`, 10, y);
+    doc.text(`Apertura: ${formatMiles(apertura)}`, 10, y);
     y += 8;
-    doc.text(`Cierre: ${cierre.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    doc.text(`Egresos: ${egresos.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos: ${ingresos.toLocaleString()}`, 10, y);
-    y += 8;
-    doc.text(`Diferencia: ${diferencia.toLocaleString()}`, 10, y);
+    doc.text(`Cierre: ${formatMiles(cierre)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    doc.text(`Ingresos POS: ${ingresosPOS.toLocaleString()}`, 10, y);
+    doc.text(`Egresos: ${formatMiles(egresos)}`, 10, y);
     y += 8;
-    doc.text(`Ingresos Voucher: ${ingresosVoucher.toLocaleString()}`, 10, y);
+    doc.line(10, y, 200, y);
     y += 8;
-    doc.text(`Ingresos Transfer: ${ingresosTransfer.toLocaleString()}`, 10, y);
+    doc.text(`Ingresos Efectivo: ${formatMiles(ingresos)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos POS: ${formatMiles(ingresosPOS)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Voucher: ${formatMiles(ingresosVoucher)}`, 10, y);
+    y += 8;
+    doc.text(`Ingresos Transfer: ${formatMiles(ingresosTransfer)}`, 10, y);
+    y += 8;
+    doc.line(10, y, 200, y);
+    y += 8;
+    const totalIngresos =
+      ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
+    doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
+    y += 8;
+    // Línea nueva para Total Egresos
+    doc.text(`Total Egresos: ${formatMiles(egresos)}`, 10, y);
+    y += 8;
+    // Línea nueva para Diferencia
+    const diferencia = totalIngresos - egresos;
+    doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;

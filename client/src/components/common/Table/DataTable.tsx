@@ -165,6 +165,7 @@ function DataTable<T extends DataTableRow>({
                       )}
                       {onDelete && (
                         <button
+                          type="button"
                           onClick={() => onDelete(item)}
                           className="font-medium text-red-600 hover:underline cursor-pointer"
                           title="Eliminar"

@@ -42,14 +42,28 @@ const CajaGasto = {
 
   create: (data) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO cajagasto (CajaId, TipoGastoId, TipoGastoGrupoId) VALUES (?, ?, ?)`;
-      const values = [data.CajaId, data.TipoGastoId, data.TipoGastoGrupoId];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        CajaGasto.getById(result.insertId)
-          .then((gasto) => resolve(gasto))
-          .catch((error) => reject(error));
-      });
+      // Obtener el siguiente CajaGastoId disponible para la caja
+      db.query(
+        "SELECT MAX(CajaGastoId) as maxId FROM cajagasto WHERE CajaId = ?",
+        [data.CajaId],
+        (err, results) => {
+          if (err) return reject(err);
+          const nextId = (results[0]?.maxId || 0) + 1;
+          const query = `INSERT INTO cajagasto (CajaId, CajaGastoId, TipoGastoId, TipoGastoGrupoId) VALUES (?, ?, ?, ?)`;
+          const values = [
+            data.CajaId,
+            nextId,
+            data.TipoGastoId,
+            data.TipoGastoGrupoId,
+          ];
+          db.query(query, values, (err, result) => {
+            if (err) return reject(err);
+            CajaGasto.getById(nextId)
+              .then((gasto) => resolve(gasto))
+              .catch((error) => reject(error));
+          });
+        }
+      );
     });
   },
 

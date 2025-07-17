@@ -32,7 +32,10 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
   const [formData, setFormData] = useState<Partial<CajaGasto>>({});
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [gruposGasto, setGruposGasto] = useState<TipoGastoGrupo[]>([]);
-  const [editId, setEditId] = useState<string | number | null>(null);
+  const [nuevoGasto, setNuevoGasto] = useState({
+    TipoGastoId: "",
+    TipoGastoGrupoId: "",
+  });
 
   const fetchGastos = useCallback(async () => {
     setLoading(true);
@@ -81,17 +84,12 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
     }
   };
 
-  const handleCreate = () => {
-    setEditId(null);
-    setFormData({ CajaId: cajaId });
-    setIsModalOpen(true);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (editId) {
-        await updateCajaGasto(editId, formData);
+      if (formData.CajaGastoId) {
+        // Assuming CajaGastoId is the key for update
+        await updateCajaGasto(formData.CajaGastoId, formData);
         Swal.fire({
           icon: "success",
           title: "Gasto actualizado",
@@ -119,14 +117,65 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
 
   const columns = [
     { key: "CajaGastoId", label: "ID" },
-    { key: "TipoGastoId", label: "Tipo de Gasto" },
-    { key: "TipoGastoGrupoId", label: "Grupo de Gasto" },
+    {
+      key: "TipoGastoId",
+      label: "Tipo de Gasto",
+      render: (g: CajaGasto & { id: string | number }) => {
+        const tipo = tiposGasto.find(
+          (t) => String(t.TipoGastoId) === String(g.TipoGastoId)
+        );
+        return tipo ? tipo.TipoGastoDescripcion : g.TipoGastoId;
+      },
+    },
+    {
+      key: "TipoGastoGrupoId",
+      label: "Grupo de Gasto",
+      render: (g: CajaGasto & { id: string | number }) => {
+        const grupo = gruposGasto.find(
+          (gg) =>
+            String(gg.TipoGastoGrupoId) === String(g.TipoGastoGrupoId) &&
+            String(gg.TipoGastoId) === String(g.TipoGastoId)
+        );
+        return grupo ? grupo.TipoGastoGrupoDescripcion : g.TipoGastoGrupoId;
+      },
+    },
   ];
 
   // Adaptar los datos para DataTable (agregar 'id')
   const gastosWithId: (CajaGasto & { id: string | number })[] = gastos.map(
     (g) => ({ ...g, id: g.CajaGastoId })
   );
+
+  // Nueva función para manejar el agregado de un gasto
+  const handleAddGasto = async () => {
+    if (!nuevoGasto.TipoGastoId || !nuevoGasto.TipoGastoGrupoId) return;
+    // Validación de duplicado
+    const yaExiste = gastos.some(
+      (g) =>
+        String(g.TipoGastoId) === String(nuevoGasto.TipoGastoId) &&
+        String(g.TipoGastoGrupoId) === String(nuevoGasto.TipoGastoGrupoId)
+    );
+    if (yaExiste) {
+      Swal.fire({
+        icon: "warning",
+        title: "Ya existe un gasto con ese tipo y grupo en esta caja",
+      });
+      return;
+    }
+    await createCajaGasto({
+      CajaId: cajaId,
+      TipoGastoId: nuevoGasto.TipoGastoId,
+      TipoGastoGrupoId: nuevoGasto.TipoGastoGrupoId,
+    });
+    setNuevoGasto({ TipoGastoId: "", TipoGastoGrupoId: "" });
+    fetchGastos();
+    Swal.fire({
+      icon: "success",
+      title: "Gasto agregado exitosamente",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -137,6 +186,55 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
         onDelete={(g) => handleDelete(g.CajaGastoId)}
         emptyMessage="No hay gastos registrados"
       />
+      {/* Inputs para agregar nuevo gasto */}
+      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+        <select
+          className="border rounded px-2 py-1 text-sm flex-1"
+          value={nuevoGasto.TipoGastoId}
+          onChange={(e) =>
+            setNuevoGasto((prev) => ({
+              ...prev,
+              TipoGastoId: e.target.value,
+              TipoGastoGrupoId: "", // Resetea el grupo al cambiar tipo
+            }))
+          }
+        >
+          <option value="">Tipo de gasto...</option>
+          {tiposGasto.map((tg) => (
+            <option key={tg.TipoGastoId} value={tg.TipoGastoId}>
+              {tg.TipoGastoDescripcion}
+            </option>
+          ))}
+        </select>
+        <select
+          className="border rounded px-2 py-1 text-sm flex-1"
+          value={nuevoGasto.TipoGastoGrupoId}
+          onChange={(e) =>
+            setNuevoGasto((prev) => ({
+              ...prev,
+              TipoGastoGrupoId: e.target.value,
+            }))
+          }
+        >
+          <option value="">Grupo...</option>
+          {gruposGasto
+            .filter(
+              (gg) => String(gg.TipoGastoId) === String(nuevoGasto.TipoGastoId)
+            )
+            .map((gg) => (
+              <option key={gg.TipoGastoGrupoId} value={gg.TipoGastoGrupoId}>
+                {gg.TipoGastoGrupoDescripcion}
+              </option>
+            ))}
+        </select>
+        <button
+          type="button"
+          className="text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-xs"
+          onClick={handleAddGasto}
+        >
+          Agregar
+        </button>
+      </div>
       {isModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center">
           <div
@@ -148,7 +246,7 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
             className="relative bg-white rounded-lg shadow p-6 z-10 max-w-md w-full"
           >
             <h3 className="text-lg font-semibold mb-4">
-              {editId ? "Editar Gasto" : "Nuevo Gasto"}
+              {formData.CajaGastoId ? "Editar Gasto" : "Nuevo Gasto"}
             </h3>
             <div className="mb-4">
               <label className="block mb-1">Tipo de Gasto</label>
@@ -204,11 +302,6 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
           </form>
         </div>
       )}
-      <ActionButton
-        label="Nuevo Gasto"
-        onClick={handleCreate}
-        className="mt-4 text-white"
-      />
       {loading && <div>Cargando gastos...</div>}
       {error && <div className="text-red-500">{error}</div>}
     </div>

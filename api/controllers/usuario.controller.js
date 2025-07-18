@@ -134,7 +134,7 @@ exports.login = async (req, res) => {
 
     // Generar token
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "20m",
+      expiresIn: "1d",
     });
 
     // Obtener permisos del usuario

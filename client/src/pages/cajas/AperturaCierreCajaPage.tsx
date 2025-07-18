@@ -165,13 +165,15 @@ export default function AperturaCierreCajaPage() {
     let ingresosPOS = 0;
     let ingresosVoucher = 0;
     let ingresosTransfer = 0;
+    let ingresosCompensacion = 0;
     for (const reg of registrosFiltrados) {
       if (
         reg.TipoGastoId === 2 &&
         reg.TipoGastoGrupoId !== 2 &&
         reg.TipoGastoGrupoId !== 4 &&
         reg.TipoGastoGrupoId !== 5 &&
-        reg.TipoGastoGrupoId !== 6
+        reg.TipoGastoGrupoId !== 6 &&
+        reg.TipoGastoGrupoId !== 7
       ) {
         ingresos += reg.RegistroDiarioCajaMonto;
       }
@@ -186,6 +188,9 @@ export default function AperturaCierreCajaPage() {
       }
       if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
         ingresosTransfer += reg.RegistroDiarioCajaMonto;
+      }
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 7) {
+        ingresosCompensacion += reg.RegistroDiarioCajaMonto;
       }
     }
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
@@ -231,10 +236,20 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     doc.text(`Ingresos Transfer: ${formatMiles(ingresosTransfer)}`, 10, y);
     y += 8;
+    doc.text(
+      `Ingresos Compensación: ${formatMiles(ingresosCompensacion)}`,
+      10,
+      y
+    );
+    y += 8;
     doc.line(10, y, 200, y);
     y += 8;
     const totalIngresos =
-      ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
+      ingresos +
+      ingresosPOS +
+      ingresosVoucher +
+      ingresosTransfer +
+      ingresosCompensacion;
     doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
     y += 8;
     // Línea nueva para Total Egresos

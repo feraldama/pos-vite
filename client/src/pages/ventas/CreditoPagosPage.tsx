@@ -37,6 +37,7 @@ const TIPOS_PAGO = [
   { value: "CR", label: "Crédito" },
   { value: "PO", label: "POS" },
   { value: "TR", label: "Transfer" },
+  { value: "CM", label: "Compensación" },
 ];
 
 const CreditoPagosPage = () => {

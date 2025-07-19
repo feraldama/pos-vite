@@ -69,7 +69,20 @@ export default function PerfilesList({
 
   useEffect(() => {
     if (isModalOpen) {
-      getMenus(1, 1000).then((res) => setMenus(res.data || []));
+      getMenus(1, 1000).then((res) => {
+        const menusFiltrados = (res.data || []).filter(
+          (menu: { MenuId: number; MenuNombre: string }) => {
+            const nombre = menu.MenuNombre.toUpperCase();
+            return (
+              !nombre.startsWith("WP") &&
+              !nombre.startsWith("K2B") &&
+              !nombre.startsWith("WW") &&
+              !nombre.startsWith("INICIO")
+            );
+          }
+        );
+        setMenus(menusFiltrados);
+      });
       if (currentPerfil) {
         getPermisosByPerfil(currentPerfil.PerfilId).then((res) => {
           const arr = Array.isArray(res) ? res : res.data;

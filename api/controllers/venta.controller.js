@@ -140,6 +140,8 @@ exports.searchVentas = async (req, res) => {
 exports.getVentasPendientesPorCliente = async (req, res) => {
   try {
     const { clienteId } = req.params;
+    const { localId } = req.query;
+
     if (!clienteId) {
       return res.status(400).json({
         success: false,
@@ -147,7 +149,10 @@ exports.getVentasPendientesPorCliente = async (req, res) => {
       });
     }
 
-    const ventas = await Venta.getVentasPendientesPorCliente(clienteId);
+    const ventas = await Venta.getVentasPendientesPorCliente(
+      clienteId,
+      localId
+    );
     res.json({
       success: true,
       data: ventas,

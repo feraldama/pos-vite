@@ -124,7 +124,11 @@ const CreditoPagosPage = () => {
     }
 
     try {
-      const response = await getVentasPendientesPorCliente(Number(clienteId));
+      const localId = user?.LocalId;
+      const response = await getVentasPendientesPorCliente(
+        Number(clienteId),
+        localId
+      );
       const ventasPendientes = response.data || [];
 
       // Calcular el total de la deuda asegurando que los valores sean números

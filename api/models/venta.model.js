@@ -324,9 +324,9 @@ const Venta = {
   },
 
   // Obtener ventas pendientes por cliente
-  getVentasPendientesPorCliente: (clienteId) => {
+  getVentasPendientesPorCliente: (clienteId, localId) => {
     return new Promise((resolve, reject) => {
-      const query = `
+      let query = `
         SELECT 
           v.VentaId,
           v.VentaFecha,
@@ -334,13 +334,22 @@ const Venta = {
           CAST(COALESCE(v.VentaEntrega, 0) AS DECIMAL(10,2)) as VentaEntrega,
           CAST((v.Total - COALESCE(v.VentaEntrega, 0)) AS DECIMAL(10,2)) as Saldo
         FROM venta v
+        JOIN usuario u ON v.VentaUsuario = u.UsuarioId
         WHERE v.ClienteId = ? 
         AND v.VentaTipo = 'CR'
-        HAVING Saldo > 0
-        ORDER BY v.VentaFecha ASC
       `;
 
-      db.query(query, [clienteId], (err, results) => {
+      const params = [clienteId];
+
+      // Si se proporciona localId, filtrar por el local del usuario que realizó la venta
+      if (localId) {
+        query += ` AND u.LocalId = ?`;
+        params.push(localId);
+      }
+
+      query += ` HAVING Saldo > 0 ORDER BY v.VentaFecha ASC`;
+
+      db.query(query, params, (err, results) => {
         if (err) {
           console.error("Error en getVentasPendientesPorCliente:", err);
           return reject(err);

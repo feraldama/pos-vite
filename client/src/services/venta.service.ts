@@ -218,9 +218,15 @@ export const getProductosByVentaId = async (ventaId: string | number) => {
   }
 };
 
-export const getVentasPendientesPorCliente = async (clienteId: number) => {
+export const getVentasPendientesPorCliente = async (
+  clienteId: number,
+  localId?: number
+) => {
   try {
-    const response = await api.get(`/venta/pendientes/${clienteId}`);
+    const params = localId ? { localId } : {};
+    const response = await api.get(`/venta/pendientes/${clienteId}`, {
+      params,
+    });
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;

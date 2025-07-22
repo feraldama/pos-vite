@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useAuth } from "../../../contexts/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,13 @@ function Login() {
   const [error, setError] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (emailInputRef.current) {
+      emailInputRef.current.focus();
+    }
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setCredentials({
@@ -87,6 +94,7 @@ function Login() {
               </label>
               <div className="mt-2">
                 <input
+                  ref={emailInputRef}
                   id="email"
                   name="email"
                   type="text"

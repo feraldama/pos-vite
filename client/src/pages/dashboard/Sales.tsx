@@ -54,6 +54,7 @@ export default function Sales() {
   const [carrito, setCarrito] = useState<
     {
       id: number;
+      carritoId: string; // Identificador único para cada línea del carrito
       nombre: string;
       precio: number;
       imagen: string;
@@ -109,9 +110,14 @@ export default function Sales() {
   );
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const precioRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+  const descripcionRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
+    {}
+  );
 
   // Array de productos con precio editable
   const productosPrecioEditable = useMemo(() => [1, 836, 850], []);
+  // Array de productos con descripción editable
+  const productosDescripcionEditable = useMemo(() => [1], []);
 
   useEffect(() => {
     if (selectedProductId === null) return;
@@ -144,6 +150,22 @@ export default function Sales() {
 
     const precioSeguro = precioFinal ?? 0;
 
+    // Si el producto tiene descripción editable, siempre agregar como nueva línea
+    if (productosDescripcionEditable.includes(producto.id)) {
+      setCarrito([
+        ...carrito,
+        {
+          ...producto,
+          carritoId: `${producto.id}-${Date.now()}-${Math.random()}`,
+          precio: precioSeguro,
+          cantidad: 1,
+        },
+      ]);
+      setSelectedProductId(producto.id);
+      return;
+    }
+
+    // Para productos normales, verificar si ya existe en el carrito
     const existe = carrito.find((p) => p.id === producto.id);
     if (existe) {
       setCarrito(
@@ -155,20 +177,35 @@ export default function Sales() {
     } else {
       setCarrito([
         ...carrito,
-        { ...producto, precio: precioSeguro, cantidad: 1 },
+        {
+          ...producto,
+          carritoId: `${producto.id}-${Date.now()}-${Math.random()}`,
+          precio: precioSeguro,
+          cantidad: 1,
+        },
       ]);
       setSelectedProductId(producto.id);
     }
   };
 
-  const quitarProducto = (id: number) => {
-    setCarrito(carrito.filter((p) => p.id !== id));
+  const quitarProducto = (carritoId: string) => {
+    setCarrito(carrito.filter((p) => p.carritoId !== carritoId));
   };
 
-  const cambiarCantidad = (id: number, cantidad: number) => {
+  const cambiarCantidad = (carritoId: string, cantidad: number) => {
     setCarrito(
       carrito.map((p) =>
-        p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p
+        p.carritoId === carritoId
+          ? { ...p, cantidad: Math.max(1, cantidad) }
+          : p
+      )
+    );
+  };
+
+  const cambiarDescripcion = (carritoId: string, descripcion: string) => {
+    setCarrito(
+      carrito.map((p) =>
+        p.carritoId === carritoId ? { ...p, nombre: descripcion } : p
       )
     );
   };
@@ -747,16 +784,44 @@ export default function Sales() {
                             }}
                           />
                           <div>
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                fontSize: 17,
-                                color: "#222",
-                                lineHeight: 1.2,
-                              }}
-                            >
-                              {p.nombre}
-                            </div>
+                            {productosDescripcionEditable.includes(p.id) ? (
+                              <input
+                                type="text"
+                                value={p.nombre}
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: 17,
+                                  color: "#222",
+                                  lineHeight: 1.2,
+                                  border: "1px solid #d1d5db",
+                                  borderRadius: 4,
+                                  padding: "4px 8px",
+                                  width: "100%",
+                                  background: "#f9fafb",
+                                }}
+                                ref={(el) => {
+                                  descripcionRefs.current[p.id] = el || null;
+                                }}
+                                onChange={(e) =>
+                                  cambiarDescripcion(
+                                    p.carritoId,
+                                    e.target.value
+                                  )
+                                }
+                                onFocus={() => setSelectedProductId(p.id)}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: 17,
+                                  color: "#222",
+                                  lineHeight: 1.2,
+                                }}
+                              >
+                                {p.nombre}
+                              </div>
+                            )}
                             <div
                               style={{
                                 color: "#e53935",
@@ -766,7 +831,7 @@ export default function Sales() {
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                quitarProducto(p.id);
+                                quitarProducto(p.carritoId);
                               }}
                             >
                               Eliminar
@@ -787,7 +852,7 @@ export default function Sales() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              cambiarCantidad(p.id, p.cantidad - 1);
+                              cambiarCantidad(p.carritoId, p.cantidad - 1);
                               setSelectedProductId(p.id);
                             }}
                             style={{
@@ -839,17 +904,17 @@ export default function Sales() {
                                 handleTecladoNumerico("C");
                               } else if (e.key === "ArrowUp") {
                                 e.preventDefault();
-                                cambiarCantidad(p.id, p.cantidad + 1);
+                                cambiarCantidad(p.carritoId, p.cantidad + 1);
                               } else if (e.key === "ArrowDown") {
                                 e.preventDefault();
-                                cambiarCantidad(p.id, p.cantidad - 1);
+                                cambiarCantidad(p.carritoId, p.cantidad - 1);
                               }
                             }}
                           />
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              cambiarCantidad(p.id, p.cantidad + 1);
+                              cambiarCantidad(p.carritoId, p.cantidad + 1);
                               setSelectedProductId(p.id);
                             }}
                             style={{
@@ -908,7 +973,7 @@ export default function Sales() {
                               if (!isNaN(nuevoPrecio)) {
                                 setCarrito(
                                   carrito.map((item) =>
-                                    item.id === p.id &&
+                                    item.carritoId === p.carritoId &&
                                     productosPrecioEditable.includes(item.id)
                                       ? { ...item, precio: nuevoPrecio }
                                       : item

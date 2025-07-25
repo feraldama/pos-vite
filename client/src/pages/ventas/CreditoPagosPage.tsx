@@ -228,9 +228,7 @@ const CreditoPagosPage = () => {
               timerInterval = setInterval(() => {
                 const timerLeft = Swal.getTimerLeft();
                 const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
-                if (timer.textContent) {
-                  timer.textContent = `${secondsLeft}`;
-                }
+                timer.textContent = `${secondsLeft}`;
               }, 100);
             }
           }

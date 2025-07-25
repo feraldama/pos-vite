@@ -6,6 +6,7 @@ import {
   type Venta,
   getProductosByVentaId,
   type VentaProducto,
+  deleteVenta,
 } from "../../services/venta.service";
 import { getClienteById } from "../../services/clientes.service";
 import { getProductoById } from "../../services/productos.service";
@@ -14,6 +15,8 @@ import VentasList from "../../components/ventas/VentasList";
 import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
+import axios from "axios";
+import { js2xml } from "xml-js";
 
 interface Pagination {
   totalItems: number;
@@ -32,11 +35,12 @@ export default function VentasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string>("VentaFecha");
+  const [sortKey, setSortKey] = useState<string>("VentaId");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const puedeCrear = usePermiso("VENTAS", "crear");
   const puedeLeer = usePermiso("VENTAS", "leer");
+  const puedeEliminar = usePermiso("VENTAS", "eliminar");
 
   const loadClientesData = async (ventasData: Venta[]) => {
     try {
@@ -248,6 +252,115 @@ export default function VentasPage() {
     }
   };
 
+  const handleDelete = async (venta: Venta) => {
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          // Preparar fecha para el webservice
+          const fechaDate = new Date();
+          const dia = fechaDate.getDate();
+          const mes = fechaDate.getMonth() + 1;
+          const año = fechaDate.getFullYear() % 100;
+          const diaStr = dia < 10 ? `0${dia}` : dia.toString();
+          const mesStr = mes < 10 ? `0${mes}` : mes.toString();
+          const añoStr = año < 10 ? `0${año}` : año.toString();
+          const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+
+          // Preparar datos para el webservice
+          const json = {
+            Envelope: {
+              _attributes: {
+                xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
+              },
+              Body: {
+                "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
+                  _attributes: { xmlns: "Decorpar" },
+                  Ventaid: venta.VentaId,
+                  Fechastring: fechaFormateada,
+                  Regla: 1, // Valor por defecto para Regla
+                },
+              },
+            },
+          };
+
+          const xml = js2xml(json, {
+            compact: true,
+            ignoreComment: true,
+            spaces: 4,
+          });
+          const config = {
+            headers: {
+              "Content-Type": "text/xml",
+            },
+          };
+
+          // PRIMERO: Llamar al webservice
+          await axios.post(
+            `${import.meta.env.VITE_APP_URL}${
+              import.meta.env.VITE_APP_URL_GENEXUS
+            }apborrarregistodiariows`,
+            xml,
+            config
+          );
+
+          // SEGUNDO: Solo si el webservice fue exitoso, eliminar la venta
+          await deleteVenta(venta.VentaId);
+
+          let timerInterval: ReturnType<typeof setInterval>;
+          Swal.fire({
+            title: "Venta eliminada exitosamente!",
+            html: "Actualizando en <b></b> segundos.",
+            timer: 3000,
+            timerProgressBar: true,
+            width: "90%",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+              Swal.showLoading();
+              const popup = Swal.getPopup();
+              if (popup) {
+                const timer = popup.querySelector("b");
+                if (timer) {
+                  timerInterval = setInterval(() => {
+                    const timerLeft = Swal.getTimerLeft();
+                    const secondsLeft = timerLeft
+                      ? Math.ceil(timerLeft / 1000)
+                      : 0;
+                    timer.textContent = `${secondsLeft}`;
+                  }, 100);
+                }
+              }
+            },
+            willClose: () => {
+              clearInterval(timerInterval);
+            },
+          }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.timer) {
+              fetchVentas();
+            }
+          });
+        } catch (error: unknown) {
+          const err = error as { message?: string };
+          const msg = err?.message || "No se pudo eliminar la venta";
+          Swal.fire({
+            icon: "warning",
+            title: "No permitido",
+            text: msg,
+          });
+        }
+      }
+    });
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -273,6 +386,7 @@ export default function VentasPage() {
         ventas={ventasData.ventas}
         onViewDetails={handleViewDetails}
         onCreate={puedeCrear ? handleCreateVenta : undefined}
+        onDelete={puedeEliminar ? handleDelete : undefined}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}

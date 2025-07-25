@@ -19,6 +19,7 @@ interface VentasListProps {
   sortOrder?: "asc" | "desc";
   onViewDetails?: (venta: Venta) => void;
   onCreate?: () => void;
+  onDelete?: (venta: Venta) => void;
   onSearch: (value: string) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
@@ -42,6 +43,7 @@ const VentasList = ({
   sortOrder,
   onViewDetails,
   onCreate,
+  onDelete,
   onSearch,
   searchTerm,
   onKeyPress,
@@ -314,6 +316,7 @@ const VentasList = ({
         columns={columns}
         data={ventasWithAlmacen}
         onEdit={onViewDetails}
+        onDelete={onDelete}
         onViewCredit={handleViewCreditDetails}
         emptyMessage="No hay ventas registradas"
         getStatusColor={getStatusColor}

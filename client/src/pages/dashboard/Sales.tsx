@@ -20,7 +20,11 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
-import { formatMiles } from "../../utils/utils";
+import {
+  formatMiles,
+  generatePresupuestoPDF,
+  type CarritoItem,
+} from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -584,48 +588,14 @@ export default function Sales() {
 
   // --- Generar PDF de Presupuesto ---
   const handlePresupuestoPDF = () => {
-    const doc = new jsPDF();
-    const cliente = clienteSeleccionado
-      ? `${clienteSeleccionado.ClienteNombre} ${clienteSeleccionado.ClienteApellido}`.trim()
-      : "SIN NOMBRE";
-    doc.setFontSize(22);
-    doc.text("Presupuesto", 14, 20);
-    doc.setFontSize(14);
-    doc.text(`Cliente:    ${cliente}`, 14, 32);
+    // Convertir el carrito al formato esperado por la función de utils
+    const carritoItems: CarritoItem[] = carrito.map((item) => ({
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      precio: item.precio,
+    }));
 
-    // Tabla de productos
-    const headers = [["Producto", "Cantidad", "Precio Unitario", "Total"]];
-    const body = carrito.map((item) => [
-      item.nombre,
-      String(item.cantidad),
-      `Gs. ${item.precio.toLocaleString()}`,
-      `Gs. ${(item.precio * item.cantidad).toLocaleString()}`,
-    ]);
-    autoTable(doc, {
-      head: headers,
-      body: body,
-      startY: 40,
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      bodyStyles: { fontSize: 12 },
-      styles: { cellPadding: 2 },
-      theme: "grid",
-      margin: { left: 14, right: 14 },
-    });
-    // Calcular total
-    const subtotal = carrito.reduce(
-      (acc, item) => acc + item.precio * item.cantidad,
-      0
-    );
-    const finalY =
-      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
-        ?.finalY || 60;
-    doc.setFontSize(16);
-    doc.text(`Total: Gs. ${subtotal.toLocaleString()}`, 14, finalY + 16);
-    doc.save("presupuesto.pdf");
+    generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
   };
 
   return (

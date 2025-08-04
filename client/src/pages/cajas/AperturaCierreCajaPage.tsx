@@ -196,9 +196,9 @@ export default function AperturaCierreCajaPage() {
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
-      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(sobranteFaltante)}`;
+      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(sobranteFaltante)}`;
     } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(
+      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(
         Math.abs(sobranteFaltante)
       )}`;
     } else {

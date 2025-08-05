@@ -363,6 +363,8 @@ export default function Sales() {
             Clientecuentareact: cuentaCliente,
             Voucherreact: voucher,
             Transferreact: Number(banco),
+            Ventanrofactura: 0,
+            Ventatimbrado: 0,
           },
         },
       },

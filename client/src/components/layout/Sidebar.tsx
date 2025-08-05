@@ -54,6 +54,7 @@ const navigation: NavigationItem[] = [
     href: "/credito-pagos",
     icon: <BanknotesIcon className="h-7 w-6" />,
   },
+
   {
     name: "Almacenes",
     href: "/almacenes",
@@ -94,7 +95,10 @@ const navigation: NavigationItem[] = [
     name: "Modificaciones",
     href: "/modifications",
     icon: <WrenchIcon className="h-7 w-6" />,
-    children: [{ name: "Ventas", href: "/modifications/ventas" }],
+    children: [
+      { name: "Facturas", href: "/facturas" },
+      { name: "Ventas", href: "/modifications/ventas" },
+    ],
   },
   {
     name: "Control de Acceso",

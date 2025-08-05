@@ -59,6 +59,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       setBancoCredito(0);
       setCuentaCliente(0);
       setTotalRest(totalCost);
+      setTimeout(() => {
+        const efectivoInput = document.getElementById("efectivo-input");
+        if (efectivoInput) {
+          efectivoInput.focus();
+        }
+      }, 100);
     }
   }, [
     show,
@@ -209,6 +215,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !isSubmitting && totalRest <= 0) {
+      handleSendRequest();
+    }
+  };
+
   const buttonsPago = [
     [1, 2, 3],
     [4, 5, 6],
@@ -232,6 +244,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         alignItems: "center",
         justifyContent: "center",
       }}
+      onKeyPress={handleKeyPress}
+      tabIndex={0}
     >
       <div
         style={{
@@ -326,6 +340,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Efectivo:
               </label>
               <input
+                id="efectivo-input"
                 type="text"
                 value={formatMiles(efectivo)}
                 onFocus={(e) => {

@@ -38,7 +38,7 @@ interface ProductsListProps {
   onSearch: (value: string) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentProduct?: Producto | null;

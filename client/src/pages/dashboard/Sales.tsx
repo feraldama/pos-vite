@@ -71,6 +71,7 @@ export default function Sales() {
   const [productos, setProductos] = useState<
     {
       ProductoId: number;
+      ProductoCodigo: string;
       ProductoNombre: string;
       ProductoPrecioVenta: number;
       ProductoStock: number;
@@ -638,6 +639,44 @@ export default function Sales() {
     generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
   };
 
+  // --- Función para manejar ENTER en la búsqueda ---
+  const handleSearchSubmit = () => {
+    console.log("log: 🚀 ~ busqueda:", busqueda);
+    if (!busqueda.trim()) return;
+
+    // Buscar productos filtrados (igual que en el render)
+    const productosFiltrados = productos.filter(
+      (p) =>
+        (p.ProductoNombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+          (p.ProductoCodigo &&
+            String(p.ProductoCodigo)
+              .toLowerCase()
+              .includes(busqueda.toLowerCase()))) &&
+        (Number(p.LocalId) === 0 ||
+          Number(p.LocalId) === Number(cajaAperturada?.CajaId))
+    );
+
+    // Agregar el primer producto encontrado
+    if (productosFiltrados.length > 0) {
+      const primerProducto = productosFiltrados[0];
+
+      // Agregar el producto al carrito
+      agregarProducto({
+        id: primerProducto.ProductoId,
+        nombre: primerProducto.ProductoNombre,
+        precio: primerProducto.ProductoPrecioVenta,
+        precioMayorista: primerProducto.ProductoPrecioVentaMayorista,
+        imagen: primerProducto.ProductoImagen
+          ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
+          : logo,
+        stock: primerProducto.ProductoStock,
+      });
+
+      // Limpiar la búsqueda
+      setBusqueda("");
+    }
+  };
+
   return (
     <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
@@ -860,8 +899,8 @@ export default function Sales() {
           <SearchButton
             searchTerm={busqueda}
             onSearch={setBusqueda}
-            onSearchSubmit={() => {}}
-            placeholder="Buscar productos"
+            onSearchSubmit={handleSearchSubmit}
+            placeholder="Buscar por nombre o código"
             hideButton={true}
           />
           {user && (
@@ -912,9 +951,13 @@ export default function Sales() {
               productos
                 .filter(
                   (p) =>
-                    p.ProductoNombre.toLowerCase().includes(
+                    (p.ProductoNombre.toLowerCase().includes(
                       busqueda.toLowerCase()
-                    ) &&
+                    ) ||
+                      (p.ProductoCodigo &&
+                        String(p.ProductoCodigo)
+                          .toLowerCase()
+                          .includes(busqueda.toLowerCase()))) &&
                     (Number(p.LocalId) === 0 ||
                       Number(p.LocalId) === Number(cajaAperturada?.CajaId))
                 )

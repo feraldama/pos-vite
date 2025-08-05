@@ -5,7 +5,7 @@ interface SearchButtonProps {
   searchTerm: string;
   onSearch: (value: string) => void;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
   placeholder?: string;
   className?: string;
   hideButton?: boolean;
@@ -46,13 +46,21 @@ export default function SearchButton({
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => onSearch(e.target.value)}
-          onKeyDown={onKeyPress}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onSearchSubmit();
+            }
+            if (onKeyPress) {
+              onKeyPress(e);
+            }
+          }}
         />
       </div>
       {!hideButton && (
         <ActionButton
           label="Buscar"
-          onClick={onSearchSubmit}
+          onClick={() => onSearchSubmit()}
           className="text-white rounded-lg flex-shrink-0"
         />
       )}

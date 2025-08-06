@@ -102,56 +102,114 @@ export default function AperturaCierreCajaPage() {
   // Obtener registros de la caja al cerrar
   const fetchRegistrosCaja = async () => {
     try {
-      // Traer todos los registros de la caja seleccionada (puedes filtrar por caja y usuario si lo deseas)
+      // Traer todos los registros sin filtrar primero
       const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
-      setRegistrosCaja(
-        data.data.filter((r: RegistroDiarioCaja) => r.CajaId == cajaId)
+
+      // Filtrar por caja y usuario
+      const registrosFiltrados = data.data.filter(
+        (r: RegistroDiarioCaja) =>
+          r.CajaId == cajaId && r.UsuarioId === user?.id
       );
-    } catch {
+
+      setRegistrosCaja(registrosFiltrados);
+    } catch (error) {
+      console.error("Error al cargar registros:", error);
       setRegistrosCaja([]);
     }
   };
 
   // Función para generar el PDF
-  function generarResumenCierrePDF() {
+  async function generarResumenCierrePDF(
+    registrosPasados?: RegistroDiarioCaja[]
+  ) {
     if (!user || !cajaId) return;
+
+    // Usar registros pasados como parámetro o cargar nuevos si no se proporcionan
+    let registrosParaUsar = registrosPasados || registrosCaja;
+
+    if (registrosParaUsar.length === 0) {
+      try {
+        const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
+        const registrosFiltrados = data.data.filter(
+          (r: RegistroDiarioCaja) =>
+            r.CajaId == cajaId && r.UsuarioId === user?.id
+        );
+        registrosParaUsar = registrosFiltrados;
+
+        if (registrosParaUsar.length === 0) {
+          Swal.fire({
+            icon: "warning",
+            title: "No hay registros",
+            text: "No se han cargado los registros de caja. Intente descargar el PDF manualmente.",
+            confirmButtonColor: "#2563eb",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error al cargar registros para PDF:", error);
+        Swal.fire({
+          icon: "warning",
+          title: "Error al cargar registros",
+          text: "No se pudieron cargar los registros de caja.",
+          confirmButtonColor: "#2563eb",
+        });
+        return;
+      }
+    }
+
     const cajaDescripcion =
       cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || "";
     const fecha = new Date().toLocaleDateString();
     const hora = new Date().toLocaleTimeString();
+
     // --- Nueva lógica: buscar última apertura y cierre del usuario ---
-    const registros = registrosCaja.filter((r) => r.UsuarioId == user.id);
-    // Buscar la última apertura del usuario
-    const aperturaReg = registros.find(
-      (reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2
-    );
+    const registros = registrosParaUsar.filter((r) => r.UsuarioId == user.id);
+
+    // Buscar la última apertura del usuario (ordenar por ID descendente y tomar el primero)
+    const aperturas = registros
+      .filter((reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2)
+      .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
+
+    const aperturaReg = aperturas[0];
     if (!aperturaReg) {
       Swal.fire({
         icon: "warning",
         title: "No se encontró apertura",
-        text: "No se encontró una apertura de caja para este usuario.",
+        text: "No se encontró una apertura de caja para este usuario. Los registros pueden estar en proceso de carga.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
-    // Buscar el primer cierre posterior a la apertura
-    const cierreReg = registros.find(
-      (reg) =>
-        reg.TipoGastoId === 1 &&
-        reg.TipoGastoGrupoId === 2 &&
-        reg.RegistroDiarioCajaId > aperturaReg.RegistroDiarioCajaId
-    );
+
+    // Buscar el último cierre del usuario (ordenar por ID descendente y tomar el primero)
+    const cierres = registros
+      .filter((reg) => reg.TipoGastoId === 1 && reg.TipoGastoGrupoId === 2)
+      .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
+
+    const cierreReg = cierres[0];
     if (!cierreReg) {
       Swal.fire({
         icon: "warning",
         title: "No se encontró cierre",
-        text: "No se encontró un cierre de caja posterior a la apertura para este usuario.",
+        text: "No se encontró un cierre de caja para este usuario.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
+
+    // Verificar que el cierre sea posterior a la apertura
+    if (cierreReg.RegistroDiarioCajaId <= aperturaReg.RegistroDiarioCajaId) {
+      Swal.fire({
+        icon: "warning",
+        title: "Error en registros",
+        text: "El cierre debe ser posterior a la apertura. Verifique los registros.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
     // Filtrar los registros entre apertura y cierre (inclusive)
-    const registrosFiltrados = registrosCaja.filter(
+    const registrosFiltrados = registrosParaUsar.filter(
       (reg) =>
         reg.UsuarioId == user.id &&
         reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
@@ -249,7 +307,33 @@ export default function AperturaCierreCajaPage() {
     doc.text(txtSobranteFaltante, 10, y);
     y += 12;
     doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
-    doc.save(`ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`);
+
+    // Generar el PDF y abrirlo automáticamente
+    const pdfBlob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    // Crear un enlace temporal para descargar el PDF
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = `ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Abrir el PDF automáticamente en una nueva pestaña
+    setTimeout(() => {
+      const openLink = document.createElement("a");
+      openLink.href = pdfUrl;
+      openLink.target = "_blank";
+      document.body.appendChild(openLink);
+      openLink.click();
+      document.body.removeChild(openLink);
+    }, 500);
+
+    // Limpiar la URL del objeto después de un tiempo
+    setTimeout(() => {
+      URL.revokeObjectURL(pdfUrl);
+    }, 2000);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -276,6 +360,10 @@ export default function AperturaCierreCajaPage() {
         setSuccess(result.message || "Operación realizada correctamente");
         await fetchRegistrosCaja();
         setDescargarPDF(true);
+        // Descarga automática del PDF después de cargar registros
+        setTimeout(async () => {
+          await generarResumenCierrePDF();
+        }, 2000); // Reducir el delay inicial
       }
     } catch (err) {
       setError(
@@ -383,7 +471,7 @@ export default function AperturaCierreCajaPage() {
         <div className="flex justify-center mt-4">
           <ActionButton
             label="Descargar Resumen PDF"
-            onClick={generarResumenCierrePDF}
+            onClick={() => generarResumenCierrePDF()}
           />
         </div>
       )}

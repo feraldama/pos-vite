@@ -9,6 +9,7 @@ interface SearchButtonProps {
   placeholder?: string;
   className?: string;
   hideButton?: boolean;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export default function SearchButton({
@@ -18,6 +19,7 @@ export default function SearchButton({
   onSearchSubmit,
   placeholder = "Buscar...",
   hideButton = false,
+  inputRef,
 }: SearchButtonProps) {
   return (
     <div className="flex items-center flex-row flex-wrap py-4 bg-white sm:max-w-full lg:max-w-xl gap-2">
@@ -55,6 +57,7 @@ export default function SearchButton({
               onKeyPress(e);
             }
           }}
+          ref={inputRef}
         />
       </div>
       {!hideButton && (

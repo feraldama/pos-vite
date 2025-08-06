@@ -9,7 +9,10 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import { js2xml } from "xml-js";
 import logo from "../../assets/img/logo.jpg";
-import { getAllClientesSinPaginacion } from "../../services/clientes.service";
+import {
+  getAllClientesSinPaginacion,
+  createCliente,
+} from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -214,6 +217,41 @@ export default function Sales() {
     // Traer combos
     getCombos(1, 1000).then((data) => setCombos(data.data || []));
   }, []);
+
+  const handleCreateCliente = async (clienteData: Cliente) => {
+    try {
+      const nuevoCliente = await createCliente({
+        ClienteId: clienteData.ClienteId,
+        ClienteRUC: clienteData.ClienteRUC,
+        ClienteNombre: clienteData.ClienteNombre,
+        ClienteApellido: clienteData.ClienteApellido,
+        ClienteDireccion: clienteData.ClienteDireccion,
+        ClienteTelefono: clienteData.ClienteTelefono,
+        ClienteTipo: clienteData.ClienteTipo,
+        UsuarioId: clienteData.UsuarioId,
+      });
+      // Recargar la lista de clientes
+      const response = await getAllClientesSinPaginacion();
+      setClientes(response.data || []);
+      // Seleccionar el nuevo cliente creado
+      if (nuevoCliente.data) {
+        setClienteSeleccionado(nuevoCliente.data);
+        setShowClienteModal(false);
+      }
+      Swal.fire({
+        icon: "success",
+        title: "Cliente creado exitosamente",
+        text: "El cliente ha sido creado y seleccionado",
+      });
+    } catch (error) {
+      console.error("Error al crear cliente:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al crear cliente",
+        text: "Hubo un problema al crear el cliente",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!clienteSeleccionado) return;
@@ -958,9 +996,15 @@ export default function Sales() {
               className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-blue-100 transition cursor-pointer"
               onClick={() => setShowClienteModal(true)}
             >
-              {clienteSeleccionado?.ClienteNombre ||
-                clientes[0]?.ClienteNombre ||
-                "SIN NOMBRE MINORISTA"}
+              {clienteSeleccionado
+                ? `${clienteSeleccionado.ClienteNombre} ${
+                    clienteSeleccionado.ClienteApellido || ""
+                  }`
+                : clientes[0]
+                ? `${clientes[0].ClienteNombre} ${
+                    clientes[0].ClienteApellido || ""
+                  }`
+                : "SIN NOMBRE MINORISTA"}
             </button>
             <ClienteModal
               show={showClienteModal}
@@ -970,6 +1014,8 @@ export default function Sales() {
                 setClienteSeleccionado(cliente);
                 setShowClienteModal(false);
               }}
+              onCreateCliente={handleCreateCliente}
+              currentUserId={user?.id}
             />
           </div>
         </div>

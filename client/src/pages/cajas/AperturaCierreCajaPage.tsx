@@ -45,6 +45,7 @@ export default function AperturaCierreCajaPage() {
   const [cajaDisabled, setCajaDisabled] = useState(false);
   const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
   const [descargarPDF, setDescargarPDF] = useState(false);
+  const [operacionCompletada, setOperacionCompletada] = useState(false);
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -341,6 +342,7 @@ export default function AperturaCierreCajaPage() {
     setError(null);
     setSuccess(null);
     setSubmitting(true);
+    setOperacionCompletada(true); // Deshabilitar el botón inmediatamente
     try {
       const result = await aperturaCierreCaja({
         apertura: tipo === "0" ? 0 : 1,
@@ -369,6 +371,7 @@ export default function AperturaCierreCajaPage() {
       setError(
         (err as { message?: string })?.message || "Error en la operación"
       );
+      setOperacionCompletada(false); // Rehabilitar el botón si hay error
     } finally {
       setSubmitting(false);
     }
@@ -458,7 +461,7 @@ export default function AperturaCierreCajaPage() {
           <ActionButton
             onClick={handleSubmit}
             label="CONFIRMAR"
-            disabled={submitting}
+            disabled={submitting || operacionCompletada}
           />
         </div>
         {success && (

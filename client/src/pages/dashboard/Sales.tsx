@@ -119,6 +119,7 @@ export default function Sales() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
+  const [isDevolucion, setIsDevolucion] = useState(false);
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -385,36 +386,63 @@ export default function Sales() {
       };
     });
 
+    // Determinar si es venta o devolución
+    const isDevolucionMode = isDevolucion;
+    const endpoint = isDevolucionMode ? "apdevolucionws" : "apventaconfirmarws";
+    const operationName = isDevolucionMode
+      ? "PDevolucionWS.VENTACONFIRMAR"
+      : "PVentaConfirmarWS.VENTACONFIRMAR";
+    const namespace = isDevolucionMode ? "PosVite" : "PosViteAlonso";
+
     const json = {
       Envelope: {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
-          "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "PosViteAlonso" },
+          [operationName]: {
+            _attributes: { xmlns: namespace },
             Sdtproducto: {
               SDTProductoItem: SDTProductoItem,
             },
-            Ventafechastring: fechaFormateada,
-            Almacenorigenid: user?.LocalId,
-            Clientetipo: clienteSeleccionado?.ClienteTipo,
-            Cajaid: cajaAperturada?.CajaId,
-            Usuarioid: user?.id,
-            Efectivo: efectivo,
-            Total2: getSubtotal(cartItems),
-            Ventatipo: "CO",
-            Pagotipo: "E",
-            Clienteid: clienteSeleccionado?.ClienteId,
-            Efectivoreact: Number(efectivo) + Number(totalRest),
-            Bancoreact: Number(bancoDebito) + Number(bancoCredito),
-            Clientecuentareact: cuentaCliente,
-            Voucherreact: voucher,
-            Transferreact: Number(banco),
-            Ventanrofactura: 0,
-            Ventatimbrado: 0,
+            ...(isDevolucionMode
+              ? {
+                  Ventafechastring: fechaFormateada,
+                  Almacenorigenid: user?.LocalId,
+                  Clientetipo: clienteSeleccionado?.ClienteTipo,
+                  Cajaid: cajaAperturada?.CajaId,
+                  Usuarioid: user?.id,
+                  Efectivo: efectivo,
+                  Total2: getSubtotal(cartItems),
+                  Ventatipo: "CO",
+                  Clienteid: clienteSeleccionado?.ClienteId,
+                  Voucherreact: voucher,
+                  Transferreact: Number(banco),
+                  Ventanrofactura: 0,
+                  Ventatimbrado: 0,
+                }
+              : {
+                  Ventafechastring: fechaFormateada,
+                  Almacenorigenid: user?.LocalId,
+                  Clientetipo: clienteSeleccionado?.ClienteTipo,
+                  Cajaid: cajaAperturada?.CajaId,
+                  Usuarioid: user?.id,
+                  Efectivo: efectivo,
+                  Total2: getSubtotal(cartItems),
+                  Ventatipo: "CO",
+                  Pagotipo: "E",
+                  Clienteid: clienteSeleccionado?.ClienteId,
+                  Efectivoreact: Number(efectivo) + Number(totalRest),
+                  Bancoreact: Number(bancoDebito) + Number(bancoCredito),
+                  Clientecuentareact: cuentaCliente,
+                  Voucherreact: voucher,
+                  Transferreact: Number(banco),
+                  Ventanrofactura: 0,
+                  Ventatimbrado: 0,
+                }),
           },
         },
       },
     };
+
     const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
     const config = {
       headers: {
@@ -425,18 +453,23 @@ export default function Sales() {
       await axios.post(
         import.meta.env.VITE_APP_URL +
           import.meta.env.VITE_APP_URL_GENEXUS +
-          "apventaconfirmarws",
+          endpoint,
         xml,
         config
       );
       if (printTicket) {
         generateTicketPDF();
       }
-      // Swal.fire("SweetAlert2 is working!");
+
+      const successMessage = isDevolucionMode
+        ? "Devolución realizada con éxito!"
+        : "Venta realizada con éxito!";
+      const timerMessage = "Nueva venta en";
+
       let timerInterval: ReturnType<typeof setInterval>;
       Swal.fire({
-        title: "Venta realizada con éxito!",
-        html: "Nueva venta en <b></b> segundos.",
+        title: successMessage,
+        html: `${timerMessage} <b></b> segundos.`,
         timer: 3000,
         timerProgressBar: true,
         width: "90%",
@@ -466,6 +499,13 @@ export default function Sales() {
       });
     } catch (error) {
       console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: isDevolucionMode
+          ? "Error al realizar la devolución"
+          : "Error al realizar la venta",
+      });
     }
     // Limpiar estados de pago
     setEfectivo(0);
@@ -477,6 +517,7 @@ export default function Sales() {
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
+    setIsDevolucion(false); // Resetear el checkbox de devolución
   };
 
   const generateTicketPDF = () => {
@@ -878,21 +919,45 @@ export default function Sales() {
         </div>
         {/* Pad numérico y botón pagar - NUEVO DISEÑO TAILWIND */}
         <div className="bg-white rounded-xl shadow p-4">
+          {/* Checkbox de Devolución */}
+          <div className="flex items-center mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+            <input
+              type="checkbox"
+              id="devolucion-checkbox"
+              checked={isDevolucion}
+              onChange={(e) => setIsDevolucion(e.target.checked)}
+              className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+            />
+            <label
+              htmlFor="devolucion-checkbox"
+              className="ml-2 text-sm font-medium text-red-700 cursor-pointer select-none"
+            >
+              {isDevolucion ? "🔴 MODO DEVOLUCIÓN" : "⚪ MODO VENTA"}
+            </label>
+          </div>
           {/* Total */}
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
-            <span className="text-blue-500 font-semibold text-lg">
+            <span
+              className={`font-semibold text-lg ${
+                isDevolucion ? "text-red-500" : "text-blue-500"
+              }`}
+            >
               Gs. {formatMiles(total)}
             </span>
           </div>
           {/* Grid de botones */}
           <div className="grid grid-cols-4 gap-2 mb-3">
-            {/* Botón Pagar grande */}
+            {/* Botón Pagar/Devolver grande */}
             <button
-              className="row-span-4 bg-blue-500 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 border-blue-500 hover:bg-blue-600 transition min-h-[215px]"
+              className={`row-span-4 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 transition min-h-[215px] cursor-pointer ${
+                isDevolucion
+                  ? "bg-red-500 border-red-500 hover:bg-red-600"
+                  : "bg-blue-500 border-blue-500 hover:bg-blue-600"
+              }`}
               onClick={() => setShowModal(true)}
             >
-              Pagar
+              {isDevolucion ? "Devolver" : "Pagar"}
             </button>
             {/* Números y símbolos */}
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
@@ -951,14 +1016,21 @@ export default function Sales() {
       {/* Lado Derecho */}
       <div className="flex-[2] p-4">
         <div className="flex items-center mb-4 justify-between">
-          <SearchButton
-            searchTerm={busqueda}
-            onSearch={setBusqueda}
-            onSearchSubmit={handleSearchSubmit}
-            placeholder="Buscar por nombre o código"
-            hideButton={true}
-            inputRef={searchInputRef}
-          />
+          <div className="flex items-center gap-4">
+            <SearchButton
+              searchTerm={busqueda}
+              onSearch={setBusqueda}
+              onSearchSubmit={handleSearchSubmit}
+              placeholder="Buscar por nombre o código"
+              hideButton={true}
+              inputRef={searchInputRef}
+            />
+            {isDevolucion && (
+              <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+                🔴 MODO DEVOLUCIÓN
+              </div>
+            )}
+          </div>
           {user && (
             <div className="ml-6 font-semibold text-[#222] text-[16px] flex items-center gap-2">
               <span>

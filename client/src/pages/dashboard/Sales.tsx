@@ -947,10 +947,10 @@ export default function Sales() {
             </span>
           </div>
           {/* Grid de botones */}
-          <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="grid grid-cols-3 gap-4 mb-3">
             {/* Botón Pagar/Devolver grande */}
             <button
-              className={`row-span-4 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[200px] col-span-1 border-2 transition min-h-[215px] cursor-pointer ${
+              className={`text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[100px] border-2 transition cursor-pointer ${
                 isDevolucion
                   ? "bg-red-500 border-red-500 hover:bg-red-600"
                   : "bg-blue-500 border-blue-500 hover:bg-blue-600"
@@ -959,28 +959,22 @@ export default function Sales() {
             >
               {isDevolucion ? "Devolver" : "Pagar"}
             </button>
-            {/* Números y símbolos */}
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
-              <button
-                key={n}
-                className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
-                onClick={() => handleTecladoNumerico(n)}
-              >
-                {n}
-              </button>
-            ))}
-            {/* Botón borrar y limpiar */}
+            {/* Botón Presupuesto */}
             <button
-              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
-              onClick={() => handleTecladoNumerico("←")}
-            >
-              ←
-            </button>
-            <button
-              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-12 flex items-center justify-center hover:bg-gray-100 transition min-w-[60px]"
+              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-[100px] flex items-center justify-center hover:bg-gray-100 transition"
               onClick={handlePresupuestoPDF}
             >
               Presupuesto
+            </button>
+            {/* Botón Imprimir Factura */}
+            <button
+              className="bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-green-600 transition"
+              onClick={() => {
+                // Aquí puedes agregar la lógica para imprimir factura
+                console.log("Imprimir factura");
+              }}
+            >
+              Imprimir Factura
             </button>
           </div>
           {/* Recuadro inferior para el nombre del cliente */}

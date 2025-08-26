@@ -2,6 +2,7 @@ import React from "react";
 import { formatMiles } from "../../utils/utils";
 
 interface ProductCardProps {
+  // id: number;
   nombre: string;
   precio: number;
   precioMayorista?: number;
@@ -9,11 +10,10 @@ interface ProductCardProps {
   imagen: string;
   stock: number;
   onAdd: () => void;
-  precioUnitario?: number;
-  stockUnitario?: number;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
+  // id,
   nombre,
   precio,
   precioMayorista,
@@ -21,8 +21,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   imagen,
   stock,
   onAdd,
-  precioUnitario,
-  stockUnitario,
 }) => {
   const mostrarPrecio =
     clienteTipo === "MA" && precioMayorista !== undefined
@@ -30,32 +28,78 @@ const ProductCard: React.FC<ProductCardProps> = ({
       : precio;
   return (
     <div
-      className="w-full bg-white border border-gray-200 rounded-lg shadow-md cursor-pointer p-0 flex flex-col items-center transition hover:shadow-lg"
+      style={{
+        width: "100%",
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        boxShadow: "0 2px 8px #0001",
+        cursor: "pointer",
+        padding: 0,
+        transition: "box-shadow 0.2s",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
       onClick={onAdd}
     >
-      <div className="w-full flex justify-center items-center p-4">
+      <div
+        style={{
+          width: "100%",
+          padding: 16,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <img
-          className="h-32 object-contain bg-white"
+          style={{
+            width: "auto",
+            height: 120,
+            objectFit: "contain",
+            borderRadius: 0,
+            background: "#fff",
+          }}
           src={imagen}
           alt={nombre}
         />
       </div>
-      <div className="w-full px-4 pb-2 text-center">
-        <div className="font-bold text-base text-gray-800 uppercase leading-tight min-h-[44px] flex items-center justify-center">
+      <div
+        style={{
+          width: "100%",
+          padding: "0 16px 10px 16px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 16,
+            color: "#222",
+            textTransform: "uppercase",
+            lineHeight: 1.2,
+            marginBottom: 0,
+            minHeight: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           {nombre}
         </div>
-        <div className="font-bold text-2xl text-orange-500 mb-0">
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 22,
+            color: "#ff9100",
+            marginBottom: 0,
+          }}
+        >
           Gs. {formatMiles(mostrarPrecio)}
         </div>
-        {precioUnitario !== undefined && (
-          <div className="text-sm text-blue-700">
-            Gs. {formatMiles(precioUnitario)}
-          </div>
-        )}
-        <div className="text-sm text-gray-500 mt-1 space-x-4">
-          Caja: <span className="text-green-600 font-semibold">{stock}</span>
-          Unidad:{" "}
-          <span className="text-green-600 font-semibold">{stockUnitario}</span>
+        <div style={{ fontSize: 15, color: "#888", marginTop: 4 }}>
+          Stock:{" "}
+          <span style={{ color: "#43a047", fontWeight: 600 }}>{stock}</span>
         </div>
       </div>
     </div>

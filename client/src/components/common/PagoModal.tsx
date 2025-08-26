@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { createRegistroDiarioCaja } from "../../services/registros.service";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
-import { updateCajaMonto } from "../../services/cajas.service";
-import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
-import { getCajaById } from "../../services/cajas.service";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
+import axios from "axios";
+import { js2xml } from "xml-js";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -16,6 +14,19 @@ interface TipoGastoGrupo {
   TipoGastoGrupoId: number;
   TipoGastoGrupoDescripcion: string;
   TipoGastoId: number;
+}
+
+interface PagoSOAPData {
+  Registrodiariocajaid: number;
+  Tipogastoid: number;
+  Tipogastogrupoid: number;
+  Registrodiariocajamonto: number;
+  Tipo: number;
+  Cajaid: number;
+  Registrodiariocajafecha: string;
+  Registrodiariocajadetalle: string;
+  Registrodiariocajacambio: number;
+  Usuarioid: string;
 }
 
 interface PagoModalProps {
@@ -38,6 +49,9 @@ const PagoModal: React.FC<PagoModalProps> = ({
   const [monto, setMonto] = useState<number | "">("");
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupo, setTiposGastoGrupo] = useState<TipoGastoGrupo[]>([]);
+  const [tipo, setTipo] = useState<number>(1);
+  const [cambio, setCambio] = useState<number>(0);
+  const [registroId, setRegistroId] = useState<number>(1);
 
   useEffect(() => {
     if (show) {
@@ -55,48 +69,123 @@ const PagoModal: React.FC<PagoModalProps> = ({
     (g) => g.TipoGastoId === tipoGastoId
   );
 
+  const sendRequestSOAP = async (pagoData: PagoSOAPData) => {
+    const json = {
+      Envelope: {
+        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
+        Body: {
+          "PBorrarRegistoDiarioWS.Execute": {
+            _attributes: { xmlns: "Cobranza" },
+            Registrodiariocajaid: pagoData.Registrodiariocajaid,
+            Tipogastoid: pagoData.Tipogastoid,
+            Tipogastogrupoid: pagoData.Tipogastogrupoid,
+            Registrodiariocajamonto: pagoData.Registrodiariocajamonto,
+            Tipo: pagoData.Tipo,
+            Cajaid: pagoData.Cajaid,
+            FechaString: pagoData.Registrodiariocajafecha,
+            Registrodiariocajadetalle: pagoData.Registrodiariocajadetalle,
+            Registrodiariocajacambio: pagoData.Registrodiariocajacambio,
+            Usuarioid: pagoData.Usuarioid,
+          },
+        },
+      },
+    };
+
+    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
+    const config = {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    };
+
+    try {
+      await axios.post(
+        "http://localhost:8080/CobranzaAmimar/servlet/com.cobranza.apborrarregistodiariows",
+        xml,
+        config
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error en llamada SOAP:", error);
+      throw new Error("Error al procesar el pago SOAP");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cajaAperturada || !usuario) return;
+
     try {
-      await createRegistroDiarioCaja({
-        CajaId: cajaAperturada.CajaId,
-        RegistroDiarioCajaFecha: fecha,
-        TipoGastoId: tipoGastoId,
-        TipoGastoGrupoId: tipoGastoGrupoId,
-        RegistroDiarioCajaDetalle: detalle,
-        RegistroDiarioCajaMonto: monto,
-        UsuarioId: usuario.id,
-      });
-      // Obtener el monto actualizado de la caja aperturada por el usuario
-      const estado = await getEstadoAperturaPorUsuario(usuario.id);
-      const cajaAperturadaId = estado.cajaId;
-      const cajaActualizada = await getCajaById(cajaAperturadaId);
-      const cajaMontoActual = cajaActualizada.CajaMonto;
-      if (tipoGastoId === 1) {
-        // Restar el monto
-        await updateCajaMonto(
-          cajaAperturadaId,
-          Number(cajaMontoActual) - Number(monto)
-        );
-      } else if (tipoGastoId === 2) {
-        // Sumar el monto
-        await updateCajaMonto(
-          cajaAperturadaId,
-          Number(cajaMontoActual) + Number(monto)
+      // Siempre usar endpoint SOAP
+      const pagoSOAPData = {
+        Registrodiariocajaid: registroId,
+        Tipogastoid: Number(tipoGastoId),
+        Tipogastogrupoid: Number(tipoGastoGrupoId),
+        Registrodiariocajamonto: Number(monto),
+        Tipo: tipo,
+        Cajaid: Number(cajaAperturada.CajaId),
+        Registrodiariocajafecha: new Date(fecha).toISOString(),
+        Registrodiariocajadetalle: detalle,
+        Registrodiariocajacambio: cambio,
+        Usuarioid: String(usuario.id),
+      };
+
+      // Validar datos antes de enviar
+      const errores = [];
+      if (
+        !pagoSOAPData.Registrodiariocajaid ||
+        pagoSOAPData.Registrodiariocajaid <= 0
+      ) {
+        errores.push(
+          "ID de registro diario de caja es requerido y debe ser mayor a 0"
         );
       }
+      if (!pagoSOAPData.Tipogastoid || pagoSOAPData.Tipogastoid <= 0) {
+        errores.push("ID de tipo de gasto es requerido y debe ser mayor a 0");
+      }
+      if (
+        !pagoSOAPData.Tipogastogrupoid ||
+        pagoSOAPData.Tipogastogrupoid <= 0
+      ) {
+        errores.push("ID de grupo de gasto es requerido y debe ser mayor a 0");
+      }
+      if (
+        !pagoSOAPData.Registrodiariocajamonto ||
+        pagoSOAPData.Registrodiariocajamonto <= 0
+      ) {
+        errores.push("Monto es requerido y debe ser mayor a 0");
+      }
+      if (!pagoSOAPData.Cajaid || pagoSOAPData.Cajaid <= 0) {
+        errores.push("ID de caja es requerido y debe ser mayor a 0");
+      }
+      if (!pagoSOAPData.Registrodiariocajafecha) {
+        errores.push("Fecha es requerida");
+      }
+      if (
+        !pagoSOAPData.Registrodiariocajadetalle ||
+        pagoSOAPData.Registrodiariocajadetalle.trim() === ""
+      ) {
+        errores.push("Detalle es requerido");
+      }
+      if (!pagoSOAPData.Usuarioid || pagoSOAPData.Usuarioid.trim() === "") {
+        errores.push("ID de usuario es requerido");
+      }
+
+      if (errores.length > 0) {
+        Swal.fire("Error de validación", errores.join("\n"), "error");
+        return;
+      }
+
+      await sendRequestSOAP(pagoSOAPData);
       Swal.fire(
         "Pago registrado",
-        "El pago fue registrado correctamente",
+        "El pago fue registrado correctamente usando el endpoint SOAP",
         "success"
       );
+
       handleClose();
-      setFecha("");
-      setTipoGastoId("");
-      setTipoGastoGrupoId("");
-      setDetalle("");
-      setMonto("");
+      resetForm();
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "No se pudo registrar el pago";
@@ -104,12 +193,23 @@ const PagoModal: React.FC<PagoModalProps> = ({
     }
   };
 
+  const resetForm = () => {
+    setFecha("");
+    setTipoGastoId("");
+    setTipoGastoGrupoId("");
+    setDetalle("");
+    setMonto("");
+    setTipo(1);
+    setCambio(0);
+    setRegistroId(1);
+  };
+
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
           onClick={handleClose}
@@ -119,8 +219,9 @@ const PagoModal: React.FC<PagoModalProps> = ({
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Nuevo Pago
         </h2>
+
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
                 Fecha
@@ -202,13 +303,53 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 pattern="[0-9.]*"
               />
             </div>
+
+            {/* Campos requeridos para SOAP */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Tipo
+              </label>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(Number(e.target.value))}
+                required
+                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+              >
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Cambio
+              </label>
+              <input
+                type="number"
+                value={cambio}
+                onChange={(e) => setCambio(Number(e.target.value))}
+                required
+                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                ID de Registro
+              </label>
+              <input
+                type="number"
+                value={registroId}
+                onChange={(e) => setRegistroId(Number(e.target.value))}
+                required
+                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
             >
-              Guardar
+              Guardar Pago
             </button>
             <button
               type="button"

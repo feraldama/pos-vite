@@ -11,12 +11,12 @@ import {
   KeyIcon,
   UsersIcon,
   PencilSquareIcon,
-  BanknotesIcon,
+  // BanknotesIcon,
   CurrencyDollarIcon,
-  ArchiveBoxIcon,
-  RectangleGroupIcon,
-  CubeIcon,
-  WrenchIcon,
+  // ArchiveBoxIcon,
+  // RectangleGroupIcon,
+  // CubeIcon,
+  // WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
@@ -49,26 +49,26 @@ const navigation: NavigationItem[] = [
     href: "/ventas",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
-  {
-    name: "Cobro de Créditos",
-    href: "/credito-pagos",
-    icon: <BanknotesIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Almacenes",
-    href: "/almacenes",
-    icon: <ArchiveBoxIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Productos",
-    href: "/products",
-    icon: <CubeIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
-  },
+  // {
+  //   name: "Cobro de Créditos",
+  //   href: "/credito-pagos",
+  //   icon: <BanknotesIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Almacenes",
+  //   href: "/almacenes",
+  //   icon: <ArchiveBoxIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Productos",
+  //   href: "/products",
+  //   icon: <CubeIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Combos",
+  //   href: "/combos",
+  //   icon: <RectangleGroupIcon className="h-7 w-6" />,
+  // },
   {
     name: "Clientes",
     href: "/customers",
@@ -90,12 +90,12 @@ const navigation: NavigationItem[] = [
       { name: "Registro Diario Caja", href: "/movements/summary" },
     ],
   },
-  {
-    name: "Modificaciones",
-    href: "/modifications",
-    icon: <WrenchIcon className="h-7 w-6" />,
-    children: [{ name: "Ventas", href: "/modifications/ventas" }],
-  },
+  // {
+  //   name: "Modificaciones",
+  //   href: "/modifications",
+  //   icon: <WrenchIcon className="h-7 w-6" />,
+  //   children: [{ name: "Ventas", href: "/modifications/ventas" }],
+  // },
   {
     name: "Control de Acceso",
     href: "/access-control",

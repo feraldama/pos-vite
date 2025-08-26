@@ -110,13 +110,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     } else if (pagoTipo === "D") {
       deb = append(bancoDebito, label);
       totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoCredito -
-        cuentaCliente -
-        deb * 1.03 -
-        vou;
+        totalCost - efectivo - banco - bancoCredito - cuentaCliente - deb - vou;
       setBancoDebito(deb);
     } else if (pagoTipo === "CR") {
       cred = append(bancoCredito, label);
@@ -439,7 +433,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   marginRight: 8,
                 }}
               >
-                Tarjeta Débito (3% adicional):
+                POS:
               </label>
               <input
                 type="text"
@@ -447,7 +441,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 onFocus={(e) => {
                   setPagoTipoLocal("D");
                   if (bancoDebito === 0) {
-                    setBancoDebito(Number((totalRest * 1.03).toFixed(0)));
+                    setBancoDebito(Number(totalRest.toFixed(0)));
                     setTotalRest(0);
                   }
                   e.target.select();
@@ -461,7 +455,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     banco -
                     bancoCredito -
                     cuentaCliente -
-                    newValue * 1.03 -
+                    newValue -
                     voucher;
                   setTotalRest(totalResto);
                 }}
@@ -481,7 +475,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               />
             </div>
             {/* Tarjeta Crédito */}
-            <div
+            {/* <div
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -501,7 +495,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </label>
               <input
                 type="text"
-                value={formatMiles(bancoCredito)}
+                value={new Intl.NumberFormat("es-ES").format(bancoCredito)}
                 onFocus={(e) => {
                   setPagoTipoLocal("CR");
                   if (bancoCredito === 0) {
@@ -537,7 +531,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   outline: "none",
                 }}
               />
-            </div>
+            </div> */}
             {/* Cuenta Cliente */}
             <div
               style={{

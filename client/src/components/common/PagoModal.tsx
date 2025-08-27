@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
+import { createRegistroDiarioCaja } from "../../services/registros.service";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
 import axios from "axios";
@@ -49,9 +50,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
   const [monto, setMonto] = useState<number | "">("");
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupo, setTiposGastoGrupo] = useState<TipoGastoGrupo[]>([]);
-  const [tipo, setTipo] = useState<number>(1);
   const [cambio, setCambio] = useState<number>(0);
-  const [registroId, setRegistroId] = useState<number>(1);
 
   useEffect(() => {
     if (show) {
@@ -74,15 +73,15 @@ const PagoModal: React.FC<PagoModalProps> = ({
       Envelope: {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
-          "PBorrarRegistoDiarioWS.Execute": {
+          "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
             _attributes: { xmlns: "Cobranza" },
             Registrodiariocajaid: pagoData.Registrodiariocajaid,
             Tipogastoid: pagoData.Tipogastoid,
             Tipogastogrupoid: pagoData.Tipogastogrupoid,
             Registrodiariocajamonto: pagoData.Registrodiariocajamonto,
-            Tipo: pagoData.Tipo,
+            Tipo: 1,
             Cajaid: pagoData.Cajaid,
-            FechaString: pagoData.Registrodiariocajafecha,
+            Fechastring: pagoData.Registrodiariocajafecha,
             Registrodiariocajadetalle: pagoData.Registrodiariocajadetalle,
             Registrodiariocajacambio: pagoData.Registrodiariocajacambio,
             Usuarioid: pagoData.Usuarioid,
@@ -116,60 +115,30 @@ const PagoModal: React.FC<PagoModalProps> = ({
     e.preventDefault();
     if (!cajaAperturada || !usuario) return;
 
-    try {
-      // Siempre usar endpoint SOAP
-      const pagoSOAPData = {
-        Registrodiariocajaid: registroId,
-        Tipogastoid: Number(tipoGastoId),
-        Tipogastogrupoid: Number(tipoGastoGrupoId),
-        Registrodiariocajamonto: Number(monto),
-        Tipo: tipo,
-        Cajaid: Number(cajaAperturada.CajaId),
-        Registrodiariocajafecha: new Date(fecha).toISOString(),
-        Registrodiariocajadetalle: detalle,
-        Registrodiariocajacambio: cambio,
-        Usuarioid: String(usuario.id),
-      };
+    // Validar que la caja tenga un ID válido
+    if (!cajaAperturada.CajaId) {
+      Swal.fire(
+        "Error",
+        "No se pudo obtener el ID de la caja aperturada",
+        "error"
+      );
+      return;
+    }
 
-      // Validar datos antes de enviar
+    try {
+      // Validar datos básicos antes de enviar
       const errores = [];
-      if (
-        !pagoSOAPData.Registrodiariocajaid ||
-        pagoSOAPData.Registrodiariocajaid <= 0
-      ) {
-        errores.push(
-          "ID de registro diario de caja es requerido y debe ser mayor a 0"
-        );
-      }
-      if (!pagoSOAPData.Tipogastoid || pagoSOAPData.Tipogastoid <= 0) {
+      if (!tipoGastoId || Number(tipoGastoId) <= 0) {
         errores.push("ID de tipo de gasto es requerido y debe ser mayor a 0");
       }
-      if (
-        !pagoSOAPData.Tipogastogrupoid ||
-        pagoSOAPData.Tipogastogrupoid <= 0
-      ) {
+      if (!tipoGastoGrupoId || Number(tipoGastoGrupoId) <= 0) {
         errores.push("ID de grupo de gasto es requerido y debe ser mayor a 0");
       }
-      if (
-        !pagoSOAPData.Registrodiariocajamonto ||
-        pagoSOAPData.Registrodiariocajamonto <= 0
-      ) {
+      if (!monto || Number(monto) <= 0) {
         errores.push("Monto es requerido y debe ser mayor a 0");
       }
-      if (!pagoSOAPData.Cajaid || pagoSOAPData.Cajaid <= 0) {
-        errores.push("ID de caja es requerido y debe ser mayor a 0");
-      }
-      if (!pagoSOAPData.Registrodiariocajafecha) {
-        errores.push("Fecha es requerida");
-      }
-      if (
-        !pagoSOAPData.Registrodiariocajadetalle ||
-        pagoSOAPData.Registrodiariocajadetalle.trim() === ""
-      ) {
+      if (!detalle || detalle.trim() === "") {
         errores.push("Detalle es requerido");
-      }
-      if (!pagoSOAPData.Usuarioid || pagoSOAPData.Usuarioid.trim() === "") {
-        errores.push("ID de usuario es requerido");
       }
 
       if (errores.length > 0) {
@@ -177,10 +146,79 @@ const PagoModal: React.FC<PagoModalProps> = ({
         return;
       }
 
+      // Formatear fecha para la base de datos (YYYY-MM-DD)
+      const fechaDate = new Date(fecha + "T00:00:00");
+      const fechaISO = fechaDate.toISOString().split("T")[0];
+
+      // Debug: ver qué valor tiene cajaAperturada
+      console.log("cajaAperturada:", cajaAperturada);
+      console.log("cajaAperturada.CajaId:", cajaAperturada.CajaId);
+      console.log("tipoGastoId:", tipoGastoId);
+      console.log("tipoGastoGrupoId:", tipoGastoGrupoId);
+
+      // Primero guardar en la base de datos
+      const registroData = {
+        TipoGastoId: Number(tipoGastoId), // Cambié Tipogastoid por TipoGastoId
+        TipoGastoGrupoId: Number(tipoGastoGrupoId), // Cambié Tipogastogrupoid por TipoGastoGrupoId
+        RegistroDiarioCajaMonto: Number(monto),
+        Tipo: 1, // Siempre 1 para este caso
+        CajaId: Number(cajaAperturada.CajaId), // Cambié Cajaid por CajaId para que coincida con el modelo
+        Registrodiariocajafecha: fechaISO,
+        RegistroDiarioCajaDetalle: detalle,
+        Registrodiariocajacambio: cambio,
+        Usuarioid: String(usuario.id),
+      };
+
+      console.log("registroData que se enviará:", registroData);
+
+      // Crear registro en la base de datos
+      const registroCreado = await createRegistroDiarioCaja(registroData);
+      console.log("Respuesta completa de la API:", registroCreado);
+
+      // El ID está en registroCreado.data.RegistroDiarioCajaId según la respuesta de la API
+      const nuevoRegistroId =
+        registroCreado.data?.RegistroDiarioCajaId ||
+        registroCreado.RegistroDiarioCajaId ||
+        registroCreado.id ||
+        registroCreado.Registrodiariocajaid;
+
+      if (!nuevoRegistroId) {
+        console.error(
+          "No se pudo obtener el ID. Respuesta completa:",
+          registroCreado
+        );
+        throw new Error("No se pudo obtener el ID del registro creado");
+      }
+
+      console.log("ID del registro creado:", nuevoRegistroId);
+
+      // Formatear fecha para SOAP (DD/MM/YY)
+      const dia = fechaDate.getDate();
+      const mes = fechaDate.getMonth() + 1;
+      const año = fechaDate.getFullYear() % 100;
+      const diaStr = dia < 10 ? `0${dia}` : dia.toString();
+      const mesStr = mes < 10 ? `0${mes}` : mes.toString();
+      const añoStr = año < 10 ? `0${año}` : año.toString();
+      const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+
+      // Ahora enviar a SOAP con el ID real generado
+      const pagoSOAPData = {
+        Registrodiariocajaid: nuevoRegistroId,
+        Tipogastoid: Number(tipoGastoId),
+        Tipogastogrupoid: Number(tipoGastoGrupoId),
+        Registrodiariocajamonto: Number(monto),
+        Tipo: 1,
+        Cajaid: Number(cajaAperturada.CajaId),
+        Registrodiariocajafecha: fechaFormateada,
+        Registrodiariocajadetalle: detalle,
+        Registrodiariocajacambio: cambio,
+        Usuarioid: String(usuario.id),
+      };
+
       await sendRequestSOAP(pagoSOAPData);
       Swal.fire(
         "Pago registrado",
-        "El pago fue registrado correctamente usando el endpoint SOAP",
+        "El pago fue registrado correctamente",
         "success"
       );
 
@@ -199,9 +237,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
     setTipoGastoGrupoId("");
     setDetalle("");
     setMonto("");
-    setTipo(1);
     setCambio(0);
-    setRegistroId(1);
   };
 
   if (!show) return null;
@@ -209,7 +245,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
           onClick={handleClose}
@@ -221,7 +257,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-4 mb-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
                 Fecha
@@ -303,22 +339,6 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 pattern="[0-9.]*"
               />
             </div>
-
-            {/* Campos requeridos para SOAP */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Tipo
-              </label>
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(Number(e.target.value))}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              >
-                <option value={1}>1</option>
-                <option value={2}>2</option>
-              </select>
-            </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
                 Cambio
@@ -327,18 +347,6 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 type="number"
                 value={cambio}
                 onChange={(e) => setCambio(Number(e.target.value))}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                ID de Registro
-              </label>
-              <input
-                type="number"
-                value={registroId}
-                onChange={(e) => setRegistroId(Number(e.target.value))}
                 required
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
               />

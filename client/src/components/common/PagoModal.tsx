@@ -150,12 +150,6 @@ const PagoModal: React.FC<PagoModalProps> = ({
       const fechaDate = new Date(fecha + "T00:00:00");
       const fechaISO = fechaDate.toISOString().split("T")[0];
 
-      // Debug: ver qué valor tiene cajaAperturada
-      console.log("cajaAperturada:", cajaAperturada);
-      console.log("cajaAperturada.CajaId:", cajaAperturada.CajaId);
-      console.log("tipoGastoId:", tipoGastoId);
-      console.log("tipoGastoGrupoId:", tipoGastoGrupoId);
-
       // Primero guardar en la base de datos
       const registroData = {
         TipoGastoId: Number(tipoGastoId), // Cambié Tipogastoid por TipoGastoId
@@ -165,15 +159,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
         CajaId: Number(cajaAperturada.CajaId), // Cambié Cajaid por CajaId para que coincida con el modelo
         Registrodiariocajafecha: fechaISO,
         RegistroDiarioCajaDetalle: detalle,
-        Registrodiariocajacambio: cambio,
+        RegistroDiarioCajaCambio: cambio,
         Usuarioid: String(usuario.id),
       };
 
-      console.log("registroData que se enviará:", registroData);
-
       // Crear registro en la base de datos
       const registroCreado = await createRegistroDiarioCaja(registroData);
-      console.log("Respuesta completa de la API:", registroCreado);
 
       // El ID está en registroCreado.data.RegistroDiarioCajaId según la respuesta de la API
       const nuevoRegistroId =
@@ -189,8 +180,6 @@ const PagoModal: React.FC<PagoModalProps> = ({
         );
         throw new Error("No se pudo obtener el ID del registro creado");
       }
-
-      console.log("ID del registro creado:", nuevoRegistroId);
 
       // Formatear fecha para SOAP (DD/MM/YY)
       const dia = fechaDate.getDate();

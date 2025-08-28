@@ -12,6 +12,7 @@ interface Movimiento {
   UsuarioId: string | number;
   CajaId: string | number;
   TipoGastoId: string | number;
+  TipoGastoGrupoId: string | number;
   CajaDescripcion: string;
   TipoGastoDescripcion: string;
   TipoGastoGrupoDescripcion: string;

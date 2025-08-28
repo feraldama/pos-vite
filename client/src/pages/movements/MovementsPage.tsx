@@ -10,6 +10,8 @@ import MovementsList from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
+import axios from "axios";
+import { js2xml } from "xml-js";
 
 // Tipos auxiliares
 interface Movimiento {
@@ -21,6 +23,7 @@ interface Movimiento {
   UsuarioId: string | number;
   CajaId: string | number;
   TipoGastoId: string | number;
+  TipoGastoGrupoId: string | number;
   CajaDescripcion: string;
   TipoGastoDescripcion: string;
   TipoGastoGrupoDescripcion: string;
@@ -112,6 +115,59 @@ export default function MovementsPage() {
     }
   };
 
+  const sendRequestSOAP = async (movimiento: Movimiento) => {
+    // Formatear fecha para SOAP (DD/MM/YY)
+    const fechaDate = new Date(movimiento.RegistroDiarioCajaFecha);
+    const dia = fechaDate.getDate();
+    const mes = fechaDate.getMonth() + 1;
+    const año = fechaDate.getFullYear() % 100;
+    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
+    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
+    const añoStr = año < 10 ? `0${año}` : año.toString();
+    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+
+    const json = {
+      Envelope: {
+        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
+        Body: {
+          "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
+            _attributes: { xmlns: "Cobranza" },
+            Registrodiariocajaid: movimiento.RegistroDiarioCajaId,
+            Tipogastoid: movimiento.TipoGastoId,
+            Tipogastogrupoid: movimiento.TipoGastoGrupoId,
+            Registrodiariocajamonto: movimiento.RegistroDiarioCajaMonto,
+            Tipo: 2, // Tipo 2 para eliminación
+            Cajaid: movimiento.CajaId,
+            Fechastring: fechaFormateada,
+            Registrodiariocajadetalle: movimiento.RegistroDiarioCajaDetalle,
+            Registrodiariocajacambio: movimiento.RegistroDiarioCajaCambio || 0,
+            Usuarioid: movimiento.UsuarioId,
+          },
+        },
+      },
+    };
+
+    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
+    const config = {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    };
+
+    try {
+      await axios.post(
+        "http://localhost:8080/CobranzaAmimar/servlet/com.cobranza.apborrarregistodiariows",
+        xml,
+        config
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error en llamada SOAP:", error);
+      throw new Error("Error al procesar la eliminación SOAP");
+    }
+  };
+
   const handleDelete = async (movimiento: Movimiento) => {
     Swal.fire({
       title: "¿Estás seguro?",
@@ -125,7 +181,12 @@ export default function MovementsPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          // Primero enviar la solicitud SOAP
+          await sendRequestSOAP(movimiento);
+
+          // Luego eliminar de la base de datos
           await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
+
           Swal.fire({
             icon: "success",
             title: "Registro eliminado exitosamente",

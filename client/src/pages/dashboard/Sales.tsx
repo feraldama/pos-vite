@@ -22,6 +22,7 @@ import { getLocalById } from "../../services/locales.service";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
+import InvoicePrintModal from "../../components/common/InvoicePrintModal";
 import { getCombos } from "../../services/combos.service";
 import {
   formatMiles,
@@ -89,6 +90,7 @@ export default function Sales() {
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
+  const [showInvoicePrintModal, setShowInvoicePrintModal] = useState(false);
   const [totalRest, setTotalRest] = useState(0);
   const [efectivo, setEfectivo] = useState(0);
   const [banco, setBanco] = useState(0);
@@ -969,10 +971,7 @@ export default function Sales() {
             {/* Botón Imprimir Factura */}
             <button
               className="bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-green-600 transition"
-              onClick={() => {
-                // Aquí puedes agregar la lógica para imprimir factura
-                console.log("Imprimir factura");
-              }}
+              onClick={() => setShowInvoicePrintModal(true)}
             >
               Imprimir Factura
             </button>
@@ -1120,6 +1119,11 @@ export default function Sales() {
           handleClose={() => setShowPagoModal(false)}
           cajaAperturada={cajaAperturada}
           usuario={user}
+        />
+
+        <InvoicePrintModal
+          show={showInvoicePrintModal}
+          onClose={() => setShowInvoicePrintModal(false)}
         />
       </div>
       <PaymentModal

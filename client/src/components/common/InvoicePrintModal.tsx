@@ -286,66 +286,6 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                }
              }
            
-                       /* Estilos para hoja legal */
-            @media print and (size: legal) {
-              body { 
-                margin: 0; 
-                padding: 0; 
-              }
-                             .factura { 
-                 page-break-after: avoid; 
-                 margin: 0; 
-                 padding: 35px 20px 20px 20px; 
-               }
-              .cliente-info { 
-                margin-bottom: 10px; 
-              }
-              .productos-lista { 
-                margin-bottom: 15px; 
-              }
-              .totales { 
-                margin-top: 10px; 
-                padding-top: 5px;
-              }
-              @page { 
-                margin: 0; 
-                size: legal;
-              }
-              @page :first { 
-                margin: 0; 
-              }
-              @page :left { 
-                margin: 0; 
-              }
-              @page :right { 
-                margin: 0; 
-              }
-              
-              /* Ocultar fecha y número de factura del navegador */
-              body::before,
-              body::after {
-                display: none !important;
-              }
-              
-              /* Ocultar encabezados y pies de página del navegador */
-              @page {
-                margin: 0;
-                size: legal;
-              }
-              
-              /* Reglas adicionales para ocultar elementos del navegador */
-              *::before,
-              *::after {
-                display: none !important;
-              }
-              
-              /* Ocultar cualquier elemento que pueda contener fecha o título */
-              title,
-              meta[name="title"],
-              meta[property="og:title"] {
-                display: none !important;
-              }
-            }
            
            body { 
              font-family: Arial, sans-serif; 
@@ -355,7 +295,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
            }
                        .factura { 
               margin: 0; 
-              padding: 25px 20px 20px 20px; 
+              padding: 32px 20px 20px 20px; 
             }
            .header { 
              text-align: center; 
@@ -377,10 +317,10 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              margin-right: 20px;
            }
            .cliente-left p { 
-             margin: 1px 0; 
+             margin: 2px 0; 
              font-size: 11px; 
              text-align: left;
-             min-height: 14px;
+             min-height: 15px;
            }
            .cliente-right { 
              flex: 0 0 auto;
@@ -400,13 +340,14 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              margin: 5px 0 !important;
            }
            
-                       .productos-lista { 
+           .productos-lista { 
               margin-bottom: 15px; 
+              margin-top: 10px;
             }
            .productos-header {
              display: flex;
              font-weight: bold;
-             font-size: 11px;
+             font-size: 10px;
              border-bottom: 1px solid #ccc;
              padding-bottom: 5px;
              margin-bottom: 10px;
@@ -415,8 +356,8 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              display: flex; 
              justify-content: space-between; 
              align-items: center;
-             margin-bottom: 3px;
-             font-size: 11px;
+             margin-bottom: 2px;
+             font-size: 10px;
            }
            .col-cantidad { 
              width: 60px; 
@@ -517,7 +458,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
           <div class="cliente-left">
             <p style="margin-left: 295px;">
               <span>${formatearFecha(venta.VentaFecha)}</span>
-              <span style="margin-left: 190px;">Contado</span>
+              <span style="margin-left: 202px;">Contado</span>
             </p>
             <p style="margin-left: 320px;">${
               venta.ClienteRazonSocial || "N/A"
@@ -528,7 +469,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 venta.ClienteTelefono || "N/A"
               }</span>
             </p>
-            <p style="margin-left: 300px;">${
+            <p style="margin-left: 300px; margin-bottom: 15px;">${
               venta.ClienteDireccion || "Sin dirección registrada"
             }</p>
           </div>
@@ -559,7 +500,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              .join("")}
            
            ${Array.from(
-             { length: Math.max(0, 12 - productos.length) },
+             { length: Math.max(0, 14 - productos.length) },
              () => `
              <div class="producto-item">
                <span class="col-cantidad">&nbsp;</span>
@@ -588,12 +529,12 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 subtotal
               )}</span>
             </p>
-            <p style="display: flex; justify-content: space-between;">
+            <p style="display: flex; justify-content: space-between; margin-top: -4px;">
               <span style="margin-left: 110px;" class="liquidacion-iva">0</span>
-              <span style="margin-left: 20px;" class="liquidacion-iva">${formatearNumero(
+              <span style="margin-left: 0px;" class="liquidacion-iva">${formatearNumero(
                 iva
               )}</span>
-              <span style="margin-right: 220px;" class="total-iva">${formatearNumero(
+              <span style="margin-right: 320px;" class="total-iva">${formatearNumero(
                 iva
               )}</span>
             </p>

@@ -452,7 +452,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
     // El total real debe ser el subtotal + IVA
     const totalReal = subtotal;
 
-    return `
+    const facturaIndividual = `
       <div class="factura">
         <div class="cliente-info">
           <div class="cliente-left">
@@ -466,7 +466,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
             <p style="margin-left: 280px;">
               <span>${venta.ClienteRUC || "N/A"}</span>
               <span style="margin-left: 75px;">${
-                venta.ClienteTelefono || "N/A"
+                venta.ClienteTelefono || ""
               }</span>
             </p>
             <p style="margin-left: 300px; margin-bottom: 15px;">${
@@ -529,7 +529,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 subtotal
               )}</span>
             </p>
-            <p style="display: flex; justify-content: space-between; margin-top: -4px;">
+            <p style="display: flex; justify-content: space-between; margin-top: -5px;">
               <span style="margin-left: 110px;" class="liquidacion-iva">0</span>
               <span style="margin-left: 0px;" class="liquidacion-iva">${formatearNumero(
                 iva
@@ -542,6 +542,25 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
         </div>
       </div>
     `;
+
+    // Separación entre facturas
+    const separacion1 = `
+      <div style="height: 0px; margin: -10px 0 0 0; padding: 0;"></div>
+    `;
+
+    // Separación entre facturas
+    const separacion2 = `
+      <div style="height: 0px; margin: -8px 0 0 0; padding: 0;"></div>
+    `;
+
+    // Retornar la factura triplicada con separación entre facturas
+    return (
+      facturaIndividual +
+      separacion1 +
+      facturaIndividual +
+      separacion2 +
+      facturaIndividual
+    );
   };
 
   // ... existing code ...

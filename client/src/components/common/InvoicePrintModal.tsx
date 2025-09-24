@@ -341,7 +341,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
            }
            
            .productos-lista { 
-              margin-bottom: 15px; 
+              margin-bottom: 2px; 
               margin-top: 10px;
             }
            .productos-header {
@@ -500,7 +500,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              .join("")}
            
            ${Array.from(
-             { length: Math.max(0, 14 - productos.length) },
+             { length: Math.max(0, 16 - productos.length) },
              () => `
              <div class="producto-item">
                <span class="col-cantidad">&nbsp;</span>
@@ -514,7 +514,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
            ).join("")}
          </div>
         
-        <div class="totales">
+        <div class="totales" style="margin-top: -9px;">
           <div class="totales-left">
             <p style="display: flex; justify-content: flex-end;">
               <span style="margin-right: 30px;" class="subtotal">${formatearNumero(
@@ -545,12 +545,12 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
 
     // Separación entre facturas
     const separacion1 = `
-      <div style="height: 0px; margin: -10px 0 0 0; padding: 0;"></div>
+      <div style="height: 0px; margin: -15px 0 0 0; padding: 0;"></div>
     `;
 
     // Separación entre facturas
     const separacion2 = `
-      <div style="height: 0px; margin: -8px 0 0 0; padding: 0;"></div>
+      <div style="height: 0px; margin: -14px 0 0 0; padding: 0;"></div>
     `;
 
     // Retornar la factura triplicada con separación entre facturas

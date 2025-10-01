@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
 import {
   getVentasPaginated,
@@ -49,15 +49,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [itemsPerPage] = useState(10);
 
-  // Cargar ventas al abrir el modal
-  useEffect(() => {
-    if (show) {
-      fetchVentas();
-      setVentaSeleccionada(null);
-    }
-  }, [show, currentPage]);
-
-  const fetchVentas = async () => {
+  const fetchVentas = useCallback(async () => {
     try {
       setLoading(true);
       let data;
@@ -125,7 +117,15 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, currentPage, itemsPerPage]);
+
+  // Cargar ventas al abrir el modal
+  useEffect(() => {
+    if (show) {
+      fetchVentas();
+      setVentaSeleccionada(null);
+    }
+  }, [show, currentPage, fetchVentas]);
 
   const handleSearch = () => {
     setCurrentPage(1);

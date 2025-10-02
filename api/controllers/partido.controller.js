@@ -321,10 +321,6 @@ exports.setWinner = async (req, res) => {
     // Obtener todos los jugadores del partido
     const jugadores = await PartidoJugador.getByPartidoId(PartidoId);
 
-    console.log(`=== ACTUALIZANDO PARTIDO ${PartidoId} ===`);
-    console.log(`Equipo ganador seleccionado: ${equipoGanador}`);
-    console.log(`Jugadores encontrados:`, jugadores);
-
     if (!jugadores || jugadores.length === 0) {
       return res.status(404).json({
         success: false,
@@ -337,10 +333,6 @@ exports.setWinner = async (req, res) => {
       // Convertir PartidoJugadorPareja a string para comparar correctamente
       const parejaJugador = String(jugador.PartidoJugadorPareja);
       const resultado = parejaJugador === equipoGanador ? "G" : "P";
-
-      console.log(
-        `Actualizando Jugador ID: ${jugador.PartidoJugadorId}, PartidoId: ${jugador.PartidoId}, Pareja: ${parejaJugador}, Equipo ganador: ${equipoGanador}, Resultado: ${resultado}`
-      );
 
       // Actualizar usando tanto PartidoJugadorId como PartidoId para asegurar unicidad
       await PartidoJugador.updateByPartidoAndJugador(

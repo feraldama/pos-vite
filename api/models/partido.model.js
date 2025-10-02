@@ -92,6 +92,7 @@ const Partido = {
           db.query(
             `SELECT pj.PartidoId,
                     pj.PartidoJugadorPareja,
+                    pj.PartidoJugadorResultado,
                     cl.ClienteNombre,
                     cl.ClienteApellido
              FROM partidojugador pj
@@ -210,6 +211,7 @@ const Partido = {
           db.query(
             `SELECT pj.PartidoId,
                     pj.PartidoJugadorPareja,
+                    pj.PartidoJugadorResultado,
                     cl.ClienteNombre,
                     cl.ClienteApellido
              FROM partidojugador pj

@@ -213,7 +213,8 @@ export default function PartidosList({
   // Función para formatear el versus de jugadores con colores
   const formatearVersus = (
     jugadores: PartidoJugador[] = [],
-    vertical: boolean = false
+    vertical: boolean = false,
+    partidoEstado?: boolean
   ) => {
     if (!jugadores || jugadores.length === 0) return "Sin jugadores";
 
@@ -233,21 +234,47 @@ export default function PartidosList({
       .map((j) => `${j.ClienteNombre} ${j.ClienteApellido}`.trim())
       .join(" - ");
 
+    // Determinar qué equipo ganó (si el partido está finalizado)
+    let equipoGanador = null;
+    if (partidoEstado && jugadores.length > 0) {
+      const jugadorGanador = jugadores.find(
+        (j) => j.PartidoJugadorResultado === "G"
+      );
+      if (jugadorGanador) {
+        equipoGanador = String(jugadorGanador.PartidoJugadorPareja);
+      }
+    }
+
+    // Función para obtener el color de cada equipo
+    const getColorEquipo = (pareja: string) => {
+      if (partidoEstado && equipoGanador === pareja) {
+        return "text-green-600"; // Verde para el ganador
+      }
+      if (partidoEstado && equipoGanador && equipoGanador !== pareja) {
+        return "text-gray-700"; // Color por defecto para el perdedor
+      }
+      return pareja === "1" ? "text-blue-600" : "text-red-600"; // Colores normales para partidos pendientes
+    };
+
     if (nombresPareja1 && nombresPareja2) {
       if (vertical) {
         return (
           <div className="text-sm text-center">
-            <div className="text-blue-600 font-medium">{nombresPareja1}</div>
+            <div className={`${getColorEquipo("1")} font-medium`}>
+              {nombresPareja1}
+            </div>
             <div className="text-gray-500 my-1">vs</div>
-            <div className="text-red-600 font-medium">{nombresPareja2}</div>
+            <div className={`${getColorEquipo("2")} font-medium`}>
+              {nombresPareja2}
+            </div>
           </div>
         );
       } else {
         return (
           <span className="text-sm">
-            <span className="text-blue-600">{nombresPareja1}</span>
+            <span className={getColorEquipo("1")}>{nombresPareja1}</span>
             <span className="mx-2 text-gray-500">vs</span>
-            <span className="text-red-600">{nombresPareja2}</span>
+            <span className={getColorEquipo("2")}>{nombresPareja2}</span>
           </span>
         );
       }
@@ -255,7 +282,9 @@ export default function PartidosList({
       if (vertical) {
         return (
           <div className="text-sm text-center">
-            <div className="text-blue-600 font-medium">{nombresPareja1}</div>
+            <div className={`${getColorEquipo("1")} font-medium`}>
+              {nombresPareja1}
+            </div>
             <div className="text-gray-500 my-1">vs</div>
             <div className="text-gray-500">TBD</div>
           </div>
@@ -263,7 +292,7 @@ export default function PartidosList({
       } else {
         return (
           <span className="text-sm">
-            <span className="text-blue-600">{nombresPareja1}</span>
+            <span className={getColorEquipo("1")}>{nombresPareja1}</span>
             <span className="mx-2 text-gray-500">vs</span>
             <span className="text-gray-500">TBD</span>
           </span>
@@ -275,7 +304,9 @@ export default function PartidosList({
           <div className="text-sm text-center">
             <div className="text-gray-500">TBD</div>
             <div className="text-gray-500 my-1">vs</div>
-            <div className="text-red-600 font-medium">{nombresPareja2}</div>
+            <div className={`${getColorEquipo("2")} font-medium`}>
+              {nombresPareja2}
+            </div>
           </div>
         );
       } else {
@@ -283,7 +314,7 @@ export default function PartidosList({
           <span className="text-sm">
             <span className="text-gray-500">TBD</span>
             <span className="mx-2 text-gray-500">vs</span>
-            <span className="text-red-600">{nombresPareja2}</span>
+            <span className={getColorEquipo("2")}>{nombresPareja2}</span>
           </span>
         );
       }
@@ -474,12 +505,12 @@ export default function PartidosList({
         text:
           response.message ||
           `Equipo ${equipoGanador} ha sido marcado como ganador`,
+      }).then(() => {
+        // Recargar la página solo después de cerrar el modal
+        window.location.reload();
       });
 
       handleCloseWinnerModal();
-
-      // Recargar la página para mostrar los cambios
-      window.location.reload();
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
@@ -551,7 +582,8 @@ export default function PartidosList({
     {
       key: "versus",
       label: "Partido",
-      render: (item: Partido) => formatearVersus(item.jugadores),
+      render: (item: Partido) =>
+        formatearVersus(item.jugadores, false, item.PartidoEstado),
     },
     { key: "PartidoFecha", label: "Fecha" },
     { key: "PartidoHoraInicio", label: "Hora Inicio" },
@@ -1105,7 +1137,11 @@ export default function PartidosList({
                   {selectedPartido.PartidoFecha}
                 </div>
                 <div className="text-sm text-gray-700">
-                  {formatearVersus(selectedPartido.jugadores, true)}
+                  {formatearVersus(
+                    selectedPartido.jugadores,
+                    true,
+                    selectedPartido.PartidoEstado
+                  )}
                 </div>
               </div>
 

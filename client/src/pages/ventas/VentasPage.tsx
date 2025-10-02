@@ -372,7 +372,6 @@ export default function VentasPage() {
 
   const handleCreateVenta = () => {
     // Implementar la lógica para crear una nueva venta
-    console.log("Crear nueva venta");
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver las ventas.</div>;

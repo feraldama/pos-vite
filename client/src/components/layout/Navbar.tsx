@@ -30,9 +30,9 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   // Navegación fija
   const navigation = [
     { name: "Dashboard", href: "/dashboard" },
-    { name: "Apertura de caja", href: "/apertura-cierre-caja" },
-    { name: "Ventas", href: "/ventas" },
-    { name: "Cobro de Créditos", href: "/credito-pagos" },
+    { name: "Jugadores", href: "/customers" },
+    { name: "Partidos", href: "/partidos" },
+    { name: "Reportes", href: "/reportes" },
   ];
 
   return (

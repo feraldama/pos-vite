@@ -76,18 +76,58 @@ const Partido = {
          LEFT JOIN cancha c ON p.CanchaId = c.CanchaId 
          ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
-        (err, results) => {
+        (err, partidos) => {
           if (err) return reject(err);
 
+          if (partidos.length === 0) {
+            return resolve({
+              partidos: [],
+              total: 0,
+            });
+          }
+
+          const partidoIds = partidos.map((p) => p.PartidoId);
+
+          // Obtener jugadores para estos partidos
           db.query(
-            "SELECT COUNT(*) as total FROM partido",
-            (err, countResult) => {
+            `SELECT pj.PartidoId,
+                    pj.PartidoJugadorPareja,
+                    cl.ClienteNombre,
+                    cl.ClienteApellido
+             FROM partidojugador pj
+             LEFT JOIN clientes cl ON pj.ClienteId = cl.ClienteId
+             WHERE pj.PartidoId IN (?)
+             ORDER BY pj.PartidoId, pj.PartidoJugadorPareja, pj.PartidoJugadorId`,
+            [partidoIds],
+            (err, jugadores) => {
               if (err) return reject(err);
 
-              resolve({
-                partidos: results,
-                total: countResult[0].total,
-              });
+              // Agrupar jugadores por PartidoId
+              const jugadoresPorPartido = jugadores.reduce((acc, jugador) => {
+                if (!acc[jugador.PartidoId]) {
+                  acc[jugador.PartidoId] = [];
+                }
+                acc[jugador.PartidoId].push(jugador);
+                return acc;
+              }, {});
+
+              // Combinar partidos con sus jugadores
+              const partidosConJugadores = partidos.map((partido) => ({
+                ...partido,
+                jugadores: jugadoresPorPartido[partido.PartidoId] || [],
+              }));
+
+              db.query(
+                "SELECT COUNT(*) as total FROM partido",
+                (err, countResult) => {
+                  if (err) return reject(err);
+
+                  resolve({
+                    partidos: partidosConJugadores,
+                    total: countResult[0].total,
+                  });
+                }
+              );
             }
           );
         }
@@ -116,7 +156,7 @@ const Partido = {
         : "ASC";
 
       const searchQuery = `
-        SELECT p.PartidoId, 
+        SELECT DISTINCT p.PartidoId, 
                DATE_FORMAT(p.PartidoFecha, '%d-%m-%Y') as PartidoFecha, 
                DATE_FORMAT(p.PartidoHoraInicio, '%H:%i') as PartidoHoraInicio,
                DATE_FORMAT(p.PartidoHoraFin, '%H:%i') as PartidoHoraFin,
@@ -126,10 +166,15 @@ const Partido = {
                c.CanchaNombre 
         FROM partido p
         LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
+        LEFT JOIN partidojugador pj ON p.PartidoId = pj.PartidoId
+        LEFT JOIN clientes cl ON pj.ClienteId = cl.ClienteId
         WHERE p.PartidoCategoria LIKE ? 
         OR (p.PartidoEstado = 1 AND ? = 'FINALIZADO')
         OR (p.PartidoEstado = 0 AND ? = 'PENDIENTE')
         OR c.CanchaNombre LIKE ?
+        OR cl.ClienteNombre LIKE ?
+        OR cl.ClienteApellido LIKE ?
+        OR CONCAT(cl.ClienteNombre, ' ', cl.ClienteApellido) LIKE ?
         ORDER BY p.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -138,29 +183,92 @@ const Partido = {
 
       db.query(
         searchQuery,
-        [searchValue, upperTerm, upperTerm, searchValue, limit, offset],
-        (err, results) => {
+        [
+          searchValue,
+          upperTerm,
+          upperTerm,
+          searchValue,
+          searchValue,
+          searchValue,
+          searchValue,
+          limit,
+          offset,
+        ],
+        (err, partidos) => {
           if (err) return reject(err);
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM partido p
-            LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
-            WHERE p.PartidoCategoria LIKE ? 
-            OR (p.PartidoEstado = 1 AND ? = 'FINALIZADO')
-            OR (p.PartidoEstado = 0 AND ? = 'PENDIENTE')
-            OR c.CanchaNombre LIKE ?
-          `;
+          if (partidos.length === 0) {
+            return resolve({
+              partidos: [],
+              total: 0,
+            });
+          }
 
+          const partidoIds = partidos.map((p) => p.PartidoId);
+
+          // Obtener jugadores para estos partidos
           db.query(
-            countQuery,
-            [searchValue, upperTerm, upperTerm, searchValue],
-            (err, countResult) => {
+            `SELECT pj.PartidoId,
+                    pj.PartidoJugadorPareja,
+                    cl.ClienteNombre,
+                    cl.ClienteApellido
+             FROM partidojugador pj
+             LEFT JOIN clientes cl ON pj.ClienteId = cl.ClienteId
+             WHERE pj.PartidoId IN (?)
+             ORDER BY pj.PartidoId, pj.PartidoJugadorPareja, pj.PartidoJugadorId`,
+            [partidoIds],
+            (err, jugadores) => {
               if (err) return reject(err);
 
-              resolve({
-                partidos: results,
-                total: countResult[0]?.total || 0,
-              });
+              // Agrupar jugadores por PartidoId
+              const jugadoresPorPartido = jugadores.reduce((acc, jugador) => {
+                if (!acc[jugador.PartidoId]) {
+                  acc[jugador.PartidoId] = [];
+                }
+                acc[jugador.PartidoId].push(jugador);
+                return acc;
+              }, {});
+
+              // Combinar partidos con sus jugadores
+              const partidosConJugadores = partidos.map((partido) => ({
+                ...partido,
+                jugadores: jugadoresPorPartido[partido.PartidoId] || [],
+              }));
+
+              const countQuery = `
+                SELECT COUNT(DISTINCT p.PartidoId) as total FROM partido p
+                LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
+                LEFT JOIN partidojugador pj ON p.PartidoId = pj.PartidoId
+                LEFT JOIN clientes cl ON pj.ClienteId = cl.ClienteId
+                WHERE p.PartidoCategoria LIKE ? 
+                OR (p.PartidoEstado = 1 AND ? = 'FINALIZADO')
+                OR (p.PartidoEstado = 0 AND ? = 'PENDIENTE')
+                OR c.CanchaNombre LIKE ?
+                OR cl.ClienteNombre LIKE ?
+                OR cl.ClienteApellido LIKE ?
+                OR CONCAT(cl.ClienteNombre, ' ', cl.ClienteApellido) LIKE ?
+              `;
+
+              db.query(
+                countQuery,
+                [
+                  searchValue,
+                  upperTerm,
+                  upperTerm,
+                  searchValue,
+                  searchValue,
+                  searchValue,
+                  searchValue,
+                ],
+                (err, countResult) => {
+                  if (err) return reject(err);
+
+                  resolve({
+                    partidos: partidosConJugadores,
+                    total: countResult[0]?.total || 0,
+                  });
+                }
+              );
             }
           );
         }

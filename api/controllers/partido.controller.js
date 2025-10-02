@@ -284,3 +284,88 @@ exports.getAllPartidosSinPaginacion = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// setWinner
+exports.setWinner = async (req, res) => {
+  try {
+    const { PartidoId, equipoGanador } = req.body;
+
+    // Validar parámetros requeridos
+    if (!PartidoId || !equipoGanador) {
+      return res.status(400).json({
+        success: false,
+        message: "PartidoId y equipoGanador son requeridos",
+      });
+    }
+
+    // Validar que equipoGanador sea 1 o 2
+    if (equipoGanador !== "1" && equipoGanador !== "2") {
+      return res.status(400).json({
+        success: false,
+        message: "equipoGanador debe ser '1' o '2'",
+      });
+    }
+
+    // Verificar que el partido existe
+    const partido = await Partido.getById(PartidoId);
+    if (!partido) {
+      return res.status(404).json({
+        success: false,
+        message: "Partido no encontrado",
+      });
+    }
+
+    // Actualizar PartidoEstado a true (1)
+    await Partido.update(PartidoId, { PartidoEstado: true });
+
+    // Obtener todos los jugadores del partido
+    const jugadores = await PartidoJugador.getByPartidoId(PartidoId);
+
+    console.log(`=== ACTUALIZANDO PARTIDO ${PartidoId} ===`);
+    console.log(`Equipo ganador seleccionado: ${equipoGanador}`);
+    console.log(`Jugadores encontrados:`, jugadores);
+
+    if (!jugadores || jugadores.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontraron jugadores para este partido",
+      });
+    }
+
+    // Actualizar resultados de los jugadores
+    for (const jugador of jugadores) {
+      // Convertir PartidoJugadorPareja a string para comparar correctamente
+      const parejaJugador = String(jugador.PartidoJugadorPareja);
+      const resultado = parejaJugador === equipoGanador ? "G" : "P";
+
+      console.log(
+        `Actualizando Jugador ID: ${jugador.PartidoJugadorId}, PartidoId: ${jugador.PartidoId}, Pareja: ${parejaJugador}, Equipo ganador: ${equipoGanador}, Resultado: ${resultado}`
+      );
+
+      // Actualizar usando tanto PartidoJugadorId como PartidoId para asegurar unicidad
+      await PartidoJugador.updateByPartidoAndJugador(
+        jugador.PartidoJugadorId,
+        PartidoId,
+        { PartidoJugadorResultado: resultado }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Equipo ${equipoGanador} marcado como ganador del partido ${PartidoId}`,
+      data: {
+        PartidoId,
+        equipoGanador,
+        PartidoEstado: true,
+        jugadoresActualizados: jugadores.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error en setWinner:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor",
+      error: error.message,
+    });
+  }
+};

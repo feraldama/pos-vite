@@ -3,6 +3,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
   CreditCardIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/outline";
 // import React from "react";
 
@@ -24,6 +25,7 @@ interface DataTableProps<T extends DataTableRow> {
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onViewCredit?: (item: T) => void;
+  onSelectWinner?: (item: T) => void;
   emptyMessage?: string;
   actions?: boolean;
   customActions?: (item: T) => React.ReactNode;
@@ -40,6 +42,7 @@ function DataTable<T extends DataTableRow>({
   onEdit,
   onDelete,
   onViewCredit,
+  onSelectWinner,
   emptyMessage = "No se encontraron registros",
   actions = true,
   customActions,
@@ -161,6 +164,15 @@ function DataTable<T extends DataTableRow>({
                           title="Ver Detalles de Crédito"
                         >
                           <CreditCardIcon className="h-5 w-5 inline" />
+                        </button>
+                      )}
+                      {onSelectWinner && (
+                        <button
+                          onClick={() => onSelectWinner(item)}
+                          className="font-medium text-yellow-600 hover:underline cursor-pointer"
+                          title="Seleccionar Ganador"
+                        >
+                          <TrophyIcon className="h-5 w-5 inline" />
                         </button>
                       )}
                       {onDelete && (

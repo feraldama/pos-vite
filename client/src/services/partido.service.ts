@@ -115,3 +115,22 @@ export const searchPartidos = async (
     throw axiosError.response?.data || { message: "Error al buscar partidos" };
   }
 };
+
+// Establecer ganador del partido
+export const setWinner = async (
+  PartidoId: number,
+  equipoGanador: "1" | "2"
+) => {
+  try {
+    const response = await api.post("/partidos/set-winner", {
+      PartidoId,
+      equipoGanador,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || { message: "Error al establecer ganador" }
+    );
+  }
+};

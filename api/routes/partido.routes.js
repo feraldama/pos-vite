@@ -18,6 +18,7 @@ router.get("/:id", authMiddleware, partidoController.getPartidoById);
 router.post("/", authMiddleware, partidoController.createPartido);
 router.put("/:id", authMiddleware, partidoController.updatePartido);
 router.delete("/:id", authMiddleware, partidoController.deletePartido);
+router.post("/set-winner", authMiddleware, partidoController.setWinner);
 
 // Ruta pública para traer todos los partidos sin paginación
 

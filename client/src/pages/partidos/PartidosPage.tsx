@@ -4,6 +4,7 @@ import {
   createPartido,
   updatePartido,
   deletePartido,
+  searchPartidos,
 } from "../../services/partido.service";
 // import { getClientes } from "../../services/clientes.service";
 import PartidosList from "../../components/partidos/PartidosList";
@@ -54,7 +55,7 @@ export default function PartidosPage() {
   const [currentPartido, setCurrentPartido] = useState<Partido | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
 
   const puedeCrear = usePermiso("PARTIDOS", "crear");
   const puedeEditar = usePermiso("PARTIDOS", "editar");
@@ -64,21 +65,30 @@ export default function PartidosPage() {
   const fetchPartidos = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getPartidosPaginated(currentPage, itemsPerPage);
-      const data = response.data;
+      let data;
+      if (appliedSearchTerm) {
+        data = await searchPartidos(
+          appliedSearchTerm,
+          currentPage,
+          itemsPerPage
+        );
+      } else {
+        data = await getPartidosPaginated(currentPage, itemsPerPage);
+      }
       setPartidosData({
-        partidos: data,
-        pagination: response.pagination || {
-          totalItems: data.length,
-          totalPages: 1,
-        },
+        partidos: data.data,
+        pagination: data.pagination,
       });
-    } catch {
-      setError("Error al obtener partidos");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error desconocido");
+      }
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, appliedSearchTerm]);
 
   useEffect(() => {
     fetchPartidos();
@@ -164,25 +174,20 @@ export default function PartidosPage() {
     setCurrentPage(1);
   };
 
-  const handleSearch = (value: string) => setSearchInput(value);
-
-  const handleSearchSubmit = () => setSearchTerm(searchInput);
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSearchSubmit();
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
   };
 
-  const filteredPartidos = partidosData.partidos.filter(
-    (partido) =>
-      partido.PartidoCategoria.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      ) ||
-      (partido.PartidoEstado ? "FINALIZADO" : "PENDIENTE")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (partido.CanchaNombre &&
-        partido.CanchaNombre.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const applySearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      applySearch();
+    }
+  };
 
   if (!puedeLeer) return <div>No tienes permiso para ver los partidos</div>;
   if (loading) return <div>Cargando partidos...</div>;
@@ -192,7 +197,7 @@ export default function PartidosPage() {
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-medium mb-3">Gestión de Partidos</h1>
       <PartidosList
-        partidos={filteredPartidos.map((p) => ({ ...p, id: p.PartidoId }))}
+        partidos={partidosData.partidos.map((p) => ({ ...p, id: p.PartidoId }))}
         onEdit={puedeEditar ? handleEdit : undefined}
         onDelete={puedeEliminar ? handleDelete : undefined}
         onCreate={puedeCrear ? handleCreate : undefined}
@@ -200,10 +205,10 @@ export default function PartidosPage() {
         onCloseModal={() => setIsModalOpen(false)}
         currentPartido={currentPartido}
         onSubmit={handleSubmit}
-        searchTerm={searchInput}
+        searchTerm={searchTerm}
         onSearch={handleSearch}
         onKeyPress={handleKeyPress}
-        onSearchSubmit={handleSearchSubmit}
+        onSearchSubmit={applySearch}
       />
       <Pagination
         currentPage={currentPage}

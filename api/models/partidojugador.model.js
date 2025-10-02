@@ -255,6 +255,47 @@ const PartidoJugador = {
       );
     });
   },
+
+  updateByPartidoAndJugador: (
+    partidoJugadorId,
+    partidoId,
+    partidoJugadorData
+  ) => {
+    return new Promise((resolve, reject) => {
+      let updateFields = [];
+      let values = [];
+      const camposActualizables = [
+        "PartidoId",
+        "ClienteId",
+        "PartidoJugadorPareja",
+        "PartidoJugadorResultado",
+        "PartidoJugadorObs",
+      ];
+      camposActualizables.forEach((campo) => {
+        if (partidoJugadorData[campo] !== undefined) {
+          updateFields.push(`${campo} = ?`);
+          values.push(partidoJugadorData[campo]);
+        }
+      });
+      if (updateFields.length === 0) {
+        return resolve(null);
+      }
+      values.push(partidoJugadorId, partidoId);
+      const query = `
+        UPDATE partidojugador 
+        SET ${updateFields.join(", ")}
+        WHERE PartidoJugadorId = ? AND PartidoId = ?
+      `;
+      db.query(query, values, (err, result) => {
+        if (err) return reject(err);
+        resolve({
+          PartidoJugadorId: partidoJugadorId,
+          PartidoId: partidoId,
+          ...partidoJugadorData,
+        });
+      });
+    });
+  },
 };
 
 module.exports = PartidoJugador;

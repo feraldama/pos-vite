@@ -6,6 +6,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import { getPartidoJugadoresByPartidoId } from "../../services/partidojugador.service";
 import { getClientes } from "../../services/clientes.service";
 import { getCanchasAll } from "../../services/cancha.service";
+import { setWinner } from "../../services/partido.service";
 import Swal from "sweetalert2";
 
 interface Partido {
@@ -18,6 +19,7 @@ interface Partido {
   PartidoEstado: boolean;
   CanchaId: number;
   CanchaNombre?: string;
+  jugadores?: PartidoJugador[];
   [key: string]: unknown;
 }
 
@@ -99,6 +101,8 @@ export default function PartidosList({
   });
   const [busquedaJugador, setBusquedaJugador] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
+  const [selectedPartido, setSelectedPartido] = useState<Partido | null>(null);
 
   // Cargar canchas al montar el componente
   useEffect(() => {
@@ -204,6 +208,88 @@ export default function PartidosList({
       return `${año}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
     }
     return fechaFormateada;
+  };
+
+  // Función para formatear el versus de jugadores con colores
+  const formatearVersus = (
+    jugadores: PartidoJugador[] = [],
+    vertical: boolean = false
+  ) => {
+    if (!jugadores || jugadores.length === 0) return "Sin jugadores";
+
+    // Separar jugadores por pareja
+    const pareja1 = jugadores.filter(
+      (j) => String(j.PartidoJugadorPareja) === "1"
+    );
+    const pareja2 = jugadores.filter(
+      (j) => String(j.PartidoJugadorPareja) === "2"
+    );
+
+    // Formatear nombres de cada pareja
+    const nombresPareja1 = pareja1
+      .map((j) => `${j.ClienteNombre} ${j.ClienteApellido}`.trim())
+      .join(" - ");
+    const nombresPareja2 = pareja2
+      .map((j) => `${j.ClienteNombre} ${j.ClienteApellido}`.trim())
+      .join(" - ");
+
+    if (nombresPareja1 && nombresPareja2) {
+      if (vertical) {
+        return (
+          <div className="text-sm text-center">
+            <div className="text-blue-600 font-medium">{nombresPareja1}</div>
+            <div className="text-gray-500 my-1">vs</div>
+            <div className="text-red-600 font-medium">{nombresPareja2}</div>
+          </div>
+        );
+      } else {
+        return (
+          <span className="text-sm">
+            <span className="text-blue-600">{nombresPareja1}</span>
+            <span className="mx-2 text-gray-500">vs</span>
+            <span className="text-red-600">{nombresPareja2}</span>
+          </span>
+        );
+      }
+    } else if (nombresPareja1) {
+      if (vertical) {
+        return (
+          <div className="text-sm text-center">
+            <div className="text-blue-600 font-medium">{nombresPareja1}</div>
+            <div className="text-gray-500 my-1">vs</div>
+            <div className="text-gray-500">TBD</div>
+          </div>
+        );
+      } else {
+        return (
+          <span className="text-sm">
+            <span className="text-blue-600">{nombresPareja1}</span>
+            <span className="mx-2 text-gray-500">vs</span>
+            <span className="text-gray-500">TBD</span>
+          </span>
+        );
+      }
+    } else if (nombresPareja2) {
+      if (vertical) {
+        return (
+          <div className="text-sm text-center">
+            <div className="text-gray-500">TBD</div>
+            <div className="text-gray-500 my-1">vs</div>
+            <div className="text-red-600 font-medium">{nombresPareja2}</div>
+          </div>
+        );
+      } else {
+        return (
+          <span className="text-sm">
+            <span className="text-gray-500">TBD</span>
+            <span className="mx-2 text-gray-500">vs</span>
+            <span className="text-red-600">{nombresPareja2}</span>
+          </span>
+        );
+      }
+    }
+
+    return "Sin jugadores asignados";
   };
 
   const handleInputChange = (
@@ -362,6 +448,51 @@ export default function PartidosList({
     }
   };
 
+  const handleSelectWinner = (partido: Partido) => {
+    setSelectedPartido(partido);
+    setIsWinnerModalOpen(true);
+  };
+
+  const handleCloseWinnerModal = () => {
+    setIsWinnerModalOpen(false);
+    setSelectedPartido(null);
+  };
+
+  const handleConfirmWinner = async (equipoGanador: "1" | "2") => {
+    if (!selectedPartido) return;
+
+    try {
+      // Llamar al API para actualizar el ganador
+      const response = await setWinner(
+        selectedPartido.PartidoId,
+        equipoGanador
+      );
+
+      Swal.fire({
+        icon: "success",
+        title: "Ganador seleccionado",
+        text:
+          response.message ||
+          `Equipo ${equipoGanador} ha sido marcado como ganador`,
+      });
+
+      handleCloseWinnerModal();
+
+      // Recargar la página para mostrar los cambios
+      window.location.reload();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el resultado del partido";
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: errorMessage,
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -417,6 +548,11 @@ export default function PartidosList({
 
   const columns = [
     { key: "PartidoId", label: "ID" },
+    {
+      key: "versus",
+      label: "Partido",
+      render: (item: Partido) => formatearVersus(item.jugadores),
+    },
     { key: "PartidoFecha", label: "Fecha" },
     { key: "PartidoHoraInicio", label: "Hora Inicio" },
     { key: "PartidoHoraFin", label: "Hora Fin" },
@@ -464,6 +600,7 @@ export default function PartidosList({
         data={partidos}
         onEdit={onEdit}
         onDelete={onDelete ? (item) => onDelete(item.PartidoId) : undefined}
+        onSelectWinner={handleSelectWinner}
         emptyMessage="No se encontraron partidos"
       />
       {isModalOpen && (
@@ -841,15 +978,21 @@ export default function PartidosList({
                             </span>
                             <p
                               className={`text-sm font-medium ${
+                                jugador.PartidoJugadorResultado === "G" ||
                                 jugador.PartidoJugadorResultado === "GANADOR"
                                   ? "text-green-600"
-                                  : jugador.PartidoJugadorResultado ===
-                                    "PERDEDOR"
+                                  : jugador.PartidoJugadorResultado === "P" ||
+                                    jugador.PartidoJugadorResultado ===
+                                      "PERDEDOR"
                                   ? "text-red-600"
                                   : "text-yellow-600"
                               }`}
                             >
-                              {jugador.PartidoJugadorResultado || "PENDIENTE"}
+                              {jugador.PartidoJugadorResultado === "G"
+                                ? "GANADOR"
+                                : jugador.PartidoJugadorResultado === "P"
+                                ? "PERDEDOR"
+                                : "PENDIENTE"}
                             </p>
                           </div>
                           <div>
@@ -903,6 +1046,125 @@ export default function PartidosList({
                 />
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de selección de ganador */}
+      {isWinnerModalOpen && selectedPartido && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseWinnerModal();
+          }}
+        >
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <div className="relative w-full max-w-md z-10">
+            <div
+              className="relative bg-white rounded-lg shadow p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Seleccionar Ganador
+                </h3>
+                <button
+                  type="button"
+                  className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center"
+                  onClick={handleCloseWinnerModal}
+                >
+                  <svg
+                    className="w-3 h-3"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">ID:</span>{" "}
+                  {selectedPartido.PartidoId}
+                </div>
+                <div className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">Categoría:</span>{" "}
+                  {selectedPartido.PartidoCategoria}
+                </div>
+                <div className="text-sm text-gray-600 mb-4">
+                  <span className="font-medium">Fecha:</span>{" "}
+                  {selectedPartido.PartidoFecha}
+                </div>
+                <div className="text-sm text-gray-700">
+                  {formatearVersus(selectedPartido.jugadores, true)}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-900">
+                  ¿Cuál equipo fue el ganador?
+                </p>
+
+                {/* Equipo 1 */}
+                <button
+                  onClick={() => handleConfirmWinner("1")}
+                  className="w-full p-4 text-left border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-blue-600">Equipo 1</div>
+                      <div className="text-sm text-gray-600">
+                        {selectedPartido.jugadores
+                          ?.filter(
+                            (j) => String(j.PartidoJugadorPareja) === "1"
+                          )
+                          .map((j) => `${j.ClienteNombre} ${j.ClienteApellido}`)
+                          .join(" - ")}
+                      </div>
+                    </div>
+                    <div className="text-2xl">🏆</div>
+                  </div>
+                </button>
+
+                {/* Equipo 2 */}
+                <button
+                  onClick={() => handleConfirmWinner("2")}
+                  className="w-full p-4 text-left border-2 border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-red-600">Equipo 2</div>
+                      <div className="text-sm text-gray-600">
+                        {selectedPartido.jugadores
+                          ?.filter(
+                            (j) => String(j.PartidoJugadorPareja) === "2"
+                          )
+                          .map((j) => `${j.ClienteNombre} ${j.ClienteApellido}`)
+                          .join(" - ")}
+                      </div>
+                    </div>
+                    <div className="text-2xl">🏆</div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <ActionButton
+                  label="Cancelar"
+                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  onClick={handleCloseWinnerModal}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}

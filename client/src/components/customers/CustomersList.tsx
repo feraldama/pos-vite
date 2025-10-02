@@ -14,6 +14,7 @@ interface Cliente {
   ClienteDireccion: string;
   ClienteTelefono: string;
   ClienteTipo: string;
+  ClienteCategoria: string;
   UsuarioId: string;
   [key: string]: unknown;
 }
@@ -68,6 +69,7 @@ export default function CustomersList({
     ClienteDireccion: "",
     ClienteTelefono: "",
     ClienteTipo: "",
+    ClienteCategoria: "",
     UsuarioId: "",
   });
 
@@ -75,7 +77,10 @@ export default function CustomersList({
 
   useEffect(() => {
     if (currentCliente) {
-      setFormData({ ...currentCliente });
+      setFormData({
+        ...currentCliente,
+        ClienteTipo: "MI", // Siempre forzar MI para edición también
+      });
     } else {
       setFormData({
         id: "",
@@ -86,6 +91,7 @@ export default function CustomersList({
         ClienteDireccion: "",
         ClienteTelefono: "",
         ClienteTipo: "MI",
+        ClienteCategoria: "INICIAL",
         UsuarioId: user?.id || "",
       });
     }
@@ -103,7 +109,12 @@ export default function CustomersList({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Asegurar que ClienteTipo siempre sea "MI"
+    const dataToSubmit = {
+      ...formData,
+      ClienteTipo: "MI",
+    };
+    onSubmit(dataToSubmit);
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -117,9 +128,9 @@ export default function CustomersList({
     { key: "ClienteRUC", label: "RUC" },
     { key: "ClienteNombre", label: "Nombre" },
     { key: "ClienteApellido", label: "Apellido" },
-    { key: "ClienteDireccion", label: "Dirección" },
+    { key: "ClienteCategoria", label: "Categoría" },
     { key: "ClienteTelefono", label: "Teléfono" },
-    { key: "ClienteTipo", label: "Tipo" },
+    { key: "ClienteDireccion", label: "Dirección" },
     { key: "UsuarioId", label: "Usuario" },
   ];
 
@@ -132,13 +143,13 @@ export default function CustomersList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar clientes"
+            placeholder="Buscar jugadores"
           />
         </div>
         <div className="py-4">
           {onCreate && (
             <ActionButton
-              label="Nuevo Cliente"
+              label="Nuevo Jugador"
               onClick={onCreate}
               icon={PlusIcon}
             />
@@ -147,7 +158,7 @@ export default function CustomersList({
       </div>
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-gray-600">
-          Mostrando {clientes.length} de {pagination?.totalItems} clientes
+          Mostrando {clientes.length} de {pagination?.totalItems} jugadores
         </div>
       </div>
       <DataTable<Cliente>
@@ -155,7 +166,7 @@ export default function CustomersList({
         data={clientes}
         onEdit={onEdit}
         onDelete={onDelete}
-        emptyMessage="No se encontraron clientes"
+        emptyMessage="No se encontraron jugadores"
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSort={onSort}
@@ -174,8 +185,8 @@ export default function CustomersList({
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
                   {currentCliente
-                    ? `Editar cliente: ${currentCliente.ClienteId}`
-                    : "Crear nuevo cliente"}
+                    ? `Editar jugador: ${currentCliente.ClienteId}`
+                    : "Crear nuevo jugador"}
                 </h3>
                 <button
                   type="button"
@@ -284,21 +295,28 @@ export default function CustomersList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="ClienteTipo"
+                      htmlFor="ClienteCategoria"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Tipo
+                      Categoría
                     </label>
                     <select
-                      name="ClienteTipo"
-                      id="ClienteTipo"
-                      value={formData.ClienteTipo}
+                      name="ClienteCategoria"
+                      id="ClienteCategoria"
+                      value={formData.ClienteCategoria}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     >
-                      <option value="MI">Minorista</option>
-                      <option value="MA">Mayorista</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                      <option value="7">7</option>
+                      <option value="8">8</option>
+                      <option value="INICIAL">INICIAL</option>
                     </select>
                   </div>
                   <div className="col-span-6 sm:col-span-3">

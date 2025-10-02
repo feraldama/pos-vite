@@ -122,7 +122,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
         </button>
         <div className="flex justify-between items-center mb-4 pr-8">
           <h2 className="text-2xl font-semibold text-gray-800">
-            Buscar Cliente
+            Buscar Jugador
           </h2>
           {onCreateCliente && (
             <button
@@ -130,7 +130,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
             >
               <PlusIcon className="w-4 h-4" />
-              Nuevo Cliente
+              Nuevo Jugador
             </button>
           )}
         </div>
@@ -290,7 +290,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               >
                 <div className="flex items-start justify-between p-4 border-b rounded-t">
                   <h3 className="text-xl font-semibold text-gray-900">
-                    Crear nuevo cliente
+                    Crear nuevo jugador
                   </h3>
                   <button
                     type="button"

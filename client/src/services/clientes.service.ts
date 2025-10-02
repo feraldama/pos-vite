@@ -18,7 +18,9 @@ export const getClientes = async (
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    throw axiosError.response?.data || { message: "Error al obtener clientes" };
+    throw (
+      axiosError.response?.data || { message: "Error al obtener jugadores" }
+    );
   }
 };
 
@@ -28,7 +30,7 @@ export const getClienteById = async (id: string | number) => {
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    throw axiosError.response?.data || { message: "Error al obtener cliente" };
+    throw axiosError.response?.data || { message: "Error al obtener jugador" };
   }
 };
 
@@ -38,7 +40,7 @@ export const createCliente = async (clienteData: Record<string, unknown>) => {
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    throw axiosError.response?.data || { message: "Error al crear cliente" };
+    throw axiosError.response?.data || { message: "Error al crear jugador" };
   }
 };
 
@@ -52,7 +54,7 @@ export const updateCliente = async (
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
     throw (
-      axiosError.response?.data || { message: "Error al actualizar cliente" }
+      axiosError.response?.data || { message: "Error al actualizar jugador" }
     );
   }
 };
@@ -63,7 +65,7 @@ export const deleteCliente = async (id: string | number) => {
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    throw axiosError.response?.data || { message: "Error al eliminar cliente" };
+    throw axiosError.response?.data || { message: "Error al eliminar jugador" };
   }
 };
 
@@ -86,7 +88,7 @@ export const searchClientes = async (
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    throw axiosError.response?.data || { message: "Error al buscar clientes" };
+    throw axiosError.response?.data || { message: "Error al buscar jugadores" };
   }
 };
 
@@ -98,7 +100,7 @@ export const getAllClientesSinPaginacion = async () => {
     const axiosError = error as AxiosError<{ message?: string }>;
     throw (
       axiosError.response?.data || {
-        message: "Error al obtener todos los clientes",
+        message: "Error al obtener todos los jugadores",
       }
     );
   }

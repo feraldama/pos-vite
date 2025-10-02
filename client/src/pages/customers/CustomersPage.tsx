@@ -20,6 +20,7 @@ interface Cliente {
   ClienteDireccion: string;
   ClienteTelefono: string;
   ClienteTipo: string;
+  ClienteCategoria: string;
   UsuarioId: string;
   [key: string]: unknown;
 }
@@ -190,7 +191,7 @@ export default function CustomersPage() {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Clientes</h1>
+      <h1 className="text-2xl font-medium mb-3">Gestión de Jugadores</h1>
       <CustomersList
         clientes={clientesData.clientes.map((c) => ({ ...c, id: c.ClienteId }))}
         onDelete={

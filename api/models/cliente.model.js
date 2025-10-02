@@ -33,6 +33,7 @@ const Cliente = {
         "ClienteDireccion",
         "ClienteTelefono",
         "ClienteTipo",
+        "ClienteCategoria",
         "UsuarioId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -75,6 +76,7 @@ const Cliente = {
         "ClienteDireccion",
         "ClienteTelefono",
         "ClienteTipo",
+        "ClienteCategoria",
         "UsuarioId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -135,8 +137,9 @@ const Cliente = {
           ClienteDireccion,
           ClienteTelefono,
           ClienteTipo,
+          ClienteCategoria,
           UsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
         clienteData.ClienteRUC || "",
@@ -145,6 +148,7 @@ const Cliente = {
         clienteData.ClienteDireccion || "",
         clienteData.ClienteTelefono || "",
         clienteData.ClienteTipo || "",
+        clienteData.ClienteCategoria || "INICIAL",
         clienteData.UsuarioId || "",
       ];
       db.query(query, values, (err, result) => {
@@ -165,6 +169,7 @@ const Cliente = {
         "ClienteDireccion",
         "ClienteTelefono",
         "ClienteTipo",
+        "ClienteCategoria",
         "UsuarioId",
       ];
       camposActualizables.forEach((campo) => {

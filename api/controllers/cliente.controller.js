@@ -64,7 +64,7 @@ exports.searchClientes = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en searchClientes:", error);
-    res.status(500).json({ error: "Error al buscar clientes" });
+    res.status(500).json({ error: "Error al buscar jugadores" });
   }
 };
 
@@ -97,6 +97,7 @@ exports.createCliente = async (req, res) => {
       ClienteDireccion: req.body.ClienteDireccion || null,
       ClienteTelefono: req.body.ClienteTelefono || null,
       ClienteTipo: req.body.ClienteTipo,
+      ClienteCategoria: req.body.ClienteCategoria || "INICIAL",
       UsuarioId: req.body.UsuarioId,
     });
     res.status(201).json({

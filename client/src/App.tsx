@@ -27,6 +27,9 @@ import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
+import PartidosPage from "./pages/partidos/PartidosPage";
+import CanchasPage from "./pages/canchas/CanchasPage";
+import SucursalesPage from "./pages/sucursales/SucursalesPage";
 
 function App() {
   return (
@@ -48,6 +51,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             {/* Agrega aquí más rutas protegidas */}
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/partidos" element={<PartidosPage />} />;
             <Route path="/movements/summary" element={<MovementsPage />} />;
             <Route path="/movements/cajas" element={<CajasPage />} />;
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
@@ -66,6 +70,8 @@ function App() {
             <Route path="/modifications/ventas" element={<VentasPage />} />
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/canchas" element={<CanchasPage />} />
+            <Route path="/sucursales" element={<SucursalesPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

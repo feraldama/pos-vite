@@ -10,6 +10,9 @@ import {
   HomeIcon,
   KeyIcon,
   UsersIcon,
+  BuildingOffice2Icon,
+  ClockIcon,
+  MegaphoneIcon,
   // PencilSquareIcon,
   // BanknotesIcon,
   // CurrencyDollarIcon,
@@ -70,9 +73,24 @@ const navigation: NavigationItem[] = [
   //   icon: <RectangleGroupIcon className="h-7 w-6" />,
   // },
   {
+    name: "Sucursales",
+    href: "/sucursales",
+    icon: <BuildingOffice2Icon className="h-7 w-6" />,
+  },
+  {
+    name: "Canchas",
+    href: "/canchas",
+    icon: <ClockIcon className="h-7 w-6" />,
+  },
+  {
     name: "Jugadores",
     href: "/customers",
     icon: <UsersIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Partidos",
+    href: "/partidos",
+    icon: <MegaphoneIcon className="h-7 w-6" />,
   },
   {
     name: "Reportes",

@@ -1,0 +1,268 @@
+const db = require("../config/db");
+
+const Partido = {
+  getAll: () => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        `SELECT PartidoId, 
+                DATE_FORMAT(PartidoFecha, '%d-%m-%Y') as PartidoFecha, 
+                DATE_FORMAT(PartidoHoraInicio, '%H:%i') as PartidoHoraInicio,
+                DATE_FORMAT(PartidoHoraFin, '%H:%i') as PartidoHoraFin,
+                PartidoCategoria, 
+                PartidoEstado, 
+                CanchaId 
+         FROM partido`,
+        (err, results) => {
+          if (err) reject(err);
+          resolve(results);
+        }
+      );
+    });
+  },
+
+  getById: (id) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        `SELECT p.PartidoId, 
+                DATE_FORMAT(p.PartidoFecha, '%d-%m-%Y') as PartidoFecha, 
+                DATE_FORMAT(p.PartidoHoraInicio, '%H:%i') as PartidoHoraInicio,
+                DATE_FORMAT(p.PartidoHoraFin, '%H:%i') as PartidoHoraFin,
+                p.PartidoCategoria, 
+                p.PartidoEstado, 
+                p.CanchaId, 
+                c.CanchaNombre 
+         FROM partido p 
+         LEFT JOIN cancha c ON p.CanchaId = c.CanchaId 
+         WHERE p.PartidoId = ?`,
+        [id],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results.length > 0 ? results[0] : null);
+        }
+      );
+    });
+  },
+
+  getAllPaginated: (limit, offset, sortBy = "PartidoId", sortOrder = "ASC") => {
+    return new Promise((resolve, reject) => {
+      const allowedSortFields = [
+        "PartidoId",
+        "PartidoFecha",
+        "PartidoHoraInicio",
+        "PartidoHoraFin",
+        "PartidoCategoria",
+        "PartidoEstado",
+        "CanchaId",
+        "CanchaNombre",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "PartidoId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
+      db.query(
+        `SELECT p.PartidoId, 
+                DATE_FORMAT(p.PartidoFecha, '%d-%m-%Y') as PartidoFecha, 
+                DATE_FORMAT(p.PartidoHoraInicio, '%H:%i') as PartidoHoraInicio,
+                DATE_FORMAT(p.PartidoHoraFin, '%H:%i') as PartidoHoraFin,
+                p.PartidoCategoria, 
+                p.PartidoEstado, 
+                p.CanchaId, 
+                c.CanchaNombre 
+         FROM partido p 
+         LEFT JOIN cancha c ON p.CanchaId = c.CanchaId 
+         ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
+        [limit, offset],
+        (err, results) => {
+          if (err) return reject(err);
+
+          db.query(
+            "SELECT COUNT(*) as total FROM partido",
+            (err, countResult) => {
+              if (err) return reject(err);
+
+              resolve({
+                partidos: results,
+                total: countResult[0].total,
+              });
+            }
+          );
+        }
+      );
+    });
+  },
+
+  search: (term, limit, offset, sortBy = "PartidoId", sortOrder = "ASC") => {
+    return new Promise((resolve, reject) => {
+      const allowedSortFields = [
+        "PartidoId",
+        "PartidoFecha",
+        "PartidoHoraInicio",
+        "PartidoHoraFin",
+        "PartidoCategoria",
+        "PartidoEstado",
+        "CanchaId",
+        "CanchaNombre",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "PartidoId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
+      const searchQuery = `
+        SELECT p.PartidoId, 
+               DATE_FORMAT(p.PartidoFecha, '%d-%m-%Y') as PartidoFecha, 
+               DATE_FORMAT(p.PartidoHoraInicio, '%H:%i') as PartidoHoraInicio,
+               DATE_FORMAT(p.PartidoHoraFin, '%H:%i') as PartidoHoraFin,
+               p.PartidoCategoria, 
+               p.PartidoEstado, 
+               p.CanchaId, 
+               c.CanchaNombre 
+        FROM partido p
+        LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
+        WHERE p.PartidoCategoria LIKE ? 
+        OR (p.PartidoEstado = 1 AND ? = 'FINALIZADO')
+        OR (p.PartidoEstado = 0 AND ? = 'PENDIENTE')
+        OR c.CanchaNombre LIKE ?
+        ORDER BY p.${sortField} ${order}
+        LIMIT ? OFFSET ?
+      `;
+      const searchValue = `%${term}%`;
+      const upperTerm = term.toUpperCase();
+
+      db.query(
+        searchQuery,
+        [searchValue, upperTerm, upperTerm, searchValue, limit, offset],
+        (err, results) => {
+          if (err) return reject(err);
+
+          const countQuery = `
+            SELECT COUNT(*) as total FROM partido p
+            LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
+            WHERE p.PartidoCategoria LIKE ? 
+            OR (p.PartidoEstado = 1 AND ? = 'FINALIZADO')
+            OR (p.PartidoEstado = 0 AND ? = 'PENDIENTE')
+            OR c.CanchaNombre LIKE ?
+          `;
+
+          db.query(
+            countQuery,
+            [searchValue, upperTerm, upperTerm, searchValue],
+            (err, countResult) => {
+              if (err) return reject(err);
+
+              resolve({
+                partidos: results,
+                total: countResult[0]?.total || 0,
+              });
+            }
+          );
+        }
+      );
+    });
+  },
+
+  create: (partidoData) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        INSERT INTO partido (
+          PartidoFecha,
+          PartidoHoraInicio,
+          PartidoHoraFin,
+          PartidoCategoria,
+          PartidoEstado,
+          CanchaId
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `;
+      // Convertir a booleano si viene como string
+      const estado =
+        partidoData.PartidoEstado === "true" ||
+        partidoData.PartidoEstado === true
+          ? 1
+          : 0;
+      const values = [
+        partidoData.PartidoFecha,
+        partidoData.PartidoHoraInicio,
+        partidoData.PartidoHoraFin,
+        partidoData.PartidoCategoria,
+        estado,
+        partidoData.CanchaId,
+      ];
+      db.query(query, values, (err, result) => {
+        if (err) return reject(err);
+        resolve({
+          PartidoId: result.insertId,
+          ...partidoData,
+        });
+      });
+    });
+  },
+
+  update: (id, partidoData) => {
+    return new Promise((resolve, reject) => {
+      let updateFields = [];
+      let values = [];
+      const camposActualizables = [
+        "PartidoFecha",
+        "PartidoHoraInicio",
+        "PartidoHoraFin",
+        "PartidoCategoria",
+        "PartidoEstado",
+        "CanchaId",
+      ];
+      camposActualizables.forEach((campo) => {
+        if (partidoData[campo] !== undefined) {
+          updateFields.push(`${campo} = ?`);
+          // Convertir PartidoEstado a booleano si es necesario
+          if (campo === "PartidoEstado") {
+            const estado =
+              partidoData[campo] === "true" || partidoData[campo] === true
+                ? 1
+                : 0;
+            values.push(estado);
+          } else {
+            values.push(partidoData[campo]);
+          }
+        }
+      });
+      if (updateFields.length === 0) {
+        return resolve(null);
+      }
+      values.push(id);
+      const query = `
+        UPDATE partido 
+        SET ${updateFields.join(", ")}
+        WHERE PartidoId = ?
+      `;
+      db.query(query, values, async (err, result) => {
+        if (err) return reject(err);
+        if (result.affectedRows === 0) {
+          return resolve(null);
+        }
+        // Obtener el partido actualizado
+        Partido.getById(id).then(resolve).catch(reject);
+      });
+    });
+  },
+
+  delete: (id) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        "DELETE FROM partido WHERE PartidoId = ?",
+        [id],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.affectedRows > 0);
+        }
+      );
+    });
+  },
+};
+
+module.exports = Partido;

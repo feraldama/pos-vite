@@ -21,6 +21,10 @@ const ventaProductoRoutes = require("./routes/ventaproducto.routes");
 const ventaRoutes = require("./routes/venta.routes");
 const ventaCreditoRoutes = require("./routes/ventacredito.routes");
 const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
+const partidoRoutes = require("./routes/partido.routes");
+const partidoJugadorRoutes = require("./routes/partidojugador.routes");
+const canchaRoutes = require("./routes/cancha.routes");
+const sucursalRoutes = require("./routes/sucursal.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -58,6 +62,10 @@ app.use("/api/ventaproducto", ventaProductoRoutes);
 app.use("/api/venta", ventaRoutes);
 app.use("/api/ventacredito", ventaCreditoRoutes);
 app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
+app.use("/api/partidos", partidoRoutes);
+app.use("/api/partidojugadores", partidoJugadorRoutes);
+app.use("/api/canchas", canchaRoutes);
+app.use("/api/sucursales", sucursalRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

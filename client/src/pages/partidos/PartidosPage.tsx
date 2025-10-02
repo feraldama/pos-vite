@@ -5,12 +5,6 @@ import {
   updatePartido,
   deletePartido,
 } from "../../services/partido.service";
-import {
-  getPartidoJugadoresByPartidoId,
-  createPartidoJugador,
-  // updatePartidoJugador,
-  deletePartidoJugador,
-} from "../../services/partidojugador.service";
 // import { getClientes } from "../../services/clientes.service";
 import PartidosList from "../../components/partidos/PartidosList";
 import Pagination from "../../components/common/Pagination";
@@ -133,10 +127,8 @@ export default function PartidosPage() {
     partidoData: Partido & { jugadores?: PartidoJugador[] }
   ) => {
     try {
-      let partidoId = partidoData.PartidoId;
       if (currentPartido) {
         await updatePartido(currentPartido.PartidoId, { ...partidoData });
-        partidoId = currentPartido.PartidoId;
         Swal.fire({
           position: "top-end",
           icon: "success",
@@ -145,8 +137,7 @@ export default function PartidosPage() {
           timer: 2000,
         });
       } else {
-        const res = await createPartido({ ...partidoData });
-        partidoId = res.PartidoId;
+        await createPartido({ ...partidoData });
         Swal.fire({
           position: "top-end",
           icon: "success",
@@ -155,25 +146,8 @@ export default function PartidosPage() {
           timer: 2000,
         });
       }
-      // Gestionar jugadores del partido
-      if (partidoData.jugadores) {
-        // Obtener jugadores actuales
-        const actuales = await getPartidoJugadoresByPartidoId(partidoId);
-        const arr = Array.isArray(actuales) ? actuales : actuales.data;
-        if (Array.isArray(arr)) {
-          // Eliminar jugadores existentes
-          for (const jugador of arr) {
-            await deletePartidoJugador(jugador.PartidoJugadorId);
-          }
-        }
-        // Crear nuevos jugadores
-        for (const jugador of partidoData.jugadores) {
-          await createPartidoJugador({
-            ...jugador,
-            PartidoId: partidoId,
-          });
-        }
-      }
+      // Los jugadores ya fueron creados por el backend al crear el partido
+      // No necesitamos crear jugadores adicionales aquí
       setIsModalOpen(false);
       fetchPartidos();
     } catch {

@@ -94,7 +94,7 @@ export default function PartidosList({
     PartidoId: 0,
     ClienteId: 0,
     PartidoJugadorPareja: "1",
-    PartidoJugadorResultado: "PENDIENTE",
+    PartidoJugadorResultado: "",
     PartidoJugadorObs: "",
   });
   const [busquedaJugador, setBusquedaJugador] = useState("");
@@ -116,7 +116,7 @@ export default function PartidosList({
 
       if (currentPartido) {
         setFormData({
-          PartidoFecha: currentPartido.PartidoFecha,
+          PartidoFecha: convertirFechaParaInput(currentPartido.PartidoFecha),
           PartidoHoraInicio: currentPartido.PartidoHoraInicio,
           PartidoHoraFin: currentPartido.PartidoHoraFin,
           PartidoCategoria: currentPartido.PartidoCategoria,
@@ -126,8 +126,15 @@ export default function PartidosList({
 
         // Cargar jugadores del partido
         getPartidoJugadoresByPartidoId(currentPartido.PartidoId).then((res) => {
-          const arr = Array.isArray(res) ? res : res.data;
-          setJugadores(Array.isArray(arr) ? arr : []);
+          const jugadoresData = res.data || [];
+          // Convertir PartidoJugadorPareja de número a string para compatibilidad
+          const jugadoresFormateados = jugadoresData.map(
+            (jugador: PartidoJugador) => ({
+              ...jugador,
+              PartidoJugadorPareja: jugador.PartidoJugadorPareja.toString(),
+            })
+          );
+          setJugadores(jugadoresFormateados);
         });
       } else {
         setFormData({
@@ -187,6 +194,17 @@ export default function PartidosList({
     setBusquedaJugador("");
     setIsDropdownOpen(false);
   }, [formData.PartidoCategoria]);
+
+  // Función para convertir fecha de dd-mm-aaaa a aaaa-mm-dd
+  const convertirFechaParaInput = (fechaFormateada: string) => {
+    if (!fechaFormateada) return "";
+    const partes = fechaFormateada.split("-");
+    if (partes.length === 3) {
+      const [dia, mes, año] = partes;
+      return `${año}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+    }
+    return fechaFormateada;
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -288,7 +306,7 @@ export default function PartidosList({
       PartidoId: 0,
       ClienteId: 0,
       PartidoJugadorPareja: "1", // Siempre iniciar con pareja 1, el useEffect se encargará de cambiarlo si es necesario
-      PartidoJugadorResultado: "PENDIENTE",
+      PartidoJugadorResultado: "",
       PartidoJugadorObs: "",
     });
     setBusquedaJugador("");
@@ -465,7 +483,7 @@ export default function PartidosList({
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
                   {currentPartido
-                    ? `Editar partido: ${currentPartido.PartidoCategoria}`
+                    ? `Editar partido ID: ${currentPartido.PartidoId} - Categoría: ${currentPartido.PartidoCategoria}`
                     : "Crear nuevo partido"}
                 </h3>
                 <button
@@ -831,7 +849,7 @@ export default function PartidosList({
                                   : "text-yellow-600"
                               }`}
                             >
-                              {jugador.PartidoJugadorResultado}
+                              {jugador.PartidoJugadorResultado || "PENDIENTE"}
                             </p>
                           </div>
                           <div>

@@ -142,6 +142,7 @@ exports.createPartido = async (req, res) => {
       const jugador = req.body.jugadores[i];
       const jugadorData = {
         PartidoId: nuevoPartido.PartidoId,
+        PartidoJugadorId: i + 1,
         ClienteId: jugador.ClienteId,
         PartidoJugadorPareja: jugador.PartidoJugadorPareja,
         PartidoJugadorResultado: jugador.PartidoJugadorResultado || "",
@@ -149,8 +150,6 @@ exports.createPartido = async (req, res) => {
       };
 
       const nuevoJugador = await PartidoJugador.create(jugadorData);
-      // Asignar ID secuencial empezando desde 1
-      nuevoJugador.PartidoJugadorId = i + 1;
       jugadoresCreados.push(nuevoJugador);
     }
 
@@ -218,6 +217,7 @@ exports.updatePartido = async (req, res) => {
         const jugador = jugadores[i];
         const jugadorData = {
           PartidoId: parseInt(id),
+          PartidoJugadorId: i + 1,
           ClienteId: jugador.ClienteId,
           PartidoJugadorPareja: jugador.PartidoJugadorPareja,
           PartidoJugadorResultado: jugador.PartidoJugadorResultado || "",
@@ -225,8 +225,6 @@ exports.updatePartido = async (req, res) => {
         };
 
         const nuevoJugador = await PartidoJugador.create(jugadorData);
-        // Asignar ID secuencial empezando desde 1
-        nuevoJugador.PartidoJugadorId = i + 1;
         jugadoresCreados.push(nuevoJugador);
       }
 

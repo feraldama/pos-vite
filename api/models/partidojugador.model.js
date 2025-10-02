@@ -167,14 +167,16 @@ const PartidoJugador = {
     return new Promise((resolve, reject) => {
       const query = `
         INSERT INTO partidojugador (
+          PartidoJugadorId,
           PartidoId,
           ClienteId,
           PartidoJugadorPareja,
           PartidoJugadorResultado,
           PartidoJugadorObs
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `;
       const values = [
+        partidoJugadorData.PartidoJugadorId,
         partidoJugadorData.PartidoId,
         partidoJugadorData.ClienteId,
         partidoJugadorData.PartidoJugadorPareja,
@@ -184,7 +186,7 @@ const PartidoJugador = {
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
         resolve({
-          PartidoJugadorId: result.insertId,
+          PartidoJugadorId: partidoJugadorData.PartidoJugadorId,
           ...partidoJugadorData,
         });
       });

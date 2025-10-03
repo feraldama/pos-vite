@@ -10,5 +10,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/winners/",
 });
+
+// export default defineConfig({
+//   plugins: [react(), tailwindcss()],
+//   base: "/winners/",
+// });

@@ -47,7 +47,17 @@ export default function SearchButton({
           className="block w-full pl-8 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
           placeholder={placeholder}
           value={searchTerm}
-          onChange={(e) => onSearch(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            // No permitir que el primer carácter sea un 0
+            if (value.startsWith("0")) {
+              // Si comienza con 0, remover el 0 del inicio
+              const cleanValue = value.replace(/^0+/, "");
+              onSearch(cleanValue);
+            } else {
+              onSearch(value);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

@@ -3,22 +3,10 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import { getLocales } from "../../services/locales.service";
+import { getSucursales } from "../../services/sucursal.service";
 import { getPerfiles } from "../../services/perfiles.service";
 import { getPerfilesByUsuario } from "../../services/usuarioperfil.service";
-
-interface Usuario {
-  id: string | number;
-  UsuarioId: string;
-  UsuarioNombre: string;
-  UsuarioApellido: string;
-  UsuarioCorreo: string;
-  UsuarioIsAdmin: "S" | "N";
-  UsuarioEstado: "A" | "I";
-  LocalId: number;
-  LocalNombre?: string;
-  [key: string]: unknown;
-}
+import type { Usuario } from "../../types/usuario.types";
 
 interface Pagination {
   totalItems: number;
@@ -37,7 +25,7 @@ interface UsuariosListProps {
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentUser?: Usuario | null;
-  onSubmit: (formData: Usuario) => void;
+  onSubmit: (formData: Usuario & { perfilesSeleccionados?: number[] }) => void;
   editingPassword: boolean;
   setEditingPassword: (value: boolean) => void;
   sortKey?: string;
@@ -74,11 +62,11 @@ export default function UsuariosList({
     UsuarioCorreo: "",
     UsuarioIsAdmin: "N" as "S" | "N",
     UsuarioEstado: "A" as "A" | "I",
-    LocalId: 1,
+    SucursalId: 1,
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [locales, setLocales] = useState<
-    { LocalId: number; LocalNombre: string }[]
+  const [sucursales, setSucursales] = useState<
+    { SucursalId: number; SucursalNombre: string }[]
   >([]);
   const [perfiles, setPerfiles] = useState<
     { PerfilId: number; PerfilDescripcion: string }[]
@@ -99,7 +87,7 @@ export default function UsuariosList({
         UsuarioCorreo: currentUser.UsuarioCorreo,
         UsuarioIsAdmin: currentUser.UsuarioIsAdmin,
         UsuarioEstado: currentUser.UsuarioEstado,
-        LocalId: currentUser.LocalId,
+        SucursalId: currentUser.SucursalId,
       });
       // setEditingPassword(false); // Resetear estado de edición de contraseña
     } else {
@@ -113,11 +101,11 @@ export default function UsuariosList({
         UsuarioCorreo: "",
         UsuarioIsAdmin: "N",
         UsuarioEstado: "A",
-        LocalId: 1,
+        SucursalId: 1,
       });
     }
-    getLocales(1, 1000).then((res) => {
-      setLocales(res.data || []);
+    getSucursales(1, 1000).then((res) => {
+      setSucursales(res.data || []);
     });
   }, [currentUser, setEditingPassword]);
 
@@ -208,9 +196,9 @@ export default function UsuariosList({
       status: true,
     },
     {
-      key: "LocalNombre",
-      label: "Local",
-      render: (item: Usuario) => item.LocalNombre || item.LocalId || "-",
+      key: "SucursalNombre",
+      label: "Sucursal",
+      render: (item: Usuario) => item.SucursalNombre || item.SucursalId || "-",
     },
   ];
 
@@ -389,23 +377,23 @@ export default function UsuariosList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="LocalId"
+                      htmlFor="SucursalId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Local
+                      Sucursal
                     </label>
                     <select
-                      name="LocalId"
-                      id="LocalId"
-                      value={formData.LocalId}
+                      name="SucursalId"
+                      id="SucursalId"
+                      value={formData.SucursalId}
                       onChange={handleInputChange}
                       className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
                       required
                     >
-                      <option value="">Seleccione un local</option>
-                      {locales.map((local) => (
-                        <option key={local.LocalId} value={local.LocalId}>
-                          {local.LocalNombre}
+                      <option value="">Seleccione una sucursal</option>
+                      {sucursales.map((sucursal) => (
+                        <option key={sucursal.SucursalId} value={sucursal.SucursalId}>
+                          {sucursal.SucursalNombre}
                         </option>
                       ))}
                     </select>

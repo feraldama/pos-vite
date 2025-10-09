@@ -129,7 +129,7 @@ exports.login = async (req, res) => {
       email: usuario.UsuarioCorreo,
       isAdmin: usuario.UsuarioIsAdmin,
       estado: usuario.UsuarioEstado,
-      LocalId: usuario.LocalId,
+      SucursalId: usuario.SucursalId,
     };
 
     // Generar token
@@ -186,7 +186,7 @@ exports.createUsuario = async (req, res) => {
       "UsuarioContrasena",
       "UsuarioIsAdmin",
       "UsuarioEstado",
-      "LocalId",
+      "SucursalId",
     ];
 
     for (const campo of camposRequeridos) {
@@ -233,11 +233,11 @@ exports.createUsuario = async (req, res) => {
       });
     }
 
-    // 5. Validación de LocalId (debe ser número)
-    if (isNaN(req.body.LocalId)) {
+    // 5. Validación de SucursalId (debe ser número)
+    if (isNaN(req.body.SucursalId)) {
       return res.status(400).json({
         success: false,
-        message: "LocalId debe ser un número",
+        message: "SucursalId debe ser un número",
       });
     }
 
@@ -250,7 +250,7 @@ exports.createUsuario = async (req, res) => {
       UsuarioContrasena: req.body.UsuarioContrasena,
       UsuarioIsAdmin: req.body.UsuarioIsAdmin,
       UsuarioEstado: req.body.UsuarioEstado,
-      LocalId: req.body.LocalId,
+      SucursalId: req.body.SucursalId,
     });
 
     // 7. Retornar respuesta exitosa (sin incluir la contraseña)

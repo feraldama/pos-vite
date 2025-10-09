@@ -46,8 +46,8 @@ const Usuario = {
         "UsuarioCorreo",
         "UsuarioIsAdmin",
         "UsuarioEstado",
-        "LocalId",
-        "LocalNombre",
+        "SucursalId",
+        "SucursalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -58,9 +58,9 @@ const Usuario = {
         : "ASC";
 
       const query = `
-        SELECT u.*, l.LocalNombre
+        SELECT u.*, s.SucursalNombre
         FROM usuario u
-        LEFT JOIN local l ON u.LocalId = l.LocalId
+        LEFT JOIN Sucursal s ON u.SucursalId = s.SucursalId
         ORDER BY u.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -92,8 +92,8 @@ const Usuario = {
         "UsuarioCorreo",
         "UsuarioIsAdmin",
         "UsuarioEstado",
-        "LocalId",
-        "LocalNombre",
+        "SucursalId",
+        "SucursalNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -104,13 +104,13 @@ const Usuario = {
         : "ASC";
 
       const searchQuery = `
-        SELECT u.*, l.LocalNombre
+        SELECT u.*, s.SucursalNombre
         FROM usuario u
-        LEFT JOIN local l ON u.LocalId = l.LocalId
+        LEFT JOIN Sucursal s ON u.SucursalId = s.SucursalId
         WHERE CONCAT(u.UsuarioNombre, ' ', u.UsuarioApellido) LIKE ?
         OR u.UsuarioCorreo LIKE ?
         OR u.UsuarioId LIKE ?
-        OR l.LocalNombre LIKE ?
+        OR s.SucursalNombre LIKE ?
         ORDER BY u.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -124,11 +124,11 @@ const Usuario = {
 
           const countQuery = `
             SELECT COUNT(*) as total FROM usuario u
-            LEFT JOIN local l ON u.LocalId = l.LocalId
+            LEFT JOIN Sucursal s ON u.SucursalId = s.SucursalId
             WHERE CONCAT(u.UsuarioNombre, ' ', u.UsuarioApellido) LIKE ?
             OR u.UsuarioCorreo LIKE ?
             OR u.UsuarioId LIKE ?
-            OR l.LocalNombre LIKE ?
+            OR s.SucursalNombre LIKE ?
           `;
 
           db.query(
@@ -163,7 +163,7 @@ const Usuario = {
         UsuarioContrasena, 
         UsuarioIsAdmin, 
         UsuarioEstado, 
-        LocalId
+        SucursalId
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -175,7 +175,7 @@ const Usuario = {
         usuarioData.UsuarioContrasena ? hashedPassword : hashedPassword,
         usuarioData.UsuarioIsAdmin,
         usuarioData.UsuarioEstado,
-        usuarioData.LocalId,
+        usuarioData.SucursalId,
       ];
 
       db.query(query, values, (err, result) => {
@@ -187,7 +187,7 @@ const Usuario = {
           UsuarioCorreo: usuarioData.UsuarioCorreo ?? "",
           UsuarioIsAdmin: usuarioData.UsuarioIsAdmin,
           UsuarioEstado: usuarioData.UsuarioEstado,
-          LocalId: usuarioData.LocalId,
+          SucursalId: usuarioData.SucursalId,
         });
       });
     });
@@ -211,7 +211,7 @@ const Usuario = {
           "UsuarioCorreo",
           "UsuarioIsAdmin",
           "UsuarioEstado",
-          "LocalId",
+          "SucursalId",
         ];
 
         // Si se proporciona una nueva contraseña y no está vacía, hashearla

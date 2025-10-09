@@ -15,27 +15,14 @@ import {
   getPerfilesByUsuario,
   deleteUsuarioPerfil,
 } from "../../services/usuarioperfil.service";
+import type { Usuario, UsuarioConPerfiles } from "../../types/usuario.types";
 
 // Tipos auxiliares
-interface Usuario {
-  id: string | number;
-  UsuarioId: string;
-  UsuarioNombre: string;
-  UsuarioApellido: string;
-  UsuarioCorreo: string;
-  UsuarioIsAdmin: "S" | "N";
-  UsuarioEstado: "A" | "I";
-  LocalId: number;
-  [key: string]: unknown;
-}
-
 interface Pagination {
   totalItems: number;
   totalPages: number;
   [key: string]: unknown;
 }
-
-type UsuarioConPerfiles = Usuario & { perfilesSeleccionados?: number[] };
 
 export default function UsuariosPage() {
   const [usuariosData, setUsuariosData] = useState<{

@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import api from "../../services/api";
-import { formatMiles } from "../../utils/utils";
 import {
   getEstadisticasJugadores,
   getResumenGeneral,
@@ -12,14 +10,6 @@ import {
   type ResumenGeneral,
 } from "../../services/reportes.service";
 
-interface DeudaCliente {
-  ClienteId: number;
-  Cliente: string;
-  TotalVentas: number;
-  TotalEntregado: number;
-  Saldo: number;
-}
-
 const ReportesPage: React.FC = () => {
   const puedeLeer = usePermiso("REPORTES", "leer");
   const [loading, setLoading] = useState(false);
@@ -27,50 +17,6 @@ const ReportesPage: React.FC = () => {
   const [loadingType, setLoadingType] = useState<string | null>(null);
 
   if (!puedeLeer) return <div>No tienes permiso para ver los reportes</div>;
-
-  // Función para generar PDF de créditos pendientes (existente)
-  const handleGenerarPDF = async () => {
-    setLoading(true);
-    setLoadingType("creditos");
-    setError(null);
-    try {
-      const res = await api.get("/venta/pendientes");
-      const deudas: DeudaCliente[] = res.data.data || [];
-      const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Créditos Pendientes a Cobrar", 14, 18);
-      let y = 28;
-      let totalGeneral = 0;
-      const rows = deudas.map((d) => [
-        d.ClienteId,
-        d.Cliente,
-        formatMiles(d.TotalVentas),
-        formatMiles(d.TotalEntregado),
-        formatMiles(d.Saldo),
-      ]);
-      autoTable(doc, {
-        head: [["CLIENTE ID", "CLIENTE", "TOTAL", "ENTREGA", "SALDO"]],
-        body: rows,
-        startY: y,
-        theme: "grid",
-        headStyles: { fillColor: [22, 163, 74] },
-        styles: { fontSize: 11 },
-        margin: { left: 14, right: 14 },
-      });
-      y =
-        (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
-          .finalY + 12;
-      totalGeneral = deudas.reduce((acc, d) => acc + Number(d.Saldo), 0);
-      doc.setFontSize(14);
-      doc.text(`TOTAL GENERAL: Gs. ${formatMiles(totalGeneral)}`, 14, y);
-      doc.save("creditos_pendientes.pdf");
-    } catch {
-      setError("Error al generar el PDF de deudas pendientes");
-    } finally {
-      setLoading(false);
-      setLoadingType(null);
-    }
-  };
 
   // Función para generar PDF de estadísticas de jugadores
   const handleGenerarEstadisticasJugadores = async () => {
@@ -321,24 +267,6 @@ const ReportesPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
-
-      {/* Reportes de Ventas */}
-      {/* <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-          Reportes de Ventas
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-lg shadow transition disabled:opacity-50"
-            onClick={handleGenerarPDF}
-            disabled={loading}
-          >
-            {loadingType === "creditos"
-              ? "Generando..."
-              : "CRÉDITOS PENDIENTES"}
-          </button>
-        </div>
-      </div> */}
 
       {/* Reportes de Jugadores */}
       <div className="mb-8">

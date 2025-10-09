@@ -323,7 +323,7 @@ const ReportesPage: React.FC = () => {
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
 
       {/* Reportes de Ventas */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">
           Reportes de Ventas
         </h2>
@@ -338,7 +338,7 @@ const ReportesPage: React.FC = () => {
               : "CRÉDITOS PENDIENTES"}
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Reportes de Jugadores */}
       <div className="mb-8">

@@ -45,7 +45,7 @@ const navigation: NavigationItem[] = [
     icon: <LockClosedIcon className="h-7 w-6" />,
   },
   {
-    name: "Ventas",
+    name: "Cobranzas",
     href: "/ventas",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },

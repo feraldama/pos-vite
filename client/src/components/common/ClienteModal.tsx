@@ -11,6 +11,7 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
+  ClienteCopa?: number;
 }
 
 interface ClienteModalProps {
@@ -48,6 +49,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
     ClienteTelefono: "",
     ClienteTipo: "MI",
     UsuarioId: currentUserId || "",
+    ClienteCopa: 0,
   });
 
   const clientesFiltrados = useMemo(() => {
@@ -74,6 +76,11 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    if (name === "ClienteCopa") {
+      const num = Math.max(0, Math.min(3, Number(value)));
+      setFormData((prev) => ({ ...prev, ClienteCopa: num }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]:
@@ -98,6 +105,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
         ClienteTelefono: "",
         ClienteTipo: "MI",
         UsuarioId: currentUserId || "",
+        ClienteCopa: 0,
       });
     }
   };
@@ -431,6 +439,24 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         readOnly
                         disabled
                         className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                      />
+                    </div>
+                    <div className="col-span-6 sm:col-span-3">
+                      <label
+                        htmlFor="ClienteCopa"
+                        className="block mb-2 text-sm font-medium text-gray-900"
+                      >
+                        Copas (0-3)
+                      </label>
+                      <input
+                        type="number"
+                        name="ClienteCopa"
+                        id="ClienteCopa"
+                        min={0}
+                        max={3}
+                        value={Number(formData.ClienteCopa ?? 0)}
+                        onChange={handleInputChange}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
                   </div>

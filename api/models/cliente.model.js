@@ -36,6 +36,7 @@ const Cliente = {
         "ClienteCategoria",
         "UsuarioId",
         "ClienteSexo",
+        "ClienteCopa",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -80,6 +81,7 @@ const Cliente = {
         "ClienteCategoria",
         "UsuarioId",
         "ClienteSexo",
+        "ClienteCopa",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -141,8 +143,9 @@ const Cliente = {
           ClienteTipo,
           ClienteCategoria,
           UsuarioId,
-          ClienteSexo
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ClienteSexo,
+          ClienteCopa
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
         clienteData.ClienteRUC || "",
@@ -154,6 +157,9 @@ const Cliente = {
         clienteData.ClienteCategoria || "INICIAL",
         clienteData.UsuarioId || "",
         clienteData.ClienteSexo || null,
+        typeof clienteData.ClienteCopa === "number"
+          ? clienteData.ClienteCopa
+          : 0,
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -176,6 +182,7 @@ const Cliente = {
         "ClienteCategoria",
         "UsuarioId",
         "ClienteSexo",
+        "ClienteCopa",
       ];
       camposActualizables.forEach((campo) => {
         if (clienteData[campo] !== undefined) {

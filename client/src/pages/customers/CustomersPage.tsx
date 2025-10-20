@@ -23,6 +23,7 @@ interface Cliente {
   ClienteCategoria: string;
   ClienteSexo?: "M" | "F" | "";
   UsuarioId: string;
+  ClienteCopa?: number;
   [key: string]: unknown;
 }
 

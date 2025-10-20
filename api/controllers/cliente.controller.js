@@ -104,6 +104,18 @@ exports.createCliente = async (req, res) => {
         });
       }
     }
+    // Validación de ClienteCopa (0 a 3)
+    let clienteCopa = 0;
+    if (req.body.ClienteCopa !== undefined && req.body.ClienteCopa !== null) {
+      const n = Number(req.body.ClienteCopa);
+      if (!Number.isInteger(n) || n < 0 || n > 3) {
+        return res.status(400).json({
+          success: false,
+          message: "ClienteCopa debe ser un entero entre 0 y 3",
+        });
+      }
+      clienteCopa = n;
+    }
     // Crear el nuevo cliente
     const nuevoCliente = await Cliente.create({
       ClienteRUC: req.body.ClienteRUC || "",
@@ -115,6 +127,7 @@ exports.createCliente = async (req, res) => {
       ClienteCategoria: req.body.ClienteCategoria || "INICIAL",
       UsuarioId: req.body.UsuarioId,
       ClienteSexo: sexo,
+      ClienteCopa: clienteCopa,
     });
     res.status(201).json({
       success: true,
@@ -154,6 +167,17 @@ exports.updateCliente = async (req, res) => {
           message: "ClienteSexo debe ser 'M' o 'F'",
         });
       }
+    }
+    // Validación de ClienteCopa si viene en el payload
+    if (clienteData.ClienteCopa !== undefined) {
+      const n = Number(clienteData.ClienteCopa);
+      if (!Number.isInteger(n) || n < 0 || n > 3) {
+        return res.status(400).json({
+          success: false,
+          message: "ClienteCopa debe ser un entero entre 0 y 3",
+        });
+      }
+      clienteData.ClienteCopa = n;
     }
     const updatedCliente = await Cliente.update(id, clienteData);
     if (!updatedCliente) {

@@ -3,6 +3,7 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import { TrophyIcon } from "@heroicons/react/24/solid";
 import { useAuth } from "../../contexts/useAuth";
 
 interface Cliente {
@@ -17,6 +18,7 @@ interface Cliente {
   ClienteCategoria: string;
   ClienteSexo?: "M" | "F" | "";
   UsuarioId: string;
+  ClienteCopa?: number;
   [key: string]: unknown;
 }
 
@@ -73,6 +75,7 @@ export default function CustomersList({
     ClienteCategoria: "",
     ClienteSexo: "",
     UsuarioId: "",
+    ClienteCopa: 0,
   });
 
   const { user } = useAuth();
@@ -96,6 +99,7 @@ export default function CustomersList({
         ClienteCategoria: "INICIAL",
         ClienteSexo: "",
         UsuarioId: user?.id || "",
+        ClienteCopa: 0,
       });
     }
   }, [currentCliente, user]);
@@ -131,6 +135,17 @@ export default function CustomersList({
     { key: "ClienteRUC", label: "RUC" },
     { key: "ClienteNombre", label: "Nombre" },
     { key: "ClienteApellido", label: "Apellido" },
+    {
+      key: "ClienteCopa",
+      label: "Copas",
+      render: (item: Cliente) => (
+        <div className="flex gap-1">
+          {Array.from({ length: Number(item.ClienteCopa || 0) }).map((_, i) => (
+            <TrophyIcon key={i} className="h-4 w-4 text-amber-500" />
+          ))}
+        </div>
+      ),
+    },
     { key: "ClienteSexo", label: "Sexo" },
     { key: "ClienteCategoria", label: "Categoría" },
     { key: "ClienteTelefono", label: "Teléfono" },
@@ -341,6 +356,34 @@ export default function CustomersList({
                       <option value="8">8</option>
                       <option value="INICIAL">INICIAL</option>
                     </select>
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteCopa"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Copas (0-3)
+                    </label>
+                    <input
+                      type="number"
+                      name="ClienteCopa"
+                      id="ClienteCopa"
+                      min={0}
+                      max={3}
+                      value={Number(formData.ClienteCopa ?? 0)}
+                      onChange={(e) => {
+                        const value = Math.max(
+                          0,
+                          Math.min(3, Number(e.target.value))
+                        );
+                        setFormData((prev) => ({
+                          ...prev,
+                          ClienteCopa: value,
+                        }));
+                      }}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
+                    />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label

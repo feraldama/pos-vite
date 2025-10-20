@@ -461,9 +461,21 @@ export default function PartidosList({
             busquedaJugador.toLowerCase()
           );
 
-          // Filtrar por categoría (obligatorio)
-          const coincideCategoria =
-            cliente.ClienteCategoria === formData.PartidoCategoria;
+          // Filtrar por categoría del cliente en función de la categoría del partido
+          let coincideCategoria = false;
+          if (formData.PartidoCategoria === "SUMA11") {
+            // Para SUMA11 permitimos jugadores de 3,4,5,6,7,8
+            const permitidas = ["3", "4", "5", "6", "7", "8"];
+            coincideCategoria = permitidas.includes(cliente.ClienteCategoria);
+          } else if (formData.PartidoCategoria === "SUMA13") {
+            // Para SUMA13 permitimos jugadores de 5,6,7,8
+            const permitidas = ["5", "6", "7", "8"];
+            coincideCategoria = permitidas.includes(cliente.ClienteCategoria);
+          } else {
+            // Categorías tradicionales: igualdad exacta
+            coincideCategoria =
+              cliente.ClienteCategoria === formData.PartidoCategoria;
+          }
 
           // Filtrar por sexo según selección (M/F) o MIXTO (no filtra por sexo)
           const coincideSexo =
@@ -767,6 +779,8 @@ export default function PartidosList({
                       <option value="6">6</option>
                       <option value="7">7</option>
                       <option value="8">8</option>
+                      <option value="SUMA11">SUMA11</option>
+                      <option value="SUMA13">SUMA13</option>
                       <option value="INICIAL">INICIAL</option>
                     </select>
                   </div>

@@ -83,6 +83,11 @@ const navigation: NavigationItem[] = [
     icon: <ClockIcon className="h-7 w-6" />,
   },
   {
+    name: "Competencias",
+    href: "/competencias",
+    icon: <MegaphoneIcon className="h-7 w-6" />,
+  },
+  {
     name: "Jugadores",
     href: "/customers",
     icon: <UsersIcon className="h-7 w-6" />,

@@ -123,8 +123,24 @@ exports.createPartido = async (req, res) => {
       });
     }
 
-    // Convertir horas a formato TIMESTAMP
+    // Convertir horas a formato TIMESTAMP y validar PartidoSexo
     const partidoData = { ...req.body };
+    // Validación y normalización de PartidoSexo (M/F/X)
+    if (partidoData.PartidoSexo !== undefined) {
+      const sx = String(partidoData.PartidoSexo).trim().toUpperCase();
+      if (sx === "M" || sx === "F" || sx === "X") {
+        partidoData.PartidoSexo = sx;
+      } else if (sx === "") {
+        partidoData.PartidoSexo = null;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "PartidoSexo debe ser 'M', 'F' o 'X'",
+        });
+      }
+    } else {
+      partidoData.PartidoSexo = null;
+    }
     const { PartidoFecha, PartidoHoraInicio, PartidoHoraFin } = partidoData;
 
     // Crear timestamps combinando fecha y hora
@@ -184,6 +200,21 @@ exports.updatePartido = async (req, res) => {
         success: false,
         message: "PartidoFecha es un campo requerido",
       });
+    }
+
+    // Validación y normalización de PartidoSexo (M/F/X) si viene
+    if (partidoData.PartidoSexo !== undefined) {
+      const sx = String(partidoData.PartidoSexo).trim().toUpperCase();
+      if (sx === "M" || sx === "F" || sx === "X") {
+        partidoData.PartidoSexo = sx;
+      } else if (sx === "") {
+        partidoData.PartidoSexo = null;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "PartidoSexo debe ser 'M', 'F' o 'X'",
+        });
+      }
     }
 
     // Convertir horas a formato TIMESTAMP si están presentes

@@ -10,7 +10,8 @@ const Partido = {
                 DATE_FORMAT(PartidoHoraFin, '%H:%i') as PartidoHoraFin,
                 PartidoCategoria, 
                 PartidoEstado, 
-                CanchaId 
+                CanchaId,
+                PartidoSexo
          FROM partido`,
         (err, results) => {
           if (err) reject(err);
@@ -30,6 +31,7 @@ const Partido = {
                 p.PartidoCategoria, 
                 p.PartidoEstado, 
                 p.CanchaId, 
+                p.PartidoSexo,
                 c.CanchaNombre 
          FROM partido p 
          LEFT JOIN cancha c ON p.CanchaId = c.CanchaId 
@@ -53,6 +55,7 @@ const Partido = {
         "PartidoCategoria",
         "PartidoEstado",
         "CanchaId",
+        "PartidoSexo",
         "CanchaNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -71,6 +74,7 @@ const Partido = {
                 p.PartidoCategoria, 
                 p.PartidoEstado, 
                 p.CanchaId, 
+                p.PartidoSexo,
                 c.CanchaNombre 
          FROM partido p 
          LEFT JOIN cancha c ON p.CanchaId = c.CanchaId 
@@ -146,6 +150,7 @@ const Partido = {
         "PartidoCategoria",
         "PartidoEstado",
         "CanchaId",
+        "PartidoSexo",
         "CanchaNombre",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -164,6 +169,7 @@ const Partido = {
                p.PartidoCategoria, 
                p.PartidoEstado, 
                p.CanchaId, 
+               p.PartidoSexo,
                c.CanchaNombre 
         FROM partido p
         LEFT JOIN cancha c ON p.CanchaId = c.CanchaId
@@ -287,8 +293,9 @@ const Partido = {
           PartidoHoraFin,
           PartidoCategoria,
           PartidoEstado,
-          CanchaId
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          CanchaId,
+          PartidoSexo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
       // Convertir a booleano si viene como string
       const estado =
@@ -303,6 +310,7 @@ const Partido = {
         partidoData.PartidoCategoria,
         estado,
         partidoData.CanchaId,
+        partidoData.PartidoSexo || null,
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -325,6 +333,7 @@ const Partido = {
         "PartidoCategoria",
         "PartidoEstado",
         "CanchaId",
+        "PartidoSexo",
       ];
       camposActualizables.forEach((campo) => {
         if (partidoData[campo] !== undefined) {

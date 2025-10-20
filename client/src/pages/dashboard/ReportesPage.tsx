@@ -24,42 +24,70 @@ const ReportesPage: React.FC = () => {
     setLoadingType("estadisticas");
     setError(null);
     try {
-      const response = await getEstadisticasJugadores(1, 1000);
-      const jugadores: EstadisticaJugador[] = response.data || [];
+      const [respM, respF, respX] = await Promise.all([
+        getEstadisticasJugadores(1, 1000, undefined, undefined, "M"),
+        getEstadisticasJugadores(1, 1000, undefined, undefined, "F"),
+        getEstadisticasJugadores(1, 1000, undefined, undefined, "X"),
+      ]);
+      const ordenarNombre = (arr: EstadisticaJugador[]) =>
+        arr.sort((a, b) =>
+          a.ClienteNombre.toLowerCase().localeCompare(
+            b.ClienteNombre.toLowerCase()
+          )
+        );
 
-      // Ordenar jugadores por nombre
-      const jugadoresOrdenados = jugadores.sort((a, b) => {
-        const nombreA = a.ClienteNombre.toLowerCase();
-        const nombreB = b.ClienteNombre.toLowerCase();
-        return nombreA.localeCompare(nombreB);
-      });
+      const secciones: Array<{
+        titulo: string;
+        color: [number, number, number];
+        data: EstadisticaJugador[];
+      }> = [
+        {
+          titulo: "Masculino",
+          color: [59, 130, 246],
+          data: ordenarNombre(respM.data || []),
+        },
+        {
+          titulo: "Femenino",
+          color: [236, 72, 153],
+          data: ordenarNombre(respF.data || []),
+        },
+        {
+          titulo: "Mixto",
+          color: [107, 114, 128],
+          data: ordenarNombre(respX.data || []),
+        },
+      ];
 
       const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Estadísticas de Jugadores", 14, 18);
+      let currentY = 18;
+      for (const sec of secciones) {
+        doc.setFontSize(18);
+        doc.text(`Estadísticas de Jugadores - ${sec.titulo}`, 14, currentY);
+        autoTable(doc, {
+          head: [
+            ["ID", "JUGADOR", "PARTIDOS", "GANADOS", "PERDIDOS", "% VICTORIAS"],
+          ],
+          body: sec.data.map((j) => [
+            j.ClienteId,
+            `${j.ClienteNombre} ${j.ClienteApellido}`,
+            j.totalPartidos.toString(),
+            j.partidosGanados.toString(),
+            j.partidosPerdidos.toString(),
+            `${j.porcentajeVictorias}%`,
+          ]),
+          startY: currentY + 6,
+          theme: "grid",
+          headStyles: { fillColor: sec.color },
+          styles: { fontSize: 10 },
+          margin: { left: 14, right: 14 },
+        });
+        const docWithAutoTable = doc as jsPDF & {
+          lastAutoTable?: { finalY: number };
+        };
+        currentY = (docWithAutoTable.lastAutoTable?.finalY || currentY) + 14;
+      }
 
-      const rows = jugadoresOrdenados.map((j) => [
-        j.ClienteId,
-        `${j.ClienteNombre} ${j.ClienteApellido}`,
-        j.totalPartidos.toString(),
-        j.partidosGanados.toString(),
-        j.partidosPerdidos.toString(),
-        `${j.porcentajeVictorias}%`,
-      ]);
-
-      autoTable(doc, {
-        head: [
-          ["ID", "JUGADOR", "PARTIDOS", "GANADOS", "PERDIDOS", "% VICTORIAS"],
-        ],
-        body: rows,
-        startY: 28,
-        theme: "grid",
-        headStyles: { fillColor: [59, 130, 246] },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
-
-      doc.save("estadisticas_jugadores.pdf");
+      doc.save("estadisticas_jugadores_por_sexo.pdf");
     } catch {
       setError("Error al generar el PDF de estadísticas de jugadores");
     } finally {
@@ -114,44 +142,70 @@ const ReportesPage: React.FC = () => {
     setLoadingType("top-partidos");
     setError(null);
     try {
-      const response = await getTopJugadores("totalPartidos", 20);
-      const jugadores: EstadisticaJugador[] = response.data || [];
+      // Usar endpoint de estadísticas con sort por totalPartidos y filtro por sexo
+      const [respM, respF, respX] = await Promise.all([
+        getEstadisticasJugadores(1, 20, "totalPartidos", "desc", "M"),
+        getEstadisticasJugadores(1, 20, "totalPartidos", "desc", "F"),
+        getEstadisticasJugadores(1, 20, "totalPartidos", "desc", "X"),
+      ]);
+      const ordenar = (arr: EstadisticaJugador[]) =>
+        arr.sort((a, b) =>
+          b.totalPartidos !== a.totalPartidos
+            ? b.totalPartidos - a.totalPartidos
+            : a.ClienteNombre.toLowerCase().localeCompare(
+                b.ClienteNombre.toLowerCase()
+              )
+        );
 
-      // Ordenar jugadores por total de partidos (descendente) y luego por nombre en caso de empate
-      const jugadoresOrdenados = jugadores.sort((a, b) => {
-        // Primero por total de partidos (descendente)
-        if (b.totalPartidos !== a.totalPartidos) {
-          return b.totalPartidos - a.totalPartidos;
-        }
-        // En caso de empate, ordenar por nombre
-        const nombreA = a.ClienteNombre.toLowerCase();
-        const nombreB = b.ClienteNombre.toLowerCase();
-        return nombreA.localeCompare(nombreB);
-      });
+      const secciones: Array<{
+        titulo: string;
+        color: [number, number, number];
+        data: EstadisticaJugador[];
+      }> = [
+        {
+          titulo: "Masculino",
+          color: [59, 130, 246],
+          data: ordenar(respM.data || []),
+        },
+        {
+          titulo: "Femenino",
+          color: [236, 72, 153],
+          data: ordenar(respF.data || []),
+        },
+        {
+          titulo: "Mixto",
+          color: [107, 114, 128],
+          data: ordenar(respX.data || []),
+        },
+      ];
 
       const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Top 20 - Más Partidos Jugados", 14, 18);
+      let currentY = 18;
+      for (const sec of secciones) {
+        doc.setFontSize(18);
+        doc.text(`Top 20 - Más Partidos Jugados - ${sec.titulo}`, 14, currentY);
+        autoTable(doc, {
+          head: [["#", "JUGADOR", "PARTIDOS", "GANADOS", "% VICTORIAS"]],
+          body: sec.data.map((j, index) => [
+            (index + 1).toString(),
+            `${j.ClienteNombre} ${j.ClienteApellido}`,
+            j.totalPartidos.toString(),
+            j.partidosGanados.toString(),
+            `${j.porcentajeVictorias}%`,
+          ]),
+          startY: currentY + 6,
+          theme: "grid",
+          headStyles: { fillColor: sec.color },
+          styles: { fontSize: 10 },
+          margin: { left: 14, right: 14 },
+        });
+        const docWithAutoTable = doc as jsPDF & {
+          lastAutoTable?: { finalY: number };
+        };
+        currentY = (docWithAutoTable.lastAutoTable?.finalY || currentY) + 14;
+      }
 
-      const rows = jugadoresOrdenados.map((j, index) => [
-        (index + 1).toString(),
-        `${j.ClienteNombre} ${j.ClienteApellido}`,
-        j.totalPartidos.toString(),
-        j.partidosGanados.toString(),
-        `${j.porcentajeVictorias}%`,
-      ]);
-
-      autoTable(doc, {
-        head: [["#", "JUGADOR", "PARTIDOS", "GANADOS", "% VICTORIAS"]],
-        body: rows,
-        startY: 28,
-        theme: "grid",
-        headStyles: { fillColor: [16, 185, 129] },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
-
-      doc.save("top_partidos_jugados.pdf");
+      doc.save("top_partidos_jugados_por_sexo.pdf");
     } catch {
       setError("Error al generar el PDF de top jugadores");
     } finally {
@@ -166,44 +220,70 @@ const ReportesPage: React.FC = () => {
     setLoadingType("top-victorias");
     setError(null);
     try {
-      const response = await getTopJugadores("partidosGanados", 20);
-      const jugadores: EstadisticaJugador[] = response.data || [];
+      // Usar endpoint de estadísticas con sort por partidosGanados y filtro por sexo
+      const [respM, respF, respX] = await Promise.all([
+        getEstadisticasJugadores(1, 20, "partidosGanados", "desc", "M"),
+        getEstadisticasJugadores(1, 20, "partidosGanados", "desc", "F"),
+        getEstadisticasJugadores(1, 20, "partidosGanados", "desc", "X"),
+      ]);
+      const ordenar = (arr: EstadisticaJugador[]) =>
+        arr.sort((a, b) =>
+          b.partidosGanados !== a.partidosGanados
+            ? b.partidosGanados - a.partidosGanados
+            : a.ClienteNombre.toLowerCase().localeCompare(
+                b.ClienteNombre.toLowerCase()
+              )
+        );
 
-      // Ordenar jugadores por victorias (descendente) y luego por nombre en caso de empate
-      const jugadoresOrdenados = jugadores.sort((a, b) => {
-        // Primero por victorias (descendente)
-        if (b.partidosGanados !== a.partidosGanados) {
-          return b.partidosGanados - a.partidosGanados;
-        }
-        // En caso de empate, ordenar por nombre
-        const nombreA = a.ClienteNombre.toLowerCase();
-        const nombreB = b.ClienteNombre.toLowerCase();
-        return nombreA.localeCompare(nombreB);
-      });
+      const secciones: Array<{
+        titulo: string;
+        color: [number, number, number];
+        data: EstadisticaJugador[];
+      }> = [
+        {
+          titulo: "Masculino",
+          color: [59, 130, 246],
+          data: ordenar(respM.data || []),
+        },
+        {
+          titulo: "Femenino",
+          color: [236, 72, 153],
+          data: ordenar(respF.data || []),
+        },
+        {
+          titulo: "Mixto",
+          color: [107, 114, 128],
+          data: ordenar(respX.data || []),
+        },
+      ];
 
       const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text("Top 20 - Más Victorias", 14, 18);
+      let currentY = 18;
+      for (const sec of secciones) {
+        doc.setFontSize(18);
+        doc.text(`Top 20 - Más Victorias - ${sec.titulo}`, 14, currentY);
+        autoTable(doc, {
+          head: [["#", "JUGADOR", "VICTORIAS", "PARTIDOS", "% VICTORIAS"]],
+          body: sec.data.map((j, index) => [
+            (index + 1).toString(),
+            `${j.ClienteNombre} ${j.ClienteApellido}`,
+            j.partidosGanados.toString(),
+            j.totalPartidos.toString(),
+            `${j.porcentajeVictorias}%`,
+          ]),
+          startY: currentY + 6,
+          theme: "grid",
+          headStyles: { fillColor: sec.color },
+          styles: { fontSize: 10 },
+          margin: { left: 14, right: 14 },
+        });
+        const docWithAutoTable = doc as jsPDF & {
+          lastAutoTable?: { finalY: number };
+        };
+        currentY = (docWithAutoTable.lastAutoTable?.finalY || currentY) + 14;
+      }
 
-      const rows = jugadoresOrdenados.map((j, index) => [
-        (index + 1).toString(),
-        `${j.ClienteNombre} ${j.ClienteApellido}`,
-        j.partidosGanados.toString(),
-        j.totalPartidos.toString(),
-        `${j.porcentajeVictorias}%`,
-      ]);
-
-      autoTable(doc, {
-        head: [["#", "JUGADOR", "VICTORIAS", "PARTIDOS", "% VICTORIAS"]],
-        body: rows,
-        startY: 28,
-        theme: "grid",
-        headStyles: { fillColor: [239, 68, 68] },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-      });
-
-      doc.save("top_victorias.pdf");
+      doc.save("top_victorias_por_sexo.pdf");
     } catch {
       setError("Error al generar el PDF de top victorias");
     } finally {

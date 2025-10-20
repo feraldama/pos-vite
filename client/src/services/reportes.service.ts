@@ -43,7 +43,8 @@ export const getEstadisticasJugadores = async (
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  sexo?: "M" | "F" | "X"
 ) => {
   const params: { [key: string]: string | number | undefined } = {
     page,
@@ -51,6 +52,7 @@ export const getEstadisticasJugadores = async (
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (sexo) params.sexo = sexo;
 
   try {
     const response = await api.get("/reportes/jugadores", { params });
@@ -71,7 +73,8 @@ export const searchEstadisticasJugadores = async (
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  sexo?: "M" | "F" | "X"
 ) => {
   const params: { [key: string]: string | number | undefined } = {
     term: searchTerm,
@@ -80,6 +83,7 @@ export const searchEstadisticasJugadores = async (
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (sexo) params.sexo = sexo;
 
   try {
     const response = await api.get("/reportes/jugadores/search", { params });

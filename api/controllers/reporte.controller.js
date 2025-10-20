@@ -8,6 +8,7 @@ exports.getEstadisticasJugadores = async (req, res) => {
       limit = 10,
       sortBy = "totalPartidos",
       sortOrder = "DESC",
+      sexo,
     } = req.query;
 
     const limitNum = parseInt(limit);
@@ -36,7 +37,8 @@ exports.getEstadisticasJugadores = async (req, res) => {
       limitNum,
       offset,
       validSortBy,
-      validSortOrder
+      validSortOrder,
+      sexo
     );
 
     res.json({
@@ -69,6 +71,7 @@ exports.searchEstadisticasJugadores = async (req, res) => {
       limit = 10,
       sortBy = "totalPartidos",
       sortOrder = "DESC",
+      sexo,
     } = req.query;
 
     if (!term.trim()) {
@@ -105,7 +108,8 @@ exports.searchEstadisticasJugadores = async (req, res) => {
       limitNum,
       offset,
       validSortBy,
-      validSortOrder
+      validSortOrder,
+      sexo
     );
 
     res.json({

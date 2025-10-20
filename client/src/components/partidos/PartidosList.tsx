@@ -19,6 +19,7 @@ interface Partido {
   PartidoEstado: boolean;
   CanchaId: number;
   CanchaNombre?: string;
+  PartidoSexo?: "M" | "F" | "X" | null;
   jugadores?: PartidoJugador[];
   [key: string]: unknown;
 }
@@ -88,6 +89,7 @@ export default function PartidosList({
     PartidoCategoria: "",
     PartidoEstado: false,
     CanchaId: "",
+    PartidoSexo: "X" as "M" | "F" | "X",
   });
   const [jugadores, setJugadores] = useState<PartidoJugador[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -128,7 +130,13 @@ export default function PartidosList({
           PartidoCategoria: currentPartido.PartidoCategoria,
           PartidoEstado: Boolean(currentPartido.PartidoEstado),
           CanchaId: currentPartido.CanchaId?.toString() || "",
+          PartidoSexo:
+            (currentPartido.PartidoSexo as "M" | "F" | "X" | null) ?? "X",
         });
+        // Sincronizar filtro con PartidoSexo del partido
+        const sexo =
+          (currentPartido.PartidoSexo as "M" | "F" | "X" | null) ?? "X";
+        setFiltroSexo(sexo === "X" ? "MIXTO" : sexo);
 
         // Cargar jugadores del partido
         getPartidoJugadoresByPartidoId(currentPartido.PartidoId).then((res) => {
@@ -150,11 +158,12 @@ export default function PartidosList({
           PartidoCategoria: "",
           PartidoEstado: false,
           CanchaId: "",
+          PartidoSexo: "X",
         });
         setJugadores([]);
       }
-      // Reiniciar filtro de sexo por defecto a Masculino al abrir
-      setFiltroSexo("M");
+      // Reiniciar filtro de sexo por defecto (no mixto) si es creación
+      if (!currentPartido) setFiltroSexo("M");
       setBusquedaJugador("");
       setIsDropdownOpen(false);
     }
@@ -576,6 +585,8 @@ export default function PartidosList({
     const formDataToSubmit = {
       ...formData,
       CanchaId: Number(formData.CanchaId),
+      // Mapear filtro de UI a PartidoSexo del backend (M/F/X)
+      PartidoSexo: filtroSexo === "MIXTO" ? "X" : filtroSexo,
     };
 
     onSubmit({
@@ -597,6 +608,16 @@ export default function PartidosList({
     { key: "PartidoHoraInicio", label: "Hora Inicio" },
     { key: "PartidoHoraFin", label: "Hora Fin" },
     { key: "PartidoCategoria", label: "Categoría" },
+    {
+      key: "PartidoSexo",
+      label: "Sexo",
+      render: (item: Partido) =>
+        item.PartidoSexo === "M"
+          ? "MASCULINO"
+          : item.PartidoSexo === "F"
+          ? "FEMENINO"
+          : "MIXTO",
+    },
     {
       key: "CanchaId",
       label: "Cancha",

@@ -6,7 +6,8 @@ const Reporte = {
     limit,
     offset,
     sortBy = "totalPartidos",
-    sortOrder = "DESC"
+    sortOrder = "DESC",
+    sexo
   ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
@@ -26,6 +27,10 @@ const Reporte = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
+      const whereSexo =
+        sexo && ["M", "F", "X"].includes(String(sexo))
+          ? "AND p.PartidoSexo = ?"
+          : "";
       const query = `
         SELECT 
           c.ClienteId,
@@ -49,14 +54,16 @@ const Reporte = {
         FROM clientes c
         LEFT JOIN partidojugador pj ON c.ClienteId = pj.ClienteId
         LEFT JOIN partido p ON pj.PartidoId = p.PartidoId
-        WHERE p.PartidoEstado = 1
+        WHERE p.PartidoEstado = 1 ${whereSexo}
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
         HAVING totalPartidos > 0
         ORDER BY ${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
-
-      db.query(query, [limit, offset], (err, results) => {
+      const params = [];
+      if (whereSexo) params.push(sexo);
+      params.push(limit, offset);
+      db.query(query, params, (err, results) => {
         if (err) return reject(err);
 
         // Obtener el total de jugadores con partidos
@@ -66,13 +73,14 @@ const Reporte = {
             FROM clientes c
             LEFT JOIN partidojugador pj ON c.ClienteId = pj.ClienteId
             LEFT JOIN partido p ON pj.PartidoId = p.PartidoId
-            WHERE p.PartidoEstado = 1
+            WHERE p.PartidoEstado = 1 ${whereSexo}
             GROUP BY c.ClienteId
             HAVING COUNT(DISTINCT pj.PartidoId) > 0
           ) as jugadoresConPartidos
         `;
-
-        db.query(countQuery, (err, countResult) => {
+        const countParams = [];
+        if (whereSexo) countParams.push(sexo);
+        db.query(countQuery, countParams, (err, countResult) => {
           if (err) return reject(err);
 
           resolve({
@@ -90,7 +98,8 @@ const Reporte = {
     limit,
     offset,
     sortBy = "totalPartidos",
-    sortOrder = "DESC"
+    sortOrder = "DESC",
+    sexo
   ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
@@ -110,6 +119,10 @@ const Reporte = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
+      const whereSexo =
+        sexo && ["M", "F", "X"].includes(String(sexo))
+          ? "AND p.PartidoSexo = ?"
+          : "";
       const searchQuery = `
         SELECT 
           c.ClienteId,
@@ -133,7 +146,7 @@ const Reporte = {
         FROM clientes c
         LEFT JOIN partidojugador pj ON c.ClienteId = pj.ClienteId
         LEFT JOIN partido p ON pj.PartidoId = p.PartidoId
-        WHERE p.PartidoEstado = 1
+        WHERE p.PartidoEstado = 1 ${whereSexo}
         AND (c.ClienteNombre LIKE ? 
              OR c.ClienteApellido LIKE ? 
              OR CONCAT(c.ClienteNombre, ' ', c.ClienteApellido) LIKE ?)
@@ -144,21 +157,21 @@ const Reporte = {
       `;
 
       const searchValue = `%${term}%`;
+      const searchParams = [];
+      if (whereSexo) searchParams.push(sexo);
+      searchParams.push(searchValue, searchValue, searchValue, limit, offset);
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+      db.query(searchQuery, searchParams, (err, results) => {
+        if (err) return reject(err);
 
-          // Obtener el total de jugadores con partidos que coinciden con la búsqueda
-          const countQuery = `
+        // Obtener el total de jugadores con partidos que coinciden con la búsqueda
+        const countQuery = `
           SELECT COUNT(*) as total FROM (
             SELECT c.ClienteId
             FROM clientes c
             LEFT JOIN partidojugador pj ON c.ClienteId = pj.ClienteId
             LEFT JOIN partido p ON pj.PartidoId = p.PartidoId
-            WHERE p.PartidoEstado = 1
+            WHERE p.PartidoEstado = 1 ${whereSexo}
             AND (c.ClienteNombre LIKE ? 
                  OR c.ClienteApellido LIKE ? 
                  OR CONCAT(c.ClienteNombre, ' ', c.ClienteApellido) LIKE ?)
@@ -166,21 +179,19 @@ const Reporte = {
             HAVING COUNT(DISTINCT pj.PartidoId) > 0
           ) as jugadoresConPartidos
         `;
+        const countParams = [];
+        if (whereSexo) countParams.push(sexo);
+        countParams.push(searchValue, searchValue, searchValue);
 
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
+        db.query(countQuery, countParams, (err, countResult) => {
+          if (err) return reject(err);
 
-              resolve({
-                estadisticas: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
+          resolve({
+            estadisticas: results,
+            total: countResult[0].total,
+          });
+        });
+      });
     });
   },
 

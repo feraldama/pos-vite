@@ -89,6 +89,21 @@ exports.createCliente = async (req, res) => {
         message: `El campo ClienteNombre es requerido`,
       });
     }
+    // Validación y normalización de ClienteSexo (M/F o null)
+    let sexo = null;
+    if (req.body.ClienteSexo !== undefined && req.body.ClienteSexo !== null) {
+      const v = String(req.body.ClienteSexo).trim().toUpperCase();
+      if (v === "") {
+        sexo = null;
+      } else if (v === "M" || v === "F") {
+        sexo = v;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "ClienteSexo debe ser 'M' o 'F'",
+        });
+      }
+    }
     // Crear el nuevo cliente
     const nuevoCliente = await Cliente.create({
       ClienteRUC: req.body.ClienteRUC || "",
@@ -99,6 +114,7 @@ exports.createCliente = async (req, res) => {
       ClienteTipo: req.body.ClienteTipo,
       ClienteCategoria: req.body.ClienteCategoria || "INICIAL",
       UsuarioId: req.body.UsuarioId,
+      ClienteSexo: sexo,
     });
     res.status(201).json({
       success: true,
@@ -118,12 +134,26 @@ exports.createCliente = async (req, res) => {
 exports.updateCliente = async (req, res) => {
   try {
     const { id } = req.params;
-    const clienteData = req.body;
+    const clienteData = { ...req.body };
     if (!clienteData.ClienteNombre) {
       return res.status(400).json({
         success: false,
         message: "ClienteNombre es un campo requerido",
       });
+    }
+    // Validación y normalización de ClienteSexo si viene en el payload
+    if (clienteData.ClienteSexo !== undefined) {
+      const v = String(clienteData.ClienteSexo).trim().toUpperCase();
+      if (v === "") {
+        clienteData.ClienteSexo = null;
+      } else if (v === "M" || v === "F") {
+        clienteData.ClienteSexo = v;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "ClienteSexo debe ser 'M' o 'F'",
+        });
+      }
     }
     const updatedCliente = await Cliente.update(id, clienteData);
     if (!updatedCliente) {

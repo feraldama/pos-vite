@@ -15,6 +15,7 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   ClienteCategoria: string;
+  ClienteSexo?: "M" | "F" | "";
   UsuarioId: string;
   [key: string]: unknown;
 }
@@ -70,6 +71,7 @@ export default function CustomersList({
     ClienteTelefono: "",
     ClienteTipo: "",
     ClienteCategoria: "",
+    ClienteSexo: "",
     UsuarioId: "",
   });
 
@@ -92,6 +94,7 @@ export default function CustomersList({
         ClienteTelefono: "",
         ClienteTipo: "MI",
         ClienteCategoria: "INICIAL",
+        ClienteSexo: "",
         UsuarioId: user?.id || "",
       });
     }
@@ -128,6 +131,7 @@ export default function CustomersList({
     { key: "ClienteRUC", label: "RUC" },
     { key: "ClienteNombre", label: "Nombre" },
     { key: "ClienteApellido", label: "Apellido" },
+    { key: "ClienteSexo", label: "Sexo" },
     { key: "ClienteCategoria", label: "Categoría" },
     { key: "ClienteTelefono", label: "Teléfono" },
     { key: "ClienteDireccion", label: "Dirección" },
@@ -292,6 +296,25 @@ export default function CustomersList({
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteSexo"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Sexo
+                    </label>
+                    <select
+                      name="ClienteSexo"
+                      id="ClienteSexo"
+                      value={formData.ClienteSexo}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    >
+                      <option value="">Seleccione</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
+                    </select>
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label

@@ -40,6 +40,7 @@ interface Cliente {
   ClienteNombre: string;
   ClienteApellido: string;
   ClienteCategoria: string;
+  ClienteSexo?: "M" | "F" | null;
   [key: string]: unknown;
 }
 
@@ -91,6 +92,7 @@ export default function PartidosList({
   const [jugadores, setJugadores] = useState<PartidoJugador[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [canchas, setCanchas] = useState<Cancha[]>([]);
+  const [filtroSexo, setFiltroSexo] = useState<"M" | "F" | "MIXTO">("M");
   const [nuevoJugador, setNuevoJugador] = useState<PartidoJugador>({
     PartidoJugadorId: 0,
     PartidoId: 0,
@@ -151,6 +153,8 @@ export default function PartidosList({
         });
         setJugadores([]);
       }
+      // Reiniciar filtro de sexo por defecto a Masculino al abrir
+      setFiltroSexo("M");
       setBusquedaJugador("");
       setIsDropdownOpen(false);
     }
@@ -452,7 +456,11 @@ export default function PartidosList({
           const coincideCategoria =
             cliente.ClienteCategoria === formData.PartidoCategoria;
 
-          return coincideTexto && coincideCategoria;
+          // Filtrar por sexo según selección (M/F) o MIXTO (no filtra por sexo)
+          const coincideSexo =
+            filtroSexo === "MIXTO" ? true : cliente.ClienteSexo === filtroSexo;
+
+          return coincideTexto && coincideCategoria && coincideSexo;
         })
         .sort((a, b) => {
           const nombreA =
@@ -739,6 +747,29 @@ export default function PartidosList({
                       <option value="7">7</option>
                       <option value="8">8</option>
                       <option value="INICIAL">INICIAL</option>
+                    </select>
+                  </div>
+                  <div className="col-span-6 sm:col-span-2">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Sexo
+                    </label>
+                    <select
+                      name="FiltroSexo"
+                      value={filtroSexo}
+                      onChange={(e) =>
+                        setFiltroSexo(
+                          e.target.value === "M"
+                            ? "M"
+                            : e.target.value === "F"
+                            ? "F"
+                            : "MIXTO"
+                        )
+                      }
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    >
+                      <option value="MIXTO">Mixto</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
                     </select>
                   </div>
                   <div className="col-span-6 sm:col-span-2">
@@ -1039,7 +1070,7 @@ export default function PartidosList({
                         <button
                           type="button"
                           onClick={() => handleEliminarJugador(index)}
-                          className="ml-4 text-red-600 hover:text-red-800"
+                          className="ml-4 text-red-600 hover:text-red-800 cursor-pointer"
                         >
                           <svg
                             className="w-4 h-4"

@@ -21,6 +21,7 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   ClienteCategoria: string;
+  ClienteSexo?: "M" | "F" | "";
   UsuarioId: string;
   [key: string]: unknown;
 }
@@ -151,11 +152,20 @@ export default function CustomersPage() {
   const handleSubmit = async (clienteData: Cliente) => {
     let mensaje = "";
     try {
+      // Normalizar ClienteSexo para API: '' -> undefined (no enviar) o null
+      const payload = {
+        ...clienteData,
+        ClienteSexo:
+          clienteData.ClienteSexo === "" ||
+          clienteData.ClienteSexo === undefined
+            ? undefined
+            : clienteData.ClienteSexo,
+      } as Cliente;
       if (currentCliente) {
-        await updateCliente(currentCliente.ClienteId, clienteData);
+        await updateCliente(currentCliente.ClienteId, payload);
         mensaje = "Cliente actualizado exitosamente";
       } else {
-        const response = await createCliente(clienteData);
+        const response = await createCliente(payload);
         mensaje = response.message || "Cliente creado exitosamente";
       }
       setIsModalOpen(false);

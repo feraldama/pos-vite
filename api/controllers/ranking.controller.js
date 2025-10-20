@@ -11,20 +11,19 @@ exports.getRankingGlobal = async (req, res) => {
         c.ClienteNombre as nombre,
         c.ClienteCategoria as categoria,
         c.ClienteSexo as sexo,
-        COALESCE(
-          SUM(CASE 
-            WHEN pj.PartidoJugadorResultado = 'G' THEN 100 
-            WHEN pj.PartidoJugadorResultado = 'P' THEN 30 
-            ELSE 0 
-          END), 0
-        ) as puntos,
+        SUM(CASE 
+          WHEN pj.PartidoJugadorResultado = 'G' THEN 100 
+          WHEN pj.PartidoJugadorResultado = 'P' THEN 30 
+          ELSE 0 
+        END) as puntos,
         COUNT(DISTINCT CASE WHEN pj.PartidoJugadorResultado IS NOT NULL AND pj.PartidoJugadorResultado != '' THEN pj.PartidoId END) as partidosJugados,
         0 as subTorneos
       FROM clientes c
-      LEFT JOIN PartidoJugador pj ON c.ClienteId = pj.ClienteId
-      LEFT JOIN Partido p ON pj.PartidoId = p.PartidoId AND p.PartidoSexo != 'X'
+      INNER JOIN PartidoJugador pj ON c.ClienteId = pj.ClienteId
+      INNER JOIN Partido p ON pj.PartidoId = p.PartidoId AND p.PartidoSexo != 'X'
       WHERE c.ClienteCategoria = ? AND c.ClienteSexo = ?
       GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteCategoria, c.ClienteSexo
+      HAVING partidosJugados > 0
       ORDER BY puntos DESC, partidosJugados DESC
     `;
 
@@ -73,22 +72,21 @@ exports.getRankingCompetencia = async (req, res) => {
           c.ClienteNombre as nombre,
           c.ClienteCategoria as categoria,
           c.ClienteSexo as sexo,
-          COALESCE(
-            SUM(CASE 
-              WHEN pj.PartidoJugadorResultado = 'G' THEN 100 
-              WHEN pj.PartidoJugadorResultado = 'P' THEN 30 
-              ELSE 0 
-            END), 0
-          ) as puntos,
+          SUM(CASE 
+            WHEN pj.PartidoJugadorResultado = 'G' THEN 100 
+            WHEN pj.PartidoJugadorResultado = 'P' THEN 30 
+            ELSE 0 
+          END) as puntos,
           COUNT(DISTINCT CASE WHEN pj.PartidoJugadorResultado IS NOT NULL AND pj.PartidoJugadorResultado != '' THEN pj.PartidoId END) as partidosJugados
         FROM clientes c
-        LEFT JOIN PartidoJugador pj ON c.ClienteId = pj.ClienteId
-        LEFT JOIN Partido p ON pj.PartidoId = p.PartidoId AND p.PartidoSexo != 'X'
+        INNER JOIN PartidoJugador pj ON c.ClienteId = pj.ClienteId
+        INNER JOIN Partido p ON pj.PartidoId = p.PartidoId AND p.PartidoSexo != 'X'
         WHERE c.ClienteCategoria = ? 
           AND c.ClienteSexo = ?
           AND p.PartidoFecha >= ? 
           AND p.PartidoFecha <= ?
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteCategoria, c.ClienteSexo
+        HAVING partidosJugados > 0
         ORDER BY puntos DESC, partidosJugados DESC
       `;
 

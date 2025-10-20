@@ -1,4 +1,3 @@
-// import React from "react";
 import { useAuth } from "../../contexts/useAuth";
 import { Link } from "react-router-dom";
 import {
@@ -7,6 +6,7 @@ import {
   DocumentChartBarIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
+import RankingTable from "../../components/dashboard/RankingTable";
 
 function Dashboard() {
   const { user } = useAuth();
@@ -27,6 +27,12 @@ function Dashboard() {
           </div>
         </section>
       )}
+
+      {/* Sección de Rankings */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <RankingTable title="Ranking (Global)" showSubTorneos={true} />
+        <RankingTable title="Ranking (En Competencia)" showSubTorneos={false} />
+      </section>
 
       {/* Sección de Navegación */}
       <section

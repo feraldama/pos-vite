@@ -25,6 +25,7 @@ const partidoRoutes = require("./routes/partido.routes");
 const partidoJugadorRoutes = require("./routes/partidojugador.routes");
 const canchaRoutes = require("./routes/cancha.routes");
 const competenciaRoutes = require("./routes/competencia.routes");
+const rankingRoutes = require("./routes/ranking.routes");
 const sucursalRoutes = require("./routes/sucursal.routes");
 const reporteRoutes = require("./routes/reporte.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
@@ -68,6 +69,7 @@ app.use("/api/partidos", partidoRoutes);
 app.use("/api/partidojugadores", partidoJugadorRoutes);
 app.use("/api/canchas", canchaRoutes);
 app.use("/api/competencias", competenciaRoutes);
+app.use("/api/ranking", rankingRoutes);
 app.use("/api/sucursales", sucursalRoutes);
 app.use("/api/reportes", reporteRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional

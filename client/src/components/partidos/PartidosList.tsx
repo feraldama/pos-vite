@@ -593,69 +593,6 @@ export default function PartidosList({
       return;
     }
 
-    // Validaciones de SUMA11 / SUMA13 según categorías de jugadores
-    if (
-      formData.PartidoCategoria === "SUMA11" ||
-      formData.PartidoCategoria === "SUMA13"
-    ) {
-      const obtenerCategoriaNumerica = (clienteId: number) => {
-        const cli = clientes.find((c) => c.ClienteId === clienteId);
-        const n = cli ? parseInt(cli.ClienteCategoria, 10) : NaN;
-        return Number.isNaN(n) ? null : n;
-      };
-
-      const jugadoresPareja1 = jugadores.filter(
-        (j) => j.PartidoJugadorPareja === "1"
-      );
-      const jugadoresPareja2 = jugadores.filter(
-        (j) => j.PartidoJugadorPareja === "2"
-      );
-
-      const p1CatA = obtenerCategoriaNumerica(jugadoresPareja1[0].ClienteId);
-      const p1CatB = obtenerCategoriaNumerica(jugadoresPareja1[1].ClienteId);
-      const p2CatA = obtenerCategoriaNumerica(jugadoresPareja2[0].ClienteId);
-      const p2CatB = obtenerCategoriaNumerica(jugadoresPareja2[1].ClienteId);
-
-      // Verificar que existan categorías numéricas válidas
-      if (
-        p1CatA === null ||
-        p1CatB === null ||
-        p2CatA === null ||
-        p2CatB === null
-      ) {
-        Swal.fire({
-          icon: "warning",
-          title: "Categorías inválidas",
-          text: "Las categorías de los jugadores deben ser numéricas para SUMA11/SUMA13",
-        });
-        return;
-      }
-
-      const sumaP1 = p1CatA + p1CatB;
-      const sumaP2 = p2CatA + p2CatB;
-
-      if (formData.PartidoCategoria === "SUMA13") {
-        if (sumaP1 < 13 || sumaP2 < 13) {
-          Swal.fire({
-            icon: "warning",
-            title: "Combinación inválida (SUMA13)",
-            text: `Cada pareja debe sumar 13 o más. Pareja 1: ${sumaP1}, Pareja 2: ${sumaP2}`,
-          });
-          return;
-        }
-      } else if (formData.PartidoCategoria === "SUMA11") {
-        const validaSuma11 = (suma: number) => suma === 11 || suma === 12;
-        if (!validaSuma11(sumaP1) || !validaSuma11(sumaP2)) {
-          Swal.fire({
-            icon: "warning",
-            title: "Combinación inválida (SUMA11)",
-            text: `Cada pareja debe sumar 11 o 12. Pareja 1: ${sumaP1}, Pareja 2: ${sumaP2}`,
-          });
-          return;
-        }
-      }
-    }
-
     // Convertir CanchaId a número
     const formDataToSubmit = {
       ...formData,

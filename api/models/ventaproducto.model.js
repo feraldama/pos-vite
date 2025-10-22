@@ -25,14 +25,22 @@ const VentaProducto = {
 
   getByVentaId: (ventaId) => {
     return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventaproducto WHERE VentaId = ?",
-        [ventaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
+      const query = `
+        SELECT 
+          vp.*,
+          p.ProductoNombre,
+          p.ProductoCodigo,
+          p.ProductoPrecioVenta,
+          p.ProductoIVA
+        FROM ventaproducto vp
+        LEFT JOIN producto p ON vp.ProductoId = p.ProductoId
+        WHERE vp.VentaId = ?
+      `;
+
+      db.query(query, [ventaId], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
     });
   },
 

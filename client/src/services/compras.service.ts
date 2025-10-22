@@ -10,6 +10,10 @@ export interface Compra {
   CompraTipo: string;
   CompraPagoCompleto: boolean;
   CompraEntrega: number;
+  Total: number;
+  AlmacenId: number;
+  ProveedorNombre?: string;
+  ProveedorRUC?: string;
   proveedor?: {
     ProveedorId: number;
     ProveedorNombre: string;
@@ -26,6 +30,7 @@ export interface CompraProducto {
   CompraProductoBonificacion: number;
   CompraProductoPrecio: number;
   AlmacenOrigenId: number;
+  ProductoNombre?: string;
   producto?: {
     ProductoId: number;
     ProductoNombre: string;
@@ -52,10 +57,12 @@ export interface CreateCompraData {
 export interface ComprasResponse {
   success: boolean;
   data: Compra[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  pagination: {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+  };
 }
 
 export interface CompraResponse {
@@ -130,5 +137,59 @@ export const deleteCompra = async (
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
     throw axiosError.response?.data || { message: "Error al eliminar compra" };
+  }
+};
+
+// Obtener compras con paginación (para la página de historial)
+export const getComprasPaginated = async (
+  page: number = 1,
+  limit: number = 10,
+  sortKey: string = "CompraId",
+  sortOrder: "asc" | "desc" = "desc"
+): Promise<ComprasResponse> => {
+  try {
+    const response = await api.get("/compras", {
+      params: { page, limit, sortKey, sortOrder },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw axiosError.response?.data || { message: "Error al obtener compras" };
+  }
+};
+
+// Buscar compras
+export const searchCompras = async (
+  searchTerm: string,
+  page: number = 1,
+  limit: number = 10,
+  sortKey: string = "CompraId",
+  sortOrder: "asc" | "desc" = "desc"
+): Promise<ComprasResponse> => {
+  try {
+    const response = await api.get("/compras/search", {
+      params: { search: searchTerm, page, limit, sortKey, sortOrder },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw axiosError.response?.data || { message: "Error al buscar compras" };
+  }
+};
+
+// Obtener productos de una compra
+export const getProductosByCompraId = async (
+  compraId: number
+): Promise<CompraProducto[]> => {
+  try {
+    const response = await api.get(`/compras/${compraId}/productos`);
+    return response.data.data || [];
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener productos de la compra",
+      }
+    );
   }
 };

@@ -104,6 +104,7 @@ const navigation: NavigationItem[] = [
     children: [
       { name: "Facturas", href: "/facturas" },
       { name: "Ventas", href: "/modifications/ventas" },
+      { name: "Compras", href: "/modifications/compras" },
     ],
   },
   {

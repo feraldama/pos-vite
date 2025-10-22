@@ -251,3 +251,14 @@ exports.getAllComprasSinPaginacion = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Obtener productos de una compra
+exports.getProductosByCompraId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productos = await CompraProducto.getByCompraId(id);
+    res.json({ data: productos });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

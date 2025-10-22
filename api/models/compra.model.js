@@ -4,7 +4,14 @@ const Compra = {
   getAll: () => {
     return new Promise((resolve, reject) => {
       db.query(
-        "SELECT c.*, p.ProveedorNombre, p.ProveedorRUC FROM compra c LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId ORDER BY c.CompraFecha DESC",
+        `SELECT c.*, p.ProveedorNombre, p.ProveedorRUC,
+         COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
+         (SELECT AlmacenOrigenId FROM compraproducto WHERE CompraId = c.CompraId LIMIT 1) as AlmacenId
+         FROM compra c 
+         LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
+         LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
+         GROUP BY c.CompraId
+         ORDER BY c.CompraFecha DESC`,
         (err, results) => {
           if (err) reject(err);
           resolve(results);
@@ -16,7 +23,14 @@ const Compra = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
       db.query(
-        "SELECT c.*, p.ProveedorNombre, p.ProveedorRUC FROM compra c LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId WHERE c.CompraId = ?",
+        `SELECT c.*, p.ProveedorNombre, p.ProveedorRUC,
+         COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
+         (SELECT AlmacenOrigenId FROM compraproducto WHERE CompraId = c.CompraId LIMIT 1) as AlmacenId
+         FROM compra c 
+         LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
+         LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
+         WHERE c.CompraId = ?
+         GROUP BY c.CompraId`,
         [id],
         (err, results) => {
           if (err) return reject(err);
@@ -47,8 +61,16 @@ const Compra = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
+      const orderByField = sortField === "Total" ? "Total" : `c.${sortField}`;
       db.query(
-        `SELECT c.*, p.ProveedorNombre, p.ProveedorRUC FROM compra c LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId ORDER BY c.${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT c.*, p.ProveedorNombre, p.ProveedorRUC, 
+         COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
+         (SELECT AlmacenOrigenId FROM compraproducto WHERE CompraId = c.CompraId LIMIT 1) as AlmacenId
+         FROM compra c 
+         LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
+         LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
+         GROUP BY c.CompraId
+         ORDER BY ${orderByField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -90,13 +112,19 @@ const Compra = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
+      const orderByField = sortField === "Total" ? "Total" : `c.${sortField}`;
       const searchQuery = `
-        SELECT c.*, p.ProveedorNombre, p.ProveedorRUC FROM compra c
+        SELECT c.*, p.ProveedorNombre, p.ProveedorRUC,
+        COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
+        (SELECT AlmacenOrigenId FROM compraproducto WHERE CompraId = c.CompraId LIMIT 1) as AlmacenId
+        FROM compra c
         LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId
+        LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
         WHERE c.CompraFactura LIKE ? 
         OR c.CompraTipo LIKE ? 
         OR p.ProveedorNombre LIKE ?
-        ORDER BY c.${sortField} ${order}
+        GROUP BY c.CompraId
+        ORDER BY ${orderByField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;

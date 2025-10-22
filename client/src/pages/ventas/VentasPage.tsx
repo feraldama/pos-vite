@@ -283,7 +283,7 @@ export default function VentasPage() {
               },
               Body: {
                 "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
-                  _attributes: { xmlns: "PosViteAlonso" },
+                  _attributes: { xmlns: "TechNow" },
                   Ventaid: venta.VentaId,
                   Fechastring: fechaFormateada,
                   Regla: 1, // Valor por defecto para Regla

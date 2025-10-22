@@ -19,6 +19,7 @@ import {
   WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
+  ShoppingCartIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -48,6 +49,11 @@ const navigation: NavigationItem[] = [
     name: "Ventas",
     href: "/ventas",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Compras",
+    href: "/compras",
+    icon: <ShoppingCartIcon className="h-7 w-6" />,
   },
   {
     name: "Cobro de Créditos",

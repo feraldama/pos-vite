@@ -394,7 +394,7 @@ export default function Sales() {
     const operationName = isDevolucionMode
       ? "PDevolucionWS.VENTACONFIRMAR"
       : "PVentaConfirmarWS.VENTACONFIRMAR";
-    const namespace = isDevolucionMode ? "PosVite" : "PosViteAlonso";
+    const namespace = isDevolucionMode ? "Tech" : "TechNow";
 
     const json = {
       Envelope: {

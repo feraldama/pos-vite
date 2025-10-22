@@ -28,6 +28,7 @@ import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
 import FacturasPage from "./pages/facturas/FacturasPage";
+import Compras from "./pages/compras/Compras";
 
 function App() {
   return (
@@ -37,6 +38,24 @@ function App() {
           {/* Redirige la raíz / a /login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
+
+          {/* Rutas sin Layout (Sales y Compras) */}
+          <Route
+            path="/ventas"
+            element={
+              <PrivateRoute>
+                <Sales />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/compras"
+            element={
+              <PrivateRoute>
+                <Compras />
+              </PrivateRoute>
+            }
+          />
 
           {/* Rutas privadas (con Layout que incluye Navbar) */}
           <Route
@@ -57,7 +76,6 @@ function App() {
               path="/apertura-cierre-caja"
               element={<AperturaCierreCajaPage />}
             />
-            <Route path="/ventas" element={<Sales />} />
             <Route path="/locales" element={<LocalesPage />} />
             <Route path="/almacenes" element={<AlmacenesPage />} />
             <Route path="/combos" element={<CombosPage />} />

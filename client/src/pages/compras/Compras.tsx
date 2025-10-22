@@ -587,7 +587,7 @@ export default function Compras() {
                           />
                           <label
                             htmlFor={`caja-checkbox-${p.cartItemId}`}
-                            className="text-sm text-gray-700 cursor-pointer select-none font-medium ml-1"
+                            className="text-lg text-gray-700 cursor-pointer select-none font-medium"
                           >
                             Caja
                           </label>

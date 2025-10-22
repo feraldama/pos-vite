@@ -16,6 +16,9 @@ import ProveedorModal from "../../components/common/ProveedorModal";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import { formatMiles } from "../../utils/utils";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
+import { getLocalById } from "../../services/locales.service";
 
 interface Proveedor {
   ProveedorId: number;
@@ -30,6 +33,14 @@ interface CreateProveedorData {
   ProveedorNombre: string;
   ProveedorDireccion?: string;
   ProveedorTelefono?: string;
+}
+
+interface Caja {
+  id: string | number;
+  CajaId: string | number;
+  CajaDescripcion: string;
+  CajaMonto: number;
+  [key: string]: unknown;
 }
 
 export default function Compras() {
@@ -71,6 +82,8 @@ export default function Compras() {
   const [compraFactura, setCompraFactura] = useState("");
   const [compraTipo, setCompraTipo] = useState("CO");
   const [compraEntrega, setCompraEntrega] = useState(0);
+  const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
+  const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
@@ -174,6 +187,44 @@ export default function Compras() {
       })
       .catch(() => setProveedores([]));
   }, []);
+
+  useEffect(() => {
+    const fetchCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
+          const caja = await getCajaById(estado.cajaId);
+          setCajaAperturada(caja);
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de realizar compras.",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            navigate("/apertura-cierre-caja");
+          });
+          setCajaAperturada(null);
+        }
+      } catch {
+        setCajaAperturada(null);
+      }
+    };
+    fetchCaja();
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (user?.LocalId) {
+      getLocalById(user.LocalId)
+        .then((data) => {
+          setLocalNombre(data.LocalNombre || "");
+        })
+        .catch(() => setLocalNombre(""));
+    } else {
+      setLocalNombre("");
+    }
+  }, [user?.LocalId]);
 
   const handleCreateProveedor = async (proveedorData: CreateProveedorData) => {
     try {
@@ -679,6 +730,16 @@ export default function Compras() {
                   ({user.id})
                 </span>
               </span>
+              {localNombre && (
+                <span className="text-red-600 font-medium">
+                  | Local: {localNombre}
+                </span>
+              )}
+              {cajaAperturada && (
+                <span className="text-blue-600 font-medium">
+                  | Caja: {cajaAperturada.CajaDescripcion}
+                </span>
+              )}
               <ActionButton
                 label="Volver"
                 onClick={() => navigate(-1)}
@@ -745,7 +806,7 @@ export default function Compras() {
                         stock: p.ProductoStock,
                       })
                     }
-                    precioUnitario={p.ProductoPrecioUnitario}
+                    precioUnitario={0}
                     stockUnitario={p.ProductoStockUnitario}
                   />
                 ))

@@ -8,7 +8,7 @@ import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { js2xml } from "xml-js";
-import logo from "../../assets/img/logo.jpg";
+import logo from "../../assets/img/logo.png";
 import {
   getAllClientesSinPaginacion,
   createCliente,

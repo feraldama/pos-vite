@@ -4,7 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
 
 interface Producto {
   ProductoId?: number;
@@ -95,7 +95,10 @@ export default function ProductsList({
         ProductoPrecioVentaMayorista:
           currentProduct.ProductoPrecioVentaMayorista || 0,
         ProductoPrecioUnitario: currentProduct.ProductoPrecioUnitario || 0,
-        ProductoPrecioPromedio: currentProduct.ProductoPrecioPromedio || 0,
+        ProductoPrecioPromedio:
+          typeof currentProduct.ProductoPrecioPromedio === "string"
+            ? parseFloat(currentProduct.ProductoPrecioPromedio)
+            : currentProduct.ProductoPrecioPromedio || 0,
         ProductoStock: currentProduct.ProductoStock || 0,
         ProductoStockUnitario: currentProduct.ProductoStockUnitario || 0,
         ProductoCantidadCaja: currentProduct.ProductoCantidadCaja || 0,
@@ -402,12 +405,16 @@ export default function ProductsList({
                       type="text"
                       name="ProductoPrecioPromedio"
                       id="ProductoPrecioPromedio"
-                      value={formatMiles(formData.ProductoPrecioPromedio || 0)}
+                      value={formatMilesWithDecimals(
+                        formData.ProductoPrecioPromedio || 0
+                      )}
                       onChange={(e) => {
-                        const raw = e.target.value.replace(/\./g, "");
+                        const raw = e.target.value
+                          .replace(/\./g, "")
+                          .replace(",", ".");
                         setFormData((prev) => ({
                           ...prev,
-                          ProductoPrecioPromedio: Number(raw),
+                          ProductoPrecioPromedio: parseFloat(raw) || 0,
                         }));
                       }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"

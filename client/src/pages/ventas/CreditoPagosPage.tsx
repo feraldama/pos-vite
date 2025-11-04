@@ -181,7 +181,7 @@ const CreditoPagosPage = () => {
         _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
         Body: {
           "PCreditoWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "PosViteAlonso" },
+            _attributes: { xmlns: "TechNow" },
             Tipo: "V",
             Clienteid: Number(selectedCliente),
             Montorecibido: montoPago,

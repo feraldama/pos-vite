@@ -1,33 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  getRegistrosDiariosCaja,
-  deleteRegistroDiarioCaja,
-  searchRegistrosDiariosCaja,
-  createRegistroDiarioCaja,
-  updateRegistroDiarioCaja,
-} from "../../services/registros.service";
-import MovementsList from "../../components/movements/MovementsList";
+  getFacturas,
+  deleteFactura,
+  searchFacturas,
+  createFactura,
+  updateFactura,
+} from "../../services/factura.service";
+import FacturasList from "../../components/facturas/FacturasList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
-// Tipos auxiliares
-interface Movimiento {
+interface Factura {
   id: string | number;
-  RegistroDiarioCajaId: string | number;
-  RegistroDiarioCajaFecha: string;
-  RegistroDiarioCajaDetalle: string;
-  RegistroDiarioCajaMonto: number;
-  UsuarioId: string | number;
-  CajaId: string | number;
-  TipoGastoId: string | number;
-  TipoGastoGrupoId: string | number;
-  CajaDescripcion: string;
-  TipoGastoDescripcion: string;
-  TipoGastoGrupoDescripcion: string;
-  RegistroDiarioCajaMTCN: string;
-  RegistroDiarioCajaCargoEnvio: number;
-  RegistroDiarioCajaCambio: number;
+  FacturaId: string | number;
+  FacturaTimbrado: string;
+  FacturaDesde: string;
+  FacturaHasta: string;
   [key: string]: unknown;
 }
 
@@ -37,34 +26,33 @@ interface Pagination {
   [key: string]: unknown;
 }
 
-export default function MovementsPage() {
-  const [movimientosData, setMovimientosData] = useState<{
-    movimientos: Movimiento[];
+export default function FacturasPage() {
+  const [facturasData, setFacturasData] = useState<{
+    facturas: Factura[];
     pagination: Pagination;
-  }>({ movimientos: [], pagination: { totalItems: 0, totalPages: 1 } });
+  }>({ facturas: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
-  const [currentMovement, setCurrentMovement] = useState<Movimiento | null>(
-    null
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentFactura, setCurrentFactura] = useState<Factura | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string>("RegistroDiarioCajaId");
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-  const puedeCrear = usePermiso("REGISTRODIARIOCAJA", "crear");
-  const puedeEditar = usePermiso("REGISTRODIARIOCAJA", "editar");
-  const puedeEliminar = usePermiso("REGISTRODIARIOCAJA", "eliminar");
-  const puedeLeer = usePermiso("REGISTRODIARIOCAJA", "leer");
+  const [sortKey, setSortKey] = useState<string | undefined>("FacturaId");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const fetchMovimientos = useCallback(async () => {
+  const puedeCrear = usePermiso("FACTURAS", "crear");
+  const puedeEditar = usePermiso("FACTURAS", "editar");
+  const puedeEliminar = usePermiso("FACTURAS", "eliminar");
+  const puedeLeer = usePermiso("FACTURAS", "leer");
+
+  const fetchFacturas = useCallback(async () => {
     try {
       setLoading(true);
       let data;
       if (appliedSearchTerm) {
-        data = await searchRegistrosDiariosCaja(
+        data = await searchFacturas(
           appliedSearchTerm,
           currentPage,
           itemsPerPage,
@@ -72,15 +60,10 @@ export default function MovementsPage() {
           sortOrder
         );
       } else {
-        data = await getRegistrosDiariosCaja(
-          currentPage,
-          itemsPerPage,
-          sortKey,
-          sortOrder
-        );
+        data = await getFacturas(currentPage, itemsPerPage, sortKey, sortOrder);
       }
-      setMovimientosData({
-        movimientos: data.data,
+      setFacturasData({
+        facturas: data.data,
         pagination: data.pagination,
       });
     } catch (err) {
@@ -95,8 +78,8 @@ export default function MovementsPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchMovimientos();
-  }, [fetchMovimientos]);
+    fetchFacturas();
+  }, [fetchFacturas]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -113,7 +96,7 @@ export default function MovementsPage() {
     }
   };
 
-  const handleDelete = async (movimiento: Movimiento) => {
+  const handleDelete = async (id: string) => {
     Swal.fire({
       title: "¿Estás seguro?",
       text: "¡No podrás revertir esto!",
@@ -126,15 +109,20 @@ export default function MovementsPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
+          await deleteFactura(id);
           Swal.fire({
             icon: "success",
-            title: "Registro eliminado exitosamente",
+            title: "Factura eliminada exitosamente",
           });
-          fetchMovimientos();
+          setFacturasData((prev) => ({
+            ...prev,
+            facturas: prev.facturas.filter(
+              (factura) => factura.FacturaId !== id
+            ),
+          }));
         } catch (error: unknown) {
           const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar el registro";
+          const msg = err?.message || "No se pudo eliminar la factura";
           Swal.fire({
             icon: "warning",
             title: "No permitido",
@@ -146,29 +134,25 @@ export default function MovementsPage() {
   };
 
   const handleCreate = () => {
-    setCurrentMovement(null);
+    setCurrentFactura(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (movimiento: Movimiento) => {
-    setCurrentMovement(movimiento);
+  const handleEdit = (factura: Factura) => {
+    setCurrentFactura(factura);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (movementData: Movimiento) => {
+  const handleSubmit = async (facturaData: Factura) => {
     let mensaje = "";
     try {
-      if (currentMovement) {
-        await updateRegistroDiarioCaja(
-          currentMovement.RegistroDiarioCajaId,
-          movementData
-        );
-        mensaje = "Registro actualizado exitosamente";
+      if (currentFactura) {
+        await updateFactura(currentFactura.FacturaId, facturaData);
+        mensaje = "Factura actualizada exitosamente";
       } else {
-        const response = await createRegistroDiarioCaja(movementData);
-        mensaje = response.message || "Registro creado exitosamente";
+        const response = await createFactura(facturaData);
+        mensaje = response.message || "Factura creada exitosamente";
       }
-
       setIsModalOpen(false);
       Swal.fire({
         position: "top-end",
@@ -177,7 +161,7 @@ export default function MovementsPage() {
         showConfirmButton: false,
         timer: 2000,
       });
-      fetchMovimientos();
+      fetchFacturas();
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -196,27 +180,37 @@ export default function MovementsPage() {
     setCurrentPage(1);
   };
 
-  if (!puedeLeer)
-    return <div>No tienes permiso para ver los registros diarios de caja.</div>;
-  if (loading) return <div>Cargando registros...</div>;
+  if (loading) return <div>Cargando facturas...</div>;
   if (error) return <div>Error: {error}</div>;
+  if (!puedeLeer) return <div>No tienes permiso para ver las facturas</div>;
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Registro Diario de Caja</h1>
-      <MovementsList
-        movimientos={movimientosData.movimientos}
-        onDelete={puedeEliminar ? handleDelete : undefined}
+      <h1 className="text-2xl font-medium mb-3">Gestión de Facturas</h1>
+      <FacturasList
+        facturas={facturasData.facturas.map((f) => ({
+          ...f,
+          id: f.FacturaId,
+        }))}
+        onDelete={
+          puedeEliminar
+            ? (factura) => handleDelete(factura.FacturaId as string)
+            : undefined
+        }
         onEdit={puedeEditar ? handleEdit : undefined}
         onCreate={puedeCrear ? handleCreate : undefined}
-        pagination={movimientosData.pagination}
+        pagination={facturasData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}
         onSearchSubmit={applySearch}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
-        currentMovement={currentMovement}
+        currentFactura={
+          currentFactura
+            ? { ...currentFactura, id: currentFactura.FacturaId }
+            : null
+        }
         onSubmit={handleSubmit}
         sortKey={sortKey}
         sortOrder={sortOrder}
@@ -225,11 +219,10 @@ export default function MovementsPage() {
           setSortOrder(order);
           setCurrentPage(1);
         }}
-        disableEdit={true}
       />
       <Pagination
         currentPage={currentPage}
-        totalPages={movimientosData.pagination.totalPages}
+        totalPages={facturasData.pagination.totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}

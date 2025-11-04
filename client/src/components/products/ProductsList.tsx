@@ -4,7 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
 
 interface Producto {
   ProductoId?: number;
@@ -38,7 +38,7 @@ interface ProductsListProps {
   onSearch: (value: string) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentProduct?: Producto | null;
@@ -95,7 +95,10 @@ export default function ProductsList({
         ProductoPrecioVentaMayorista:
           currentProduct.ProductoPrecioVentaMayorista || 0,
         ProductoPrecioUnitario: currentProduct.ProductoPrecioUnitario || 0,
-        ProductoPrecioPromedio: currentProduct.ProductoPrecioPromedio || 0,
+        ProductoPrecioPromedio:
+          typeof currentProduct.ProductoPrecioPromedio === "string"
+            ? parseFloat(currentProduct.ProductoPrecioPromedio)
+            : currentProduct.ProductoPrecioPromedio || 0,
         ProductoStock: currentProduct.ProductoStock || 0,
         ProductoStockUnitario: currentProduct.ProductoStockUnitario || 0,
         ProductoCantidadCaja: currentProduct.ProductoCantidadCaja || 0,
@@ -377,6 +380,22 @@ export default function ProductsList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
+                      htmlFor="ProductoPrecioUnitario"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Precio Unitario
+                    </label>
+                    <input
+                      type="number"
+                      name="ProductoPrecioUnitario"
+                      id="ProductoPrecioUnitario"
+                      value={formData.ProductoPrecioUnitario}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
                       htmlFor="ProductoPrecioPromedio"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
@@ -386,12 +405,16 @@ export default function ProductsList({
                       type="text"
                       name="ProductoPrecioPromedio"
                       id="ProductoPrecioPromedio"
-                      value={formatMiles(formData.ProductoPrecioPromedio || 0)}
+                      value={formatMilesWithDecimals(
+                        formData.ProductoPrecioPromedio || 0
+                      )}
                       onChange={(e) => {
-                        const raw = e.target.value.replace(/\./g, "");
+                        const raw = e.target.value
+                          .replace(/\./g, "")
+                          .replace(",", ".");
                         setFormData((prev) => ({
                           ...prev,
-                          ProductoPrecioPromedio: Number(raw),
+                          ProductoPrecioPromedio: parseFloat(raw) || 0,
                         }));
                       }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
@@ -412,6 +435,54 @@ export default function ProductsList({
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ProductoStockUnitario"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Stock Unitario
+                    </label>
+                    <input
+                      type="number"
+                      name="ProductoStockUnitario"
+                      id="ProductoStockUnitario"
+                      value={formData.ProductoStockUnitario}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ProductoCantidadCaja"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Cantidad por Caja
+                    </label>
+                    <input
+                      type="number"
+                      name="ProductoCantidadCaja"
+                      id="ProductoCantidadCaja"
+                      value={formData.ProductoCantidadCaja}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ProductoIVA"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      IVA
+                    </label>
+                    <input
+                      type="number"
+                      name="ProductoIVA"
+                      id="ProductoIVA"
+                      value={formData.ProductoIVA}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">

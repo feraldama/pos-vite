@@ -21,6 +21,9 @@ const ventaProductoRoutes = require("./routes/ventaproducto.routes");
 const ventaRoutes = require("./routes/venta.routes");
 const ventaCreditoRoutes = require("./routes/ventacredito.routes");
 const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
+const facturaRoutes = require("./routes/factura.routes");
+const compraRoutes = require("./routes/compra.routes");
+const proveedorRoutes = require("./routes/proveedor.routes");
 const cajagastoRoutes = require("./routes/cajagasto.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
@@ -59,6 +62,9 @@ app.use("/api/ventaproducto", ventaProductoRoutes);
 app.use("/api/venta", ventaRoutes);
 app.use("/api/ventacredito", ventaCreditoRoutes);
 app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
+app.use("/api/factura", facturaRoutes);
+app.use("/api/compras", compraRoutes);
+app.use("/api/proveedores", proveedorRoutes);
 app.use("/api/cajagasto", cajagastoRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 

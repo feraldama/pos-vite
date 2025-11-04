@@ -4,92 +4,83 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
-interface Combo {
+interface Factura {
   id: string | number;
-  ComboId: string | number;
-  ComboDescripcion: string;
-  ProductoId: string | number;
-  ComboCantidad: number;
-  ComboPrecio: number;
+  FacturaId: string | number;
+  FacturaTimbrado: string;
+  FacturaDesde: string;
+  FacturaHasta: string;
   [key: string]: unknown;
 }
 
-interface Producto {
-  ProductoId: string | number;
-  ProductoNombre: string;
+interface Pagination {
+  totalItems: number;
 }
 
-interface CombosListProps {
-  combos: Combo[];
-  productos: Producto[];
-  onDelete?: (item: Combo) => void;
-  onEdit?: (item: Combo) => void;
+interface FacturasListProps {
+  facturas: Factura[];
+  onDelete?: (item: Factura) => void;
+  onEdit?: (item: Factura) => void;
   onCreate?: () => void;
-  isModalOpen: boolean;
-  onCloseModal: () => void;
-  currentCombo?: Combo | null;
-  onSubmit: (formData: Combo) => void;
+  pagination?: Pagination;
   onSearch: (value: string) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
   onSearchSubmit: () => void;
+  isModalOpen: boolean;
+  onCloseModal: () => void;
+  currentFactura?: Factura | null;
+  onSubmit: (formData: Factura) => void;
+  sortKey?: string;
+  sortOrder?: "asc" | "desc";
+  onSort?: (key: string, order: "asc" | "desc") => void;
 }
 
-export default function CombosList({
-  combos,
-  productos,
+export default function FacturasList({
+  facturas,
   onDelete,
   onEdit,
   onCreate,
-  isModalOpen,
-  onCloseModal,
-  currentCombo,
-  onSubmit,
+  pagination,
   onSearch,
   searchTerm,
   onKeyPress,
   onSearchSubmit,
-}: CombosListProps) {
-  const [formData, setFormData] = useState<Combo>({
+  isModalOpen,
+  onCloseModal,
+  currentFactura,
+  onSubmit,
+  sortKey,
+  sortOrder,
+  onSort,
+}: FacturasListProps) {
+  const [formData, setFormData] = useState({
     id: "",
-    ComboId: "",
-    ComboDescripcion: "",
-    ProductoId: "",
-    ComboCantidad: 1,
-    ComboPrecio: 0,
+    FacturaId: "",
+    FacturaTimbrado: "",
+    FacturaDesde: "",
+    FacturaHasta: "",
   });
 
   useEffect(() => {
-    if (currentCombo && productos.length > 0) {
-      let productoId = currentCombo.ProductoId;
-
-      // Si ProductoId no es un número, buscar por nombre
-      if (isNaN(Number(productoId))) {
-        const productoEncontrado = productos.find(
-          (p) => p.ProductoNombre === productoId
-        );
-        productoId = productoEncontrado
-          ? String(productoEncontrado.ProductoId)
-          : "";
-      } else {
-        productoId = String(productoId);
-      }
-
+    if (currentFactura) {
       setFormData({
-        ...currentCombo,
-        ProductoId: productoId,
+        id: String(currentFactura.id ?? currentFactura.FacturaId),
+        FacturaId: String(currentFactura.FacturaId),
+        FacturaTimbrado: currentFactura.FacturaTimbrado,
+        FacturaDesde: currentFactura.FacturaDesde,
+        FacturaHasta: currentFactura.FacturaHasta,
       });
-    } else if (!currentCombo) {
+    } else {
       setFormData({
         id: "",
-        ComboId: "",
-        ComboDescripcion: "",
-        ProductoId: "",
-        ComboCantidad: 1,
-        ComboPrecio: 0,
+        FacturaId: "",
+        FacturaTimbrado: "",
+        FacturaDesde: "",
+        FacturaHasta: "",
       });
     }
-  }, [currentCombo, productos]);
+  }, [currentFactura]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -97,24 +88,26 @@ export default function CombosList({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === "ComboCantidad" || name === "ComboPrecio"
-          ? Number(value)
-          : value,
+      [name]: value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData as Factura);
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onCloseModal();
+    }
   };
 
   const columns = [
-    { key: "ComboId", label: "ID" },
-    { key: "ComboDescripcion", label: "Descripción" },
-    { key: "ProductoId", label: "Producto" },
-    { key: "ComboCantidad", label: "Cantidad" },
-    { key: "ComboPrecio", label: "Precio" },
+    { key: "FacturaId", label: "ID" },
+    { key: "FacturaTimbrado", label: "Timbrado" },
+    { key: "FacturaDesde", label: "Desde" },
+    { key: "FacturaHasta", label: "Hasta" },
   ];
 
   return (
@@ -126,37 +119,40 @@ export default function CombosList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar combos"
+            placeholder="Buscar facturas"
           />
         </div>
         <div className="py-4">
           {onCreate && (
             <ActionButton
-              label="Nuevo Combo"
+              label="Nueva Factura"
               onClick={onCreate}
               icon={PlusIcon}
             />
           )}
         </div>
       </div>
-      <DataTable<Combo>
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-gray-600">
+          Mostrando {facturas.length} de {pagination?.totalItems} facturas
+        </div>
+      </div>
+      <DataTable<Factura>
         columns={columns}
-        data={combos.map((combo) => ({
-          ...combo,
-          ProductoId:
-            productos.find((p) => p.ProductoId === combo.ProductoId)
-              ?.ProductoNombre || combo.ProductoId,
-        }))}
+        data={facturas}
         onEdit={onEdit}
         onDelete={onDelete}
-        emptyMessage="No se encontraron combos"
+        emptyMessage="No se encontraron facturas"
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={onSort}
       />
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black opacity-50"
-            onClick={onCloseModal}
-          />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={handleBackdropClick}
+        >
+          <div className="absolute inset-0 bg-black opacity-50" />
           <div className="relative w-full max-w-2xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
@@ -164,9 +160,9 @@ export default function CombosList({
             >
               <div className="flex items-start justify-between p-4 border-b rounded-t">
                 <h3 className="text-xl font-semibold text-gray-900">
-                  {currentCombo
-                    ? `Editar combo: ${currentCombo.ComboDescripcion}`
-                    : "Crear nuevo combo"}
+                  {currentFactura
+                    ? `Editar factura: ${currentFactura.FacturaId}`
+                    : "Crear nueva factura"}
                 </h3>
                 <button
                   type="button"
@@ -194,89 +190,75 @@ export default function CombosList({
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="ComboDescripcion"
+                      htmlFor="FacturaTimbrado"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Descripción
+                      Timbrado (máximo 8 dígitos)
                     </label>
                     <input
                       type="text"
-                      name="ComboDescripcion"
-                      id="ComboDescripcion"
-                      value={formData.ComboDescripcion}
+                      name="FacturaTimbrado"
+                      id="FacturaTimbrado"
+                      value={formData.FacturaTimbrado}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      placeholder="12345678"
+                      maxLength={8}
+                      pattern="[0-9]{1,8}"
                       required
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="ProductoId"
+                      htmlFor="FacturaDesde"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Producto
-                    </label>
-                    <select
-                      name="ProductoId"
-                      id="ProductoId"
-                      value={formData.ProductoId}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    >
-                      <option value="">Seleccione un producto</option>
-                      {productos.map((producto) => (
-                        <option
-                          key={String(producto.ProductoId)}
-                          value={String(producto.ProductoId)}
-                        >
-                          {producto.ProductoNombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ComboCantidad"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Cantidad
+                      Desde (máximo 7 dígitos)
                     </label>
                     <input
-                      type="number"
-                      name="ComboCantidad"
-                      id="ComboCantidad"
-                      value={formData.ComboCantidad}
+                      type="text"
+                      name="FacturaDesde"
+                      id="FacturaDesde"
+                      value={formData.FacturaDesde}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      placeholder="1"
+                      maxLength={7}
+                      pattern="[0-9]{1,7}"
                       required
-                      min={1}
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="ComboPrecio"
+                      htmlFor="FacturaHasta"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Precio
+                      Hasta (máximo 7 dígitos)
                     </label>
                     <input
-                      type="number"
-                      name="ComboPrecio"
-                      id="ComboPrecio"
-                      value={formData.ComboPrecio}
+                      type="text"
+                      name="FacturaHasta"
+                      id="FacturaHasta"
+                      value={formData.FacturaHasta}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      placeholder="1000"
+                      maxLength={7}
+                      pattern="[0-9]{1,7}"
                       required
-                      min={0}
-                      step={0.01}
                     />
                   </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  <p>• El timbrado debe tener máximo 8 dígitos numéricos</p>
+                  <p>• Los números desde/hasta deben tener máximo 7 dígitos</p>
+                  <p>• El número "Desde" debe ser menor que "Hasta"</p>
+                  <p>• No se permiten superposiciones de rangos</p>
                 </div>
               </div>
               <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
                 <ActionButton
-                  label={currentCombo ? "Actualizar" : "Crear"}
+                  label={currentFactura ? "Actualizar" : "Crear"}
                   type="submit"
                 />
                 <ActionButton

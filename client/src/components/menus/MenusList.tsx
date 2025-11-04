@@ -24,7 +24,7 @@ interface MenusListProps {
   searchTerm: string;
   onSearch: (value: string) => void;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
 }
 
 export default function MenusList({

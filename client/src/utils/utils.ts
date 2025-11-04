@@ -1,24 +1,7 @@
 export const formatMiles = (value: number | string): string => {
   const parseToNumber = (value: number | string): number => {
     if (typeof value === "string") {
-      // Si el valor ya es un string numérico, convertirlo directamente
-      if (/^\d+(\.\d+)?$/.test(value)) {
-        return parseFloat(value);
-      }
-      // Si tiene formato de moneda (15.000,00), convertirlo correctamente
-      if (value.includes(",") && value.includes(".")) {
-        return parseFloat(value.replace(/\./g, "").replace(",", "."));
-      }
-      // Si solo tiene coma como separador decimal (15000,00)
-      if (value.includes(",") && !value.includes(".")) {
-        return parseFloat(value.replace(",", "."));
-      }
-      // Si solo tiene punto como separador decimal (15000.00)
-      if (value.includes(".") && !value.includes(",")) {
-        return parseFloat(value);
-      }
-      // Por defecto, intentar parsear directamente
-      return parseFloat(value);
+      return parseFloat(value.replace(/\./g, "").replace(",", "."));
     }
     return value;
   };
@@ -28,6 +11,26 @@ export const formatMiles = (value: number | string): string => {
     minimumFractionDigits: 0,
     useGrouping: true,
   }).format(roundedCommission);
+};
+
+export const formatMilesWithDecimals = (value: number | string): string => {
+  const parseToNumber = (value: number | string): number => {
+    if (typeof value === "string") {
+      // Si el string ya es un número válido, úsalo directamente
+      if (/^\d+\.?\d*$/.test(value) && value.includes(".")) {
+        return parseFloat(value);
+      }
+      // Si tiene formato español con comas como decimales
+      return parseFloat(value.replace(/\./g, "").replace(",", "."));
+    }
+    return value;
+  };
+  const commission = parseToNumber(value);
+  return new Intl.NumberFormat("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true,
+  }).format(commission);
 };
 
 export const formatCurrency = (value: number) => {

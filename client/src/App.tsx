@@ -27,6 +27,9 @@ import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
+import FacturasPage from "./pages/facturas/FacturasPage";
+import Compras from "./pages/compras/Compras";
+import ComprasPage from "./pages/compras/ComprasPage";
 
 function App() {
   return (
@@ -36,6 +39,24 @@ function App() {
           {/* Redirige la raíz / a /login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
+
+          {/* Rutas sin Layout (Sales y Compras) */}
+          <Route
+            path="/ventas"
+            element={
+              <PrivateRoute>
+                <Sales />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/compras"
+            element={
+              <PrivateRoute>
+                <Compras />
+              </PrivateRoute>
+            }
+          />
 
           {/* Rutas privadas (con Layout que incluye Navbar) */}
           <Route
@@ -56,7 +77,6 @@ function App() {
               path="/apertura-cierre-caja"
               element={<AperturaCierreCajaPage />}
             />
-            <Route path="/ventas" element={<Sales />} />
             <Route path="/locales" element={<LocalesPage />} />
             <Route path="/almacenes" element={<AlmacenesPage />} />
             <Route path="/combos" element={<CombosPage />} />
@@ -64,8 +84,10 @@ function App() {
             <Route path="/menus" element={<MenusPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/modifications/ventas" element={<VentasPage />} />
+            <Route path="/modifications/compras" element={<ComprasPage />} />
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/facturas" element={<FacturasPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

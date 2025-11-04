@@ -40,7 +40,7 @@ interface MovementsListProps {
   onSubmit: (formData: Movimiento) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;

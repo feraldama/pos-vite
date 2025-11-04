@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { createRegistroDiarioCaja } from "../../services/registros.service";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
-import { createRegistroDiarioCaja } from "../../services/registros.service";
+import { updateCajaMonto } from "../../services/cajas.service";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
+import { getCajaById } from "../../services/cajas.service";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
-import axios from "axios";
-import { js2xml } from "xml-js";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -15,19 +16,6 @@ interface TipoGastoGrupo {
   TipoGastoGrupoId: number;
   TipoGastoGrupoDescripcion: string;
   TipoGastoId: number;
-}
-
-interface PagoSOAPData {
-  Registrodiariocajaid: number;
-  Tipogastoid: number;
-  Tipogastogrupoid: number;
-  Registrodiariocajamonto: number;
-  Tipo: number;
-  Cajaid: number;
-  Registrodiariocajafecha: string;
-  Registrodiariocajadetalle: string;
-  Registrodiariocajacambio: number;
-  Usuarioid: string;
 }
 
 interface PagoModalProps {
@@ -50,7 +38,6 @@ const PagoModal: React.FC<PagoModalProps> = ({
   const [monto, setMonto] = useState<number | "">("");
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupo, setTiposGastoGrupo] = useState<TipoGastoGrupo[]>([]);
-  const [cambio, setCambio] = useState<number>(0);
 
   useEffect(() => {
     if (show) {
@@ -68,151 +55,48 @@ const PagoModal: React.FC<PagoModalProps> = ({
     (g) => g.TipoGastoId === tipoGastoId
   );
 
-  const sendRequestSOAP = async (pagoData: PagoSOAPData) => {
-    const json = {
-      Envelope: {
-        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
-        Body: {
-          "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "Cobranza" },
-            Registrodiariocajaid: pagoData.Registrodiariocajaid,
-            Tipogastoid: pagoData.Tipogastoid,
-            Tipogastogrupoid: pagoData.Tipogastogrupoid,
-            Registrodiariocajamonto: pagoData.Registrodiariocajamonto,
-            Tipo: 1,
-            Cajaid: pagoData.Cajaid,
-            Fechastring: pagoData.Registrodiariocajafecha,
-            Registrodiariocajadetalle: pagoData.Registrodiariocajadetalle,
-            Registrodiariocajacambio: pagoData.Registrodiariocajacambio,
-            Usuarioid: pagoData.Usuarioid,
-          },
-        },
-      },
-    };
-
-    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    };
-
-    try {
-      await axios.post(
-        "http://localhost:8080/CobranzaAmimar/servlet/com.cobranza.apborrarregistodiariows",
-        xml,
-        config
-      );
-
-      return true;
-    } catch (error) {
-      console.error("Error en llamada SOAP:", error);
-      throw new Error("Error al procesar el pago SOAP");
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cajaAperturada || !usuario) return;
-
-    // Validar que la caja tenga un ID válido
-    if (!cajaAperturada.CajaId) {
-      Swal.fire(
-        "Error",
-        "No se pudo obtener el ID de la caja aperturada",
-        "error"
-      );
-      return;
-    }
-
     try {
-      // Validar datos básicos antes de enviar
-      const errores = [];
-      if (!tipoGastoId || Number(tipoGastoId) <= 0) {
-        errores.push("ID de tipo de gasto es requerido y debe ser mayor a 0");
-      }
-      if (!tipoGastoGrupoId || Number(tipoGastoGrupoId) <= 0) {
-        errores.push("ID de grupo de gasto es requerido y debe ser mayor a 0");
-      }
-      if (!monto || Number(monto) <= 0) {
-        errores.push("Monto es requerido y debe ser mayor a 0");
-      }
-      if (!detalle || detalle.trim() === "") {
-        errores.push("Detalle es requerido");
-      }
-
-      if (errores.length > 0) {
-        Swal.fire("Error de validación", errores.join("\n"), "error");
-        return;
-      }
-
-      // Formatear fecha para la base de datos (YYYY-MM-DD)
-      const fechaDate = new Date(fecha + "T00:00:00");
-      const fechaISO = fechaDate.toISOString().split("T")[0];
-
-      // Primero guardar en la base de datos
-      const registroData = {
-        TipoGastoId: Number(tipoGastoId), // Cambié Tipogastoid por TipoGastoId
-        TipoGastoGrupoId: Number(tipoGastoGrupoId), // Cambié Tipogastogrupoid por TipoGastoGrupoId
-        RegistroDiarioCajaMonto: Number(monto),
-        Tipo: 1, // Siempre 1 para este caso
-        CajaId: Number(cajaAperturada.CajaId), // Cambié Cajaid por CajaId para que coincida con el modelo
-        Registrodiariocajafecha: fechaISO,
+      await createRegistroDiarioCaja({
+        CajaId: cajaAperturada.CajaId,
+        RegistroDiarioCajaFecha: fecha,
+        TipoGastoId: tipoGastoId,
+        TipoGastoGrupoId: tipoGastoGrupoId,
         RegistroDiarioCajaDetalle: detalle,
-        RegistroDiarioCajaCambio: cambio,
-        Usuarioid: String(usuario.id),
-      };
-
-      // Crear registro en la base de datos
-      const registroCreado = await createRegistroDiarioCaja(registroData);
-
-      // El ID está en registroCreado.data.RegistroDiarioCajaId según la respuesta de la API
-      const nuevoRegistroId =
-        registroCreado.data?.RegistroDiarioCajaId ||
-        registroCreado.RegistroDiarioCajaId ||
-        registroCreado.id ||
-        registroCreado.Registrodiariocajaid;
-
-      if (!nuevoRegistroId) {
-        console.error(
-          "No se pudo obtener el ID. Respuesta completa:",
-          registroCreado
+        RegistroDiarioCajaMonto: monto,
+        UsuarioId: usuario.id,
+      });
+      // Obtener el monto actualizado de la caja aperturada por el usuario
+      const estado = await getEstadoAperturaPorUsuario(usuario.id);
+      const cajaAperturadaId = estado.cajaId;
+      const cajaActualizada = await getCajaById(cajaAperturadaId);
+      const cajaMontoActual = cajaActualizada.CajaMonto;
+      if (tipoGastoId === 1) {
+        // Restar el monto
+        await updateCajaMonto(
+          cajaAperturadaId,
+          Number(cajaMontoActual) - Number(monto)
         );
-        throw new Error("No se pudo obtener el ID del registro creado");
+      } else if (tipoGastoId === 2) {
+        // Sumar el monto
+        await updateCajaMonto(
+          cajaAperturadaId,
+          Number(cajaMontoActual) + Number(monto)
+        );
       }
-
-      // Formatear fecha para SOAP (DD/MM/YY)
-      const dia = fechaDate.getDate();
-      const mes = fechaDate.getMonth() + 1;
-      const año = fechaDate.getFullYear() % 100;
-      const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-      const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-      const añoStr = año < 10 ? `0${año}` : año.toString();
-      const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-      // Ahora enviar a SOAP con el ID real generado
-      const pagoSOAPData = {
-        Registrodiariocajaid: nuevoRegistroId,
-        Tipogastoid: Number(tipoGastoId),
-        Tipogastogrupoid: Number(tipoGastoGrupoId),
-        Registrodiariocajamonto: Number(monto),
-        Tipo: 1,
-        Cajaid: Number(cajaAperturada.CajaId),
-        Registrodiariocajafecha: fechaFormateada,
-        Registrodiariocajadetalle: detalle,
-        Registrodiariocajacambio: cambio,
-        Usuarioid: String(usuario.id),
-      };
-
-      await sendRequestSOAP(pagoSOAPData);
       Swal.fire(
         "Pago registrado",
         "El pago fue registrado correctamente",
         "success"
       );
-
       handleClose();
-      resetForm();
+      setFecha("");
+      setTipoGastoId("");
+      setTipoGastoGrupoId("");
+      setDetalle("");
+      setMonto("");
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "No se pudo registrar el pago";
@@ -220,21 +104,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
     }
   };
 
-  const resetForm = () => {
-    setFecha("");
-    setTipoGastoId("");
-    setTipoGastoGrupoId("");
-    setDetalle("");
-    setMonto("");
-    setCambio(0);
-  };
-
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
           onClick={handleClose}
@@ -244,9 +119,8 @@ const PagoModal: React.FC<PagoModalProps> = ({
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Nuevo Pago
         </h2>
-
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 mb-4">
+          <div className="grid grid-cols-1 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
                 Fecha
@@ -328,25 +202,13 @@ const PagoModal: React.FC<PagoModalProps> = ({
                 pattern="[0-9.]*"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Cambio
-              </label>
-              <input
-                type="number"
-                value={cambio}
-                onChange={(e) => setCambio(Number(e.target.value))}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              />
-            </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
             >
-              Guardar Pago
+              Guardar
             </button>
             <button
               type="button"

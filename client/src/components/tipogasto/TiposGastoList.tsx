@@ -38,7 +38,7 @@ interface TiposGastoListProps {
   onSearch: (value: string) => void;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentTipoGasto?: TipoGasto | null;

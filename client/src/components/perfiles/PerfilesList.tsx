@@ -25,7 +25,7 @@ interface PerfilesListProps {
   searchTerm: string;
   onSearch: (value: string) => void;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
-  onSearchSubmit: React.MouseEventHandler<HTMLButtonElement>;
+  onSearchSubmit: () => void;
 }
 
 // Definir tipo explícito para los permisos

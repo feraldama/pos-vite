@@ -1,17 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
-  getVentasPaginated,
-  searchVentas,
-  type Venta,
-  getProductosByVentaId,
-  type VentaProducto,
-  deleteVenta,
-} from "../../services/venta.service";
-import { getClienteById } from "../../services/clientes.service";
+  getComprasPaginated,
+  searchCompras,
+  type Compra,
+  getProductosByCompraId,
+  type CompraProducto,
+  deleteCompra,
+} from "../../services/compras.service";
+import { getProveedorById } from "../../services/proveedores.service";
 import { getProductoById } from "../../services/productos.service";
 import { getAlmacenById } from "../../services/almacenes.service";
-import VentasList from "../../components/ventas/VentasList";
+import ComprasList from "../../components/compras/ComprasList";
 import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
@@ -24,54 +24,57 @@ interface Pagination {
   [key: string]: unknown;
 }
 
-export default function VentasPage() {
-  const [ventasData, setVentasData] = useState<{
-    ventas: Venta[];
+export default function ComprasPage() {
+  const [comprasData, setComprasData] = useState<{
+    compras: Compra[];
     pagination: Pagination;
-  }>({ ventas: [], pagination: { totalItems: 0, totalPages: 1 } });
+  }>({ compras: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string>("VentaId");
+  const [sortKey, setSortKey] = useState<string>("CompraId");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
-  const puedeCrear = usePermiso("VENTAS", "crear");
-  const puedeLeer = usePermiso("VENTAS", "leer");
-  const puedeEliminar = usePermiso("VENTAS", "eliminar");
+  const puedeCrear = usePermiso("COMPRAS", "crear");
+  const puedeLeer = usePermiso("COMPRAS", "leer");
+  const puedeEliminar = usePermiso("COMPRAS", "eliminar");
 
-  const loadClientesData = async (ventasData: Venta[]) => {
+  const loadProveedoresData = async (comprasData: Compra[]) => {
     try {
-      const ventasConClientes = await Promise.all(
-        ventasData.map(async (venta) => {
+      const comprasConProveedores = await Promise.all(
+        comprasData.map(async (compra) => {
           try {
-            const cliente = await getClienteById(venta.ClienteId);
+            const proveedor = await getProveedorById(compra.ProveedorId);
             return {
-              ...venta,
-              ClienteNombre: cliente.ClienteNombre,
-              ClienteApellido: cliente.ClienteApellido,
+              ...compra,
+              ProveedorNombre: proveedor.data.ProveedorNombre,
+              ProveedorRUC: proveedor.data.ProveedorRUC,
             };
           } catch (error) {
-            console.error(`Error al cargar cliente ${venta.ClienteId}:`, error);
-            return venta;
+            console.error(
+              `Error al cargar proveedor ${compra.ProveedorId}:`,
+              error
+            );
+            return compra;
           }
         })
       );
-      return ventasConClientes;
+      return comprasConProveedores;
     } catch (error) {
-      console.error("Error al cargar datos de clientes:", error);
-      return ventasData;
+      console.error("Error al cargar datos de proveedores:", error);
+      return comprasData;
     }
   };
 
-  const fetchVentas = useCallback(async () => {
+  const fetchCompras = useCallback(async () => {
     try {
       setLoading(true);
       let data;
       if (appliedSearchTerm) {
-        data = await searchVentas(
+        data = await searchCompras(
           appliedSearchTerm,
           currentPage,
           itemsPerPage,
@@ -79,16 +82,16 @@ export default function VentasPage() {
           sortOrder
         );
       } else {
-        data = await getVentasPaginated(
+        data = await getComprasPaginated(
           currentPage,
           itemsPerPage,
           sortKey,
           sortOrder
         );
       }
-      const ventasConClientes = await loadClientesData(data.data);
-      setVentasData({
-        ventas: ventasConClientes,
+      const comprasConProveedores = await loadProveedoresData(data.data);
+      setComprasData({
+        compras: comprasConProveedores,
         pagination: data.pagination,
       });
       setError(null);
@@ -104,8 +107,8 @@ export default function VentasPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchVentas();
-  }, [fetchVentas]);
+    fetchCompras();
+  }, [fetchCompras]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -122,42 +125,38 @@ export default function VentasPage() {
     }
   };
 
-  const handleViewDetails = async (venta: Venta) => {
+  const handleViewDetails = async (compra: Compra) => {
     try {
-      // Obtener los productos de la venta
-      const ventaProductos = await getProductosByVentaId(venta.VentaId);
+      // Obtener los productos de la compra
+      const compraProductos = await getProductosByCompraId(compra.CompraId);
 
       // Obtener los detalles de cada producto
       const productosConDetalles = await Promise.all(
-        ventaProductos.map(async (ventaProducto: VentaProducto) => {
-          const producto = await getProductoById(ventaProducto.ProductoId);
+        compraProductos.map(async (compraProducto: CompraProducto) => {
+          const producto = await getProductoById(compraProducto.ProductoId);
           return {
-            ...ventaProducto,
+            ...compraProducto,
             ProductoNombre: producto.ProductoNombre,
-            PromedioTotal:
-              ventaProducto.VentaProductoPrecioPromedio *
-              ventaProducto.VentaProductoCantidad,
+            PrecioTotal:
+              compraProducto.CompraProductoPrecio *
+              compraProducto.CompraProductoCantidad,
           };
         })
       );
 
       // Obtener los detalles del almacén
-      const almacen = await getAlmacenById(venta.AlmacenId);
+      const almacen = await getAlmacenById(compra.AlmacenId);
 
-      const clienteInfo = venta.ClienteNombre
-        ? `${venta.ClienteNombre} ${venta.ClienteApellido}`
-        : `Cliente #${venta.ClienteId}`;
+      const proveedorInfo = compra.ProveedorNombre
+        ? `${compra.ProveedorNombre} (${compra.ProveedorRUC})`
+        : `Proveedor #${compra.ProveedorId}`;
 
-      const getTipoVentaText = (tipo: string) => {
+      const getTipoCompraText = (tipo: string) => {
         switch (tipo) {
           case "CO":
             return "Contado";
           case "CR":
             return "Crédito";
-          case "PO":
-            return "POS";
-          case "TR":
-            return "Transfer";
           default:
             return tipo;
         }
@@ -171,11 +170,8 @@ export default function VentasPage() {
               <th class="text-left py-2 px-4" style="min-width: 200px">Producto</th>
               <th class="text-right py-2 px-4" style="min-width: 120px">Cantidad</th>
               <th class="text-right py-2 px-4" style="min-width: 160px">Precio Unit.</th>
-              <th class="text-right py-2 px-4" style="min-width: 160px">Precio Prom.</th>
-              <th class="text-right py-2 px-4" style="min-width: 160px">Prom. Total</th>
-              <th class="text-right py-2 px-4" style="min-width: 160px">Precio</th>
               <th class="text-right py-2 px-4" style="min-width: 160px">Precio Total</th>
-              <th class="text-right py-2 px-4" style="min-width: 160px">Subtotal</th>
+              <th class="text-right py-2 px-4" style="min-width: 160px">Unidad</th>
             </tr>
           </thead>
           <tbody>
@@ -185,26 +181,17 @@ export default function VentasPage() {
               <tr class="border-b hover:bg-gray-50">
                 <td class="py-2 px-4">${prod.ProductoNombre}</td>
                 <td class="text-right py-2 px-4">${
-                  prod.VentaProductoCantidad
+                  prod.CompraProductoCantidad
                 }</td>
                 <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.VentaProductoPrecio
+                  prod.CompraProductoPrecio
                 )}</td>
                 <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.VentaProductoPrecioPromedio
+                  prod.PrecioTotal
                 )}</td>
-                <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.PromedioTotal
-                )}</td>
-                <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.VentaProductoPrecio
-                )}</td>
-                <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.VentaProductoPrecioTotal
-                )}</td>
-                <td class="text-right py-2 px-4">${formatCurrency(
-                  prod.VentaProductoPrecioTotal
-                )}</td>
+                <td class="text-right py-2 px-4">${
+                  prod.CompraProductoCantidadUnidad === "C" ? "Caja" : "Unidad"
+                }</td>
               </tr>
             `
               )
@@ -214,22 +201,24 @@ export default function VentasPage() {
       `;
 
       Swal.fire({
-        title: `Venta #${venta.VentaId}`,
+        title: `Compra #${compra.CompraId}`,
         html: `
           <div class="text-left" style="overflow-x: auto;">
-            <p><strong>Cliente:</strong> ${clienteInfo}</p>
+            <p><strong>Proveedor:</strong> ${proveedorInfo}</p>
             <p><strong>Fecha:</strong> ${new Date(
-              venta.VentaFecha
+              compra.CompraFecha
             ).toLocaleString()}</p>
-            <p><strong>Tipo:</strong> ${getTipoVentaText(venta.VentaTipo)}</p>
+            <p><strong>Tipo:</strong> ${getTipoCompraText(
+              compra.CompraTipo
+            )}</p>
             <p><strong>Almacén:</strong> ${almacen.AlmacenNombre}</p>
-            <p><strong>Usuario:</strong> ${venta.VentaUsuario}</p>
+            <p><strong>Factura:</strong> ${compra.CompraFactura}</p>
             <div class="mt-4">
               <h3 class="font-bold mb-2">Detalle de Productos</h3>
               ${productosTable}
             </div>
             <p class="text-right mt-4 pr-4"><strong>Total:</strong> ${formatCurrency(
-              venta.Total
+              compra.Total
             )}</p>
           </div>
         `,
@@ -243,16 +232,16 @@ export default function VentasPage() {
         },
       });
     } catch (error) {
-      console.error("Error al cargar los detalles de la venta:", error);
+      console.error("Error al cargar los detalles de la compra:", error);
       Swal.fire({
         title: "Error",
-        text: "No se pudieron cargar los detalles de la venta",
+        text: "No se pudieron cargar los detalles de la compra",
         icon: "error",
       });
     }
   };
 
-  const handleDelete = async (venta: Venta) => {
+  const handleDelete = async (compra: Compra) => {
     Swal.fire({
       title: "¿Estás seguro?",
       text: "¡No podrás revertir esto!",
@@ -284,9 +273,9 @@ export default function VentasPage() {
               Body: {
                 "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
                   _attributes: { xmlns: "TechNow" },
-                  Ventaid: venta.VentaId,
+                  Ventaid: compra.CompraId,
                   Fechastring: fechaFormateada,
-                  Regla: 1, // Valor por defecto para Regla
+                  Regla: 2, // Valor por defecto para Regla
                 },
               },
             },
@@ -312,12 +301,12 @@ export default function VentasPage() {
             config
           );
 
-          // SEGUNDO: Solo si el webservice fue exitoso, eliminar la venta
-          await deleteVenta(venta.VentaId);
+          // SEGUNDO: Solo si el webservice fue exitoso, eliminar la compra
+          await deleteCompra(compra.CompraId);
 
           let timerInterval: ReturnType<typeof setInterval>;
           Swal.fire({
-            title: "Venta eliminada exitosamente!",
+            title: "Compra eliminada exitosamente!",
             html: "Actualizando en <b></b> segundos.",
             timer: 3000,
             timerProgressBar: true,
@@ -345,12 +334,12 @@ export default function VentasPage() {
             },
           }).then((result) => {
             if (result.dismiss === Swal.DismissReason.timer) {
-              fetchVentas();
+              fetchCompras();
             }
           });
         } catch (error: unknown) {
           const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar la venta";
+          const msg = err?.message || "No se pudo eliminar la compra";
           Swal.fire({
             icon: "warning",
             title: "No permitido",
@@ -370,28 +359,28 @@ export default function VentasPage() {
     setCurrentPage(1);
   };
 
-  const handleCreateVenta = () => {
-    // Implementar la lógica para crear una nueva venta
-    console.log("Crear nueva venta");
+  const handleCreateCompra = () => {
+    // Implementar la lógica para crear una nueva compra
+    console.log("Crear nueva compra");
   };
 
-  if (!puedeLeer) return <div>No tienes permiso para ver las ventas.</div>;
-  if (loading) return <div>Cargando ventas...</div>;
+  if (!puedeLeer) return <div>No tienes permiso para ver las compras.</div>;
+  if (loading) return <div>Cargando compras...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Historial de Ventas</h1>
-      <VentasList
-        ventas={ventasData.ventas}
+      <h1 className="text-2xl font-medium mb-3">Historial de Compras</h1>
+      <ComprasList
+        compras={comprasData.compras}
         onViewDetails={handleViewDetails}
-        onCreate={puedeCrear ? handleCreateVenta : undefined}
+        onCreate={puedeCrear ? handleCreateCompra : undefined}
         onDelete={puedeEliminar ? handleDelete : undefined}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}
         onSearchSubmit={applySearch}
-        pagination={ventasData.pagination}
+        pagination={comprasData.pagination}
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSort={(key, order) => {
@@ -402,7 +391,7 @@ export default function VentasPage() {
       />
       <Pagination
         currentPage={currentPage}
-        totalPages={ventasData.pagination.totalPages}
+        totalPages={comprasData.pagination.totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}

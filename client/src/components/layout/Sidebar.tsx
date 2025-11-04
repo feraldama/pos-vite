@@ -19,6 +19,7 @@ import {
   // WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
+  TruckIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -88,6 +89,14 @@ const navigation: NavigationItem[] = [
       { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
       // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
+    ],
+  },
+  {
+    name: "Transporte",
+    href: "/transporte",
+    icon: <TruckIcon className="h-7 w-6" />,
+    children: [
+      { name: "Empresas de Transporte", href: "/movements/transporte" },
     ],
   },
   // {

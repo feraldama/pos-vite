@@ -30,6 +30,7 @@ import ReportesPage from "./pages/dashboard/ReportesPage";
 import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
+import TransportesPage from "./pages/transporte/TransportesPage";
 
 function App() {
   return (
@@ -72,6 +73,8 @@ function App() {
             <Route path="/movements/summary" element={<MovementsPage />} />;
             <Route path="/movements/cajas" element={<CajasPage />} />;
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
+            <Route path="/movements/transporte" element={<TransportesPage />} />
+            ;
             <Route path="/customers" element={<CustomersPage />} />;
             <Route
               path="/apertura-cierre-caja"

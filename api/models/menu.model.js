@@ -60,7 +60,7 @@ const Menu = {
     return new Promise((resolve, reject) => {
       db.query("SELECT * FROM menu WHERE MenuId = ?", [id], (err, results) => {
         if (err) return reject(err);
-        resolve(results[0]);
+        resolve(results && results.length > 0 ? results[0] : null);
       });
     });
   },

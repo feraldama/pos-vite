@@ -30,8 +30,8 @@ const Usuario = {
         "SELECT * FROM usuario WHERE UsuarioId = ? LIMIT 1",
         [email],
         (err, results) => {
-          if (err) reject(err);
-          resolve(results[0]);
+          if (err) return reject(err);
+          resolve(results && results.length > 0 ? results[0] : null);
         }
       );
     });

@@ -51,7 +51,7 @@ export default function AperturaCierreCajaPage() {
     const fetchCajas = async () => {
       try {
         setLoading(true);
-        const data = await getCajas(1, 100);
+        const data = await getCajas(1, 1000);
         setCajas(data.data);
         if (data.data.length > 0) setCajaId(data.data[0].CajaId);
       } catch {
@@ -217,14 +217,15 @@ export default function AperturaCierreCajaPage() {
         reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
     );
     // Calcular totales
-    const apertura = aperturaReg.RegistroDiarioCajaMonto;
-    const cierre = cierreReg.RegistroDiarioCajaMonto;
+    const apertura = Number(aperturaReg.RegistroDiarioCajaMonto);
+    const cierre = Number(cierreReg.RegistroDiarioCajaMonto);
     let egresos = 0;
     let ingresos = 0;
     let ingresosPOS = 0;
     let ingresosVoucher = 0;
     let ingresosTransfer = 0;
     for (const reg of registrosFiltrados) {
+      const monto = Number(reg.RegistroDiarioCajaMonto);
       if (
         reg.TipoGastoId === 2 &&
         reg.TipoGastoGrupoId !== 2 &&
@@ -232,19 +233,19 @@ export default function AperturaCierreCajaPage() {
         reg.TipoGastoGrupoId !== 5 &&
         reg.TipoGastoGrupoId !== 6
       ) {
-        ingresos += reg.RegistroDiarioCajaMonto;
+        ingresos += monto;
       }
       if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
-        egresos += reg.RegistroDiarioCajaMonto;
+        egresos += monto;
       }
       if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
-        ingresosPOS += reg.RegistroDiarioCajaMonto;
+        ingresosPOS += monto;
       }
       if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
-        ingresosVoucher += reg.RegistroDiarioCajaMonto;
+        ingresosVoucher += monto;
       }
       if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
-        ingresosTransfer += reg.RegistroDiarioCajaMonto;
+        ingresosTransfer += monto;
       }
     }
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);

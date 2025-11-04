@@ -116,7 +116,6 @@ export default function CajasList({
       label: "Monto",
       render: (caja: Caja) => `Gs. ${formatMiles(caja.CajaMonto)}`,
     },
-    { key: "CajaGastoCantidad", label: "Gasto Cantidad" },
   ];
 
   return (
@@ -245,23 +244,6 @@ export default function CajasList({
                           setFormData((prev) => ({ ...prev, CajaMonto: num }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="CajaGastoCantidad"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Gasto Cantidad
-                    </label>
-                    <input
-                      type="number"
-                      name="CajaGastoCantidad"
-                      id="CajaGastoCantidad"
-                      value={formData.CajaGastoCantidad}
-                      onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />

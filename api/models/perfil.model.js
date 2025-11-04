@@ -16,7 +16,7 @@ const Perfil = {
         [id],
         (err, results) => {
           if (err) return reject(err);
-          resolve(results[0]);
+          resolve(results && results.length > 0 ? results[0] : null);
         }
       );
     });

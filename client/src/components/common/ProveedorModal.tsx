@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
 // Definir la interfaz Proveedor localmente
@@ -40,6 +40,7 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
     ProveedorDireccion: "",
     ProveedorTelefono: "",
   });
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredProveedores = proveedores.filter(
     (p) =>
@@ -66,6 +67,13 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
       console.error("Error al crear proveedor:", error);
     }
   };
+
+  // Enfocar el input de búsqueda cuando se abre el modal y no está en modo crear
+  useEffect(() => {
+    if (show && !showCreateForm && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [show, showCreateForm]);
 
   if (!show) return null;
 
@@ -96,6 +104,7 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
           <>
             <div className="mb-4">
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Buscar proveedor..."
                 value={searchTerm}

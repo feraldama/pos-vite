@@ -85,6 +85,14 @@ export default function Compras() {
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
+  // Estado para la fecha de la compra (por defecto fecha de hoy)
+  const [compraFecha, setCompraFecha] = useState(() => {
+    const hoy = new Date();
+    const año = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoy.getDate()).padStart(2, "0");
+    return `${año}-${mes}-${dia}`;
+  });
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
@@ -281,13 +289,15 @@ export default function Compras() {
     console.log("Usuario ID:", user.id);
     console.log("Usuario completo:", user);
 
-    const fecha = new Date();
-    const dia = fecha.getDate();
-    const mes = fecha.getMonth() + 1;
-    const año = fecha.getFullYear() % 100;
-    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-    const añoStr = año < 10 ? `0${año}` : año.toString();
+    // Formatear la fecha seleccionada al formato DD/MM/YY
+    // Parsear directamente del string para evitar problemas de zona horaria
+    const [añoCompleto, mesCompleto, diaCompleto] = compraFecha.split("-");
+    const diaFormato = parseInt(diaCompleto, 10);
+    const mesFormato = parseInt(mesCompleto, 10);
+    const añoFormato = parseInt(añoCompleto, 10) % 100;
+    const diaStr = diaFormato < 10 ? `0${diaFormato}` : diaFormato.toString();
+    const mesStr = mesFormato < 10 ? `0${mesFormato}` : mesFormato.toString();
+    const añoStr = añoFormato < 10 ? `0${añoFormato}` : añoFormato.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
     const SDTCompraItem = carrito.map((p) => ({
@@ -397,6 +407,12 @@ export default function Compras() {
     setCompraFactura("");
     setCompraEntrega(0);
     setCarrito([]);
+    // Restaurar fecha a hoy
+    const hoy = new Date();
+    const añoHoy = hoy.getFullYear();
+    const mesHoy = String(hoy.getMonth() + 1).padStart(2, "0");
+    const diaHoy = String(hoy.getDate()).padStart(2, "0");
+    setCompraFecha(`${añoHoy}-${mesHoy}-${diaHoy}`);
   };
 
   const handleTecladoNumerico = (valor: string | number) => {
@@ -659,20 +675,33 @@ export default function Compras() {
             </div>
           </div>
 
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Monto Entregado
-            </label>
-            <input
-              type="text"
-              value={compraEntrega > 0 ? formatMiles(compraEntrega) : ""}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, "");
-                setCompraEntrega(Number(value));
-              }}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-              placeholder="0"
-            />
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Monto Entregado
+              </label>
+              <input
+                type="text"
+                value={compraEntrega > 0 ? formatMiles(compraEntrega) : ""}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d]/g, "");
+                  setCompraEntrega(Number(value));
+                }}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Compra
+              </label>
+              <input
+                type="date"
+                value={compraFecha}
+                onChange={(e) => setCompraFecha(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              />
+            </div>
           </div>
 
           {/* Botón Comprar */}

@@ -30,6 +30,7 @@ import ReportesPage from "./pages/dashboard/ReportesPage";
 import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
+import Inventario from "./pages/inventario/Inventario";
 
 function App() {
   return (
@@ -40,7 +41,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
 
-          {/* Rutas sin Layout (Sales y Compras) */}
+          {/* Rutas sin Layout (Sales, Compras e Inventario) */}
           <Route
             path="/ventas"
             element={
@@ -54,6 +55,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Compras />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/inventario"
+            element={
+              <PrivateRoute>
+                <Inventario />
               </PrivateRoute>
             }
           />

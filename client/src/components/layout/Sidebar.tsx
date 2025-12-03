@@ -105,6 +105,7 @@ const navigation: NavigationItem[] = [
       { name: "Facturas", href: "/facturas" },
       { name: "Ventas", href: "/modifications/ventas" },
       { name: "Compras", href: "/modifications/compras" },
+      { name: "Inventario", href: "/inventario" },
     ],
   },
   {

@@ -30,6 +30,7 @@ const pagotransRoutes = require("./routes/pagotrans.routes");
 const colegioRoutes = require("./routes/colegio.routes");
 const colegiocursoRoutes = require("./routes/colegiocurso.routes");
 const nominaRoutes = require("./routes/nomina.routes");
+const colegiocobranzaRoutes = require("./routes/colegiocobranza.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -76,6 +77,7 @@ app.use("/api/pagotrans", pagotransRoutes);
 app.use("/api/colegio", colegioRoutes);
 app.use("/api/colegiocurso", colegiocursoRoutes);
 app.use("/api/nomina", nominaRoutes);
+app.use("/api/colegiocobranza", colegiocobranzaRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

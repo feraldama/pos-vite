@@ -34,6 +34,7 @@ import TransportesPage from "./pages/transporte/TransportesPage";
 import PagosTransportePage from "./pages/pagotrans/PagosTransportePage";
 import ColegiosPage from "./pages/colegios/ColegiosPage";
 import NominasPage from "./pages/nominas/NominasPage";
+import ColegioCobranzasPage from "./pages/colegiocobranzas/ColegioCobranzasPage";
 
 function App() {
   return (
@@ -80,6 +81,10 @@ function App() {
             <Route path="/pagotrans" element={<PagosTransportePage />} />
             <Route path="/colegios" element={<ColegiosPage />} />
             <Route path="/nominas" element={<NominasPage />} />
+            <Route
+              path="/colegiocobranzas"
+              element={<ColegioCobranzasPage />}
+            />
             <Route path="/customers" element={<CustomersPage />} />;
             <Route
               path="/apertura-cierre-caja"

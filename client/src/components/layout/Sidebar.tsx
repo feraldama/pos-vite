@@ -108,6 +108,7 @@ const navigation: NavigationItem[] = [
     children: [
       { name: "Colegios", href: "/colegios" },
       { name: "Nominas", href: "/nominas" },
+      { name: "Cobranzas", href: "/colegiocobranzas" },
     ],
   },
   // {

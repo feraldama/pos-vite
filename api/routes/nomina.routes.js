@@ -8,6 +8,7 @@ router.use(authMiddleware);
 
 // Rutas para nominas
 router.get("/", authMiddleware, nominaController.getAll);
+router.get("/all", authMiddleware, nominaController.getAllNominasSinPaginacion);
 router.get("/search", authMiddleware, nominaController.search);
 router.get("/:id", authMiddleware, nominaController.getById);
 router.post("/", authMiddleware, nominaController.create);

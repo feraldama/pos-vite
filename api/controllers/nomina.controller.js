@@ -106,3 +106,14 @@ exports.delete = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Obtener todas las nominas sin paginación
+exports.getAllNominasSinPaginacion = async (req, res) => {
+  try {
+    const nominas = await Nomina.getAll();
+    res.json({ data: nominas });
+  } catch (error) {
+    console.error("Error al obtener todas las nominas:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

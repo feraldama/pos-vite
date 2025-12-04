@@ -103,3 +103,17 @@ export const deleteNomina = async (id: string | number) => {
     );
   }
 };
+
+export const getAllNominasSinPaginacion = async () => {
+  try {
+    const response = await api.get("/nomina/all");
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener todas las nominas",
+      }
+    );
+  }
+};

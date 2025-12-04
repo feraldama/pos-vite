@@ -1,199 +1,631 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../../contexts/useAuth";
+import { getEstadoAperturaPorUsuario } from "../../../services/registrodiariocaja.service";
+import {
+  getCajaById,
+  getCajas,
+  updateCajaMonto,
+} from "../../../services/cajas.service";
+import {
+  getNominaById,
+  createNomina,
+  getAllNominasSinPaginacion,
+} from "../../../services/nomina.service";
+import { getColegioById } from "../../../services/colegio.service";
+import { getColegioCursos } from "../../../services/colegio.service";
+import { createColegioCobranza } from "../../../services/colegiocobranza.service";
+import NominaModal from "../../../components/common/NominaModal";
+import Swal from "sweetalert2";
+import { formatMiles, formatMilesWithDecimals } from "../../../utils/utils";
 
-export default function PresupuestosTab() {
-  const [searchTerm, setSearchTerm] = useState("");
+interface Caja {
+  id: string | number;
+  CajaId: string | number;
+  CajaDescripcion: string;
+  CajaMonto: number;
+  [key: string]: unknown;
+}
+
+interface Nomina {
+  NominaId: number;
+  NominaNombre: string;
+  NominaApellido: string;
+  ColegioId: number;
+  ColegioCursoId: number;
+}
+
+interface ColegioCurso {
+  ColegioId: number;
+  ColegioCursoId: number;
+  ColegioCursoNombre: string;
+  ColegioCursoImporte: string;
+}
+
+export default function CobranzaColegiosTab() {
+  const { user } = useAuth();
+  const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
+  const [cajas, setCajas] = useState<Caja[]>([]);
+  const [nominas, setNominas] = useState<Nomina[]>([]);
+  const [showNominaModal, setShowNominaModal] = useState(false);
+  const [nominaSeleccionada, setNominaSeleccionada] = useState<Nomina | null>(
+    null
+  );
+
+  // Formulario
+  const [cajaId, setCajaId] = useState<string | number>("");
+  const [fecha, setFecha] = useState("");
+  const [nominaId, setNominaId] = useState<string | number>("");
+  const [colegioId, setColegioId] = useState<number | "">("");
+  const [colegioNombre, setColegioNombre] = useState("");
+  const [cursoId, setCursoId] = useState<number | "">("");
+  const [cursoNombre, setCursoNombre] = useState("");
+  const [importe, setImporte] = useState<number>(0);
+  const [mesPagado, setMesPagado] = useState("");
+  const [mes, setMes] = useState<number>(0);
+  const [subtotalCuota, setSubtotalCuota] = useState<number>(0);
+  const [diasMora, setDiasMora] = useState<number>(0);
+  const [multa, setMulta] = useState<number>(0);
+  const [examen, setExamen] = useState<number | "">("");
+  const [descuento, setDescuento] = useState<number | "">("");
+  const [total, setTotal] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return;
+      try {
+        // Obtener caja aperturada
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
+          const caja = await getCajaById(estado.cajaId);
+          setCajaAperturada(caja);
+          setCajaId(estado.cajaId);
+        } else {
+          setCajaAperturada(null);
+        }
+
+        // Obtener todas las cajas
+        const cajasData = await getCajas(1, 1000);
+        setCajas(cajasData.data);
+
+        // Obtener todas las nominas sin paginación
+        const nominasData = await getAllNominasSinPaginacion();
+        setNominas(nominasData.data || []);
+
+        // Inicializar fecha actual
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+        const dd = String(hoy.getDate()).padStart(2, "0");
+        const hh = String(hoy.getHours()).padStart(2, "0");
+        const min = String(hoy.getMinutes()).padStart(2, "0");
+        setFecha(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      }
+    };
+    fetchData();
+  }, [user]);
+
+  // Cuando se selecciona una nómina, cargar colegio y curso
+  useEffect(() => {
+    const loadNominaData = async () => {
+      if (!nominaId) {
+        setColegioId("");
+        setColegioNombre("");
+        setCursoId("");
+        setCursoNombre("");
+        setImporte(0);
+        return;
+      }
+
+      try {
+        const nomina = await getNominaById(nominaId);
+        if (nomina) {
+          setColegioId(nomina.ColegioId);
+          setCursoId(nomina.ColegioCursoId);
+
+          // Cargar nombre del colegio
+          const colegio = await getColegioById(nomina.ColegioId);
+          setColegioNombre(colegio?.ColegioNombre || "");
+
+          // Cargar curso y su importe
+          const cursos = await getColegioCursos(nomina.ColegioId);
+          const curso = cursos.find(
+            (c: ColegioCurso) => c.ColegioCursoId === nomina.ColegioCursoId
+          );
+          if (curso) {
+            setCursoNombre(curso.ColegioCursoNombre);
+            const importeValue = Number(curso.ColegioCursoImporte) || 0;
+            setImporte(importeValue);
+            // Resetear multa cuando cambia el curso
+            setMulta(0);
+            setDiasMora(0);
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar datos de la nómina:", error);
+      }
+    };
+
+    loadNominaData();
+  }, [nominaId]);
+
+  // Calcular subtotal cuando cambian importe o mes
+  useEffect(() => {
+    const nuevoSubtotal = importe * mes;
+    setSubtotalCuota(nuevoSubtotal);
+  }, [importe, mes]);
+
+  // Calcular multa cuando cambian días de mora
+  useEffect(() => {
+    const nuevaMulta = diasMora * 1000;
+    setMulta(nuevaMulta);
+  }, [diasMora]);
+
+  // Calcular total cuando cambian los valores
+  useEffect(() => {
+    const examenValue = Number(examen) || 0;
+    const descuentoValue = Number(descuento) || 0;
+    const multaValue = Number(multa) || 0;
+    const nuevoTotal =
+      subtotalCuota + multaValue + examenValue - descuentoValue;
+    setTotal(Math.max(0, nuevoTotal));
+  }, [subtotalCuota, multa, examen, descuento]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cajaAperturada || !user) {
+      Swal.fire({
+        icon: "warning",
+        title: "Caja no aperturada",
+        text: "Debes aperturar una caja antes de realizar cobranzas.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
+    if (!nominaId || !colegioId || !cursoId) {
+      Swal.fire({
+        icon: "warning",
+        title: "Datos incompletos",
+        text: "Debes seleccionar una nómina válida.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
+    try {
+      // Crear la cobranza
+      await createColegioCobranza({
+        CajaId: cajaId,
+        ColegioCobranzaFecha: fecha,
+        NominaId: nominaId,
+        ColegioCobranzaMesPagado: mesPagado,
+        ColegioCobranzaMes: mes,
+        ColegioCobranzaDiasMora: diasMora,
+        ColegioCobranzaExamen: examen || 0,
+        UsuarioId: user.id,
+        ColegioCobranzaDescuento: descuento || 0,
+      });
+
+      // Actualizar monto de la caja (sumar el total)
+      const estado = await getEstadoAperturaPorUsuario(user.id);
+      const cajaAperturadaId = estado.cajaId;
+      const cajaActualizada = await getCajaById(cajaAperturadaId);
+      const cajaMontoActual = cajaActualizada.CajaMonto;
+      await updateCajaMonto(
+        cajaAperturadaId,
+        Number(cajaMontoActual) + Number(total)
+      );
+
+      Swal.fire(
+        "Cobranza registrada",
+        "La cobranza fue registrada correctamente",
+        "success"
+      );
+
+      // Limpiar formulario
+      handleCancel();
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error ? err.message : "No se pudo registrar la cobranza";
+      Swal.fire("Error", errorMsg, "error");
+    }
+  };
+
+  const handleCancel = () => {
+    setNominaId("");
+    setNominaSeleccionada(null);
+    setColegioId("");
+    setColegioNombre("");
+    setCursoId("");
+    setCursoNombre("");
+    setImporte(0);
+    setMesPagado("");
+    setMes(0);
+    setSubtotalCuota(0);
+    setDiasMora(0);
+    setMulta(0);
+    setExamen("");
+    setDescuento("");
+    setTotal(0);
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dd = String(hoy.getDate()).padStart(2, "0");
+    const hh = String(hoy.getHours()).padStart(2, "0");
+    const min = String(hoy.getMinutes()).padStart(2, "0");
+    setFecha(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <h2 className="text-xl font-bold text-purple-800 mb-2">
-          Módulo de Presupuestos
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-green-800 mb-6 border-b-2 border-green-500 pb-2">
+          COLEGIO COBRANZA
         </h2>
-        <p className="text-purple-700">
-          Crea y gestiona presupuestos para clientes, cotizaciones y propuestas
-          comerciales.
-        </p>
-      </div>
 
-      {/* Barra de búsqueda */}
-      <div className="flex gap-4">
-        <input
-          type="text"
-          placeholder="Buscar por cliente, número de presupuesto o producto..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-        />
-        <button className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-          Buscar
-        </button>
-      </div>
-
-      {/* Contenido principal */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Tarjeta de Resumen */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Resumen de Presupuestos
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total del Mes:</span>
-              <span className="font-bold text-purple-600">0</span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Id */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Id
+              </label>
+              <input
+                type="text"
+                value="0"
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Pendientes:</span>
-              <span className="font-bold text-orange-600">0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Aprobados:</span>
-              <span className="font-bold text-green-600">0</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Tarjeta de Acciones Rápidas */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Acciones Rápidas
-          </h3>
-          <div className="space-y-3">
-            <button className="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-              Nuevo Presupuesto
-            </button>
-            <button className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-              Convertir a Venta
-            </button>
-            <button className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition">
-              Generar PDF
-            </button>
-          </div>
-        </div>
-
-        {/* Tarjeta de Estados */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Estados de Presupuestos
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Borrador:</span>
-              <span className="font-bold text-gray-600">0</span>
+            {/* Caja */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Caja
+              </label>
+              <select
+                value={cajaId}
+                onChange={(e) => setCajaId(e.target.value)}
+                required
+                disabled={!!cajaAperturada}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">Seleccione una caja</option>
+                {cajas.map((caja) => (
+                  <option key={caja.CajaId} value={caja.CajaId}>
+                    {caja.CajaDescripcion}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Enviado:</span>
-              <span className="font-bold text-blue-600">0</span>
+
+            {/* Fecha */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha
+              </label>
+              <input
+                type="datetime-local"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Aprobado:</span>
-              <span className="font-bold text-green-600">0</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Tabla de Presupuestos Recientes */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">
-            Presupuestos Recientes
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="text-center text-gray-500 py-8">
-            <div className="text-4xl mb-2">📋</div>
-            <p>No hay presupuestos registrados para mostrar</p>
-            <p className="text-sm">Los presupuestos creados aparecerán aquí</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Formulario de Nuevo Presupuesto */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Crear Nuevo Presupuesto
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cliente
-            </label>
-            <input
-              type="text"
-              placeholder="Nombre del cliente"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fecha de Vencimiento
-            </label>
-            <input
-              type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Válido por (días)
-            </label>
-            <input
-              type="number"
-              placeholder="30"
-              min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condiciones de Pago
-            </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-              <option>Seleccionar condiciones</option>
-              <option>Contado</option>
-              <option>30 días</option>
-              <option>60 días</option>
-              <option>90 días</option>
-              <option>Personalizado</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Observaciones
-            </label>
-            <textarea
-              placeholder="Observaciones adicionales del presupuesto..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Sección de Productos */}
-        <div className="mt-6">
-          <h4 className="text-md font-semibold text-gray-800 mb-3">
-            Productos del Presupuesto
-          </h4>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="text-center text-gray-500 py-4">
-              <div className="text-2xl mb-2">➕</div>
-              <p>Agregar productos al presupuesto</p>
-              <button className="mt-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-                Agregar Producto
+            {/* Nómina */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nómina
+              </label>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowNominaModal(true);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-left bg-white hover:bg-gray-50 transition"
+              >
+                {nominaSeleccionada
+                  ? `${nominaSeleccionada.NominaApellido}, ${nominaSeleccionada.NominaNombre}`
+                  : "Seleccione una nómina..."}
               </button>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-6 flex gap-3">
-          <button className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-            Crear Presupuesto
-          </button>
-          <button className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
-            Guardar Borrador
-          </button>
-        </div>
+            {/* Colegio */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Colegio
+              </label>
+              <input
+                type="text"
+                value={colegioNombre}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* Curso */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Curso
+              </label>
+              <input
+                type="text"
+                value={cursoNombre}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* Importe */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Importe
+              </label>
+              <input
+                type="text"
+                value={importe > 0 ? formatMilesWithDecimals(importe) : "0,00"}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* Mes Pagado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mes Pagado
+              </label>
+              <input
+                type="text"
+                value={mesPagado}
+                onChange={(e) => setMesPagado(e.target.value.toUpperCase())}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent uppercase"
+                style={{ textTransform: "uppercase" }}
+              />
+            </div>
+
+            {/* Mes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mes
+              </label>
+              <input
+                type="number"
+                value={mes}
+                onChange={(e) => setMes(Number(e.target.value) || 0)}
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Subtotal Cuota */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subtotal Cuota
+              </label>
+              <input
+                type="text"
+                value={
+                  subtotalCuota > 0
+                    ? formatMilesWithDecimals(subtotalCuota)
+                    : "0,00"
+                }
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* Dias Mora */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dias Mora
+              </label>
+              <input
+                type="number"
+                value={diasMora}
+                onChange={(e) => {
+                  const dias = Number(e.target.value) || 0;
+                  setDiasMora(dias);
+                }}
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Multa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Multa
+              </label>
+              <input
+                type="text"
+                value={multa > 0 ? formatMilesWithDecimals(multa) : "0,00"}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+
+            {/* Examen */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Examen
+              </label>
+              <input
+                type="text"
+                value={examen !== "" ? formatMiles(examen) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setExamen(isNaN(num) ? "" : num);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                inputMode="numeric"
+              />
+            </div>
+
+            {/* Descuento */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descuento
+              </label>
+              <input
+                type="text"
+                value={descuento !== "" ? formatMiles(descuento) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setDescuento(isNaN(num) ? "" : num);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                inputMode="numeric"
+              />
+            </div>
+
+            {/* Total */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Total
+              </label>
+              <input
+                type="text"
+                value={total > 0 ? formatMilesWithDecimals(total) : "0,00"}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 font-bold"
+              />
+            </div>
+
+            {/* Usuario */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Usuario
+              </label>
+              <input
+                type="text"
+                value={user?.id || ""}
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              />
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-6 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+            >
+              CANCELAR
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium"
+            >
+              CONFIRMAR
+            </button>
+          </div>
+        </form>
       </div>
+      <NominaModal
+        show={showNominaModal}
+        onClose={() => setShowNominaModal(false)}
+        nominas={nominas}
+        onSelect={(nomina) => {
+          setNominaSeleccionada(nomina);
+          setNominaId(nomina.NominaId);
+          setShowNominaModal(false);
+        }}
+        onCreateNomina={async (nominaData) => {
+          try {
+            // Validar que los campos requeridos estén presentes
+            if (
+              !nominaData.NominaNombre ||
+              !nominaData.ColegioId ||
+              nominaData.ColegioId === 0 ||
+              !nominaData.ColegioCursoId ||
+              nominaData.ColegioCursoId === 0
+            ) {
+              Swal.fire({
+                icon: "warning",
+                title: "Datos incompletos",
+                text: "Debe completar todos los campos requeridos (Nombre, Colegio y Curso)",
+              });
+              throw new Error("Datos incompletos");
+            }
+
+            // Crear la nómina directamente como en NominasPage
+            const response = await createNomina({
+              NominaNombre: nominaData.NominaNombre,
+              NominaApellido: nominaData.NominaApellido || "",
+              ColegioId: Number(nominaData.ColegioId),
+              ColegioCursoId: Number(nominaData.ColegioCursoId),
+            });
+
+            // Recargar la lista de nóminas
+            const nominasResponse = await getAllNominasSinPaginacion();
+            setNominas(nominasResponse.data || []);
+
+            // Si la respuesta tiene data, usar esa, sino buscar por el ID retornado
+            if (response.data) {
+              setNominaSeleccionada(response.data as unknown as Nomina);
+              setNominaId((response.data as Nomina).NominaId);
+              setShowNominaModal(false);
+              Swal.fire({
+                icon: "success",
+                title: "Nómina creada exitosamente",
+                text: "La nómina ha sido creada y seleccionada",
+              });
+            } else {
+              // Si no viene en data, buscar en la lista actualizada
+              const nuevaNominaEnLista = nominasResponse.data?.find(
+                (n: Nomina) =>
+                  n.NominaNombre === nominaData.NominaNombre &&
+                  n.ColegioId === Number(nominaData.ColegioId)
+              );
+              if (nuevaNominaEnLista) {
+                setNominaSeleccionada(nuevaNominaEnLista);
+                setNominaId(nuevaNominaEnLista.NominaId);
+                setShowNominaModal(false);
+                Swal.fire({
+                  icon: "success",
+                  title: "Nómina creada exitosamente",
+                  text: "La nómina ha sido creada y seleccionada",
+                });
+              } else {
+                throw new Error("No se pudo encontrar la nómina creada");
+              }
+            }
+          } catch (error) {
+            console.error("Error al crear nómina:", error);
+            const errorMessage =
+              error instanceof Error
+                ? error.message
+                : "Hubo un problema al crear la nómina";
+            Swal.fire({
+              icon: "error",
+              title: "Error al crear nómina",
+              text: errorMessage,
+            });
+            throw error; // Re-lanzar el error para que el modal lo maneje
+          }
+        }}
+      />
     </div>
   );
 }

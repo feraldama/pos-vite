@@ -105,7 +105,10 @@ const navigation: NavigationItem[] = [
     name: "Admin. Colegios",
     href: "/admincolegios",
     icon: <AcademicCapIcon className="h-7 w-6" />,
-    children: [{ name: "Colegios", href: "/colegios" }],
+    children: [
+      { name: "Colegios", href: "/colegios" },
+      { name: "Nominas", href: "/nominas" },
+    ],
   },
   // {
   //   name: "Modificaciones",

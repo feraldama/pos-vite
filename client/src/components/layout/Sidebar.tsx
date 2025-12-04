@@ -20,6 +20,7 @@ import {
   LockClosedIcon,
   ChartBarIcon,
   TruckIcon,
+  AcademicCapIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -99,6 +100,12 @@ const navigation: NavigationItem[] = [
       { name: "Empresas de Transporte", href: "/movements/transporte" },
       { name: "Pagos Transporte", href: "/pagotrans" },
     ],
+  },
+  {
+    name: "Admin. Colegios",
+    href: "/admincolegios",
+    icon: <AcademicCapIcon className="h-7 w-6" />,
+    children: [{ name: "Colegios", href: "/colegios" }],
   },
   // {
   //   name: "Modificaciones",

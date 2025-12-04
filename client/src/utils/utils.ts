@@ -1,6 +1,14 @@
 export const formatMiles = (value: number | string): string => {
   const parseToNumber = (value: number | string): number => {
     if (typeof value === "string") {
+      // Si el string tiene un punto decimal (formato: "123.45" o "123456.78")
+      // Verificar si tiene exactamente un punto y después del punto hay dígitos
+      const hasDecimalPoint = /^\d+\.\d+$/.test(value);
+      if (hasDecimalPoint) {
+        // Es un número decimal, parsearlo directamente
+        return parseFloat(value);
+      }
+      // Si no tiene punto decimal, tratar puntos como separadores de miles
       return parseFloat(value.replace(/\./g, "").replace(",", "."));
     }
     return value;

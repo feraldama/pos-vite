@@ -32,6 +32,7 @@ import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import TransportesPage from "./pages/transporte/TransportesPage";
 import PagosTransportePage from "./pages/pagotrans/PagosTransportePage";
+import ColegiosPage from "./pages/colegios/ColegiosPage";
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
             <Route path="/movements/transporte" element={<TransportesPage />} />
             <Route path="/pagotrans" element={<PagosTransportePage />} />
+            <Route path="/colegios" element={<ColegiosPage />} />
             <Route path="/customers" element={<CustomersPage />} />;
             <Route
               path="/apertura-cierre-caja"

@@ -97,6 +97,7 @@ const navigation: NavigationItem[] = [
     icon: <TruckIcon className="h-7 w-6" />,
     children: [
       { name: "Empresas de Transporte", href: "/movements/transporte" },
+      { name: "Pagos Transporte", href: "/pagotrans" },
     ],
   },
   // {

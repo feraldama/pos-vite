@@ -2,6 +2,7 @@ import api from "./api";
 import type { AxiosError } from "axios";
 
 export interface PagoTrans {
+  id?: string | number;
   PagoTransId?: number;
   PagoTransFecha?: string;
   TransporteId?: number;

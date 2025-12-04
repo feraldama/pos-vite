@@ -113,10 +113,15 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] p-6 relative flex flex-col">
         <button
+          type="button"
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
-          onClick={onClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
         >
           &times;
         </button>
@@ -126,7 +131,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
           </h2>
           {onCreateCliente && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowCreateModal(true);
+              }}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
             >
               <PlusIcon className="w-4 h-4" />
@@ -134,7 +144,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             </button>
           )}
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 flex-shrink-0">
           <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -190,7 +200,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg">
+        <div className="overflow-x-auto overflow-y-auto rounded-lg flex-1 min-h-0">
           <table className="min-w-full bg-white">
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-sm">
@@ -232,7 +242,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
           </table>
         </div>
         {/* Paginación */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-4 flex-shrink-0">
           <div className="text-sm text-gray-500">
             {clientesFiltrados.length === 0
               ? "0"
@@ -260,15 +270,25 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               className="px-3 py-1 rounded text-gray-500 border border-gray-200 disabled:opacity-50"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPage((p) => Math.max(1, p - 1));
+              }}
               disabled={page === 1}
             >
               Anterior
             </button>
             <button
+              type="button"
               className="px-3 py-1 rounded text-gray-500 border border-gray-200 disabled:opacity-50"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPage((p) => Math.min(totalPages, p + 1));
+              }}
               disabled={page === totalPages || totalPages === 0}
             >
               Siguiente

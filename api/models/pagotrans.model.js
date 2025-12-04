@@ -12,14 +12,22 @@ const PagoTrans = {
 
   getById: (id) => {
     return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM pagotrans WHERE PagoTransId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results && results.length > 0 ? results[0] : null);
-        }
-      );
+      const query = `
+        SELECT p.*, 
+          t.TransporteNombre, 
+          c.CajaDescripcion,
+          cl.ClienteNombre,
+          cl.ClienteApellido
+        FROM pagotrans p
+        LEFT JOIN transporte t ON p.TransporteId = t.TransporteId
+        LEFT JOIN Caja c ON p.CajaId = c.CajaId
+        LEFT JOIN clientes cl ON p.ClienteId = cl.ClienteId
+        WHERE p.PagoTransId = ?
+      `;
+      db.query(query, [id], (err, results) => {
+        if (err) return reject(err);
+        resolve(results && results.length > 0 ? results[0] : null);
+      });
     });
   },
 

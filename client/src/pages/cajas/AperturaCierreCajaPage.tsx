@@ -53,7 +53,7 @@ export default function AperturaCierreCajaPage() {
         setLoading(true);
         const data = await getCajas(1, 100);
         setCajas(data.data);
-        if (data.data.length > 0) setCajaId(data.data[0].CajaId);
+        // No establecer caja por defecto, el usuario debe seleccionar
       } catch {
         setError("Error al cargar cajas");
       } finally {
@@ -429,6 +429,7 @@ export default function AperturaCierreCajaPage() {
               required
               disabled={cajaDisabled}
             >
+              <option value="">Seleccione una caja</option>
               {cajas.map((caja) => (
                 <option key={caja.CajaId} value={caja.CajaId}>
                   {caja.CajaDescripcion}

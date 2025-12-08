@@ -322,7 +322,7 @@ export default function Sales() {
     salePrice: p.precio,
     price: p.precio,
     unidad: "U",
-    totalPrice: p.precio * p.cantidad,
+    totalPrice: obtenerTotal(p),
   }));
 
   function getSubtotal(items: Array<{ totalPrice: number }>): number {
@@ -395,6 +395,7 @@ export default function Sales() {
       ? "PDevolucionWS.VENTACONFIRMAR"
       : "PVentaConfirmarWS.VENTACONFIRMAR";
     const namespace = isDevolucionMode ? "Tech" : "TechNow";
+    console.log("log: 🚀 ~ getSubtotal:", getSubtotal(cartItems));
 
     const json = {
       Envelope: {

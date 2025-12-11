@@ -11,6 +11,7 @@ import logo from "../../assets/img/logo.jpg";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import { getLocalById } from "../../services/locales.service";
+import { usePermiso } from "../../hooks/usePermiso";
 
 export default function Inventario() {
   const [carrito, setCarrito] = useState<
@@ -42,6 +43,10 @@ export default function Inventario() {
   >([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const puedeCrear = usePermiso("INVENTARIO", "crear");
+  const puedeEditar = usePermiso("INVENTARIO", "editar");
+  const puedeEliminar = usePermiso("INVENTARIO", "eliminar");
+  const puedeLeer = usePermiso("INVENTARIO", "leer");
   const [tipoInventario, setTipoInventario] = useState("S"); // F = Fijar, S = Sumar
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
@@ -79,6 +84,14 @@ export default function Inventario() {
     imagen: string;
     stock: number;
   }) => {
+    if (!puedeCrear) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para agregar productos al inventario.",
+      });
+      return;
+    }
     const nuevoCartItemId = Date.now() + Math.random();
 
     setCarrito([
@@ -94,10 +107,26 @@ export default function Inventario() {
   };
 
   const quitarProducto = (cartItemId: number) => {
+    if (!puedeEliminar) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para eliminar productos del inventario.",
+      });
+      return;
+    }
     setCarrito(carrito.filter((p) => p.cartItemId !== cartItemId));
   };
 
   const cambiarCantidadCaja = (cartItemId: number, cantidad: number) => {
+    if (!puedeEditar) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para editar cantidades en el inventario.",
+      });
+      return;
+    }
     setCarrito(
       carrito.map((p) => {
         if (p.cartItemId === cartItemId) {
@@ -112,6 +141,14 @@ export default function Inventario() {
   };
 
   const cambiarCantidadUnidad = (cartItemId: number, cantidad: number) => {
+    if (!puedeEditar) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para editar cantidades en el inventario.",
+      });
+      return;
+    }
     setCarrito(
       carrito.map((p) => {
         if (p.cartItemId === cartItemId) {
@@ -147,6 +184,15 @@ export default function Inventario() {
   }, [user?.LocalId]);
 
   const sendRequest = async () => {
+    if (!puedeCrear && !puedeEditar) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para actualizar el inventario.",
+      });
+      return;
+    }
+
     if (carrito.length === 0) {
       Swal.fire({
         icon: "error",
@@ -298,6 +344,15 @@ export default function Inventario() {
   const handleSearchSubmit = () => {
     if (!busqueda.trim()) return;
 
+    if (!puedeCrear) {
+      Swal.fire({
+        icon: "warning",
+        title: "Sin permisos",
+        text: "No tienes permiso para agregar productos al inventario.",
+      });
+      return;
+    }
+
     const productosFiltrados = productos.filter(
       (p) =>
         (p.ProductoNombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -321,6 +376,8 @@ export default function Inventario() {
       setBusqueda("");
     }
   };
+
+  if (!puedeLeer) return <div>No tienes permiso para ver el inventario.</div>;
 
   return (
     <div className="flex h-screen bg-[#f5f8ff]">
@@ -361,15 +418,17 @@ export default function Inventario() {
                           <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
-                          <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              quitarProducto(p.cartItemId);
-                            }}
-                          >
-                            Eliminar
-                          </div>
+                          {puedeEliminar && (
+                            <div
+                              className="text-red-600 text-sm mt-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                quitarProducto(p.cartItemId);
+                              }}
+                            >
+                              Eliminar
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -389,7 +448,12 @@ export default function Inventario() {
                             cambiarCantidadCaja(p.cartItemId, p.caja - 1);
                             setSelectedProductId(p.cartItemId);
                           }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          disabled={!puedeEditar}
+                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
+                            puedeEditar
+                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                         >
                           -
                         </button>
@@ -397,7 +461,12 @@ export default function Inventario() {
                           type="number"
                           value={p.caja}
                           min={0}
-                          className="w-16 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
+                          disabled={!puedeEditar}
+                          className={`w-16 h-8 text-center border border-gray-300 rounded text-base font-semibold mx-1 ${
+                            puedeEditar
+                              ? "bg-gray-50 text-[#222]"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                           readOnly
                           ref={(el) => {
                             cantidadCajaRefs.current[p.cartItemId] = el || null;
@@ -433,7 +502,12 @@ export default function Inventario() {
                             cambiarCantidadCaja(p.cartItemId, p.caja + 1);
                             setSelectedProductId(p.cartItemId);
                           }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          disabled={!puedeEditar}
+                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
+                            puedeEditar
+                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                         >
                           +
                         </button>
@@ -455,7 +529,12 @@ export default function Inventario() {
                             cambiarCantidadUnidad(p.cartItemId, p.unidad - 1);
                             setSelectedProductId(p.cartItemId);
                           }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          disabled={!puedeEditar}
+                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
+                            puedeEditar
+                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                         >
                           -
                         </button>
@@ -463,7 +542,12 @@ export default function Inventario() {
                           type="number"
                           value={p.unidad}
                           min={0}
-                          className="w-16 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
+                          disabled={!puedeEditar}
+                          className={`w-16 h-8 text-center border border-gray-300 rounded text-base font-semibold mx-1 ${
+                            puedeEditar
+                              ? "bg-gray-50 text-[#222]"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                           readOnly
                           ref={(el) => {
                             cantidadUnidadRefs.current[p.cartItemId] =
@@ -500,7 +584,12 @@ export default function Inventario() {
                             cambiarCantidadUnidad(p.cartItemId, p.unidad + 1);
                             setSelectedProductId(p.cartItemId);
                           }}
-                          className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                          disabled={!puedeEditar}
+                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
+                            puedeEditar
+                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
                         >
                           +
                         </button>
@@ -533,8 +622,13 @@ export default function Inventario() {
           {/* Botón Actualizar Inventario */}
           <div className="mb-3">
             <button
-              className="w-full bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center hover:bg-green-600 transition"
+              className={`w-full border rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center transition ${
+                puedeCrear || puedeEditar
+                  ? "bg-green-500 border-green-500 hover:bg-green-600"
+                  : "bg-gray-400 border-gray-400 cursor-not-allowed"
+              }`}
               onClick={sendRequest}
+              disabled={!puedeCrear && !puedeEditar}
             >
               Actualizar Inventario
             </button>
@@ -628,16 +722,24 @@ export default function Inventario() {
                         : logo
                     }
                     stock={p.ProductoStock}
-                    onAdd={() =>
-                      agregarProducto({
-                        id: p.ProductoId,
-                        nombre: p.ProductoNombre,
-                        imagen: p.ProductoImagen
-                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo,
-                        stock: p.ProductoStock,
-                      })
-                    }
+                    onAdd={() => {
+                      if (puedeCrear) {
+                        agregarProducto({
+                          id: p.ProductoId,
+                          nombre: p.ProductoNombre,
+                          imagen: p.ProductoImagen
+                            ? `data:image/jpeg;base64,${p.ProductoImagen}`
+                            : logo,
+                          stock: p.ProductoStock,
+                        });
+                      } else {
+                        Swal.fire({
+                          icon: "warning",
+                          title: "Sin permisos",
+                          text: "No tienes permiso para agregar productos al inventario.",
+                        });
+                      }
+                    }}
                     precioUnitario={0}
                     stockUnitario={p.ProductoStockUnitario}
                   />

@@ -109,6 +109,16 @@ export default function UsuariosPage() {
   };
 
   const handleDelete = async (id: string) => {
+    // Validar que el ID no esté vacío
+    if (!id || id.trim() === "") {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "ID de usuario inválido",
+      });
+      return;
+    }
+
     Swal.fire({
       title: "¿Estás seguro?",
       text: "¡No podrás revertir esto!",
@@ -121,6 +131,7 @@ export default function UsuariosPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          console.log("Eliminando usuario con ID:", id);
           await deleteUsuario(id);
           Swal.fire({
             icon: "success",
@@ -133,13 +144,44 @@ export default function UsuariosPage() {
             ),
           }));
         } catch (error: unknown) {
-          const err = error as { message?: string };
+          const err = error as {
+            message?: string;
+            tablas?: Array<{
+              tabla: string;
+              descripcion: string;
+              cantidad: number;
+            }>;
+          };
           const msg = err?.message || "No se pudo eliminar el usuario";
-          Swal.fire({
-            icon: "warning",
-            title: "No permitido",
-            text: msg,
-          });
+
+          // Si hay información de tablas asociadas, mostrarla
+          if (err?.tablas && err.tablas.length > 0) {
+            const detallesTablas = err.tablas
+              .map(
+                (t) =>
+                  `• ${t.descripcion}: ${t.cantidad} registro${
+                    t.cantidad > 1 ? "s" : ""
+                  }`
+              )
+              .join("\n");
+
+            Swal.fire({
+              icon: "warning",
+              title: "No se puede eliminar",
+              html: `<div style="text-align: left;">
+                <p><strong>${msg}</strong></p>
+                <p style="margin-top: 10px;">Tablas con registros asociados:</p>
+                <pre style="text-align: left; margin-top: 5px; font-size: 12px;">${detallesTablas}</pre>
+              </div>`,
+              width: "600px",
+            });
+          } else {
+            Swal.fire({
+              icon: "warning",
+              title: "No permitido",
+              text: msg,
+            });
+          }
         }
       }
     });
@@ -229,7 +271,36 @@ export default function UsuariosPage() {
       <UsersList
         usuarios={usuariosData.usuarios.map((u) => ({ ...u, id: u.UsuarioId }))}
         onDelete={
-          puedeEliminar ? (user) => handleDelete(user.UsuarioId) : undefined
+          puedeEliminar
+            ? (user) => {
+                // Asegurarse de obtener el UsuarioId correctamente
+                // El objeto user viene de DataTable y debería tener UsuarioId
+                if (!user || typeof user !== "object") {
+                  console.error("Usuario inválido recibido:", user);
+                  Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Datos de usuario inválidos",
+                  });
+                  return;
+                }
+
+                const userId = user.UsuarioId;
+                if (!userId) {
+                  console.error(
+                    "Usuario sin UsuarioId. Objeto completo:",
+                    user
+                  );
+                  Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "No se pudo obtener el ID del usuario",
+                  });
+                  return;
+                }
+                handleDelete(String(userId));
+              }
+            : undefined
         }
         onEdit={puedeEditar ? handleEdit : undefined}
         onCreate={puedeCrear ? handleCreate : undefined}

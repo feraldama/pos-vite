@@ -312,6 +312,37 @@ exports.updateUsuario = async (req, res) => {
 exports.deleteUsuario = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Validar que el ID sea válido
+    if (!id || id.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "ID de usuario inválido",
+      });
+    }
+    // Verificar registros asociados antes de intentar eliminar
+    const registrosAsociados = await Usuario.verificarRegistrosAsociados(id);
+    if (registrosAsociados.length > 0) {
+      const tablasConRegistros = registrosAsociados
+        .map(
+          (r) =>
+            `${r.descripcion} (${r.cantidad} registro${
+              r.cantidad > 1 ? "s" : ""
+            })`
+        )
+        .join(", ");
+
+      return res.status(400).json({
+        success: false,
+        message: `No se puede eliminar el usuario porque tiene ${tablasConRegistros}.`,
+        tablas: registrosAsociados.map((r) => ({
+          tabla: r.tabla,
+          descripcion: r.descripcion,
+          cantidad: r.cantidad,
+        })),
+      });
+    }
+
     const deleted = await Usuario.delete(id);
     if (!deleted) {
       return res.status(404).json({
@@ -329,11 +360,36 @@ exports.deleteUsuario = async (req, res) => {
       error.message &&
       error.message.includes("a foreign key constraint fails")
     ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "No se puede eliminar el usuario porque tiene movimientos asociados.",
-      });
+      // Si aún así hay un error de foreign key, intentar obtener más información
+      try {
+        const registrosAsociados = await Usuario.verificarRegistrosAsociados(
+          req.params.id
+        );
+        const tablasConRegistros = registrosAsociados
+          .map(
+            (r) =>
+              `${r.descripcion} (${r.cantidad} registro${
+                r.cantidad > 1 ? "s" : ""
+              })`
+          )
+          .join(", ");
+
+        return res.status(400).json({
+          success: false,
+          message: `No se puede eliminar el usuario porque tiene ${tablasConRegistros}.`,
+          tablas: registrosAsociados.map((r) => ({
+            tabla: r.tabla,
+            descripcion: r.descripcion,
+            cantidad: r.cantidad,
+          })),
+        });
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "No se puede eliminar el usuario porque tiene movimientos asociados.",
+        });
+      }
     }
     res.status(500).json({
       success: false,

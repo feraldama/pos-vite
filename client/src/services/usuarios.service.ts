@@ -64,11 +64,33 @@ export const updateUsuario = async (
 };
 
 export const deleteUsuario = async (id: string | number) => {
+  // Validar que el ID sea válido
+  if (!id || String(id).trim() === "") {
+    throw { message: "ID de usuario inválido" };
+  }
+
   try {
-    const response = await api.delete(`/usuarios/${id}`);
+    const userId = encodeURIComponent(String(id));
+    const url = `/usuarios/${userId}`;
+
+    const response = await api.delete(url, {
+      timeout: 30000, // 30 segundos de timeout
+    });
+
     return response.data;
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>;
+    const axiosError = error as AxiosError<{
+      message?: string;
+      tablas?: Array<{ tabla: string; descripcion: string; cantidad: number }>;
+    }>;
+
+    // Si no hay respuesta, podría ser un problema de conexión
+    if (!axiosError.response) {
+      throw {
+        message: "No se pudo conectar con el servidor. Verifica tu conexión.",
+      };
+    }
+
     throw axiosError.response?.data || { message: "Error al eliminar usuario" };
   }
 };

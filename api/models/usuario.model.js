@@ -264,6 +264,129 @@ const Usuario = {
       }
     });
   },
+
+  delete: (id) => {
+    return new Promise((resolve, reject) => {
+      // Normalizar el ID (eliminar espacios)
+      const idNormalizado = String(id).trim();
+      db.query(
+        "DELETE FROM usuario WHERE TRIM(UsuarioId) = ?",
+        [idNormalizado],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.affectedRows > 0);
+        }
+      );
+    });
+  },
+
+  // Verificar en qué tablas tiene registros asociados
+  verificarRegistrosAsociados: (id) => {
+    return new Promise((resolve, reject) => {
+      const tablas = [
+        {
+          nombre: "usuarioperfil",
+          campo: "UsuarioId",
+          descripcion: "perfiles asignados",
+        },
+        {
+          nombre: "registrodiariocaja",
+          campo: "UsuarioId",
+          descripcion: "registros diarios de caja",
+        },
+        {
+          nombre: "clientes",
+          campo: "UsuarioId",
+          descripcion: "clientes creados",
+        },
+        {
+          nombre: "compra",
+          campo: "UsuarioId",
+          descripcion: "compras realizadas",
+        },
+        {
+          nombre: "venta",
+          campo: "VentaUsuario",
+          descripcion: "ventas realizadas",
+        },
+      ];
+
+      const resultados = [];
+      let consultasCompletadas = 0;
+      let errores = false;
+      const erroresDetalle = [];
+
+      // Normalizar el ID (eliminar espacios)
+      const idNormalizado = String(id).trim();
+
+      // Timeout de seguridad: si después de 10 segundos no se completan todas las consultas, rechazar
+      const timeout = setTimeout(() => {
+        if (consultasCompletadas < tablas.length) {
+          reject(new Error("Timeout al verificar registros asociados"));
+        }
+      }, 10000);
+
+      tablas.forEach((tabla, index) => {
+        const query = `SELECT COUNT(*) as cantidad FROM ${tabla.nombre} WHERE TRIM(${tabla.campo}) = ?`;
+
+        db.query(query, [idNormalizado], (err, result) => {
+          consultasCompletadas++;
+
+          if (err) {
+            errores = true;
+            erroresDetalle.push({ tabla: tabla.nombre, error: err.message });
+
+            // Si todas las consultas se completaron (con o sin errores), resolver o rechazar
+            if (consultasCompletadas === tablas.length) {
+              clearTimeout(timeout);
+              if (erroresDetalle.length === tablas.length) {
+                // Todas las consultas fallaron
+                reject(
+                  new Error(
+                    `Error al verificar registros: ${erroresDetalle
+                      .map((e) => e.error)
+                      .join(", ")}`
+                  )
+                );
+              } else {
+                // Algunas consultas fallaron pero otras no, devolver los resultados parciales
+                resolve(resultados);
+              }
+            }
+            return;
+          }
+
+          if (result && result[0] && result[0].cantidad > 0) {
+            resultados.push({
+              tabla: tabla.nombre,
+              descripcion: tabla.descripcion,
+              cantidad: result[0].cantidad,
+            });
+          }
+
+          // Si todas las consultas se completaron sin errores, resolver
+          if (consultasCompletadas === tablas.length && !errores) {
+            clearTimeout(timeout);
+            resolve(resultados);
+          } else if (consultasCompletadas === tablas.length && errores) {
+            // Todas completadas pero con algunos errores
+            clearTimeout(timeout);
+            if (erroresDetalle.length === tablas.length) {
+              reject(
+                new Error(
+                  `Error al verificar registros: ${erroresDetalle
+                    .map((e) => e.error)
+                    .join(", ")}`
+                )
+              );
+            } else {
+              resolve(resultados);
+            }
+          }
+        });
+      });
+    });
+  },
 };
 
 module.exports = Usuario;

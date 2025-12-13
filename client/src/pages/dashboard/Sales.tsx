@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
-import { getProductosAll } from "../../services/productos.service";
+import {
+  getProductosPaginated,
+  searchProductos,
+} from "../../services/productos.service";
 import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
@@ -29,6 +32,7 @@ import {
   generatePresupuestoPDF,
   type CarritoItem,
 } from "../../utils/utils";
+import Pagination from "../../components/common/Pagination";
 
 interface Cliente {
   ClienteId: number;
@@ -58,6 +62,13 @@ interface Combo {
   [key: string]: unknown;
 }
 
+interface PaginationData {
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  itemsPerPage: number;
+}
+
 export default function Sales() {
   const [carrito, setCarrito] = useState<
     {
@@ -72,6 +83,7 @@ export default function Sales() {
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
+  const [appliedBusqueda, setAppliedBusqueda] = useState("");
   const [productos, setProductos] = useState<
     {
       ProductoId: number;
@@ -86,6 +98,14 @@ export default function Sales() {
       ProductoStockUnitario?: number;
     }[]
   >([]);
+  const [pagination, setPagination] = useState<PaginationData>({
+    totalItems: 0,
+    totalPages: 1,
+    currentPage: 1,
+    itemsPerPage: 20,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [loading, setLoading] = useState(false);
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
@@ -231,13 +251,49 @@ export default function Sales() {
 
   const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
 
+  const fetchProductos = useCallback(async () => {
+    try {
+      setLoading(true);
+      let data;
+      if (appliedBusqueda.trim()) {
+        data = await searchProductos(
+          appliedBusqueda,
+          currentPage,
+          itemsPerPage
+        );
+      } else {
+        data = await getProductosPaginated(currentPage, itemsPerPage);
+      }
+
+      // Filtrar productos por LocalId (productos globales o del local actual)
+      const productosFiltrados = (data.data || []).filter(
+        (p: { LocalId: string | number }) =>
+          Number(p.LocalId) === 0 ||
+          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
+      );
+
+      setProductos(productosFiltrados);
+      setPagination(
+        data.pagination || {
+          totalItems: 0,
+          totalPages: 1,
+          currentPage: 1,
+          itemsPerPage: itemsPerPage,
+        }
+      );
+    } catch (error) {
+      console.error("Error al cargar productos:", error);
+      setProductos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, appliedBusqueda, cajaAperturada]);
+
   useEffect(() => {
-    setLoading(true);
-    getProductosAll()
-      .then((data) => {
-        setProductos(data.data || []);
-      })
-      .finally(() => setLoading(false));
+    fetchProductos();
+  }, [fetchProductos]);
+
+  useEffect(() => {
     // Traer todos los clientes sin paginación
     getAllClientesSinPaginacion()
       .then((data) => {
@@ -709,40 +765,108 @@ export default function Sales() {
     generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
   };
 
-  // --- Función para manejar ENTER en la búsqueda ---
+  // --- Función para aplicar la búsqueda (botón Buscar) ---
   const handleSearchSubmit = () => {
+    setAppliedBusqueda(busqueda);
+    setCurrentPage(1);
+  };
+
+  // --- Función para verificar si es código numérico (solo números) ---
+  const esCodigoNumerico = (texto: string): boolean => {
+    // Verificar si el texto contiene solo números (puede tener espacios al inicio/final)
+    return /^\d+$/.test(texto.trim());
+  };
+
+  // --- Función para manejar ENTER en la búsqueda ---
+  const handleSearchEnter = async (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!busqueda.trim()) return;
 
-    // Buscar productos filtrados (igual que en el render)
-    const productosFiltrados = productos.filter(
-      (p) =>
-        (p.ProductoNombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-          (p.ProductoCodigo &&
-            String(p.ProductoCodigo)
-              .toLowerCase()
-              .includes(busqueda.toLowerCase()))) &&
-        (Number(p.LocalId) === 0 ||
-          Number(p.LocalId) === Number(cajaAperturada?.CajaId))
-    );
+    const busquedaTerm = busqueda.trim();
 
-    // Agregar el primer producto encontrado
-    if (productosFiltrados.length > 0) {
-      const primerProducto = productosFiltrados[0];
+    // Si es código numérico (solo números), buscar y agregar directamente al carrito
+    if (esCodigoNumerico(busquedaTerm)) {
+      // Buscar producto por código exacto
+      let productoEncontrado = null;
 
-      // Agregar el producto al carrito
-      agregarProducto({
-        id: primerProducto.ProductoId,
-        nombre: primerProducto.ProductoNombre,
-        precio: primerProducto.ProductoPrecioVenta,
-        precioMayorista: primerProducto.ProductoPrecioVentaMayorista,
-        imagen: primerProducto.ProductoImagen
-          ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
-          : logo,
-        stock: primerProducto.ProductoStock,
-      });
+      // Primero buscar en los productos actuales
+      const productoLocal = productos.find(
+        (p) =>
+          p.ProductoCodigo &&
+          String(p.ProductoCodigo).trim() === busquedaTerm &&
+          (Number(p.LocalId) === 0 ||
+            Number(p.LocalId) === Number(cajaAperturada?.CajaId))
+      );
 
-      // Limpiar la búsqueda
-      setBusqueda("");
+      if (productoLocal) {
+        productoEncontrado = productoLocal;
+      } else {
+        // Si no está en productos locales, buscar en el backend
+        try {
+          const searchResult = await searchProductos(busquedaTerm, 1, 50);
+          const productosBackend = searchResult.data || [];
+
+          // Buscar coincidencia exacta por código
+          const productoExacto = productosBackend.find(
+            (p: {
+              ProductoCodigo: string | number;
+              LocalId: string | number;
+            }) =>
+              String(p.ProductoCodigo).trim() === busquedaTerm &&
+              (Number(p.LocalId) === 0 ||
+                Number(p.LocalId) === Number(cajaAperturada?.CajaId))
+          );
+
+          if (productoExacto) {
+            productoEncontrado = productoExacto;
+          }
+        } catch (error) {
+          console.error("Error al buscar producto:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "No se pudo buscar el producto",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          return;
+        }
+      }
+
+      // Si se encontró el producto, agregarlo al carrito
+      if (productoEncontrado) {
+        agregarProducto({
+          id: productoEncontrado.ProductoId,
+          nombre: productoEncontrado.ProductoNombre,
+          precio: productoEncontrado.ProductoPrecioVenta,
+          precioMayorista: productoEncontrado.ProductoPrecioVentaMayorista,
+          imagen: productoEncontrado.ProductoImagen
+            ? `data:image/jpeg;base64,${productoEncontrado.ProductoImagen}`
+            : logo,
+          stock: productoEncontrado.ProductoStock,
+        });
+
+        // Limpiar la búsqueda
+        setBusqueda("");
+        setAppliedBusqueda("");
+      } else {
+        // No se encontró el producto
+        Swal.fire({
+          icon: "warning",
+          title: "Producto no encontrado",
+          text: `No se encontró ningún producto con el código "${busquedaTerm}"`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    } else {
+      // Si contiene letras, aplicar la búsqueda (como el botón Buscar)
+      handleSearchSubmit();
     }
   };
 
@@ -993,8 +1117,8 @@ export default function Sales() {
               searchTerm={busqueda}
               onSearch={setBusqueda}
               onSearchSubmit={handleSearchSubmit}
+              onKeyPress={handleSearchEnter}
               placeholder="Buscar por nombre o código"
-              hideButton={true}
               inputRef={searchInputRef}
             />
             {isDevolucion && (
@@ -1037,7 +1161,7 @@ export default function Sales() {
         {/* Nuevo contenedor con scroll solo para los productos */}
         <div
           className="overflow-y-auto"
-          style={{ height: "calc(100vh - 120px)" }}
+          style={{ height: "calc(100vh - 200px)" }}
         >
           <div
             className="grid gap-4"
@@ -1046,53 +1170,67 @@ export default function Sales() {
             }}
           >
             {loading ? (
-              <div>Cargando productos...</div>
+              <div className="col-span-full text-center py-8">
+                Cargando productos...
+              </div>
+            ) : productos.length === 0 ? (
+              <div className="col-span-full text-center py-8 text-gray-500">
+                {appliedBusqueda
+                  ? "No se encontraron productos con ese criterio de búsqueda"
+                  : "No hay productos disponibles"}
+              </div>
             ) : (
-              productos
-                .filter(
-                  (p) =>
-                    (p.ProductoNombre.toLowerCase().includes(
-                      busqueda.toLowerCase()
-                    ) ||
-                      (p.ProductoCodigo &&
-                        String(p.ProductoCodigo)
-                          .toLowerCase()
-                          .includes(busqueda.toLowerCase()))) &&
-                    (Number(p.LocalId) === 0 ||
-                      Number(p.LocalId) === Number(cajaAperturada?.CajaId))
-                )
-                .map((p) => (
-                  <ProductCard
-                    key={p.ProductoId}
-                    nombre={p.ProductoNombre}
-                    precio={p.ProductoPrecioVenta}
-                    precioMayorista={p.ProductoPrecioVentaMayorista}
-                    clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
-                    imagen={
-                      p.ProductoImagen
+              productos.map((p) => (
+                <ProductCard
+                  key={p.ProductoId}
+                  nombre={p.ProductoNombre}
+                  precio={p.ProductoPrecioVenta}
+                  precioMayorista={p.ProductoPrecioVentaMayorista}
+                  clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
+                  imagen={
+                    p.ProductoImagen
+                      ? `data:image/jpeg;base64,${p.ProductoImagen}`
+                      : logo
+                  }
+                  stock={p.ProductoStock}
+                  onAdd={() =>
+                    agregarProducto({
+                      id: p.ProductoId,
+                      nombre: p.ProductoNombre,
+                      precio: p.ProductoPrecioVenta,
+                      precioMayorista: p.ProductoPrecioVentaMayorista,
+                      imagen: p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo
-                    }
-                    stock={p.ProductoStock}
-                    onAdd={() =>
-                      agregarProducto({
-                        id: p.ProductoId,
-                        nombre: p.ProductoNombre,
-                        precio: p.ProductoPrecioVenta,
-                        precioMayorista: p.ProductoPrecioVentaMayorista,
-                        imagen: p.ProductoImagen
-                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo,
-                        stock: p.ProductoStock,
-                      })
-                    }
-                    precioUnitario={p.ProductoPrecioUnitario}
-                    stockUnitario={p.ProductoStockUnitario}
-                  />
-                ))
+                        : logo,
+                      stock: p.ProductoStock,
+                    })
+                  }
+                  precioUnitario={p.ProductoPrecioUnitario}
+                  stockUnitario={p.ProductoStockUnitario}
+                />
+              ))
             )}
           </div>
         </div>
+        {/* Paginación */}
+        {!loading && productos.length > 0 && (
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                // Scroll hacia arriba cuando cambia la página
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              itemsPerPage={itemsPerPage}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
         <PagoModal
           show={showPagoModal}
           handleClose={() => setShowPagoModal(false)}

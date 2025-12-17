@@ -840,15 +840,49 @@ export default function Sales() {
 
       // Si se encontró el producto, agregarlo al carrito
       if (productoEncontrado) {
+        // Asegurarse de que el producto tenga todos los campos necesarios
+        const productoCompleto = {
+          ProductoId: productoEncontrado.ProductoId,
+          ProductoCodigo: productoEncontrado.ProductoCodigo || "",
+          ProductoNombre: productoEncontrado.ProductoNombre,
+          ProductoPrecioVenta: productoEncontrado.ProductoPrecioVenta || 0,
+          ProductoPrecioVentaMayorista:
+            productoEncontrado.ProductoPrecioVentaMayorista || 0,
+          ProductoPrecioUnitario:
+            productoEncontrado.ProductoPrecioUnitario ||
+            productoEncontrado.ProductoPrecioVenta ||
+            0,
+          ProductoStock: productoEncontrado.ProductoStock || 0,
+          ProductoStockUnitario:
+            productoEncontrado.ProductoStockUnitario ||
+            productoEncontrado.ProductoStock ||
+            0,
+          ProductoImagen: productoEncontrado.ProductoImagen,
+          LocalId: productoEncontrado.LocalId || 0,
+        };
+
+        // Agregar el producto a la lista de productos si no está ya presente
+        // Esto asegura que obtenerPrecio y obtenerTotal puedan encontrarlo
+        setProductos((prevProductos) => {
+          const existe = prevProductos.some(
+            (p) => p.ProductoId === productoCompleto.ProductoId
+          );
+          if (!existe) {
+            return [...prevProductos, productoCompleto];
+          }
+          return prevProductos;
+        });
+
+        // Agregar al carrito
         agregarProducto({
-          id: productoEncontrado.ProductoId,
-          nombre: productoEncontrado.ProductoNombre,
-          precio: productoEncontrado.ProductoPrecioVenta,
-          precioMayorista: productoEncontrado.ProductoPrecioVentaMayorista,
-          imagen: productoEncontrado.ProductoImagen
-            ? `data:image/jpeg;base64,${productoEncontrado.ProductoImagen}`
+          id: productoCompleto.ProductoId,
+          nombre: productoCompleto.ProductoNombre,
+          precio: productoCompleto.ProductoPrecioVenta,
+          precioMayorista: productoCompleto.ProductoPrecioVentaMayorista,
+          imagen: productoCompleto.ProductoImagen
+            ? `data:image/jpeg;base64,${productoCompleto.ProductoImagen}`
             : logo,
-          stock: productoEncontrado.ProductoStock,
+          stock: productoCompleto.ProductoStock,
         });
 
         // Limpiar la búsqueda

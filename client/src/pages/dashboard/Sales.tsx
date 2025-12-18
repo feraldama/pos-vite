@@ -395,7 +395,6 @@ export default function Sales() {
       ? "PDevolucionWS.VENTACONFIRMAR"
       : "PVentaConfirmarWS.VENTACONFIRMAR";
     const namespace = isDevolucionMode ? "Tech" : "TechNow";
-    console.log("log: 🚀 ~ getSubtotal:", getSubtotal(cartItems));
 
     const json = {
       Envelope: {

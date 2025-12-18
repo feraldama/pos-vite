@@ -47,12 +47,35 @@ export default function ComprasPage() {
       const comprasConProveedores = await Promise.all(
         comprasData.map(async (compra) => {
           try {
-            const proveedor = await getProveedorById(compra.ProveedorId);
-            return {
-              ...compra,
-              ProveedorNombre: proveedor.data.ProveedorNombre,
-              ProveedorRUC: proveedor.data.ProveedorRUC,
+            const proveedorResponse = await getProveedorById(
+              compra.ProveedorId
+            );
+            // El API retorna directamente el objeto del proveedor (según respuesta: { ProveedorId, ProveedorNombre, ... })
+            // El tipo TypeScript indica { success, data }, pero el backend retorna directamente el objeto
+            const proveedor = proveedorResponse as unknown as {
+              ProveedorNombre?: string;
+              ProveedorRUC?: string;
+              data?: { ProveedorNombre: string; ProveedorRUC: string };
             };
+
+            // El backend retorna directamente el objeto, así que accedemos directamente
+            const proveedorNombre =
+              proveedor.ProveedorNombre || proveedor.data?.ProveedorNombre;
+            const proveedorRUC =
+              proveedor.ProveedorRUC || proveedor.data?.ProveedorRUC || "";
+
+            if (proveedorNombre) {
+              return {
+                ...compra,
+                ProveedorNombre: proveedorNombre,
+                ProveedorRUC: proveedorRUC,
+              };
+            }
+
+            console.warn(
+              `Proveedor ${compra.ProveedorId} no tiene nombre válido`
+            );
+            return compra;
           } catch (error) {
             console.error(
               `Error al cargar proveedor ${compra.ProveedorId}:`,
@@ -148,7 +171,9 @@ export default function ComprasPage() {
       const almacen = await getAlmacenById(compra.AlmacenId);
 
       const proveedorInfo = compra.ProveedorNombre
-        ? `${compra.ProveedorNombre} (${compra.ProveedorRUC})`
+        ? compra.ProveedorRUC && compra.ProveedorRUC.trim()
+          ? `${compra.ProveedorNombre} (${compra.ProveedorRUC})`
+          : compra.ProveedorNombre
         : `Proveedor #${compra.ProveedorId}`;
 
       const getTipoCompraText = (tipo: string) => {

@@ -24,6 +24,7 @@ export interface Compra {
 
 export interface CompraProducto {
   CompraId: number;
+  CompraProductoId: number;
   ProductoId: number;
   CompraProductoCantidad: number;
   CompraProductoCantidadUnidad: string;
@@ -31,6 +32,9 @@ export interface CompraProducto {
   CompraProductoPrecio: number;
   AlmacenOrigenId: number;
   ProductoNombre?: string;
+  ProductoCodigo?: string;
+  ProductoPrecioVenta?: number;
+  ProductoIVA?: number;
   producto?: {
     ProductoId: number;
     ProductoNombre: string;
@@ -45,6 +49,7 @@ export interface CreateCompraData {
   CompraTipo: string;
   CompraEntrega: number;
   productos: {
+    CompraProductoId?: number;
     ProductoId: number;
     CompraProductoCantidad: number;
     CompraProductoCantidadUnidad?: string;

@@ -199,6 +199,10 @@ export default function ProductsList({
       label: "Stock",
     },
     {
+      key: "ProductoStockUnitario",
+      label: "Stock Unitario",
+    },
+    {
       key: "LocalId",
       label: "Local",
       render: (item: Producto) =>

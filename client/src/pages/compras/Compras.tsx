@@ -286,9 +286,6 @@ export default function Compras() {
       return;
     }
 
-    console.log("Usuario ID:", user.id);
-    console.log("Usuario completo:", user);
-
     // Formatear la fecha seleccionada al formato DD/MM/YY
     // Parsear directamente del string para evitar problemas de zona horaria
     const [añoCompleto, mesCompleto, diaCompleto] = compraFecha.split("-");
@@ -300,10 +297,13 @@ export default function Compras() {
     const añoStr = añoFormato < 10 ? `0${añoFormato}` : añoFormato.toString();
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
+    // Mapear el carrito (CompraProductoId se asignará en GeneXus usando el contador &i)
     const SDTCompraItem = carrito.map((p) => ({
       ProveedorId: proveedorSeleccionado.ProveedorId,
       Producto: {
         ProductoId: p.id,
+        // CompraProductoId NO se envía aquí porque el SDT no lo tiene definido
+        // Se asignará automáticamente en GeneXus usando el contador &i
         CompraProductoCantidad: p.cantidad,
         CompraProductoPrecio: p.precioUnitario,
         AlmacenId: user.LocalId || 1,
@@ -339,7 +339,10 @@ export default function Compras() {
       ignoreComment: true,
       spaces: 4,
     });
-    console.log("XML enviado:", xml);
+
+    // Verificar que el XML tenga todos los productos
+    const productosEnXML = (xml.match(/SDTCompraItem/g) || []).length;
+    console.log("Productos encontrados en XML:", productosEnXML);
 
     const config = {
       headers: {

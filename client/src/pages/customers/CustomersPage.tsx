@@ -150,11 +150,18 @@ export default function CustomersPage() {
   const handleSubmit = async (clienteData: Cliente) => {
     let mensaje = "";
     try {
+      // Aplicar trim al UsuarioId antes de enviar
+      const clienteDataTrimmed = {
+        ...clienteData,
+        UsuarioId: clienteData.UsuarioId
+          ? String(clienteData.UsuarioId).trim()
+          : "",
+      };
       if (currentCliente) {
-        await updateCliente(currentCliente.ClienteId, clienteData);
+        await updateCliente(currentCliente.ClienteId, clienteDataTrimmed);
         mensaje = "Cliente actualizado exitosamente";
       } else {
-        const response = await createCliente(clienteData);
+        const response = await createCliente(clienteDataTrimmed);
         mensaje = response.message || "Cliente creado exitosamente";
       }
       setIsModalOpen(false);

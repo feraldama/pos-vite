@@ -47,7 +47,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
     ClienteDireccion: "",
     ClienteTelefono: "",
     ClienteTipo: "MI",
-    UsuarioId: currentUserId || "",
+    UsuarioId: currentUserId ? String(currentUserId).trim() : "",
   });
 
   const clientesFiltrados = useMemo(() => {
@@ -97,7 +97,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
         ClienteDireccion: "",
         ClienteTelefono: "",
         ClienteTipo: "MI",
-        UsuarioId: currentUserId || "",
+        UsuarioId: currentUserId ? String(currentUserId).trim() : "",
       });
     }
   };

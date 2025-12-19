@@ -238,28 +238,33 @@ export default function Sales() {
         setProductos(data.data || []);
       })
       .finally(() => setLoading(false));
-    // Traer todos los clientes sin paginación
-    getAllClientesSinPaginacion()
-      .then((data) => {
-        setClientes(data.data || []);
-      })
-      .catch(() =>
-        setClientes([
-          {
-            ClienteId: 1,
-            ClienteRUC: "",
-            ClienteNombre: "SIN NOMBRE MINORISTA",
-            ClienteApellido: "",
-            ClienteDireccion: "",
-            ClienteTelefono: "",
-            ClienteTipo: "MI",
-            UsuarioId: "",
-          },
-        ])
-      );
     // Traer combos
     getCombos(1, 1000).then((data) => setCombos(data.data || []));
   }, []);
+
+  // Cargar clientes solo cuando se abre el modal
+  useEffect(() => {
+    if (showClienteModal) {
+      getAllClientesSinPaginacion()
+        .then((data) => {
+          setClientes(data.data || []);
+        })
+        .catch(() =>
+          setClientes([
+            {
+              ClienteId: 1,
+              ClienteRUC: "",
+              ClienteNombre: "SIN NOMBRE MINORISTA",
+              ClienteApellido: "",
+              ClienteDireccion: "",
+              ClienteTelefono: "",
+              ClienteTipo: "MI",
+              UsuarioId: "",
+            },
+          ])
+        );
+    }
+  }, [showClienteModal]);
 
   const handleCreateCliente = async (clienteData: Cliente) => {
     try {
@@ -271,7 +276,9 @@ export default function Sales() {
         ClienteDireccion: clienteData.ClienteDireccion,
         ClienteTelefono: clienteData.ClienteTelefono,
         ClienteTipo: clienteData.ClienteTipo,
-        UsuarioId: clienteData.UsuarioId,
+        UsuarioId: clienteData.UsuarioId
+          ? String(clienteData.UsuarioId).trim()
+          : "",
       });
       // Recargar la lista de clientes
       const response = await getAllClientesSinPaginacion();

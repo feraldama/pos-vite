@@ -231,8 +231,6 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
 
   const generarContenidoFactura = (venta: VentaCompleta) => {
     const nroFactura = calcularNroFactura(venta);
-    const total = venta.Total || 0;
-    const iva = calcularIVA(total);
 
     // Validar que la venta tenga productos
     if (!venta.VentaProductos || venta.VentaProductos.length === 0) {
@@ -432,25 +430,75 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
          </style>
       </head>
              <body>
-         ${generarHoja(venta, venta.VentaProductos || [], iva)}
+         ${generarHoja(venta, venta.VentaProductos || [])}
        </body>
       </html>
     `;
   };
 
-  const generarHoja = (
-    venta: VentaCompleta,
-    productos: VentaProducto[],
-    iva: number
-  ) => {
-    // Calcular el subtotal real sumando todos los productos
-    const subtotal = productos.reduce(
+  const generarHoja = (venta: VentaCompleta, productos: VentaProducto[]) => {
+    // Calcular el subtotal sumando todos los productos (sin recargos)
+    const subtotalProductos = productos.reduce(
       (sum, p) => sum + (p.VentaProductoPrecioTotal || 0),
       0
     );
 
-    // El total real debe ser el subtotal + IVA
-    const totalReal = subtotal;
+    // El total real debe ser el Total de la venta (que incluye recargos por método de pago)
+    // Si venta.Total no está disponible, usar el subtotal de productos
+    const totalReal = venta.Total || subtotalProductos;
+
+    // Calcular el factor de recargo (ratio entre total real y subtotal)
+    // Si no hay diferencia, el factor es 1 (sin recargo)
+    const factorRecargo =
+      subtotalProductos > 0 ? totalReal / subtotalProductos : 1;
+
+    // Calcular productos con recargo distribuido proporcionalmente
+    const productosConRecargo = productos.map((p) => {
+      const precioUnitarioOriginal = p.VentaProductoPrecio || 0;
+
+      // Calcular precio unitario con recargo
+      const precioUnitarioConRecargo = Math.round(
+        precioUnitarioOriginal * factorRecargo
+      );
+
+      // Calcular precio total con recargo (cantidad * precio unitario con recargo)
+      const cantidad = p.VentaProductoCantidad || 0;
+      const precioTotalConRecargo = Math.round(
+        precioUnitarioConRecargo * cantidad
+      );
+
+      return {
+        ...p,
+        VentaProductoPrecioConRecargo: precioUnitarioConRecargo,
+        VentaProductoPrecioTotalConRecargo: precioTotalConRecargo,
+      };
+    });
+
+    // Recalcular el subtotal con recargo para asegurar que coincida exactamente con totalReal
+    const subtotalConRecargo = productosConRecargo.reduce(
+      (sum, p) => sum + (p.VentaProductoPrecioTotalConRecargo || 0),
+      0
+    );
+
+    // Ajustar diferencias de redondeo en el último producto si es necesario
+    const diferenciaRedondeo = totalReal - subtotalConRecargo;
+    if (diferenciaRedondeo !== 0 && productosConRecargo.length > 0) {
+      const ultimoProducto =
+        productosConRecargo[productosConRecargo.length - 1];
+      // Ajustar el precio total y recalcular el precio unitario
+      ultimoProducto.VentaProductoPrecioTotalConRecargo =
+        (ultimoProducto.VentaProductoPrecioTotalConRecargo || 0) +
+        diferenciaRedondeo;
+
+      // Recalcular precio unitario ajustado
+      const cantidadUltimo = ultimoProducto.VentaProductoCantidad || 1;
+      ultimoProducto.VentaProductoPrecioConRecargo = Math.round(
+        ultimoProducto.VentaProductoPrecioTotalConRecargo / cantidadUltimo
+      );
+    }
+
+    // Calcular el IVA sobre el total real (no sobre el subtotal de productos)
+    const ivaReal = calcularIVA(totalReal);
 
     const facturaIndividual = `
       <div class="factura">
@@ -476,7 +524,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
         </div>
         
                  <div class="productos-lista">
-           ${productos
+           ${productosConRecargo
              .map(
                (p) => `
              <div class="producto-item">
@@ -487,12 +535,14 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                  "Producto sin descripción"
                }</span>
                <span class="col-precio">${formatearNumero(
-                 p.VentaProductoPrecio || 0
+                 p.VentaProductoPrecioConRecargo || p.VentaProductoPrecio || 0
                )}</span>
                <span class="col-exentas">0</span>
                <span class="col-iva5">0</span>
                <span style="margin-right: 30px;" class="col-iva10">${formatearNumero(
-                 p.VentaProductoPrecioTotal || 0
+                 p.VentaProductoPrecioTotalConRecargo ||
+                   p.VentaProductoPrecioTotal ||
+                   0
                )}</span>
              </div>
            `
@@ -500,7 +550,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
              .join("")}
            
            ${Array.from(
-             { length: Math.max(0, 16 - productos.length) },
+             { length: Math.max(0, 16 - productosConRecargo.length) },
              () => `
              <div class="producto-item">
                <span class="col-cantidad">&nbsp;</span>
@@ -518,7 +568,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
           <div class="totales-left">
             <p style="display: flex; justify-content: flex-end;">
               <span style="margin-right: 30px;" class="subtotal">${formatearNumero(
-                subtotal
+                totalReal
               )}</span>
             </p>
             <p style="display: flex; justify-content: space-between;">
@@ -526,16 +576,16 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 totalReal
               )}</span>
               <span style="margin-right: 30px;" class="subtotal">${formatearNumero(
-                subtotal
+                totalReal
               )}</span>
             </p>
             <p style="display: flex; justify-content: space-between; margin-top: -5px;">
               <span style="margin-left: 110px;" class="liquidacion-iva">0</span>
               <span style="margin-left: 0px;" class="liquidacion-iva">${formatearNumero(
-                iva
+                ivaReal
               )}</span>
               <span style="margin-right: 320px;" class="total-iva">${formatearNumero(
-                iva
+                ivaReal
               )}</span>
             </p>
           </div>

@@ -15,6 +15,11 @@ router.get(
   authMiddleware,
   ventaController.getDeudasPendientesPorCliente
 );
+router.get(
+  "/reporte",
+  authMiddleware,
+  ventaController.getReporteVentasPorCliente
+);
 router.get("/search", authMiddleware, ventaController.searchVentas);
 router.get("/", authMiddleware, ventaController.getAll);
 router.get("/paginated", authMiddleware, ventaController.getAllPaginated);

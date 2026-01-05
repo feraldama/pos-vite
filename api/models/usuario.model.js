@@ -5,8 +5,8 @@ const Usuario = {
   getAll: () => {
     return new Promise((resolve, reject) => {
       db.query("SELECT * FROM usuario", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
+        if (err) return reject(err);
+        resolve(results || []);
       });
     });
   },
@@ -30,7 +30,11 @@ const Usuario = {
         "SELECT * FROM usuario WHERE UsuarioId = ? LIMIT 1",
         [email],
         (err, results) => {
-          if (err) reject(err);
+          if (err) return reject(err);
+          // Validar que results existe y tiene elementos antes de acceder
+          if (!results || results.length === 0) {
+            return resolve(null);
+          }
           resolve(results[0]);
         }
       );
@@ -73,8 +77,8 @@ const Usuario = {
             if (err) return reject(err);
 
             resolve({
-              usuarios: results,
-              total: countResult[0].total,
+              usuarios: results || [],
+              total: countResult && countResult[0] ? countResult[0].total : 0,
             });
           }
         );

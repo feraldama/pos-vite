@@ -33,6 +33,7 @@ import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
 import SuscripcionesPage from "./pages/suscripciones/SuscripcionesPage";
 import PlanesPage from "./pages/planes/PlanesPage";
+import PagosPage from "./pages/pagos/PagosPage";
 
 function App() {
   return (
@@ -101,6 +102,7 @@ function App() {
             <Route path="/facturas" element={<FacturasPage />} />
             <Route path="/planes" element={<PlanesPage />} />
             <Route path="/suscripciones" element={<SuscripcionesPage />} />
+            <Route path="/pagos" element={<PagosPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

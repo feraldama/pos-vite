@@ -78,6 +78,11 @@ const navigation: NavigationItem[] = [
     icon: <DocumentTextIcon className="h-7 w-6" />,
   },
   {
+    name: "Pagos",
+    href: "/pagos",
+    icon: <BanknotesIcon className="h-7 w-6" />,
+  },
+  {
     name: "Productos",
     href: "/products",
     icon: <CubeIcon className="h-7 w-6" />,

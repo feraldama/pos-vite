@@ -15,7 +15,7 @@ const Suscripcion = {
       const query = `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre
+          p.PlanNombre, p.PlanPrecio
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
@@ -132,7 +132,7 @@ const Suscripcion = {
       const query = `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre
+          p.PlanNombre, p.PlanPrecio
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
@@ -196,7 +196,7 @@ const Suscripcion = {
       const searchQuery = `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre
+          p.PlanNombre, p.PlanPrecio
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId

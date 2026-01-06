@@ -123,3 +123,14 @@ exports.searchSuscripciones = async (req, res) => {
     res.status(500).json({ error: "Error al buscar suscripciones" });
   }
 };
+
+exports.getProximasAVencer = async (req, res) => {
+  try {
+    const dias = parseInt(req.query.dias) || 30;
+    const limit = parseInt(req.query.limit) || 10;
+    const suscripciones = await Suscripcion.getProximasAVencer(dias, limit);
+    res.json({ data: suscripciones });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

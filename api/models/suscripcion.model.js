@@ -224,6 +224,44 @@ const Suscripcion = {
       );
     });
   },
+
+  getProximasAVencer: (dias = 30, limit = 10) => {
+    return new Promise((resolve, reject) => {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() + dias);
+      fechaLimite.setHours(23, 59, 59, 999);
+
+      // Formatear fechas para MySQL (YYYY-MM-DD)
+      const hoyFormateado = hoy.toISOString().split("T")[0];
+      const fechaLimiteFormateada = fechaLimite.toISOString().split("T")[0];
+
+      const query = `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre, p.PlanPrecio
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+        WHERE s.SuscripcionFechaFin IS NOT NULL
+          AND DATE(s.SuscripcionFechaFin) >= DATE(?)
+          AND DATE(s.SuscripcionFechaFin) <= DATE(?)
+        ORDER BY s.SuscripcionFechaFin ASC
+        LIMIT ?
+      `;
+
+      db.query(
+        query,
+        [hoyFormateado, fechaLimiteFormateada, limit],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+  },
 };
 
 module.exports = Suscripcion;

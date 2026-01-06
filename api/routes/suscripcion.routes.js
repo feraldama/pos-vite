@@ -12,6 +12,11 @@ router.get(
   authMiddleware,
   suscripcionController.searchSuscripciones
 );
+router.get(
+  "/proximas-a-vencer",
+  authMiddleware,
+  suscripcionController.getProximasAVencer
+);
 router.get("/", authMiddleware, suscripcionController.getAll);
 router.get("/:id", authMiddleware, suscripcionController.getById);
 router.post("/", authMiddleware, suscripcionController.create);

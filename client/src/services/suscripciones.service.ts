@@ -103,3 +103,26 @@ export const searchSuscripciones = async (
     );
   }
 };
+
+export const getSuscripcionesProximasAVencer = async (
+  dias = 30,
+  limit = 10
+) => {
+  const params: { [key: string]: number } = {
+    dias,
+    limit,
+  };
+  try {
+    const response = await api.get("/suscripciones/proximas-a-vencer", {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener suscripciones próximas a vencer",
+      }
+    );
+  }
+};

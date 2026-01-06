@@ -266,6 +266,11 @@ export default function PagosList({
       label: "Fecha",
       render: (pago: Pago) => formatDate(pago.PagoFecha),
     },
+    {
+      key: "PagoUsuarioId",
+      label: "Usuario ID",
+      render: (pago: Pago) => pago.PagoUsuarioId || "N/A",
+    },
   ];
 
   return (

@@ -31,6 +31,7 @@ import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
+import PlanesPage from "./pages/planes/PlanesPage";
 
 function App() {
   return (
@@ -97,6 +98,7 @@ function App() {
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/facturas" element={<FacturasPage />} />
+            <Route path="/planes" element={<PlanesPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

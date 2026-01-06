@@ -60,20 +60,10 @@ export default function SearchButton({
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              // Si hay onKeyPress, llamarlo primero
-              if (onKeyPress) {
-                onKeyPress(e);
-                // Si el evento fue prevenido por onKeyPress, no hacer nada más
-                if (e.defaultPrevented) {
-                  return;
-                }
-              }
-              // Si no hay onKeyPress o no fue prevenido, prevenir el comportamiento por defecto y llamar a onSearchSubmit
-              if (!e.defaultPrevented) {
-                e.preventDefault();
-              }
+              e.preventDefault();
               onSearchSubmit();
-            } else if (onKeyPress) {
+            }
+            if (onKeyPress) {
               onKeyPress(e);
             }
           }}

@@ -415,6 +415,121 @@ const Venta = {
       });
     });
   },
+
+  // Obtener reporte de ventas por cliente y rango de fechas
+  getReporteVentasPorCliente: (clienteId, fechaDesde, fechaHasta) => {
+    return new Promise((resolve, reject) => {
+      // Primero obtener información del cliente
+      const clienteQuery = "SELECT * FROM clientes WHERE ClienteId = ?";
+
+      db.query(clienteQuery, [clienteId], (err, clienteResults) => {
+        if (err) return reject(err);
+
+        if (clienteResults.length === 0) {
+          return reject(new Error("Cliente no encontrado"));
+        }
+
+        const cliente = clienteResults[0];
+
+        // Obtener ventas en el rango de fechas
+        const ventasQuery = `
+          SELECT 
+            v.*,
+            c.ClienteNombre,
+            c.ClienteApellido,
+            c.ClienteRUC,
+            a.AlmacenNombre,
+            u.UsuarioNombre
+          FROM venta v
+          LEFT JOIN clientes c ON v.ClienteId = c.ClienteId
+          LEFT JOIN almacen a ON v.AlmacenId = a.AlmacenId
+          LEFT JOIN usuario u ON v.VentaUsuario = u.UsuarioId
+          WHERE v.ClienteId = ? 
+          AND DATE(v.VentaFecha) BETWEEN ? AND ?
+          ORDER BY v.VentaFecha ASC, v.VentaId ASC
+        `;
+
+        db.query(
+          ventasQuery,
+          [clienteId, fechaDesde, fechaHasta],
+          async (err, ventasResults) => {
+            if (err) return reject(err);
+
+            // Para cada venta, si es a crédito, obtener información de crédito y pagos
+            const ventasConDetalle = await Promise.all(
+              ventasResults.map(async (venta) => {
+                const ventaDetalle = {
+                  ...venta,
+                  SaldoPendiente: 0,
+                  Pagos: [],
+                };
+
+                // Si es venta a crédito, obtener información de crédito
+                if (venta.VentaTipo === "CR") {
+                  // Calcular saldo pendiente
+                  const total = Number(venta.Total) || 0;
+                  const entrega = Number(venta.VentaEntrega) || 0;
+                  ventaDetalle.SaldoPendiente = total - entrega;
+
+                  // Obtener información de crédito
+                  const creditoQuery =
+                    "SELECT * FROM ventacredito WHERE VentaId = ?";
+
+                  await new Promise((resolveCredito, rejectCredito) => {
+                    db.query(
+                      creditoQuery,
+                      [venta.VentaId],
+                      (err, creditoResults) => {
+                        if (err) return rejectCredito(err);
+
+                        if (creditoResults.length > 0) {
+                          const ventaCreditoId =
+                            creditoResults[0].VentaCreditoId;
+
+                          // Obtener pagos del crédito
+                          const pagosQuery = `
+                        SELECT * FROM ventacreditopago 
+                        WHERE VentaCreditoId = ?
+                        ORDER BY VentaCreditoPagoFecha ASC, VentaCreditoPagoId ASC
+                      `;
+
+                          db.query(
+                            pagosQuery,
+                            [ventaCreditoId],
+                            (err, pagosResults) => {
+                              if (err) return rejectCredito(err);
+                              ventaDetalle.Pagos = pagosResults || [];
+                              resolveCredito();
+                            }
+                          );
+                        } else {
+                          resolveCredito();
+                        }
+                      }
+                    );
+                  });
+                }
+
+                return ventaDetalle;
+              })
+            );
+
+            resolve({
+              cliente: {
+                ClienteId: cliente.ClienteId,
+                ClienteNombre: cliente.ClienteNombre,
+                ClienteApellido: cliente.ClienteApellido,
+                ClienteRUC: cliente.ClienteRUC,
+              },
+              fechaDesde,
+              fechaHasta,
+              ventas: ventasConDetalle,
+            });
+          }
+        );
+      });
+    });
+  },
 };
 
 module.exports = Venta;

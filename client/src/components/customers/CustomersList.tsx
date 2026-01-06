@@ -86,7 +86,7 @@ export default function CustomersList({
         ClienteDireccion: "",
         ClienteTelefono: "",
         ClienteTipo: "MI",
-        UsuarioId: user?.id || "",
+        UsuarioId: user?.id ? String(user.id).trim() : "",
       });
     }
   }, [currentCliente, user]);

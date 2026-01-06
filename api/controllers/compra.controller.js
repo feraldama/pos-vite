@@ -122,16 +122,25 @@ exports.createCompra = async (req, res) => {
 
     // Crear los productos de la compra si se proporcionan
     if (req.body.productos && req.body.productos.length > 0) {
-      const compraProductos = req.body.productos.map((producto) => ({
-        CompraId: nuevaCompra.CompraId,
-        ProductoId: producto.ProductoId,
-        CompraProductoCantidad: producto.CompraProductoCantidad,
-        CompraProductoCantidadUnidad:
-          producto.CompraProductoCantidadUnidad || "U",
-        CompraProductoBonificacion: producto.CompraProductoBonificacion || 0,
-        CompraProductoPrecio: producto.CompraProductoPrecio,
-        AlmacenOrigenId: producto.AlmacenOrigenId,
-      }));
+      const compraProductos = req.body.productos.map((producto, index) => {
+        // Asegurar que CompraProductoId siempre tenga un valor válido empezando en 1
+        const compraProductoId =
+          producto.CompraProductoId && producto.CompraProductoId > 0
+            ? producto.CompraProductoId
+            : index + 1;
+
+        return {
+          CompraId: nuevaCompra.CompraId,
+          CompraProductoId: compraProductoId,
+          ProductoId: producto.ProductoId,
+          CompraProductoCantidad: producto.CompraProductoCantidad,
+          CompraProductoCantidadUnidad:
+            producto.CompraProductoCantidadUnidad || "U",
+          CompraProductoBonificacion: producto.CompraProductoBonificacion || 0,
+          CompraProductoPrecio: producto.CompraProductoPrecio,
+          AlmacenOrigenId: producto.AlmacenOrigenId,
+        };
+      });
 
       await CompraProducto.createMultiple(compraProductos);
     }
@@ -171,16 +180,26 @@ exports.updateCompra = async (req, res) => {
 
       // Crear nuevos productos
       if (compraData.productos.length > 0) {
-        const compraProductos = compraData.productos.map((producto) => ({
-          CompraId: parseInt(id),
-          ProductoId: producto.ProductoId,
-          CompraProductoCantidad: producto.CompraProductoCantidad,
-          CompraProductoCantidadUnidad:
-            producto.CompraProductoCantidadUnidad || "U",
-          CompraProductoBonificacion: producto.CompraProductoBonificacion || 0,
-          CompraProductoPrecio: producto.CompraProductoPrecio,
-          AlmacenOrigenId: producto.AlmacenOrigenId,
-        }));
+        const compraProductos = compraData.productos.map((producto, index) => {
+          // Asegurar que CompraProductoId siempre tenga un valor válido empezando en 1
+          const compraProductoId =
+            producto.CompraProductoId && producto.CompraProductoId > 0
+              ? producto.CompraProductoId
+              : index + 1;
+
+          return {
+            CompraId: parseInt(id),
+            CompraProductoId: compraProductoId,
+            ProductoId: producto.ProductoId,
+            CompraProductoCantidad: producto.CompraProductoCantidad,
+            CompraProductoCantidadUnidad:
+              producto.CompraProductoCantidadUnidad || "U",
+            CompraProductoBonificacion:
+              producto.CompraProductoBonificacion || 0,
+            CompraProductoPrecio: producto.CompraProductoPrecio,
+            AlmacenOrigenId: producto.AlmacenOrigenId,
+          };
+        });
 
         await CompraProducto.createMultiple(compraProductos);
       }

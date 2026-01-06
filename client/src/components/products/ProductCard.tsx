@@ -38,6 +38,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="h-32 object-contain bg-white"
           src={imagen}
           alt={nombre}
+          loading="lazy"
+          decoding="async"
         />
       </div>
       <div className="w-full px-4 pb-2 text-center">

@@ -27,12 +27,12 @@ import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import InvoicePrintModal from "../../components/common/InvoicePrintModal";
 import { getCombos } from "../../services/combos.service";
+import Pagination from "../../components/common/Pagination";
 import {
   formatMiles,
   generatePresupuestoPDF,
   type CarritoItem,
 } from "../../utils/utils";
-import Pagination from "../../components/common/Pagination";
 
 interface Cliente {
   ClienteId: number;
@@ -62,13 +62,6 @@ interface Combo {
   [key: string]: unknown;
 }
 
-interface PaginationData {
-  totalItems: number;
-  totalPages: number;
-  currentPage: number;
-  itemsPerPage: number;
-}
-
 export default function Sales() {
   const [carrito, setCarrito] = useState<
     {
@@ -80,10 +73,14 @@ export default function Sales() {
       cantidad: number;
       caja: boolean;
       cartItemId: number;
+      // Precios guardados para no depender del array productos
+      precioVenta: number;
+      precioVentaMayorista: number;
+      precioUnitario: number;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
-  const [appliedBusqueda, setAppliedBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
   const [productos, setProductos] = useState<
     {
       ProductoId: number;
@@ -98,15 +95,15 @@ export default function Sales() {
       ProductoStockUnitario?: number;
     }[]
   >([]);
-  const [pagination, setPagination] = useState<PaginationData>({
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [pagination, setPagination] = useState({
     totalItems: 0,
     totalPages: 1,
     currentPage: 1,
-    itemsPerPage: 20,
+    itemsPerPage: 24,
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [loading, setLoading] = useState(false);
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
@@ -144,6 +141,7 @@ export default function Sales() {
   const [isDevolucion, setIsDevolucion] = useState(false);
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (selectedProductId !== null && cantidadRefs.current[selectedProductId]) {
@@ -165,6 +163,7 @@ export default function Sales() {
     precioMayorista?: number;
     imagen: string;
     stock: number;
+    precioUnitario?: number;
   }) => {
     const tipo = clienteSeleccionado?.ClienteTipo || "MI";
     const precioFinal =
@@ -183,6 +182,10 @@ export default function Sales() {
         cantidad: 1,
         caja: false,
         cartItemId: nuevoCartItemId,
+        // Guardar los precios originales para cálculos posteriores
+        precioVenta: producto.precio,
+        precioVentaMayorista: producto.precioMayorista ?? producto.precio,
+        precioUnitario: producto.precioUnitario ?? producto.precio,
       },
     ]);
     setSelectedProductId(nuevoCartItemId); // Focus en el input de cantidad del producto nuevo
@@ -204,68 +207,64 @@ export default function Sales() {
 
   // Función para obtener el precio unitario según el check Caja
   const obtenerPrecio = (p: (typeof carrito)[0]) => {
-    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    if (!productoOriginal) return 0;
+    // Usar los precios guardados en el carrito en lugar de buscar en productos
     if (p.caja) {
       return clienteSeleccionado?.ClienteTipo === "MA"
-        ? productoOriginal.ProductoPrecioVentaMayorista
-        : productoOriginal.ProductoPrecioVenta;
+        ? p.precioVentaMayorista
+        : p.precioVenta;
     } else {
       const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
       if (combo) {
         // El precio unitario se calcula en base al combo
         return (
-          calcularPrecioConCombo(
-            p.id,
-            p.cantidad,
-            productoOriginal.ProductoPrecioUnitario
-          ) / p.cantidad
+          calcularPrecioConCombo(p.id, p.cantidad, p.precioUnitario) /
+          p.cantidad
         );
       }
-      return productoOriginal.ProductoPrecioUnitario;
+      return p.precioUnitario;
     }
   };
 
   // Función para obtener el total según el check Caja
   const obtenerTotal = (p: (typeof carrito)[0]) => {
-    const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    if (!productoOriginal) return 0;
+    // Usar los precios guardados en el carrito en lugar de buscar en productos
     if (p.caja) {
       const precio =
         clienteSeleccionado?.ClienteTipo === "MA"
-          ? productoOriginal.ProductoPrecioVentaMayorista
-          : productoOriginal.ProductoPrecioVenta;
+          ? p.precioVentaMayorista
+          : p.precioVenta;
       return precio * p.cantidad;
     } else {
       const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
       if (combo) {
-        return calcularPrecioConCombo(
-          p.id,
-          p.cantidad,
-          productoOriginal.ProductoPrecioUnitario
-        );
+        return calcularPrecioConCombo(p.id, p.cantidad, p.precioUnitario);
       }
-      return productoOriginal.ProductoPrecioUnitario * p.cantidad;
+      return p.precioUnitario * p.cantidad;
     }
   };
 
   const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
 
+  // Función para cargar productos con paginación
   const fetchProductos = useCallback(async () => {
+    if (!cajaAperturada) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
       let data;
-      if (appliedBusqueda.trim()) {
+      if (busquedaDebounced.trim()) {
+        // Si hay búsqueda, usar el endpoint de búsqueda paginado
         data = await searchProductos(
-          appliedBusqueda,
+          busquedaDebounced.trim(),
           currentPage,
           itemsPerPage
         );
       } else {
+        // Si no hay búsqueda, cargar productos paginados
         data = await getProductosPaginated(currentPage, itemsPerPage);
       }
 
-      // Filtrar productos por LocalId (productos globales o del local actual)
+      // Filtrar productos por LocalId después de recibirlos
       const productosFiltrados = (data.data || []).filter(
         (p: { LocalId: string | number }) =>
           Number(p.LocalId) === 0 ||
@@ -273,49 +272,82 @@ export default function Sales() {
       );
 
       setProductos(productosFiltrados);
-      setPagination(
-        data.pagination || {
-          totalItems: 0,
-          totalPages: 1,
-          currentPage: 1,
-          itemsPerPage: itemsPerPage,
-        }
-      );
+      setPagination({
+        totalItems: data.pagination?.totalItems || 0,
+        totalPages: data.pagination?.totalPages || 1,
+        currentPage: data.pagination?.currentPage || 1,
+        itemsPerPage: data.pagination?.itemsPerPage || itemsPerPage,
+      });
     } catch (error) {
       console.error("Error al cargar productos:", error);
       setProductos([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, appliedBusqueda, cajaAperturada]);
+  }, [cajaAperturada, busquedaDebounced, currentPage, itemsPerPage]);
 
+  // Cargar combos solo una vez al montar
   useEffect(() => {
-    fetchProductos();
-  }, [fetchProductos]);
-
-  useEffect(() => {
-    // Traer todos los clientes sin paginación
-    getAllClientesSinPaginacion()
-      .then((data) => {
-        setClientes(data.data || []);
-      })
-      .catch(() =>
-        setClientes([
-          {
-            ClienteId: 1,
-            ClienteRUC: "",
-            ClienteNombre: "SIN NOMBRE MINORISTA",
-            ClienteApellido: "",
-            ClienteDireccion: "",
-            ClienteTelefono: "",
-            ClienteTipo: "MI",
-            UsuarioId: "",
-          },
-        ])
-      );
-    // Traer combos
     getCombos(1, 1000).then((data) => setCombos(data.data || []));
   }, []);
+
+  // Cargar productos cuando cambian las dependencias
+  useEffect(() => {
+    if (cajaAperturada) {
+      fetchProductos();
+    }
+  }, [fetchProductos, cajaAperturada]);
+
+  // Efecto para buscar cuando cambia el término de búsqueda (con debounce)
+  useEffect(() => {
+    if (!cajaAperturada) return;
+
+    // Cancelar timeout anterior si existe
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Resetear página cuando cambia la búsqueda
+    setCurrentPage(1);
+
+    const timeoutId = setTimeout(() => {
+      setBusquedaDebounced(busqueda);
+      debounceTimeoutRef.current = null;
+    }, 500); // Debounce de 500ms
+
+    debounceTimeoutRef.current = timeoutId;
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+      }
+    };
+  }, [busqueda, cajaAperturada]);
+
+  // Cargar clientes solo cuando se abre el modal
+  useEffect(() => {
+    if (showClienteModal) {
+      getAllClientesSinPaginacion()
+        .then((data) => {
+          setClientes(data.data || []);
+        })
+        .catch(() =>
+          setClientes([
+            {
+              ClienteId: 1,
+              ClienteRUC: "",
+              ClienteNombre: "SIN NOMBRE MINORISTA",
+              ClienteApellido: "",
+              ClienteDireccion: "",
+              ClienteTelefono: "",
+              ClienteTipo: "MI",
+              UsuarioId: "",
+            },
+          ])
+        );
+    }
+  }, [showClienteModal]);
 
   const handleCreateCliente = async (clienteData: Cliente) => {
     try {
@@ -327,7 +359,9 @@ export default function Sales() {
         ClienteDireccion: clienteData.ClienteDireccion,
         ClienteTelefono: clienteData.ClienteTelefono,
         ClienteTipo: clienteData.ClienteTipo,
-        UsuarioId: clienteData.UsuarioId,
+        UsuarioId: clienteData.UsuarioId
+          ? String(clienteData.UsuarioId).trim()
+          : "",
       });
       // Recargar la lista de clientes
       const response = await getAllClientesSinPaginacion();
@@ -356,19 +390,14 @@ export default function Sales() {
     if (!clienteSeleccionado) return;
     setCarrito((carritoActual) =>
       carritoActual.map((item) => {
-        const productoOriginal = productos.find(
-          (p) => p.ProductoId === item.id
-        );
-        if (!productoOriginal) return item;
+        // Usar los precios guardados en el carrito
         const tipo = clienteSeleccionado.ClienteTipo;
         const nuevoPrecio =
-          tipo === "MA"
-            ? productoOriginal.ProductoPrecioVentaMayorista
-            : productoOriginal.ProductoPrecioVenta;
+          tipo === "MA" ? item.precioVentaMayorista : item.precioVenta;
         return { ...item, precio: nuevoPrecio ?? 0 };
       })
     );
-  }, [clienteSeleccionado, productos]);
+  }, [clienteSeleccionado]);
 
   // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
   const cartItems = carrito.map((p) => ({
@@ -419,10 +448,8 @@ export default function Sales() {
 
     const SDTProductoItem = carrito.map((p) => {
       const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
-      const productoOriginal = productos.find(
-        (prod) => p.id === prod.ProductoId
-      );
-      const precioUnitario = productoOriginal?.ProductoPrecioVenta ?? p.precio;
+      // Usar el precio unitario guardado en el carrito
+      const precioUnitario = p.precioUnitario;
       const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
       const totalCombo = calcularPrecioConCombo(
         p.id,
@@ -451,7 +478,6 @@ export default function Sales() {
       ? "PDevolucionWS.VENTACONFIRMAR"
       : "PVentaConfirmarWS.VENTACONFIRMAR";
     const namespace = isDevolucionMode ? "Tech" : "TechNow";
-    console.log("log: 🚀 ~ getSubtotal:", getSubtotal(cartItems));
 
     const json = {
       Envelope: {
@@ -611,10 +637,7 @@ export default function Sales() {
 
     // Datos de la tabla
     const tableData = carrito.map((p) => {
-      const productoOriginal = productos.find(
-        (prod) => prod.ProductoId === p.id
-      );
-      if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
+      // Usar los precios guardados en el carrito
       let precioUnitario = 0;
       let precioLabel = "";
       let totalLinea = 0;
@@ -622,8 +645,8 @@ export default function Sales() {
         // Caja: precio minorista o mayorista
         precioUnitario =
           clienteSeleccionado?.ClienteTipo === "MA"
-            ? productoOriginal.ProductoPrecioVentaMayorista
-            : productoOriginal.ProductoPrecioVenta;
+            ? p.precioVentaMayorista
+            : p.precioVenta;
         precioLabel = `Caja (${
           clienteSeleccionado?.ClienteTipo === "MA" ? "Mayorista" : "Minorista"
         })`;
@@ -633,12 +656,12 @@ export default function Sales() {
         const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
         if (combo && p.cantidad >= combo.ComboCantidad) {
           // Aplica combo
-          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioUnitario = p.precioUnitario;
           precioLabel = `Unidad (Combo)`;
           totalLinea = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
         } else {
           // Solo unidad
-          precioUnitario = productoOriginal.ProductoPrecioUnitario;
+          precioUnitario = p.precioUnitario;
           precioLabel = `Unidad`;
           totalLinea = precioUnitario * p.cantidad;
         }
@@ -765,108 +788,51 @@ export default function Sales() {
     generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
   };
 
-  // --- Función para aplicar la búsqueda (botón Buscar) ---
-  const handleSearchSubmit = () => {
-    setAppliedBusqueda(busqueda);
-    setCurrentPage(1);
-  };
-
-  // --- Función para verificar si es código numérico (solo números) ---
-  const esCodigoNumerico = (texto: string): boolean => {
-    // Verificar si el texto contiene solo números (puede tener espacios al inicio/final)
-    return /^\d+$/.test(texto.trim());
-  };
-
   // --- Función para manejar ENTER en la búsqueda ---
-  const handleSearchEnter = async (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    e.stopPropagation();
+  const handleSearchSubmit = async () => {
+    if (!busqueda.trim() || !cajaAperturada) return;
 
-    if (!busqueda.trim()) return;
+    // Cancelar el debounce pendiente si existe
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
 
-    const busquedaTerm = busqueda.trim();
+    // Actualizar busquedaDebounced inmediatamente para evitar que el debounce se ejecute después
+    setBusquedaDebounced(busqueda);
 
-    // Si es código numérico (solo números), buscar y agregar directamente al carrito
-    if (esCodigoNumerico(busquedaTerm)) {
-      // Buscar producto por código exacto
-      let productoEncontrado = null;
-
-      // Primero buscar en los productos actuales
-      const productoLocal = productos.find(
-        (p) =>
-          p.ProductoCodigo &&
-          String(p.ProductoCodigo).trim() === busquedaTerm &&
-          (Number(p.LocalId) === 0 ||
-            Number(p.LocalId) === Number(cajaAperturada?.CajaId))
+    try {
+      // Buscar productos usando el servicio de búsqueda
+      const data = await searchProductos(busqueda.trim(), 1, 10);
+      const productosFiltrados = (data.data || []).filter(
+        (p: { LocalId: string | number }) =>
+          Number(p.LocalId) === 0 ||
+          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
       );
 
-      if (productoLocal) {
-        productoEncontrado = productoLocal;
-      } else {
-        // Si no está en productos locales, buscar en el backend
-        try {
-          const searchResult = await searchProductos(busquedaTerm, 1, 50);
-          const productosBackend = searchResult.data || [];
+      // Agregar el primer producto encontrado
+      if (productosFiltrados.length > 0) {
+        const primerProducto = productosFiltrados[0];
 
-          // Buscar coincidencia exacta por código
-          const productoExacto = productosBackend.find(
-            (p: {
-              ProductoCodigo: string | number;
-              LocalId: string | number;
-            }) =>
-              String(p.ProductoCodigo).trim() === busquedaTerm &&
-              (Number(p.LocalId) === 0 ||
-                Number(p.LocalId) === Number(cajaAperturada?.CajaId))
-          );
-
-          if (productoExacto) {
-            productoEncontrado = productoExacto;
-          }
-        } catch (error) {
-          console.error("Error al buscar producto:", error);
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: "No se pudo buscar el producto",
-            timer: 2000,
-            showConfirmButton: false,
-          });
-          return;
-        }
-      }
-
-      // Si se encontró el producto, agregarlo al carrito
-      if (productoEncontrado) {
+        // Agregar el producto al carrito
         agregarProducto({
-          id: productoEncontrado.ProductoId,
-          nombre: productoEncontrado.ProductoNombre,
-          precio: productoEncontrado.ProductoPrecioVenta,
-          precioMayorista: productoEncontrado.ProductoPrecioVentaMayorista,
-          imagen: productoEncontrado.ProductoImagen
-            ? `data:image/jpeg;base64,${productoEncontrado.ProductoImagen}`
+          id: primerProducto.ProductoId,
+          nombre: primerProducto.ProductoNombre,
+          precio: primerProducto.ProductoPrecioVenta,
+          precioMayorista: primerProducto.ProductoPrecioVentaMayorista,
+          imagen: primerProducto.ProductoImagen
+            ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
             : logo,
-          stock: productoEncontrado.ProductoStock,
+          stock: primerProducto.ProductoStock,
+          precioUnitario: primerProducto.ProductoPrecioUnitario,
         });
 
         // Limpiar la búsqueda
         setBusqueda("");
-        setAppliedBusqueda("");
-      } else {
-        // No se encontró el producto
-        Swal.fire({
-          icon: "warning",
-          title: "Producto no encontrado",
-          text: `No se encontró ningún producto con el código "${busquedaTerm}"`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        setBusquedaDebounced("");
       }
-    } else {
-      // Si contiene letras, aplicar la búsqueda (como el botón Buscar)
-      handleSearchSubmit();
+    } catch (error) {
+      console.error("Error al buscar producto:", error);
     }
   };
 
@@ -1117,8 +1083,8 @@ export default function Sales() {
               searchTerm={busqueda}
               onSearch={setBusqueda}
               onSearchSubmit={handleSearchSubmit}
-              onKeyPress={handleSearchEnter}
               placeholder="Buscar por nombre o código"
+              hideButton={true}
               inputRef={searchInputRef}
             />
             {isDevolucion && (
@@ -1160,77 +1126,74 @@ export default function Sales() {
         </div>
         {/* Nuevo contenedor con scroll solo para los productos */}
         <div
-          className="overflow-y-auto"
-          style={{ height: "calc(100vh - 200px)" }}
+          className="flex flex-col"
+          style={{ height: "calc(100vh - 120px)" }}
         >
-          <div
-            className="grid gap-4"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            }}
-          >
-            {loading ? (
-              <div className="col-span-full text-center py-8">
-                Cargando productos...
-              </div>
-            ) : productos.length === 0 ? (
-              <div className="col-span-full text-center py-8 text-gray-500">
-                {appliedBusqueda
-                  ? "No se encontraron productos con ese criterio de búsqueda"
-                  : "No hay productos disponibles"}
-              </div>
-            ) : (
-              productos.map((p) => (
-                <ProductCard
-                  key={p.ProductoId}
-                  nombre={p.ProductoNombre}
-                  precio={p.ProductoPrecioVenta}
-                  precioMayorista={p.ProductoPrecioVentaMayorista}
-                  clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
-                  imagen={
-                    p.ProductoImagen
-                      ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                      : logo
-                  }
-                  stock={p.ProductoStock}
-                  onAdd={() =>
-                    agregarProducto({
-                      id: p.ProductoId,
-                      nombre: p.ProductoNombre,
-                      precio: p.ProductoPrecioVenta,
-                      precioMayorista: p.ProductoPrecioVentaMayorista,
-                      imagen: p.ProductoImagen
+          <div className="overflow-y-auto flex-1 mb-4">
+            <div
+              className="grid gap-4"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              }}
+            >
+              {loading ? (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  Cargando productos...
+                </div>
+              ) : productos.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  No se encontraron productos
+                </div>
+              ) : (
+                productos.map((p) => (
+                  <ProductCard
+                    key={p.ProductoId}
+                    nombre={p.ProductoNombre}
+                    precio={p.ProductoPrecioVenta}
+                    precioMayorista={p.ProductoPrecioVentaMayorista}
+                    clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
+                    imagen={
+                      p.ProductoImagen
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo,
-                      stock: p.ProductoStock,
-                    })
-                  }
-                  precioUnitario={p.ProductoPrecioUnitario}
-                  stockUnitario={p.ProductoStockUnitario}
-                />
-              ))
-            )}
+                        : logo
+                    }
+                    stock={p.ProductoStock}
+                    onAdd={() =>
+                      agregarProducto({
+                        id: p.ProductoId,
+                        nombre: p.ProductoNombre,
+                        precio: p.ProductoPrecioVenta,
+                        precioMayorista: p.ProductoPrecioVentaMayorista,
+                        imagen: p.ProductoImagen
+                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
+                          : logo,
+                        stock: p.ProductoStock,
+                        precioUnitario: p.ProductoPrecioUnitario,
+                      })
+                    }
+                    precioUnitario={p.ProductoPrecioUnitario}
+                    stockUnitario={p.ProductoStockUnitario}
+                  />
+                ))
+              )}
+            </div>
           </div>
+          {/* Paginación */}
+          {!loading && productos.length > 0 && pagination.totalPages > 1 && (
+            <div className="bg-white rounded-lg shadow p-4">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={pagination.itemsPerPage}
+                onItemsPerPageChange={(newItemsPerPage) => {
+                  setItemsPerPage(newItemsPerPage);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
         </div>
-        {/* Paginación */}
-        {!loading && productos.length > 0 && (
-          <div className="mt-4">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={(page) => {
-                setCurrentPage(page);
-                // Scroll hacia arriba cuando cambia la página
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              itemsPerPage={itemsPerPage}
-              onItemsPerPageChange={(items) => {
-                setItemsPerPage(items);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-        )}
         <PagoModal
           show={showPagoModal}
           handleClose={() => setShowPagoModal(false)}

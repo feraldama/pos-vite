@@ -86,6 +86,7 @@ export default function ProductsList({
     { LocalId: number; LocalNombre: string }[]
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [precioCostoFocused, setPrecioCostoFocused] = useState(false);
 
   useEffect(() => {
     if (currentProduct) {
@@ -126,6 +127,7 @@ export default function ProductsList({
         LocalId: 1,
       });
     }
+    setPrecioCostoFocused(false); // Resetear el estado de foco cuando cambia el producto
     getLocales(1, 1000).then((res) => {
       setLocales(res.data || []);
     });
@@ -197,6 +199,10 @@ export default function ProductsList({
     {
       key: "ProductoStock",
       label: "Stock",
+    },
+    {
+      key: "ProductoStockUnitario",
+      label: "Stock Unitario",
     },
     {
       key: "LocalId",
@@ -405,16 +411,32 @@ export default function ProductsList({
                       type="text"
                       name="ProductoPrecioPromedio"
                       id="ProductoPrecioPromedio"
-                      value={formatMilesWithDecimals(
-                        formData.ProductoPrecioPromedio || 0
-                      )}
+                      value={
+                        precioCostoFocused
+                          ? formData.ProductoPrecioPromedio?.toString() || ""
+                          : formatMilesWithDecimals(
+                              formData.ProductoPrecioPromedio || 0
+                            )
+                      }
+                      onFocus={() => setPrecioCostoFocused(true)}
+                      onBlur={() => setPrecioCostoFocused(false)}
                       onChange={(e) => {
-                        const raw = e.target.value
-                          .replace(/\./g, "")
-                          .replace(",", ".");
+                        // Permitir escribir números y punto decimal
+                        let raw = e.target.value.replace(/[^\d.]/g, "");
+
+                        // Asegurar que solo haya un punto decimal
+                        const parts = raw.split(".");
+                        if (parts.length > 2) {
+                          raw = parts[0] + "." + parts.slice(1).join("");
+                        }
+
+                        const numValue =
+                          raw === "" || raw === "." ? 0 : parseFloat(raw);
                         setFormData((prev) => ({
                           ...prev,
-                          ProductoPrecioPromedio: parseFloat(raw) || 0,
+                          ProductoPrecioPromedio: isNaN(numValue)
+                            ? 0
+                            : numValue,
                         }));
                       }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"

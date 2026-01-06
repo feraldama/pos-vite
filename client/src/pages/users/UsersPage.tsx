@@ -131,7 +131,6 @@ export default function UsuariosPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          console.log("Eliminando usuario con ID:", id);
           await deleteUsuario(id);
           Swal.fire({
             icon: "success",

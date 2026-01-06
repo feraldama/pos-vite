@@ -145,7 +145,7 @@ const Cliente = {
         clienteData.ClienteDireccion || "",
         clienteData.ClienteTelefono || "",
         clienteData.ClienteTipo || "",
-        clienteData.UsuarioId || "",
+        clienteData.UsuarioId ? String(clienteData.UsuarioId).trim() : "",
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -170,7 +170,12 @@ const Cliente = {
       camposActualizables.forEach((campo) => {
         if (clienteData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
-          values.push(clienteData[campo]);
+          // Aplicar trim solo al UsuarioId si es string
+          if (campo === "UsuarioId" && typeof clienteData[campo] === "string") {
+            values.push(clienteData[campo].trim());
+          } else {
+            values.push(clienteData[campo]);
+          }
         }
       });
       if (updateFields.length === 0) {

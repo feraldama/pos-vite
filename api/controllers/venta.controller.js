@@ -181,3 +181,42 @@ exports.getDeudasPendientesPorCliente = async (req, res) => {
     });
   }
 };
+
+// Obtener reporte de ventas por cliente y rango de fechas
+exports.getReporteVentasPorCliente = async (req, res) => {
+  try {
+    const { clienteId, fechaDesde, fechaHasta } = req.query;
+
+    if (!clienteId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID del cliente es requerido",
+      });
+    }
+
+    if (!fechaDesde || !fechaHasta) {
+      return res.status(400).json({
+        success: false,
+        message: "Las fechas desde y hasta son requeridas",
+      });
+    }
+
+    const reporte = await Venta.getReporteVentasPorCliente(
+      clienteId,
+      fechaDesde,
+      fechaHasta
+    );
+
+    res.json({
+      success: true,
+      data: reporte,
+    });
+  } catch (error) {
+    console.error("Error al obtener reporte de ventas:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener reporte de ventas",
+      error: error.message,
+    });
+  }
+};

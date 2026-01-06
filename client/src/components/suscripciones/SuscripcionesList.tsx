@@ -19,7 +19,6 @@ interface Suscripcion {
   PlanId: string | number;
   SuscripcionFechaInicio: string;
   SuscripcionFechaFin: string;
-  SuscripcionEstado: string;
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;
@@ -92,7 +91,6 @@ export default function SuscripcionesList({
     PlanId: "",
     SuscripcionFechaInicio: "",
     SuscripcionFechaFin: "",
-    SuscripcionEstado: "",
   });
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [planes, setPlanes] = useState<Plan[]>([]);
@@ -124,20 +122,21 @@ export default function SuscripcionesList({
       );
       setClienteSeleccionado(cliente || null);
       clienteSeleccionadoRef.current = cliente || null;
+
+      const fechaInicio = currentSuscripcion.SuscripcionFechaInicio
+        ? currentSuscripcion.SuscripcionFechaInicio.split("T")[0]
+        : "";
+      const fechaFin = currentSuscripcion.SuscripcionFechaFin
+        ? currentSuscripcion.SuscripcionFechaFin.split("T")[0]
+        : "";
+
       setFormData({
         id: String(currentSuscripcion.id ?? currentSuscripcion.SuscripcionId),
         SuscripcionId: String(currentSuscripcion.SuscripcionId),
         ClienteId: String(currentSuscripcion.ClienteId),
         PlanId: String(currentSuscripcion.PlanId),
-        SuscripcionFechaInicio: currentSuscripcion.SuscripcionFechaInicio
-          ? currentSuscripcion.SuscripcionFechaInicio.split("T")[0]
-          : "",
-        SuscripcionFechaFin: currentSuscripcion.SuscripcionFechaFin
-          ? currentSuscripcion.SuscripcionFechaFin.split("T")[0]
-          : "",
-        SuscripcionEstado: getEstadoCompleto(
-          currentSuscripcion.SuscripcionEstado || "A"
-        ),
+        SuscripcionFechaInicio: fechaInicio,
+        SuscripcionFechaFin: fechaFin,
       });
     } else if (currentSuscripcion === null && !clienteSeleccionadoRef.current) {
       // Solo resetear cuando currentSuscripcion cambia a null Y no hay cliente seleccionado
@@ -150,7 +149,6 @@ export default function SuscripcionesList({
         PlanId: "",
         SuscripcionFechaInicio: "",
         SuscripcionFechaFin: "",
-        SuscripcionEstado: "ACTIVA", // Se convertirá a "A" al enviar
       });
     }
   }, [currentSuscripcion, clientes]);
@@ -294,12 +292,7 @@ export default function SuscripcionesList({
       });
       return;
     }
-    // Convertir el estado completo a inicial antes de enviar
-    const formDataToSubmit = {
-      ...formData,
-      SuscripcionEstado: getEstadoInicial(formData.SuscripcionEstado),
-    };
-    onSubmit(formDataToSubmit);
+    onSubmit(formData);
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -314,28 +307,29 @@ export default function SuscripcionesList({
     return date.toLocaleDateString("es-ES");
   };
 
-  const getEstadoCompleto = (estado: string) => {
-    const estadoMap: { [key: string]: string } = {
-      A: "ACTIVA",
-      V: "VENCIDA",
-      C: "CANCELADA",
-      ACTIVA: "ACTIVA",
-      VENCIDA: "VENCIDA",
-      CANCELADA: "CANCELADA",
-    };
-    return estadoMap[estado] || estado;
-  };
+  // Función para calcular el estado basándose en las fechas
+  const calcularEstadoPorFechas = (
+    fechaInicio: string,
+    fechaFin: string
+  ): string => {
+    if (!fechaInicio || !fechaFin) return "CANCELADA";
 
-  const getEstadoInicial = (estado: string) => {
-    const estadoMap: { [key: string]: string } = {
-      ACTIVA: "A",
-      VENCIDA: "V",
-      CANCELADA: "C",
-      A: "A",
-      V: "V",
-      C: "C",
-    };
-    return estadoMap[estado] || "A";
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const inicio = new Date(fechaInicio);
+    inicio.setHours(0, 0, 0, 0);
+
+    const fin = new Date(fechaFin);
+    fin.setHours(0, 0, 0, 0);
+
+    if (hoy < inicio) {
+      return "FUTURA"; // Opcional: suscripciones que aún no han comenzado
+    } else if (hoy > fin) {
+      return "VENCIDA";
+    } else {
+      return "ACTIVA";
+    }
   };
 
   const columns = [
@@ -368,8 +362,13 @@ export default function SuscripcionesList({
     {
       key: "SuscripcionEstado",
       label: "Estado",
-      render: (suscripcion: Suscripcion) =>
-        getEstadoCompleto(suscripcion.SuscripcionEstado || "A"),
+      render: (suscripcion: Suscripcion) => {
+        // Calcular el estado basándose en las fechas
+        return calcularEstadoPorFechas(
+          suscripcion.SuscripcionFechaInicio || "",
+          suscripcion.SuscripcionFechaFin || ""
+        );
+      },
     },
   ];
 
@@ -540,18 +539,27 @@ export default function SuscripcionesList({
                     >
                       Estado
                     </label>
-                    <select
+                    <input
+                      type="text"
                       name="SuscripcionEstado"
                       id="SuscripcionEstado"
-                      value={formData.SuscripcionEstado}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    >
-                      <option value="ACTIVA">Activa</option>
-                      <option value="VENCIDA">Vencida</option>
-                      <option value="CANCELADA">Cancelada</option>
-                    </select>
+                      value={
+                        formData.SuscripcionFechaInicio &&
+                        formData.SuscripcionFechaFin
+                          ? calcularEstadoPorFechas(
+                              formData.SuscripcionFechaInicio,
+                              formData.SuscripcionFechaFin
+                            )
+                          : "ACTIVA"
+                      }
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
+                      title="El estado se calcula automáticamente según las fechas"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      * El estado se calcula automáticamente según las fechas
+                    </p>
                   </div>
                 </div>
               </div>

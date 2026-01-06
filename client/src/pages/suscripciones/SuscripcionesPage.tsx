@@ -18,7 +18,6 @@ interface Suscripcion {
   PlanId: string | number;
   SuscripcionFechaInicio: string;
   SuscripcionFechaFin: string;
-  SuscripcionEstado: string;
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;

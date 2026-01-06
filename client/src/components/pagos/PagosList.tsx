@@ -3,10 +3,12 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { getSuscripciones } from "../../services/suscripciones.service";
+import { getAllClientesSinPaginacion } from "../../services/clientes.service";
+import { getPlanes } from "../../services/planes.service";
 import { formatMiles } from "../../utils/utils";
 import Swal from "sweetalert2";
 import { useAuth } from "../../contexts/useAuth";
+import ClienteModal from "../common/ClienteModal";
 
 interface Pago {
   id: string | number;
@@ -21,14 +23,22 @@ interface Pago {
   [key: string]: unknown;
 }
 
-interface Suscripcion {
-  SuscripcionId: string | number;
-  ClienteNombre?: string;
-  ClienteApellido?: string;
-  PlanPrecio?: number;
-  SuscripcionEstado?: string;
-  SuscripcionFechaInicio?: string;
-  SuscripcionFechaFin?: string;
+interface Cliente {
+  ClienteId: number;
+  ClienteNombre: string;
+  ClienteApellido: string;
+  ClienteRUC: string;
+  ClienteDireccion: string;
+  ClienteTelefono: string;
+  ClienteTipo: string;
+  UsuarioId: string;
+}
+
+interface Plan {
+  PlanId: string | number;
+  PlanNombre: string;
+  PlanDuracion: number;
+  PlanPrecio: number;
   [key: string]: unknown;
 }
 
@@ -77,32 +87,33 @@ export default function PagosList({
     id: "",
     PagoId: "",
     SuscripcionId: "",
+    ClienteId: "",
+    PlanId: "",
     PagoMonto: 0,
     PagoTipo: "",
     PagoFecha: "",
     PagoUsuarioId: "",
   });
-  const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [planes, setPlanes] = useState<Plan[]>([]);
+  const [clienteSeleccionado, setClienteSeleccionado] =
+    useState<Cliente | null>(null);
+  const [showClienteModal, setShowClienteModal] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
-    // Cargar suscripciones para el select
-    getSuscripciones(1, 1000)
+    // Cargar clientes y planes para crear nueva suscripción
+    getAllClientesSinPaginacion()
       .then((data) => {
-        const suscripcionesData = data.data || [];
-        // Ordenar por nombre del cliente
-        const suscripcionesOrdenadas = [...suscripcionesData].sort((a, b) => {
-          const nombreA = `${a.ClienteNombre || ""} ${a.ClienteApellido || ""}`
-            .trim()
-            .toUpperCase();
-          const nombreB = `${b.ClienteNombre || ""} ${b.ClienteApellido || ""}`
-            .trim()
-            .toUpperCase();
-          return nombreA.localeCompare(nombreB);
-        });
-        setSuscripciones(suscripcionesOrdenadas);
+        setClientes(data.data || []);
       })
-      .catch(() => setSuscripciones([]));
+      .catch(() => setClientes([]));
+
+    getPlanes(1, 1000)
+      .then((data) => {
+        setPlanes(data.data || []);
+      })
+      .catch(() => setPlanes([]));
   }, []);
 
   useEffect(() => {
@@ -111,6 +122,8 @@ export default function PagosList({
         id: String(currentPago.id ?? currentPago.PagoId),
         PagoId: String(currentPago.PagoId),
         SuscripcionId: String(currentPago.SuscripcionId),
+        ClienteId: "",
+        PlanId: "",
         PagoMonto: currentPago.PagoMonto || 0,
         PagoTipo: currentPago.PagoTipo || "",
         PagoFecha: currentPago.PagoFecha
@@ -123,11 +136,14 @@ export default function PagosList({
         id: "",
         PagoId: "",
         SuscripcionId: "",
+        ClienteId: "",
+        PlanId: "",
         PagoMonto: 0,
         PagoTipo: "",
         PagoFecha: new Date().toISOString().split("T")[0],
         PagoUsuarioId: String(user?.id || ""),
       });
+      setClienteSeleccionado(null);
     }
   }, [currentPago, user]);
 
@@ -141,13 +157,13 @@ export default function PagosList({
         [name]: name === "PagoMonto" ? Number(value) : value,
       };
 
-      // Si cambió la suscripción, actualizar el monto con el PlanPrecio
-      if (name === "SuscripcionId" && value) {
-        const suscripcionSeleccionada = suscripciones.find(
-          (s) => String(s.SuscripcionId) === String(value)
+      // Si cambió el plan, actualizar el monto con el PlanPrecio
+      if (name === "PlanId" && value) {
+        const planSeleccionado = planes.find(
+          (p) => String(p.PlanId) === String(value)
         );
-        if (suscripcionSeleccionada && suscripcionSeleccionada.PlanPrecio) {
-          newFormData.PagoMonto = Number(suscripcionSeleccionada.PlanPrecio);
+        if (planSeleccionado && planSeleccionado.PlanPrecio) {
+          newFormData.PagoMonto = Number(planSeleccionado.PlanPrecio);
         }
       }
 
@@ -157,14 +173,25 @@ export default function PagosList({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.SuscripcionId) {
+
+    // Validar campos requeridos para nueva suscripción
+    if (!formData.ClienteId) {
       Swal.fire({
         icon: "warning",
-        title: "Suscripción requerida",
-        text: "Debe seleccionar una suscripción",
+        title: "Cliente requerido",
+        text: "Debe seleccionar un cliente",
       });
       return;
     }
+    if (!formData.PlanId) {
+      Swal.fire({
+        icon: "warning",
+        title: "Plan requerido",
+        text: "Debe seleccionar un plan",
+      });
+      return;
+    }
+
     if (!formData.PagoMonto || formData.PagoMonto <= 0) {
       Swal.fire({
         icon: "warning",
@@ -181,12 +208,65 @@ export default function PagosList({
       });
       return;
     }
+
     // Asegurar que PagoUsuarioId tenga el valor del usuario logueado
     const formDataToSubmit = {
       ...formData,
       PagoUsuarioId: user?.id || formData.PagoUsuarioId,
     };
-    onSubmit(formDataToSubmit);
+
+    // Siempre crear nueva suscripción, enviar ClienteId y PlanId en lugar de SuscripcionId
+    const pagoData: Pago = {
+      ...formDataToSubmit,
+      SuscripcionId: "", // Se creará en el backend
+      ClienteId: formData.ClienteId,
+      PlanId: formData.PlanId,
+    } as Pago;
+
+    onSubmit(pagoData);
+  };
+
+  const handleSelectCliente = (cliente: Cliente) => {
+    setClienteSeleccionado(cliente);
+    setFormData((prev) => ({
+      ...prev,
+      ClienteId: String(cliente.ClienteId),
+    }));
+    setShowClienteModal(false);
+  };
+
+  const handleCreateCliente = async (clienteData: Cliente) => {
+    try {
+      const { createCliente } = await import("../../services/clientes.service");
+      const nuevoCliente = await createCliente({
+        ClienteId: clienteData.ClienteId,
+        ClienteRUC: clienteData.ClienteRUC || "",
+        ClienteNombre: clienteData.ClienteNombre,
+        ClienteApellido: clienteData.ClienteApellido || "",
+        ClienteDireccion: clienteData.ClienteDireccion || "",
+        ClienteTelefono: clienteData.ClienteTelefono || "",
+        ClienteTipo: "MI",
+        UsuarioId: user?.id || "",
+      });
+      const response = await getAllClientesSinPaginacion();
+      const clientesData = response.data || [];
+      setClientes(clientesData);
+      if (nuevoCliente.data) {
+        handleSelectCliente(nuevoCliente.data);
+      }
+      Swal.fire({
+        icon: "success",
+        title: "Cliente creado exitosamente",
+        text: "El cliente ha sido creado y seleccionado",
+      });
+    } catch (error) {
+      console.error("Error al crear cliente:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al crear cliente",
+        text: "Hubo un problema al crear el cliente",
+      });
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -199,38 +279,6 @@ export default function PagosList({
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString("es-ES");
-  };
-
-  const getEstadoCompleto = (estado: string) => {
-    const estadoMap: { [key: string]: string } = {
-      A: "ACTIVA",
-      V: "VENCIDA",
-      C: "CANCELADA",
-    };
-    return estadoMap[estado] || estado;
-  };
-
-  const getSuscripcionLabel = (suscripcion: Suscripcion) => {
-    const nombre = suscripcion.ClienteNombre || "";
-    const apellido = suscripcion.ClienteApellido || "";
-    const nombreCompleto = `${nombre} ${apellido}`.trim();
-    const estado = getEstadoCompleto(suscripcion.SuscripcionEstado || "A");
-
-    // Formatear fechas
-    const fechaInicio = suscripcion.SuscripcionFechaInicio
-      ? formatDate(suscripcion.SuscripcionFechaInicio)
-      : "";
-    const fechaFin = suscripcion.SuscripcionFechaFin
-      ? formatDate(suscripcion.SuscripcionFechaFin)
-      : "";
-
-    const fechas = [fechaInicio, fechaFin].filter(Boolean).join(" - ");
-    const fechasTexto = fechas ? ` (${fechas})` : "";
-
-    if (nombreCompleto) {
-      return `${nombreCompleto} - ${estado}${fechasTexto}`;
-    }
-    return `${estado}${fechasTexto}`;
   };
 
   const columns = [
@@ -347,26 +395,47 @@ export default function PagosList({
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-900">
-                    Suscripción *
-                  </label>
-                  <select
-                    name="SuscripcionId"
-                    value={formData.SuscripcionId}
-                    onChange={handleInputChange}
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    required
-                  >
-                    <option value="">Seleccione una suscripción</option>
-                    {suscripciones.map((suscripcion) => (
-                      <option
-                        key={suscripcion.SuscripcionId}
-                        value={suscripcion.SuscripcionId}
-                      >
-                        {getSuscripcionLabel(suscripcion)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mb-4">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Cliente *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowClienteModal(true)}
+                      className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 text-left hover:bg-gray-100 transition"
+                    >
+                      {clienteSeleccionado
+                        ? `${clienteSeleccionado.ClienteNombre} ${
+                            clienteSeleccionado.ClienteApellido || ""
+                          }`
+                        : "Seleccionar cliente"}
+                    </button>
+                    {!clienteSeleccionado && (
+                      <p className="mt-1 text-xs text-red-600">
+                        * Debe seleccionar un cliente
+                      </p>
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Plan *
+                    </label>
+                    <select
+                      name="PlanId"
+                      value={formData.PlanId}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
+                    >
+                      <option value="">Seleccione un plan</option>
+                      {planes.map((plan) => (
+                        <option key={plan.PlanId} value={plan.PlanId}>
+                          {plan.PlanNombre} -{" "}
+                          {formatMiles(plan.PlanPrecio || 0)} Gs.
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -442,6 +511,15 @@ export default function PagosList({
           </div>
         </div>
       )}
+      <ClienteModal
+        show={showClienteModal}
+        onClose={() => setShowClienteModal(false)}
+        clientes={clientes}
+        onSelect={handleSelectCliente}
+        onCreateCliente={handleCreateCliente}
+        currentUserId={user?.id}
+        hideTipo={true}
+      />
     </>
   );
 }

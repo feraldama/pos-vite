@@ -30,19 +30,12 @@ const Suscripcion = {
 
   create: (suscripcionData) => {
     return new Promise((resolve, reject) => {
-      // Convertir estado completo a inicial si es necesario
-      let estado = suscripcionData.SuscripcionEstado;
-      if (estado === "ACTIVA") estado = "A";
-      else if (estado === "VENCIDA") estado = "V";
-      else if (estado === "CANCELADA") estado = "C";
-
-      const query = `INSERT INTO suscripcion (ClienteId, PlanId, SuscripcionFechaInicio, SuscripcionFechaFin, SuscripcionEstado) VALUES (?, ?, ?, ?, ?)`;
+      const query = `INSERT INTO suscripcion (ClienteId, PlanId, SuscripcionFechaInicio, SuscripcionFechaFin) VALUES (?, ?, ?, ?)`;
       const values = [
         suscripcionData.ClienteId,
         suscripcionData.PlanId,
         suscripcionData.SuscripcionFechaInicio,
         suscripcionData.SuscripcionFechaFin,
-        estado,
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -56,19 +49,12 @@ const Suscripcion = {
 
   update: (id, suscripcionData) => {
     return new Promise((resolve, reject) => {
-      // Convertir estado completo a inicial si es necesario
-      let estado = suscripcionData.SuscripcionEstado;
-      if (estado === "ACTIVA") estado = "A";
-      else if (estado === "VENCIDA") estado = "V";
-      else if (estado === "CANCELADA") estado = "C";
-
-      const query = `UPDATE suscripcion SET ClienteId = ?, PlanId = ?, SuscripcionFechaInicio = ?, SuscripcionFechaFin = ?, SuscripcionEstado = ? WHERE SuscripcionId = ?`;
+      const query = `UPDATE suscripcion SET ClienteId = ?, PlanId = ?, SuscripcionFechaInicio = ?, SuscripcionFechaFin = ? WHERE SuscripcionId = ?`;
       const values = [
         suscripcionData.ClienteId,
         suscripcionData.PlanId,
         suscripcionData.SuscripcionFechaInicio,
         suscripcionData.SuscripcionFechaFin,
-        estado,
         id,
       ];
       db.query(query, values, (err, result) => {
@@ -107,7 +93,6 @@ const Suscripcion = {
         "PlanId",
         "SuscripcionFechaInicio",
         "SuscripcionFechaFin",
-        "SuscripcionEstado",
         "ClienteNombre",
         "PlanNombre",
       ];
@@ -172,7 +157,6 @@ const Suscripcion = {
         "PlanId",
         "SuscripcionFechaInicio",
         "SuscripcionFechaFin",
-        "SuscripcionEstado",
         "ClienteNombre",
         "PlanNombre",
       ];
@@ -203,10 +187,6 @@ const Suscripcion = {
         WHERE c.ClienteNombre LIKE ?
         OR c.ClienteApellido LIKE ?
         OR p.PlanNombre LIKE ?
-        OR s.SuscripcionEstado LIKE ?
-        OR (s.SuscripcionEstado = 'A' AND UPPER(?) LIKE '%ACTIVA%')
-        OR (s.SuscripcionEstado = 'V' AND UPPER(?) LIKE '%VENCIDA%')
-        OR (s.SuscripcionEstado = 'C' AND UPPER(?) LIKE '%CANCELADA%')
         OR CAST(s.SuscripcionId AS CHAR) LIKE ?
         ORDER BY ${orderByField} ${order}
         LIMIT ? OFFSET ?
@@ -215,18 +195,7 @@ const Suscripcion = {
 
       db.query(
         searchQuery,
-        [
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          term,
-          term,
-          term,
-          searchValue,
-          limit,
-          offset,
-        ],
+        [searchValue, searchValue, searchValue, searchValue, limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
@@ -238,24 +207,11 @@ const Suscripcion = {
             WHERE c.ClienteNombre LIKE ?
             OR c.ClienteApellido LIKE ?
             OR p.PlanNombre LIKE ?
-            OR s.SuscripcionEstado LIKE ?
-            OR (s.SuscripcionEstado = 'A' AND UPPER(?) LIKE '%ACTIVA%')
-            OR (s.SuscripcionEstado = 'V' AND UPPER(?) LIKE '%VENCIDA%')
-            OR (s.SuscripcionEstado = 'C' AND UPPER(?) LIKE '%CANCELADA%')
             OR CAST(s.SuscripcionId AS CHAR) LIKE ?
           `;
           db.query(
             countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              term,
-              term,
-              term,
-              searchValue,
-            ],
+            [searchValue, searchValue, searchValue, searchValue],
             (err, countResult) => {
               if (err) return reject(err);
               resolve({

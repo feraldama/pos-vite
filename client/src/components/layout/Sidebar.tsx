@@ -12,14 +12,14 @@ import {
   UsersIcon,
   PencilSquareIcon,
   BanknotesIcon,
-  CurrencyDollarIcon,
-  ArchiveBoxIcon,
-  RectangleGroupIcon,
-  CubeIcon,
-  WrenchIcon,
+  // CurrencyDollarIcon,
+  // ArchiveBoxIcon,
+  // RectangleGroupIcon,
+  // CubeIcon,
+  // WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
-  ShoppingCartIcon,
+  // ShoppingCartIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
@@ -46,35 +46,35 @@ const navigation: NavigationItem[] = [
     href: "/apertura-cierre-caja",
     icon: <LockClosedIcon className="h-7 w-6" />,
   },
-  {
-    name: "Ventas",
-    href: "/ventas",
-    icon: <CurrencyDollarIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Compras",
-    href: "/compras",
-    icon: <ShoppingCartIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Cobro de Créditos",
-    href: "/credito-pagos",
-    icon: <BanknotesIcon className="h-7 w-6" />,
-  },
+  // {
+  //   name: "Ventas",
+  //   href: "/ventas",
+  //   icon: <CurrencyDollarIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Compras",
+  //   href: "/compras",
+  //   icon: <ShoppingCartIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Cobro de Créditos",
+  //   href: "/credito-pagos",
+  //   icon: <BanknotesIcon className="h-7 w-6" />,
+  // },
 
+  // {
+  //   name: "Almacenes",
+  //   href: "/almacenes",
+  //   icon: <ArchiveBoxIcon className="h-7 w-6" />,
+  // },
   {
-    name: "Almacenes",
-    href: "/almacenes",
-    icon: <ArchiveBoxIcon className="h-7 w-6" />,
+    name: "Clientes",
+    href: "/customers",
+    icon: <UsersIcon className="h-7 w-6" />,
   },
   {
     name: "Planes",
     href: "/planes",
-    icon: <DocumentTextIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Suscripciones",
-    href: "/suscripciones",
     icon: <DocumentTextIcon className="h-7 w-6" />,
   },
   {
@@ -83,20 +83,20 @@ const navigation: NavigationItem[] = [
     icon: <BanknotesIcon className="h-7 w-6" />,
   },
   {
-    name: "Productos",
-    href: "/products",
-    icon: <CubeIcon className="h-7 w-6" />,
+    name: "Suscripciones",
+    href: "/suscripciones",
+    icon: <DocumentTextIcon className="h-7 w-6" />,
   },
-  {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Clientes",
-    href: "/customers",
-    icon: <UsersIcon className="h-7 w-6" />,
-  },
+  // {
+  //   name: "Productos",
+  //   href: "/products",
+  //   icon: <CubeIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Combos",
+  //   href: "/combos",
+  //   icon: <RectangleGroupIcon className="h-7 w-6" />,
+  // },
   {
     name: "Reportes",
     href: "/reportes",
@@ -113,17 +113,17 @@ const navigation: NavigationItem[] = [
       { name: "Registro Diario Caja", href: "/movements/summary" },
     ],
   },
-  {
-    name: "Modificaciones",
-    href: "/modifications",
-    icon: <WrenchIcon className="h-7 w-6" />,
-    children: [
-      { name: "Facturas", href: "/facturas" },
-      { name: "Ventas", href: "/modifications/ventas" },
-      { name: "Compras", href: "/modifications/compras" },
-      { name: "Inventario", href: "/inventario" },
-    ],
-  },
+  // {
+  //   name: "Modificaciones",
+  //   href: "/modifications",
+  //   icon: <WrenchIcon className="h-7 w-6" />,
+  //   children: [
+  //     { name: "Facturas", href: "/facturas" },
+  //     { name: "Ventas", href: "/modifications/ventas" },
+  //     { name: "Compras", href: "/modifications/compras" },
+  //     { name: "Inventario", href: "/inventario" },
+  //   ],
+  // },
   {
     name: "Control de Acceso",
     href: "/access-control",

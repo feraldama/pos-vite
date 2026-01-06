@@ -31,6 +31,7 @@ import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
+import SuscripcionesPage from "./pages/suscripciones/SuscripcionesPage";
 import PlanesPage from "./pages/planes/PlanesPage";
 
 function App() {
@@ -99,6 +100,7 @@ function App() {
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/facturas" element={<FacturasPage />} />
             <Route path="/planes" element={<PlanesPage />} />
+            <Route path="/suscripciones" element={<SuscripcionesPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

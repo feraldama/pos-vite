@@ -20,6 +20,7 @@ interface ClienteModalProps {
   onSelect: (cliente: Cliente) => void;
   onCreateCliente?: (cliente: Cliente) => void;
   currentUserId?: string;
+  hideTipo?: boolean;
 }
 
 const ClienteModal: React.FC<ClienteModalProps> = ({
@@ -29,6 +30,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   onSelect,
   onCreateCliente,
   currentUserId,
+  hideTipo = false,
 }) => {
   const [filtros, setFiltros] = useState({
     ruc: "",
@@ -397,25 +399,27 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-                    <div className="col-span-6 sm:col-span-3">
-                      <label
-                        htmlFor="ClienteTipo"
-                        className="block mb-2 text-sm font-medium text-gray-900"
-                      >
-                        Tipo
-                      </label>
-                      <select
-                        name="ClienteTipo"
-                        id="ClienteTipo"
-                        value={formData.ClienteTipo}
-                        onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                        required
-                      >
-                        <option value="MI">Minorista</option>
-                        <option value="MA">Mayorista</option>
-                      </select>
-                    </div>
+                    {!hideTipo && (
+                      <div className="col-span-6 sm:col-span-3">
+                        <label
+                          htmlFor="ClienteTipo"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Tipo
+                        </label>
+                        <select
+                          name="ClienteTipo"
+                          id="ClienteTipo"
+                          value={formData.ClienteTipo}
+                          onChange={handleInputChange}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          required
+                        >
+                          <option value="MI">Minorista</option>
+                          <option value="MA">Mayorista</option>
+                        </select>
+                      </div>
+                    )}
                     <div className="col-span-6 sm:col-span-3">
                       <label
                         htmlFor="UsuarioId"

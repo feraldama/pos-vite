@@ -1,0 +1,273 @@
+const db = require("../config/db");
+
+const Suscripcion = {
+  getAll: () => {
+    return new Promise((resolve, reject) => {
+      db.query("SELECT * FROM suscripcion", (err, results) => {
+        if (err) reject(err);
+        resolve(results);
+      });
+    });
+  },
+
+  getById: (id) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+        WHERE s.SuscripcionId = ?
+      `;
+      db.query(query, [id], (err, results) => {
+        if (err) return reject(err);
+        resolve(results.length > 0 ? results[0] : null);
+      });
+    });
+  },
+
+  create: (suscripcionData) => {
+    return new Promise((resolve, reject) => {
+      // Convertir estado completo a inicial si es necesario
+      let estado = suscripcionData.SuscripcionEstado;
+      if (estado === "ACTIVA") estado = "A";
+      else if (estado === "VENCIDA") estado = "V";
+      else if (estado === "CANCELADA") estado = "C";
+
+      const query = `INSERT INTO suscripcion (ClienteId, PlanId, SuscripcionFechaInicio, SuscripcionFechaFin, SuscripcionEstado) VALUES (?, ?, ?, ?, ?)`;
+      const values = [
+        suscripcionData.ClienteId,
+        suscripcionData.PlanId,
+        suscripcionData.SuscripcionFechaInicio,
+        suscripcionData.SuscripcionFechaFin,
+        estado,
+      ];
+      db.query(query, values, (err, result) => {
+        if (err) return reject(err);
+        // Obtener la suscripción recién creada
+        Suscripcion.getById(result.insertId)
+          .then((suscripcion) => resolve(suscripcion))
+          .catch((error) => reject(error));
+      });
+    });
+  },
+
+  update: (id, suscripcionData) => {
+    return new Promise((resolve, reject) => {
+      // Convertir estado completo a inicial si es necesario
+      let estado = suscripcionData.SuscripcionEstado;
+      if (estado === "ACTIVA") estado = "A";
+      else if (estado === "VENCIDA") estado = "V";
+      else if (estado === "CANCELADA") estado = "C";
+
+      const query = `UPDATE suscripcion SET ClienteId = ?, PlanId = ?, SuscripcionFechaInicio = ?, SuscripcionFechaFin = ?, SuscripcionEstado = ? WHERE SuscripcionId = ?`;
+      const values = [
+        suscripcionData.ClienteId,
+        suscripcionData.PlanId,
+        suscripcionData.SuscripcionFechaInicio,
+        suscripcionData.SuscripcionFechaFin,
+        estado,
+        id,
+      ];
+      db.query(query, values, (err, result) => {
+        if (err) return reject(err);
+        if (result.affectedRows === 0) return resolve(null);
+        Suscripcion.getById(id)
+          .then((suscripcion) => resolve(suscripcion))
+          .catch((error) => reject(error));
+      });
+    });
+  },
+
+  delete: (id) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        "DELETE FROM suscripcion WHERE SuscripcionId = ?",
+        [id],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.affectedRows > 0);
+        }
+      );
+    });
+  },
+
+  getAllPaginated: (
+    limit,
+    offset,
+    sortBy = "SuscripcionId",
+    sortOrder = "ASC"
+  ) => {
+    return new Promise((resolve, reject) => {
+      const allowedSortFields = [
+        "SuscripcionId",
+        "ClienteId",
+        "PlanId",
+        "SuscripcionFechaInicio",
+        "SuscripcionFechaFin",
+        "SuscripcionEstado",
+        "ClienteNombre",
+        "PlanNombre",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "SuscripcionId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
+      // Para ordenar por campos de tablas relacionadas, necesitamos usar alias
+      let orderByField = sortField;
+      if (sortField === "ClienteNombre") {
+        orderByField = "c.ClienteNombre";
+      } else if (sortField === "PlanNombre") {
+        orderByField = "p.PlanNombre";
+      } else {
+        orderByField = `s.${sortField}`;
+      }
+
+      const query = `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+        ORDER BY ${orderByField} ${order}
+        LIMIT ? OFFSET ?
+      `;
+
+      db.query(query, [limit, offset], (err, results) => {
+        if (err) return reject(err);
+
+        db.query(
+          "SELECT COUNT(*) as total FROM suscripcion",
+          (err, countResult) => {
+            if (err) return reject(err);
+
+            resolve({
+              suscripciones: results,
+              total: countResult[0].total,
+            });
+          }
+        );
+      });
+    });
+  },
+
+  searchSuscripciones: (
+    term,
+    limit,
+    offset,
+    sortBy = "SuscripcionId",
+    sortOrder = "ASC"
+  ) => {
+    return new Promise((resolve, reject) => {
+      const allowedSortFields = [
+        "SuscripcionId",
+        "ClienteId",
+        "PlanId",
+        "SuscripcionFechaInicio",
+        "SuscripcionFechaFin",
+        "SuscripcionEstado",
+        "ClienteNombre",
+        "PlanNombre",
+      ];
+      const allowedSortOrders = ["ASC", "DESC"];
+      const sortField = allowedSortFields.includes(sortBy)
+        ? sortBy
+        : "SuscripcionId";
+      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+        ? sortOrder.toUpperCase()
+        : "ASC";
+
+      let orderByField = sortField;
+      if (sortField === "ClienteNombre") {
+        orderByField = "c.ClienteNombre";
+      } else if (sortField === "PlanNombre") {
+        orderByField = "p.PlanNombre";
+      } else {
+        orderByField = `s.${sortField}`;
+      }
+
+      const searchQuery = `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+        WHERE c.ClienteNombre LIKE ?
+        OR c.ClienteApellido LIKE ?
+        OR p.PlanNombre LIKE ?
+        OR s.SuscripcionEstado LIKE ?
+        OR (s.SuscripcionEstado = 'A' AND UPPER(?) LIKE '%ACTIVA%')
+        OR (s.SuscripcionEstado = 'V' AND UPPER(?) LIKE '%VENCIDA%')
+        OR (s.SuscripcionEstado = 'C' AND UPPER(?) LIKE '%CANCELADA%')
+        OR CAST(s.SuscripcionId AS CHAR) LIKE ?
+        ORDER BY ${orderByField} ${order}
+        LIMIT ? OFFSET ?
+      `;
+      const searchValue = `%${term}%`;
+
+      db.query(
+        searchQuery,
+        [
+          searchValue,
+          searchValue,
+          searchValue,
+          searchValue,
+          term,
+          term,
+          term,
+          searchValue,
+          limit,
+          offset,
+        ],
+        (err, results) => {
+          if (err) return reject(err);
+
+          const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM suscripcion s
+            LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+            LEFT JOIN plan p ON s.PlanId = p.PlanId
+            WHERE c.ClienteNombre LIKE ?
+            OR c.ClienteApellido LIKE ?
+            OR p.PlanNombre LIKE ?
+            OR s.SuscripcionEstado LIKE ?
+            OR (s.SuscripcionEstado = 'A' AND UPPER(?) LIKE '%ACTIVA%')
+            OR (s.SuscripcionEstado = 'V' AND UPPER(?) LIKE '%VENCIDA%')
+            OR (s.SuscripcionEstado = 'C' AND UPPER(?) LIKE '%CANCELADA%')
+            OR CAST(s.SuscripcionId AS CHAR) LIKE ?
+          `;
+          db.query(
+            countQuery,
+            [
+              searchValue,
+              searchValue,
+              searchValue,
+              searchValue,
+              term,
+              term,
+              term,
+              searchValue,
+            ],
+            (err, countResult) => {
+              if (err) return reject(err);
+              resolve({
+                suscripciones: results,
+                total: countResult[0]?.total || 0,
+              });
+            }
+          );
+        }
+      );
+    });
+  },
+};
+
+module.exports = Suscripcion;

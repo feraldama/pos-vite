@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
@@ -100,6 +100,7 @@ export default function SuscripcionesList({
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>(null);
   const { user } = useAuth();
+  const clienteSeleccionadoRef = useRef<Cliente | null>(null);
 
   useEffect(() => {
     // Cargar clientes y planes
@@ -122,6 +123,7 @@ export default function SuscripcionesList({
         (c) => Number(c.ClienteId) === Number(currentSuscripcion.ClienteId)
       );
       setClienteSeleccionado(cliente || null);
+      clienteSeleccionadoRef.current = cliente || null;
       setFormData({
         id: String(currentSuscripcion.id ?? currentSuscripcion.SuscripcionId),
         SuscripcionId: String(currentSuscripcion.SuscripcionId),
@@ -137,7 +139,9 @@ export default function SuscripcionesList({
           currentSuscripcion.SuscripcionEstado || "A"
         ),
       });
-    } else {
+    } else if (currentSuscripcion === null && !clienteSeleccionadoRef.current) {
+      // Solo resetear cuando currentSuscripcion cambia a null Y no hay cliente seleccionado
+      // Esto evita que se resetee cuando se crea un nuevo cliente
       setClienteSeleccionado(null);
       setFormData({
         id: "",
@@ -150,6 +154,27 @@ export default function SuscripcionesList({
       });
     }
   }, [currentSuscripcion, clientes]);
+
+  // Actualizar cliente seleccionado cuando se actualiza la lista de clientes
+  // Esto asegura que el cliente seleccionado tenga los datos más recientes
+  useEffect(() => {
+    if (
+      clienteSeleccionadoRef.current &&
+      clientes.length > 0 &&
+      !currentSuscripcion
+    ) {
+      const clienteActualizado = clientes.find(
+        (c) =>
+          Number(c.ClienteId) ===
+          Number(clienteSeleccionadoRef.current?.ClienteId)
+      );
+      if (clienteActualizado) {
+        // Solo actualizar si el cliente existe en la nueva lista
+        setClienteSeleccionado(clienteActualizado);
+        clienteSeleccionadoRef.current = clienteActualizado;
+      }
+    }
+  }, [clientes, currentSuscripcion]);
 
   const calculateFechaFin = (fechaInicio: string, planId: string | number) => {
     if (!fechaInicio || !planId) return "";
@@ -201,6 +226,7 @@ export default function SuscripcionesList({
 
   const handleSelectCliente = (cliente: Cliente) => {
     setClienteSeleccionado(cliente);
+    clienteSeleccionadoRef.current = cliente;
     setFormData((prev) => ({
       ...prev,
       ClienteId: String(cliente.ClienteId),
@@ -233,10 +259,16 @@ export default function SuscripcionesList({
         return nombreA.localeCompare(nombreB);
       });
       setClientes(clientesOrdenados);
-      // Seleccionar el nuevo cliente creado
-      if (nuevoCliente.data) {
-        handleSelectCliente(nuevoCliente.data);
-      }
+
+      // Buscar el cliente completo en la lista actualizada
+      const clienteCompleto =
+        clientesOrdenados.find(
+          (c) => Number(c.ClienteId) === Number(nuevoCliente.data.ClienteId)
+        ) || nuevoCliente.data;
+
+      // Seleccionar el nuevo cliente creado (esto cierra el ClienteModal automáticamente)
+      handleSelectCliente(clienteCompleto);
+
       Swal.fire({
         icon: "success",
         title: "Cliente creado exitosamente",

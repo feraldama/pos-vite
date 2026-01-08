@@ -19,7 +19,9 @@ import {
   WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
-  ShoppingCartIcon,
+  // ShoppingCartIcon,
+  TagIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -51,10 +53,15 @@ const navigation: NavigationItem[] = [
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
   {
-    name: "Compras",
-    href: "/compras",
-    icon: <ShoppingCartIcon className="h-7 w-6" />,
+    name: "Alquileres",
+    href: "/alquileres",
+    icon: <ClockIcon className="h-7 w-6" />,
   },
+  // {
+  //   name: "Compras",
+  //   href: "/compras",
+  //   icon: <ShoppingCartIcon className="h-7 w-6" />,
+  // },
   {
     name: "Cobro de Créditos",
     href: "/credito-pagos",
@@ -65,6 +72,11 @@ const navigation: NavigationItem[] = [
     name: "Almacenes",
     href: "/almacenes",
     icon: <ArchiveBoxIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Tipos de Prenda",
+    href: "/tipoprenda",
+    icon: <TagIcon className="h-7 w-6" />,
   },
   {
     name: "Productos",

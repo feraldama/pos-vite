@@ -4,7 +4,8 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
-import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
+import { getAllTiposPrenda } from "../../services/tipoprenda.service";
+import { formatMiles } from "../../utils/utils";
 
 interface Producto {
   ProductoId?: number;
@@ -22,6 +23,8 @@ interface Producto {
   ProductoImagen?: string;
   ProductoImagen_GXI?: string;
   LocalId: number;
+  TipoPrendaId?: number;
+  TipoPrendaNombre?: string;
   [key: string]: unknown;
 }
 
@@ -81,12 +84,15 @@ export default function ProductsList({
     ProductoImagen: "",
     ProductoImagen_GXI: "",
     LocalId: 1,
+    TipoPrendaId: undefined,
   });
   const [locales, setLocales] = useState<
     { LocalId: number; LocalNombre: string }[]
   >([]);
+  const [tiposPrenda, setTiposPrenda] = useState<
+    { TipoPrendaId: number; TipoPrendaNombre: string }[]
+  >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [precioCostoFocused, setPrecioCostoFocused] = useState(false);
 
   useEffect(() => {
     if (currentProduct) {
@@ -102,12 +108,13 @@ export default function ProductsList({
             : currentProduct.ProductoPrecioPromedio || 0,
         ProductoStock: currentProduct.ProductoStock || 0,
         ProductoStockUnitario: currentProduct.ProductoStockUnitario || 0,
-        ProductoCantidadCaja: currentProduct.ProductoCantidadCaja || 0,
+        ProductoCantidadCaja: 1, // Siempre 1
         ProductoIVA: currentProduct.ProductoIVA || 0,
         ProductoStockMinimo: currentProduct.ProductoStockMinimo || 0,
         ProductoImagen: currentProduct.ProductoImagen || "",
         ProductoImagen_GXI: currentProduct.ProductoImagen_GXI || "",
         LocalId: currentProduct.LocalId,
+        TipoPrendaId: currentProduct.TipoPrendaId || undefined,
       });
     } else {
       setFormData({
@@ -125,12 +132,15 @@ export default function ProductsList({
         ProductoImagen: "",
         ProductoImagen_GXI: "",
         LocalId: 1,
+        TipoPrendaId: undefined,
       });
     }
-    setPrecioCostoFocused(false); // Resetear el estado de foco cuando cambia el producto
-    getLocales(1, 1000).then((res) => {
-      setLocales(res.data || []);
-    });
+    Promise.all([getLocales(1, 1000), getAllTiposPrenda()]).then(
+      ([localesRes, tiposPrendaRes]) => {
+        setLocales(localesRes.data || []);
+        setTiposPrenda(tiposPrendaRes.data || []);
+      }
+    );
   }, [currentProduct]);
 
   // Manejar cambios en el formulario
@@ -140,7 +150,12 @@ export default function ProductsList({
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? Number(value) : value,
+      [name]:
+        type === "number" || name === "TipoPrendaId" || name === "LocalId"
+          ? value === ""
+            ? undefined
+            : Number(value)
+          : value,
     }));
   };
 
@@ -177,7 +192,19 @@ export default function ProductsList({
     e.preventDefault();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { ProductoImagen_GXI, ...cleanFormData } = formData; // Limpiamos ProductoImagen_GXI antes de enviar
-    onSubmit(cleanFormData);
+    // Asegurar valores por defecto para campos ocultos
+    const formDataWithDefaults = {
+      ...cleanFormData,
+      ProductoPrecioVentaMayorista:
+        cleanFormData.ProductoPrecioVentaMayorista || 0,
+      ProductoPrecioUnitario: cleanFormData.ProductoPrecioUnitario || 0,
+      ProductoPrecioPromedio: cleanFormData.ProductoPrecioPromedio || 0,
+      ProductoStockUnitario: cleanFormData.ProductoStockUnitario || 0,
+      ProductoCantidadCaja: 1, // Siempre 1
+      ProductoIVA: cleanFormData.ProductoIVA || 0,
+      ProductoStockMinimo: cleanFormData.ProductoStockMinimo || 0,
+    };
+    onSubmit(formDataWithDefaults);
   };
 
   // Configuración de columnas para la tabla
@@ -201,8 +228,9 @@ export default function ProductsList({
       label: "Stock",
     },
     {
-      key: "ProductoStockUnitario",
-      label: "Stock Unitario",
+      key: "TipoPrendaNombre",
+      label: "Tipo de Prenda",
+      render: (item: Producto) => String(item.TipoPrendaNombre || "-"),
     },
     {
       key: "LocalId",
@@ -340,7 +368,7 @@ export default function ProductsList({
                       htmlFor="ProductoPrecioVenta"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Precio Minorista
+                      Precio Alquiler
                     </label>
                     <input
                       type="text"
@@ -357,89 +385,6 @@ export default function ProductsList({
                       }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
-                    />
-                  </div>
-                  {/* Campos adicionales opcionales */}
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoPrecioVentaMayorista"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Precio Mayorista
-                    </label>
-                    <input
-                      type="text"
-                      name="ProductoPrecioVentaMayorista"
-                      id="ProductoPrecioVentaMayorista"
-                      value={formatMiles(
-                        formData.ProductoPrecioVentaMayorista || 0
-                      )}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/\./g, "");
-                        setFormData((prev) => ({
-                          ...prev,
-                          ProductoPrecioVentaMayorista: Number(raw),
-                        }));
-                      }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoPrecioUnitario"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Precio Unitario
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoPrecioUnitario"
-                      id="ProductoPrecioUnitario"
-                      value={formData.ProductoPrecioUnitario}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoPrecioPromedio"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Precio Costo
-                    </label>
-                    <input
-                      type="text"
-                      name="ProductoPrecioPromedio"
-                      id="ProductoPrecioPromedio"
-                      value={
-                        precioCostoFocused
-                          ? formData.ProductoPrecioPromedio?.toString() || ""
-                          : formatMilesWithDecimals(
-                              formData.ProductoPrecioPromedio || 0
-                            )
-                      }
-                      onFocus={() => setPrecioCostoFocused(true)}
-                      onBlur={() => setPrecioCostoFocused(false)}
-                      onChange={(e) => {
-                        // Permitir escribir números y punto decimal
-                        let raw = e.target.value.replace(/[^\d.]/g, "");
-
-                        // Asegurar que solo haya un punto decimal
-                        const parts = raw.split(".");
-                        if (parts.length > 2) {
-                          raw = parts[0] + "." + parts.slice(1).join("");
-                        }
-
-                        const numValue =
-                          raw === "" || raw === "." ? 0 : parseFloat(raw);
-                        setFormData((prev) => ({
-                          ...prev,
-                          ProductoPrecioPromedio: isNaN(numValue)
-                            ? 0
-                            : numValue,
-                        }));
-                      }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -461,67 +406,29 @@ export default function ProductsList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="ProductoStockUnitario"
+                      htmlFor="TipoPrendaId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Stock Unitario
+                      Tipo de Prenda *
                     </label>
-                    <input
-                      type="number"
-                      name="ProductoStockUnitario"
-                      id="ProductoStockUnitario"
-                      value={formData.ProductoStockUnitario}
+                    <select
+                      name="TipoPrendaId"
+                      id="TipoPrendaId"
+                      value={formData.TipoPrendaId || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoCantidadCaja"
-                      className="block mb-2 text-sm font-medium text-gray-900"
+                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                      required
                     >
-                      Cantidad por Caja
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoCantidadCaja"
-                      id="ProductoCantidadCaja"
-                      value={formData.ProductoCantidadCaja}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoIVA"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      IVA
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoIVA"
-                      id="ProductoIVA"
-                      value={formData.ProductoIVA}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStockMinimo"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock Mínimo
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStockMinimo"
-                      id="ProductoStockMinimo"
-                      value={formData.ProductoStockMinimo}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
+                      <option value="">Seleccione un tipo de prenda</option>
+                      {tiposPrenda.map((tipo) => (
+                        <option
+                          key={tipo.TipoPrendaId}
+                          value={tipo.TipoPrendaId}
+                        >
+                          {tipo.TipoPrendaNombre}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label

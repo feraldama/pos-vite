@@ -31,6 +31,8 @@ import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
+import TiposPrendaPage from "./pages/tipoprenda/TiposPrendaPage";
+import AlquileresPage from "./pages/alquileres/AlquileresPage";
 
 function App() {
   return (
@@ -97,6 +99,8 @@ function App() {
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/facturas" element={<FacturasPage />} />
+            <Route path="/tipoprenda" element={<TiposPrendaPage />} />
+            <Route path="/alquileres" element={<AlquileresPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

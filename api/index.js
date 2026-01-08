@@ -24,6 +24,9 @@ const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
 const facturaRoutes = require("./routes/factura.routes");
 const compraRoutes = require("./routes/compra.routes");
 const proveedorRoutes = require("./routes/proveedor.routes");
+const tipoprendaRoutes = require("./routes/tipoprenda.routes");
+const alquilerRoutes = require("./routes/alquiler.routes");
+const alquilerprendasRoutes = require("./routes/alquilerprendas.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -64,6 +67,9 @@ app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
 app.use("/api/factura", facturaRoutes);
 app.use("/api/compras", compraRoutes);
 app.use("/api/proveedores", proveedorRoutes);
+app.use("/api/tipoprenda", tipoprendaRoutes);
+app.use("/api/alquiler", alquilerRoutes);
+app.use("/api/alquilerprendas", alquilerprendasRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

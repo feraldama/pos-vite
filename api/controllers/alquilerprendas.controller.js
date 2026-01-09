@@ -95,7 +95,6 @@ exports.createAlquilerPrendas = async (req, res) => {
   try {
     const camposRequeridos = [
       "AlquilerId",
-      "AlquilerPrendasId",
       "ProductoId",
       "AlquilerPrendasPrecio",
     ];

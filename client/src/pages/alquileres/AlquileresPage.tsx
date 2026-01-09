@@ -7,9 +7,6 @@ import {
   updateAlquiler,
   getAlquilerById,
 } from "../../services/alquiler.service";
-import { getAllClientesSinPaginacion } from "../../services/clientes.service";
-import { getProductosAll } from "../../services/productos.service";
-import { getAllTiposPrenda } from "../../services/tipoprenda.service";
 import AlquileresList from "../../components/alquileres/AlquileresList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
@@ -165,7 +162,7 @@ export default function AlquileresPage() {
       const alquilerCompleto = await getAlquilerById(alquiler.AlquilerId);
       setCurrentAlquiler(alquilerCompleto);
       setIsModalOpen(true);
-    } catch (error) {
+    } catch {
       Swal.fire({
         icon: "error",
         title: "Error",

@@ -111,16 +111,16 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] p-6 relative flex flex-col">
         <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer z-10"
           onClick={onClose}
         >
           &times;
         </button>
-        <div className="flex justify-between items-center mb-4 pr-8">
+        <div className="flex justify-between items-center mb-4 pr-8 flex-shrink-0">
           <h2 className="text-2xl font-semibold text-gray-800">
             Buscar Cliente
           </h2>
@@ -134,7 +134,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             </button>
           )}
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+        <div className="bg-gray-50 rounded-lg p-4 mb-4 flex-shrink-0">
           <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -190,9 +190,9 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg">
+        <div className="overflow-y-auto overflow-x-auto rounded-lg flex-1 min-h-0">
           <table className="min-w-full bg-white">
-            <thead>
+            <thead className="sticky top-0 bg-gray-50 z-10">
               <tr className="bg-gray-50 text-gray-600 text-sm">
                 <th className="py-2 px-4 text-left">RUC</th>
                 <th className="py-2 px-4 text-left">Nombre</th>
@@ -232,7 +232,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
           </table>
         </div>
         {/* Paginación */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-4 flex-shrink-0">
           <div className="text-sm text-gray-500">
             {clientesFiltrados.length === 0
               ? "0"
@@ -397,7 +397,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-                    <div className="col-span-6 sm:col-span-3">
+                    <div className="col-span-6 sm:col-span-3 hidden">
                       <label
                         htmlFor="ClienteTipo"
                         className="block mb-2 text-sm font-medium text-gray-900"

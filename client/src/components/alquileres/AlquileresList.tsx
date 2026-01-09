@@ -328,8 +328,10 @@ export default function AlquileresList({
     { key: "ClienteNombre", label: "Cliente" },
     { key: "AlquilerFechaAlquiler", label: "Fecha Alquiler" },
     { key: "AlquilerFechaEntrega", label: "Fecha Entrega" },
-    { key: "AlquilerEstado", label: "Estado" },
     { key: "AlquilerTotal", label: "Total" },
+    { key: "AlquilerEntrega", label: "Entrega" },
+    { key: "Saldo", label: "Saldo" },
+    { key: "AlquilerEstado", label: "Estado" },
   ];
 
   const getProductoNombre = (productoId: number) => {
@@ -382,7 +384,11 @@ export default function AlquileresList({
               ? new Date(a.AlquilerFechaEntrega).toLocaleDateString()
               : "",
             AlquilerTotal: formatCurrency(a.AlquilerTotal || 0),
-          })) as unknown as (Alquiler & { id: number })[]
+            AlquilerEntrega: formatCurrency(a.AlquilerEntrega || 0),
+            Saldo: formatCurrency(
+              (a.AlquilerTotal || 0) - (a.AlquilerEntrega || 0)
+            ),
+          })) as unknown as (Alquiler & { id: number; Saldo: string })[]
         }
         columns={columns}
         onEdit={onEdit}

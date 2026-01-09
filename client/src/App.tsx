@@ -18,6 +18,7 @@ import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
 import Sales from "./pages/dashboard/Sales";
+import Rentals from "./pages/dashboard/Rentals";
 import LocalesPage from "./pages/locales/LocalesPage";
 import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
 import CombosPage from "./pages/combos/CombosPage";
@@ -49,6 +50,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Sales />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/alquileres-venta"
+            element={
+              <PrivateRoute>
+                <Rentals />
               </PrivateRoute>
             }
           />

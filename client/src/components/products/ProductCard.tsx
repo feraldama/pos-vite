@@ -10,7 +10,6 @@ interface ProductCardProps {
   stock: number;
   onAdd: () => void;
   precioUnitario?: number;
-  stockUnitario?: number;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -21,8 +20,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   imagen,
   stock,
   onAdd,
-  precioUnitario,
-  stockUnitario,
 }) => {
   const mostrarPrecio =
     clienteTipo === "MA" && precioMayorista !== undefined
@@ -49,15 +46,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="font-bold text-2xl text-orange-500 mb-0">
           Gs. {formatMiles(mostrarPrecio)}
         </div>
-        {precioUnitario !== undefined && (
-          <div className="text-sm text-blue-700">
-            Gs. {formatMiles(precioUnitario)}
-          </div>
-        )}
-        <div className="text-sm text-gray-500 mt-1 space-x-4">
-          Caja: <span className="text-green-600 font-semibold">{stock}</span>
-          Unidad:{" "}
-          <span className="text-green-600 font-semibold">{stockUnitario}</span>
+        <div className="text-sm text-gray-500 mt-1">
+          Stock: <span className="text-green-600 font-semibold">{stock}</span>
         </div>
       </div>
     </div>

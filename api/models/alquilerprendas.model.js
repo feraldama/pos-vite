@@ -47,26 +47,36 @@ const AlquilerPrendas = {
 
   create: (data) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO alquilerprendas (
-        AlquilerId,
-        AlquilerPrendasId,
-        ProductoId,
-        AlquilerPrendasPrecio
-      ) VALUES (?, ?, ?, ?)`;
+      // Obtener el siguiente AlquilerPrendasId para este AlquilerId
+      db.query(
+        "SELECT COALESCE(MAX(AlquilerPrendasId), 0) as maxId FROM alquilerprendas WHERE AlquilerId = ?",
+        [data.AlquilerId],
+        (err, results) => {
+          if (err) return reject(err);
+          const nextPrendasId = (results[0]?.maxId || 0) + 1;
 
-      const values = [
-        data.AlquilerId,
-        data.AlquilerPrendasId,
-        data.ProductoId,
-        data.AlquilerPrendasPrecio,
-      ];
+          const query = `INSERT INTO alquilerprendas (
+            AlquilerId,
+            AlquilerPrendasId,
+            ProductoId,
+            AlquilerPrendasPrecio
+          ) VALUES (?, ?, ?, ?)`;
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        AlquilerPrendas.getById(data.AlquilerId, data.AlquilerPrendasId)
-          .then((alquilerPrendas) => resolve(alquilerPrendas))
-          .catch((error) => reject(error));
-      });
+          const values = [
+            data.AlquilerId,
+            nextPrendasId,
+            data.ProductoId,
+            data.AlquilerPrendasPrecio,
+          ];
+
+          db.query(query, values, (err, result) => {
+            if (err) return reject(err);
+            AlquilerPrendas.getById(data.AlquilerId, nextPrendasId)
+              .then((alquilerPrendas) => resolve(alquilerPrendas))
+              .catch((error) => reject(error));
+          });
+        }
+      );
     });
   },
 

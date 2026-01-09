@@ -57,6 +57,11 @@ const navigation: NavigationItem[] = [
     href: "/alquileres",
     icon: <ClockIcon className="h-7 w-6" />,
   },
+  {
+    name: "Alquileres Venta",
+    href: "/alquileres-venta",
+    icon: <ClockIcon className="h-7 w-6" />,
+  },
   // {
   //   name: "Compras",
   //   href: "/compras",
@@ -213,7 +218,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         >
           <div className="flex h-full flex-col bg-gray-800">
             <div className="flex h-16 shrink-0 items-center justify-between px-4 bg-gray-900">
-              <span className="text-white font-bold">SALVATORE</span>
+              <span className="text-white font-bold">ALQUILER PRENDAS</span>
               <button
                 type="button"
                 className="rounded-md text-gray-300 hover:text-white focus:outline-none"

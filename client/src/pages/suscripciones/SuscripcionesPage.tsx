@@ -21,6 +21,7 @@ interface Suscripcion {
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;
+  EstadoPago?: string;
   [key: string]: unknown;
 }
 

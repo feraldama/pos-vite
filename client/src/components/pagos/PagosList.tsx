@@ -3,12 +3,10 @@ import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { getAllClientesSinPaginacion } from "../../services/clientes.service";
-import { getPlanes } from "../../services/planes.service";
+import { getAllSuscripcionesSinPaginacion } from "../../services/suscripciones.service";
 import { formatMiles } from "../../utils/utils";
 import Swal from "sweetalert2";
 import { useAuth } from "../../contexts/useAuth";
-import ClienteModal from "../common/ClienteModal";
 
 interface Pago {
   id: string | number;
@@ -23,23 +21,17 @@ interface Pago {
   [key: string]: unknown;
 }
 
-interface Cliente {
-  ClienteId: number;
-  ClienteNombre: string;
-  ClienteApellido: string;
-  ClienteRUC: string;
-  ClienteDireccion: string;
-  ClienteTelefono: string;
-  ClienteTipo: string;
-  ClienteFechaNacimiento?: string;
-  UsuarioId: string;
-}
-
-interface Plan {
+interface Suscripcion {
+  SuscripcionId: string | number;
+  ClienteId: string | number;
   PlanId: string | number;
-  PlanNombre: string;
-  PlanDuracion: number;
-  PlanPrecio: number;
+  SuscripcionFechaInicio: string;
+  SuscripcionFechaFin: string;
+  ClienteNombre?: string;
+  ClienteApellido?: string;
+  PlanNombre?: string;
+  PlanPrecio?: number;
+  EstadoPago?: string;
   [key: string]: unknown;
 }
 
@@ -88,43 +80,48 @@ export default function PagosList({
     id: "",
     PagoId: "",
     SuscripcionId: "",
-    ClienteId: "",
-    PlanId: "",
     PagoMonto: 0,
     PagoTipo: "",
     PagoFecha: "",
     PagoUsuarioId: "",
   });
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [planes, setPlanes] = useState<Plan[]>([]);
-  const [clienteSeleccionado, setClienteSeleccionado] =
-    useState<Cliente | null>(null);
-  const [showClienteModal, setShowClienteModal] = useState(false);
+  const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([]);
+  const [suscripcionSeleccionada, setSuscripcionSeleccionada] =
+    useState<Suscripcion | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
-    // Cargar clientes y planes para crear nueva suscripción
-    getAllClientesSinPaginacion()
+    // Cargar todas las suscripciones y filtrar solo las pendientes
+    getAllSuscripcionesSinPaginacion()
       .then((data) => {
-        setClientes(data.data || []);
+        const todasSuscripciones = data.data || [];
+        // Filtrar solo las suscripciones pendientes (sin pagos)
+        const suscripcionesPendientes = todasSuscripciones.filter(
+          (s: Suscripcion) => s.EstadoPago !== "PAGADA"
+        );
+        setSuscripciones(suscripcionesPendientes);
       })
-      .catch(() => setClientes([]));
-
-    getPlanes(1, 1000)
-      .then((data) => {
-        setPlanes(data.data || []);
-      })
-      .catch(() => setPlanes([]));
+      .catch(() => setSuscripciones([]));
   }, []);
 
   useEffect(() => {
     if (currentPago) {
+      // Al editar, necesitamos cargar la suscripción aunque esté pagada
+      getAllSuscripcionesSinPaginacion()
+        .then((data) => {
+          const todasSuscripciones = data.data || [];
+          const suscripcion = todasSuscripciones.find(
+            (s: Suscripcion) =>
+              String(s.SuscripcionId) === String(currentPago.SuscripcionId)
+          );
+          setSuscripcionSeleccionada(suscripcion || null);
+        })
+        .catch(() => setSuscripcionSeleccionada(null));
+
       setFormData({
         id: String(currentPago.id ?? currentPago.PagoId),
         PagoId: String(currentPago.PagoId),
         SuscripcionId: String(currentPago.SuscripcionId),
-        ClienteId: "",
-        PlanId: "",
         PagoMonto: currentPago.PagoMonto || 0,
         PagoTipo: currentPago.PagoTipo || "",
         PagoFecha: currentPago.PagoFecha
@@ -137,58 +134,56 @@ export default function PagosList({
         id: "",
         PagoId: "",
         SuscripcionId: "",
-        ClienteId: "",
-        PlanId: "",
         PagoMonto: 0,
         PagoTipo: "",
         PagoFecha: new Date().toISOString().split("T")[0],
         PagoUsuarioId: String(user?.id || ""),
       });
-      setClienteSeleccionado(null);
+      setSuscripcionSeleccionada(null);
     }
-  }, [currentPago, user]);
+  }, [currentPago, user, suscripciones]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const newFormData = {
-        ...prev,
-        [name]: name === "PagoMonto" ? Number(value) : value,
-      };
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "PagoMonto" ? Number(value) : value,
+    }));
 
-      // Si cambió el plan, actualizar el monto con el PlanPrecio
-      if (name === "PlanId" && value) {
-        const planSeleccionado = planes.find(
-          (p) => String(p.PlanId) === String(value)
-        );
-        if (planSeleccionado && planSeleccionado.PlanPrecio) {
-          newFormData.PagoMonto = Number(planSeleccionado.PlanPrecio);
+    // Si cambió la suscripción, actualizar el monto con el PlanPrecio
+    if (name === "SuscripcionId" && value) {
+      const suscripcion = suscripciones.find(
+        (s) => String(s.SuscripcionId) === String(value)
+      );
+      if (suscripcion) {
+        setSuscripcionSeleccionada(suscripcion);
+        if (suscripcion.PlanPrecio) {
+          setFormData((prev) => ({
+            ...prev,
+            SuscripcionId: value,
+            PagoMonto: Number(suscripcion.PlanPrecio),
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            SuscripcionId: value,
+          }));
         }
       }
-
-      return newFormData;
-    });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validar campos requeridos para nueva suscripción
-    if (!formData.ClienteId) {
+    // Validar campos requeridos
+    if (!formData.SuscripcionId) {
       Swal.fire({
         icon: "warning",
-        title: "Cliente requerido",
-        text: "Debe seleccionar un cliente",
-      });
-      return;
-    }
-    if (!formData.PlanId) {
-      Swal.fire({
-        icon: "warning",
-        title: "Plan requerido",
-        text: "Debe seleccionar un plan",
+        title: "Suscripción requerida",
+        text: "Debe seleccionar una suscripción",
       });
       return;
     }
@@ -216,59 +211,11 @@ export default function PagosList({
       PagoUsuarioId: user?.id || formData.PagoUsuarioId,
     };
 
-    // Siempre crear nueva suscripción, enviar ClienteId y PlanId en lugar de SuscripcionId
     const pagoData: Pago = {
       ...formDataToSubmit,
-      SuscripcionId: "", // Se creará en el backend
-      ClienteId: formData.ClienteId,
-      PlanId: formData.PlanId,
     } as Pago;
 
     onSubmit(pagoData);
-  };
-
-  const handleSelectCliente = (cliente: Cliente) => {
-    setClienteSeleccionado(cliente);
-    setFormData((prev) => ({
-      ...prev,
-      ClienteId: String(cliente.ClienteId),
-    }));
-    setShowClienteModal(false);
-  };
-
-  const handleCreateCliente = async (clienteData: Cliente) => {
-    try {
-      const { createCliente } = await import("../../services/clientes.service");
-      const nuevoCliente = await createCliente({
-        ClienteId: clienteData.ClienteId,
-        ClienteRUC: clienteData.ClienteRUC || "",
-        ClienteNombre: clienteData.ClienteNombre,
-        ClienteApellido: clienteData.ClienteApellido || "",
-        ClienteDireccion: clienteData.ClienteDireccion || "",
-        ClienteTelefono: clienteData.ClienteTelefono || "",
-        ClienteTipo: "MI",
-        ClienteFechaNacimiento: clienteData.ClienteFechaNacimiento || null,
-        UsuarioId: user?.id || "",
-      });
-      const response = await getAllClientesSinPaginacion();
-      const clientesData = response.data || [];
-      setClientes(clientesData);
-      if (nuevoCliente.data) {
-        handleSelectCliente(nuevoCliente.data);
-      }
-      Swal.fire({
-        icon: "success",
-        title: "Cliente creado exitosamente",
-        text: "El cliente ha sido creado y seleccionado",
-      });
-    } catch (error) {
-      console.error("Error al crear cliente:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al crear cliente",
-        text: "Hubo un problema al crear el cliente",
-      });
-    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -304,7 +251,6 @@ export default function PagosList({
       render: (pago: Pago) => {
         const tipoMap: { [key: string]: string } = {
           CO: "Contado",
-          CR: "Crédito",
           PO: "POS",
           TR: "Transfer",
         };
@@ -397,57 +343,63 @@ export default function PagosList({
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <div className="mb-4">
-                    <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Cliente *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowClienteModal(true)}
-                      className="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 text-left hover:bg-gray-100 transition"
-                    >
-                      {clienteSeleccionado
-                        ? `${clienteSeleccionado.ClienteNombre} ${
-                            clienteSeleccionado.ClienteApellido || ""
-                          }`
-                        : "Seleccionar cliente"}
-                    </button>
-                    {!clienteSeleccionado && (
-                      <p className="mt-1 text-xs text-red-600">
-                        * Debe seleccionar un cliente
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Plan *
-                    </label>
-                    <select
-                      name="PlanId"
-                      value={formData.PlanId}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    >
-                      <option value="">Seleccione un plan</option>
-                      {planes.map((plan) => (
-                        <option key={plan.PlanId} value={plan.PlanId}>
-                          {plan.PlanNombre} -{" "}
-                          {formatMiles(plan.PlanPrecio || 0)} Gs.
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <label className="block mb-2 text-sm font-medium text-gray-900">
+                    Suscripción *
+                  </label>
+                  <select
+                    name="SuscripcionId"
+                    value={formData.SuscripcionId}
+                    onChange={handleInputChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    required
+                    disabled={!!currentPago}
+                  >
+                    <option value="">
+                      {currentPago
+                        ? "Suscripción del pago (no editable)"
+                        : "Seleccione una suscripción"}
+                    </option>
+                    {suscripciones.map((suscripcion) => (
+                      <option
+                        key={suscripcion.SuscripcionId}
+                        value={suscripcion.SuscripcionId}
+                      >
+                        ID: {suscripcion.SuscripcionId} -{" "}
+                        {suscripcion.ClienteNombre || ""}{" "}
+                        {suscripcion.ClienteApellido || ""} - Plan:{" "}
+                        {suscripcion.PlanNombre || "N/A"}
+                      </option>
+                    ))}
+                  </select>
+                  {!formData.SuscripcionId && (
+                    <p className="mt-1 text-xs text-red-600">
+                      * Debe seleccionar una suscripción
+                    </p>
+                  )}
                 </div>
+                {suscripcionSeleccionada && (
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Plan
+                    </label>
+                    <input
+                      type="text"
+                      value={suscripcionSeleccionada.PlanNombre || "N/A"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-900">
-                    Monto *
+                    Monto * (Editable)
                   </label>
                   <input
                     type="text"
                     name="PagoMonto"
                     value={
-                      formData.PagoMonto ? formatMiles(formData.PagoMonto) : 0
+                      formData.PagoMonto ? formatMiles(formData.PagoMonto) : ""
                     }
                     onChange={(e) => {
                       const raw = e.target.value
@@ -456,11 +408,24 @@ export default function PagosList({
                       const num = Number(raw);
                       if (!isNaN(num)) {
                         setFormData((prev) => ({ ...prev, PagoMonto: num }));
+                      } else if (raw === "") {
+                        setFormData((prev) => ({ ...prev, PagoMonto: 0 }));
                       }
                     }}
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     required
+                    placeholder={
+                      suscripcionSeleccionada?.PlanPrecio
+                        ? formatMiles(suscripcionSeleccionada.PlanPrecio)
+                        : "0"
+                    }
                   />
+                  {suscripcionSeleccionada?.PlanPrecio && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Monto sugerido del plan:{" "}
+                      {formatMiles(suscripcionSeleccionada.PlanPrecio)} Gs.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -475,7 +440,6 @@ export default function PagosList({
                   >
                     <option value="">Seleccione un tipo</option>
                     <option value="CO">Contado</option>
-                    <option value="CR">Crédito</option>
                     <option value="PO">POS</option>
                     <option value="TR">Transfer</option>
                   </select>
@@ -513,15 +477,6 @@ export default function PagosList({
           </div>
         </div>
       )}
-      <ClienteModal
-        show={showClienteModal}
-        onClose={() => setShowClienteModal(false)}
-        clientes={clientes}
-        onSelect={handleSelectCliente}
-        onCreateCliente={handleCreateCliente}
-        currentUserId={user?.id}
-        hideTipo={true}
-      />
     </>
   );
 }

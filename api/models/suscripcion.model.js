@@ -3,7 +3,20 @@ const db = require("../config/db");
 const Suscripcion = {
   getAll: () => {
     return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM suscripcion", (err, results) => {
+      const query = `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre, p.PlanPrecio,
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM pago WHERE pago.SuscripcionId = s.SuscripcionId) 
+            THEN 'PAGADA' 
+            ELSE 'PENDIENTE' 
+          END as EstadoPago
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+      `;
+      db.query(query, (err, results) => {
         if (err) reject(err);
         resolve(results);
       });
@@ -117,7 +130,12 @@ const Suscripcion = {
       const query = `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre, p.PlanPrecio
+          p.PlanNombre, p.PlanPrecio,
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM pago WHERE pago.SuscripcionId = s.SuscripcionId) 
+            THEN 'PAGADA' 
+            ELSE 'PENDIENTE' 
+          END as EstadoPago
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
@@ -180,7 +198,12 @@ const Suscripcion = {
       const searchQuery = `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre, p.PlanPrecio
+          p.PlanNombre, p.PlanPrecio,
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM pago WHERE pago.SuscripcionId = s.SuscripcionId) 
+            THEN 'PAGADA' 
+            ELSE 'PENDIENTE' 
+          END as EstadoPago
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId

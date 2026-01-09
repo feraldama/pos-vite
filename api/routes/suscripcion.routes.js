@@ -17,6 +17,11 @@ router.get(
   authMiddleware,
   suscripcionController.getProximasAVencer
 );
+router.get(
+  "/sin-paginacion",
+  authMiddleware,
+  suscripcionController.getAllSinPaginacion
+);
 router.get("/", authMiddleware, suscripcionController.getAll);
 router.get("/:id", authMiddleware, suscripcionController.getById);
 router.post("/", authMiddleware, suscripcionController.create);

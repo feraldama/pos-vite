@@ -124,6 +124,15 @@ exports.searchSuscripciones = async (req, res) => {
   }
 };
 
+exports.getAllSinPaginacion = async (req, res) => {
+  try {
+    const suscripciones = await Suscripcion.getAll();
+    res.json({ data: suscripciones });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getProximasAVencer = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 30;

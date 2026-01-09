@@ -22,6 +22,7 @@ interface Suscripcion {
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;
+  EstadoPago?: string;
   [key: string]: unknown;
 }
 
@@ -369,6 +370,24 @@ export default function SuscripcionesList({
         return calcularEstadoPorFechas(
           suscripcion.SuscripcionFechaInicio || "",
           suscripcion.SuscripcionFechaFin || ""
+        );
+      },
+    },
+    {
+      key: "EstadoPago",
+      label: "Estado Pago",
+      render: (suscripcion: Suscripcion) => {
+        const estadoPago = suscripcion.EstadoPago || "PENDIENTE";
+        return (
+          <span
+            className={`px-2 py-1 rounded text-xs font-semibold ${
+              estadoPago === "PAGADA"
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {estadoPago}
+          </span>
         );
       },
     },

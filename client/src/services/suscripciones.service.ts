@@ -104,6 +104,20 @@ export const searchSuscripciones = async (
   }
 };
 
+export const getAllSuscripcionesSinPaginacion = async () => {
+  try {
+    const response = await api.get("/suscripciones/sin-paginacion");
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener suscripciones",
+      }
+    );
+  }
+};
+
 export const getSuscripcionesProximasAVencer = async (
   dias = 30,
   limit = 10

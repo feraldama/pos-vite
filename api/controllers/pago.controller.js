@@ -42,7 +42,7 @@ exports.create = async (req, res) => {
 
     // Si se envía ClienteId y PlanId pero no SuscripcionId, crear la suscripción automáticamente
     if (!suscripcionId && req.body.ClienteId && req.body.PlanId) {
-      // Obtener el plan para calcular la duración
+      // Obtener el plan para calcular la duración (si no vienen las fechas)
       const plan = await Plan.getById(req.body.PlanId);
       if (!plan) {
         return res.status(400).json({
@@ -50,21 +50,32 @@ exports.create = async (req, res) => {
         });
       }
 
-      // Calcular fechas: fecha_inicio = hoy, fecha_fin = hoy + duración
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      const fechaInicio = hoy.toISOString().split("T")[0];
+      let fechaInicio;
+      let fechaFin;
 
-      const fechaFin = new Date(hoy);
-      fechaFin.setDate(fechaFin.getDate() + (plan.PlanDuracion || 30));
-      const fechaFinStr = fechaFin.toISOString().split("T")[0];
+      // Si vienen las fechas en el body, usarlas; si no, calcularlas
+      if (req.body.SuscripcionFechaInicio && req.body.SuscripcionFechaFin) {
+        fechaInicio = req.body.SuscripcionFechaInicio;
+        fechaFin = req.body.SuscripcionFechaFin;
+      } else {
+        // Calcular fechas: fecha_inicio = hoy, fecha_fin = hoy + duración
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        fechaInicio = hoy.toISOString().split("T")[0];
+
+        const fechaFinDate = new Date(hoy);
+        fechaFinDate.setDate(
+          fechaFinDate.getDate() + (plan.PlanDuracion || 30)
+        );
+        fechaFin = fechaFinDate.toISOString().split("T")[0];
+      }
 
       // Crear la suscripción (el estado se calcula automáticamente en el frontend)
       const nuevaSuscripcion = await Suscripcion.create({
         ClienteId: req.body.ClienteId,
         PlanId: req.body.PlanId,
         SuscripcionFechaInicio: fechaInicio,
-        SuscripcionFechaFin: fechaFinStr,
+        SuscripcionFechaFin: fechaFin,
       });
 
       suscripcionId = nuevaSuscripcion.SuscripcionId;

@@ -31,6 +31,7 @@ interface Cliente {
   ClienteDireccion: string;
   ClienteTelefono: string;
   ClienteTipo: string;
+  ClienteFechaNacimiento?: string;
   UsuarioId: string;
 }
 
@@ -246,6 +247,7 @@ export default function PagosList({
         ClienteDireccion: clienteData.ClienteDireccion || "",
         ClienteTelefono: clienteData.ClienteTelefono || "",
         ClienteTipo: "MI",
+        ClienteFechaNacimiento: clienteData.ClienteFechaNacimiento || null,
         UsuarioId: user?.id || "",
       });
       const response = await getAllClientesSinPaginacion();

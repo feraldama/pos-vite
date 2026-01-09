@@ -14,6 +14,7 @@ interface Cliente {
   ClienteDireccion: string;
   ClienteTelefono: string;
   ClienteTipo: string;
+  ClienteFechaNacimiento?: string;
   UsuarioId: string;
   [key: string]: unknown;
 }
@@ -68,6 +69,7 @@ export default function CustomersList({
     ClienteDireccion: "",
     ClienteTelefono: "",
     ClienteTipo: "",
+    ClienteFechaNacimiento: "",
     UsuarioId: "",
   });
 
@@ -86,6 +88,7 @@ export default function CustomersList({
         ClienteDireccion: "",
         ClienteTelefono: "",
         ClienteTipo: "MI",
+        ClienteFechaNacimiento: "",
         UsuarioId: user?.id ? String(user.id).trim() : "",
       });
     }
@@ -97,7 +100,10 @@ export default function CustomersList({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]:
+        name === "ClienteNombre" || name === "ClienteApellido"
+          ? value.toUpperCase()
+          : value,
     }));
   };
 
@@ -117,6 +123,7 @@ export default function CustomersList({
     { key: "ClienteRUC", label: "RUC" },
     { key: "ClienteNombre", label: "Nombre" },
     { key: "ClienteApellido", label: "Apellido" },
+    { key: "ClienteFechaNacimiento", label: "Fecha Nacimiento" },
     { key: "ClienteDireccion", label: "Dirección" },
     { key: "ClienteTelefono", label: "Teléfono" },
     { key: "ClienteTipo", label: "Tipo" },
@@ -152,7 +159,12 @@ export default function CustomersList({
       </div>
       <DataTable<Cliente>
         columns={columns}
-        data={clientes}
+        data={clientes.map((c) => ({
+          ...c,
+          ClienteFechaNacimiento: c.ClienteFechaNacimiento
+            ? new Date(c.ClienteFechaNacimiento).toLocaleDateString()
+            : "",
+        }))}
         onEdit={onEdit}
         onDelete={onDelete}
         emptyMessage="No se encontraron clientes"
@@ -283,6 +295,22 @@ export default function CustomersList({
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteFechaNacimiento"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Fecha de Nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      name="ClienteFechaNacimiento"
+                      id="ClienteFechaNacimiento"
+                      value={formData.ClienteFechaNacimiento || ""}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3 hidden">
                     <label
                       htmlFor="ClienteTipo"
                       className="block mb-2 text-sm font-medium text-gray-900"

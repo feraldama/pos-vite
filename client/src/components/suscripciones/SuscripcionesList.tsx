@@ -33,6 +33,7 @@ interface Cliente {
   ClienteDireccion: string;
   ClienteTelefono: string;
   ClienteTipo: string;
+  ClienteFechaNacimiento?: string;
   UsuarioId: string;
 }
 
@@ -242,6 +243,7 @@ export default function SuscripcionesList({
         ClienteDireccion: clienteData.ClienteDireccion || "",
         ClienteTelefono: clienteData.ClienteTelefono || "",
         ClienteTipo: "MI", // Siempre Minorista por defecto
+        ClienteFechaNacimiento: clienteData.ClienteFechaNacimiento || null,
         UsuarioId: user?.id || "",
       });
       // Recargar la lista de clientes

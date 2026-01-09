@@ -43,8 +43,8 @@ export default function PagosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPago, setCurrentPago] = useState<Pago | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string | undefined>();
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<string | undefined>("PagoId");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const puedeCrear = usePermiso("PAGOS", "crear");
   const puedeEditar = usePermiso("PAGOS", "editar");

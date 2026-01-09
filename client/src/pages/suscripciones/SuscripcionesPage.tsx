@@ -45,8 +45,8 @@ export default function SuscripcionesPage() {
   const [currentSuscripcion, setCurrentSuscripcion] =
     useState<Suscripcion | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string | undefined>();
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<string | undefined>("SuscripcionId");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const puedeCrear = usePermiso("SUSCRIPCIONES", "crear");
   const puedeEditar = usePermiso("SUSCRIPCIONES", "editar");

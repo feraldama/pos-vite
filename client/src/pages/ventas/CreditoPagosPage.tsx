@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { js2xml } from "xml-js";
 import Swal from "sweetalert2";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import { formatCurrency, formatMiles } from "../../utils/utils";
-import { getVentasPendientesPorCliente } from "../../services/venta.service";
+import {
+  getAlquileresPendientesPorCliente,
+  procesarPagoAlquileres,
+} from "../../services/alquiler.service";
 import { useAuth } from "../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
@@ -16,11 +17,14 @@ interface Cliente {
   ClienteApellido: string;
 }
 
-interface VentaPendiente {
-  VentaId: number;
-  VentaFecha: string;
-  Total: number;
-  VentaEntrega: number;
+interface AlquilerPendiente {
+  AlquilerId: number;
+  AlquilerFechaAlquiler: string;
+  AlquilerFechaEntrega?: string;
+  AlquilerFechaDevolucion?: string;
+  AlquilerEstado: string;
+  AlquilerTotal: number;
+  AlquilerEntrega: number;
   Saldo: number;
 }
 
@@ -42,9 +46,9 @@ const TIPOS_PAGO = [
 const CreditoPagosPage = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string>("");
-  const [ventasPendientes, setVentasPendientes] = useState<VentaPendiente[]>(
-    []
-  );
+  const [alquileresPendientes, setAlquileresPendientes] = useState<
+    AlquilerPendiente[]
+  >([]);
   const [tipoPago, setTipoPago] = useState<string>("CO");
   const [montoPago, setMontoPago] = useState<number>(0);
   const [fecha, setFecha] = useState<string>(
@@ -116,7 +120,7 @@ const CreditoPagosPage = () => {
 
   const handleClienteChange = async (clienteId: string) => {
     setSelectedCliente(clienteId);
-    setVentasPendientes([]);
+    setAlquileresPendientes([]);
     setTotalDeuda(0);
 
     if (!clienteId) {
@@ -125,22 +129,23 @@ const CreditoPagosPage = () => {
 
     try {
       const localId = user?.LocalId;
-      const response = await getVentasPendientesPorCliente(
+      const response = await getAlquileresPendientesPorCliente(
         Number(clienteId),
         localId
       );
-      const ventasPendientes = response.data || [];
+      const alquileresPendientes = response.data || [];
 
       // Calcular el total de la deuda asegurando que los valores sean números
-      const totalDeuda = ventasPendientes.reduce(
-        (sum: number, venta: VentaPendiente) => sum + Number(venta.Saldo),
+      const totalDeuda = alquileresPendientes.reduce(
+        (sum: number, alquiler: AlquilerPendiente) =>
+          sum + Number(alquiler.Saldo),
         0
       );
 
-      setVentasPendientes(ventasPendientes);
+      setAlquileresPendientes(alquileresPendientes);
       setTotalDeuda(totalDeuda);
     } catch (error) {
-      console.error("Error al cargar ventas pendientes:", error);
+      console.error("Error al cargar alquileres pendientes:", error);
     }
   };
 
@@ -166,49 +171,20 @@ const CreditoPagosPage = () => {
       Swal.fire("Error", "No hay una caja aperturada.", "error");
       return;
     }
-
-    const fechaDate = new Date(fecha + "T00:00:00");
-    const dia = fechaDate.getDate();
-    const mes = fechaDate.getMonth() + 1;
-    const año = fechaDate.getFullYear() % 100;
-    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-    const añoStr = año < 10 ? `0${año}` : año.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-    const json = {
-      Envelope: {
-        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
-        Body: {
-          "PCreditoWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "TechNow" },
-            Tipo: "V",
-            Clienteid: Number(selectedCliente),
-            Montorecibido: montoPago,
-            Cajaid: cajaAperturada.CajaId,
-            Usuarioid: user?.id,
-            Fechastring: fechaFormateada,
-            Ventapagotipo: tipoPago,
-          },
-        },
-      },
-    };
-
-    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    };
+    if (!user?.id) {
+      Swal.fire("Error", "Usuario no identificado.", "error");
+      return;
+    }
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_APP_URL}${
-          import.meta.env.VITE_APP_URL_GENEXUS
-        }apcreditows`,
-        xml,
-        config
-      );
+      await procesarPagoAlquileres({
+        clienteId: Number(selectedCliente),
+        montoPago: montoPago,
+        tipoPago: tipoPago,
+        fecha: fecha,
+        cajaId: cajaAperturada.CajaId,
+        usuarioId: user.id,
+      });
 
       let timerInterval: ReturnType<typeof setInterval>;
       Swal.fire({
@@ -244,13 +220,16 @@ const CreditoPagosPage = () => {
       });
     } catch (error) {
       console.error("Error al procesar el pago:", error);
-      Swal.fire("Error", "Hubo un problema al procesar el pago.", "error");
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Hubo un problema al procesar el pago.";
+      Swal.fire("Error", errorMessage, "error");
     }
   };
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Cobro de Créditos</h1>
+      <h1 className="text-2xl font-medium mb-3">Cobro de Alquileres</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Formulario de pago */}
@@ -337,16 +316,16 @@ const CreditoPagosPage = () => {
           </form>
         </div>
 
-        {/* Tabla de ventas pendientes */}
+        {/* Tabla de alquileres pendientes */}
         <div className="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Venta Id
+                  Alquiler Id
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
+                  Fecha Alquiler
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
@@ -360,22 +339,24 @@ const CreditoPagosPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {ventasPendientes.map((venta) => (
-                <tr key={venta.VentaId}>
+              {alquileresPendientes.map((alquiler) => (
+                <tr key={alquiler.AlquilerId}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {venta.VentaId}
+                    {alquiler.AlquilerId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(venta.VentaFecha).toLocaleDateString()}
+                    {new Date(
+                      alquiler.AlquilerFechaAlquiler
+                    ).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(venta.Total)}
+                    {formatCurrency(alquiler.AlquilerTotal)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(venta.VentaEntrega)}
+                    {formatCurrency(alquiler.AlquilerEntrega)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(venta.Saldo)}
+                    {formatCurrency(alquiler.Saldo)}
                   </td>
                 </tr>
               ))}

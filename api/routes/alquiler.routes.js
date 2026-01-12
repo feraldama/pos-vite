@@ -6,6 +6,16 @@ const authMiddleware = require("../middlewares/auth");
 // Rutas protegidas (requieren autenticación)
 router.get("/", authMiddleware, alquilerController.getAllAlquileres);
 router.get("/search", authMiddleware, alquilerController.searchAlquileres);
+router.get(
+  "/pendientes/:clienteId",
+  authMiddleware,
+  alquilerController.getAlquileresPendientesPorCliente
+);
+router.post(
+  "/procesar-pago",
+  authMiddleware,
+  alquilerController.procesarPagoAlquileres
+);
 router.get("/:id", authMiddleware, alquilerController.getAlquilerById);
 router.post("/", authMiddleware, alquilerController.createAlquiler);
 router.put("/:id", authMiddleware, alquilerController.updateAlquiler);

@@ -271,6 +271,52 @@ const Alquiler = {
       executeQueries();
     });
   },
+
+  // Obtener alquileres pendientes por cliente
+  getAlquileresPendientesPorCliente: (clienteId, localId) => {
+    return new Promise((resolve, reject) => {
+      let query = `
+        SELECT 
+          a.AlquilerId,
+          a.ClienteId,
+          a.AlquilerFechaAlquiler,
+          a.AlquilerFechaEntrega,
+          a.AlquilerFechaDevolucion,
+          a.AlquilerEstado,
+          CAST(a.AlquilerTotal AS DECIMAL(10,2)) as AlquilerTotal,
+          CAST(COALESCE(a.AlquilerEntrega, 0) AS DECIMAL(10,2)) as AlquilerEntrega,
+          CAST((a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) AS DECIMAL(10,2)) as Saldo
+        FROM alquiler a
+        WHERE a.ClienteId = ?
+      `;
+
+      const params = [clienteId];
+
+      // Si se proporciona localId, filtrar por el local del usuario que realizó el alquiler
+      // Nota: Necesitaríamos un JOIN con usuario si hay relación, por ahora solo filtramos por cliente
+      // if (localId) {
+      //   query += ` AND u.LocalId = ?`;
+      //   params.push(localId);
+      // }
+
+      query += ` HAVING Saldo > 0 ORDER BY a.AlquilerFechaAlquiler ASC`;
+
+      db.query(query, params, (err, results) => {
+        if (err) {
+          console.error("Error en getAlquileresPendientesPorCliente:", err);
+          return reject(err);
+        }
+        // Convertir explícitamente los valores a número
+        const processedResults = results.map((row) => ({
+          ...row,
+          AlquilerTotal: Number(row.AlquilerTotal),
+          AlquilerEntrega: Number(row.AlquilerEntrega),
+          Saldo: Number(row.Saldo),
+        }));
+        resolve(processedResults);
+      });
+    });
+  },
 };
 
 module.exports = Alquiler;

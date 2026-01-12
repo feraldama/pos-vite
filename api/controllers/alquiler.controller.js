@@ -280,3 +280,167 @@ exports.deleteAlquiler = async (req, res) => {
     });
   }
 };
+
+// Obtener alquileres pendientes por cliente
+exports.getAlquileresPendientesPorCliente = async (req, res) => {
+  try {
+    const { clienteId } = req.params;
+    const { localId } = req.query;
+
+    if (!clienteId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID del cliente es requerido",
+      });
+    }
+
+    const alquileres = await Alquiler.getAlquileresPendientesPorCliente(
+      clienteId,
+      localId
+    );
+    res.json({
+      success: true,
+      data: alquileres,
+    });
+  } catch (error) {
+    console.error("Error al obtener alquileres pendientes:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener alquileres pendientes",
+      error: error.message,
+    });
+  }
+};
+
+// Procesar pago de alquileres (distribuir desde el más antiguo)
+exports.procesarPagoAlquileres = async (req, res) => {
+  try {
+    const { clienteId, montoPago, tipoPago, fecha, cajaId, usuarioId } =
+      req.body;
+
+    if (!clienteId || !montoPago || montoPago <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "ClienteId y montoPago son requeridos",
+      });
+    }
+
+    // Obtener alquileres pendientes ordenados por fecha (más antiguo primero)
+    const alquileresPendientes =
+      await Alquiler.getAlquileresPendientesPorCliente(clienteId);
+
+    if (alquileresPendientes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No hay alquileres pendientes para este cliente",
+      });
+    }
+
+    // Calcular el total de la deuda
+    const totalDeuda = alquileresPendientes.reduce(
+      (sum, alq) => sum + Number(alq.Saldo),
+      0
+    );
+
+    if (montoPago > totalDeuda) {
+      return res.status(400).json({
+        success: false,
+        message: "El monto a pagar no puede ser mayor al saldo total",
+      });
+    }
+
+    // Distribuir el pago desde el más antiguo
+    let montoRestante = montoPago;
+    const actualizaciones = [];
+
+    for (const alquiler of alquileresPendientes) {
+      if (montoRestante <= 0) break;
+
+      const saldoActual = Number(alquiler.Saldo);
+      const entregaActual = Number(alquiler.AlquilerEntrega);
+      const montoAAplicar = Math.min(montoRestante, saldoActual);
+      const nuevaEntrega = entregaActual + montoAAplicar;
+
+      // Obtener el alquiler completo para asegurar que tenemos todos los datos
+      const alquilerCompleto = await Alquiler.getById(alquiler.AlquilerId);
+      if (!alquilerCompleto) {
+        console.error(
+          `No se encontró el alquiler con ID ${alquiler.AlquilerId}`
+        );
+        continue;
+      }
+
+      // Actualizar el alquiler
+      const alquilerActualizado = await Alquiler.update(alquiler.AlquilerId, {
+        ClienteId:
+          alquilerCompleto.ClienteId || alquiler.ClienteId || clienteId,
+        AlquilerFechaAlquiler:
+          alquilerCompleto.AlquilerFechaAlquiler ||
+          alquiler.AlquilerFechaAlquiler,
+        AlquilerFechaEntrega:
+          alquilerCompleto.AlquilerFechaEntrega ||
+          alquiler.AlquilerFechaEntrega,
+        AlquilerFechaDevolucion:
+          alquilerCompleto.AlquilerFechaDevolucion ||
+          alquiler.AlquilerFechaDevolucion,
+        AlquilerEstado:
+          alquilerCompleto.AlquilerEstado || alquiler.AlquilerEstado,
+        AlquilerTotal: alquilerCompleto.AlquilerTotal || alquiler.AlquilerTotal,
+        AlquilerEntrega: nuevaEntrega,
+      });
+
+      actualizaciones.push({
+        AlquilerId: alquiler.AlquilerId,
+        montoAplicado: montoAAplicar,
+        nuevaEntrega: nuevaEntrega,
+      });
+
+      montoRestante -= montoAAplicar;
+    }
+
+    // Registrar en caja si se proporcionan datos
+    if (cajaId && usuarioId) {
+      try {
+        const fechaActual = new Date();
+        const tipoGastoId = 2; // Ingresos
+
+        // Mapear tipo de pago a TipoGastoGrupoId
+        let tipoGastoGrupoId = 1; // Por defecto VENTA (efectivo)
+        if (tipoPago === "TR") {
+          tipoGastoGrupoId = 6; // TRANSFER
+        } else if (tipoPago === "PO") {
+          tipoGastoGrupoId = 4; // VENTA POS
+        }
+
+        await RegistroDiarioCaja.create({
+          CajaId: cajaId,
+          RegistroDiarioCajaFecha: fechaActual,
+          TipoGastoId: tipoGastoId,
+          TipoGastoGrupoId: tipoGastoGrupoId,
+          RegistroDiarioCajaDetalle: `Pago de alquileres - Cliente ${clienteId} - ${tipoPago}`,
+          RegistroDiarioCajaMonto: montoPago,
+          UsuarioId: usuarioId,
+        });
+      } catch (error) {
+        console.error("Error al registrar en caja:", error);
+        // No fallar el proceso si falla el registro en caja
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Pago procesado exitosamente",
+      data: {
+        montoPagado: montoPago,
+        actualizaciones: actualizaciones,
+      },
+    });
+  } catch (error) {
+    console.error("Error al procesar pago de alquileres:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al procesar el pago",
+      error: error.message,
+    });
+  }
+};

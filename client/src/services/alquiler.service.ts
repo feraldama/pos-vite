@@ -95,3 +95,44 @@ export const searchAlquileres = async (
     );
   }
 };
+
+export const getAlquileresPendientesPorCliente = async (
+  clienteId: number,
+  localId?: number
+) => {
+  try {
+    const params = localId ? { localId } : {};
+    const response = await api.get(`/alquiler/pendientes/${clienteId}`, {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener alquileres pendientes",
+      }
+    );
+  }
+};
+
+export const procesarPagoAlquileres = async (pagoData: {
+  clienteId: number;
+  montoPago: number;
+  tipoPago: string;
+  fecha: string;
+  cajaId: string | number;
+  usuarioId: string | number;
+}) => {
+  try {
+    const response = await api.post("/alquiler/procesar-pago", pagoData);
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al procesar el pago",
+      }
+    );
+  }
+};

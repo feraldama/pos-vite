@@ -1,5 +1,6 @@
 const Alquiler = require("../models/alquiler.model");
 const AlquilerPrendas = require("../models/alquilerprendas.model");
+const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
 
 // getAllAlquileres
 exports.getAllAlquileres = async (req, res) => {
@@ -109,6 +110,93 @@ exports.createAlquiler = async (req, res) => {
           ProductoId: prenda.ProductoId,
           AlquilerPrendasPrecio: prenda.AlquilerPrendasPrecio,
         });
+      }
+    }
+
+    // Registrar ingresos en registrodiariocaja si se proporcionan datos de pago
+    // Usar try-catch para que si falla el registro en caja, no falle el alquiler
+    if (req.body.pagos && req.body.CajaId && req.body.UsuarioId) {
+      try {
+        const { pagos, CajaId, UsuarioId } = req.body;
+        const fechaActual = new Date();
+        const registrosPromesas = [];
+
+        // TipoGastoId = 2 para ingresos
+        const tipoGastoId = 2;
+
+        // Efectivo -> TipoGastoGrupoId = 1 (VENTA)
+        if (pagos.efectivo && pagos.efectivo > 0) {
+          registrosPromesas.push(
+            RegistroDiarioCaja.create({
+              CajaId: CajaId,
+              RegistroDiarioCajaFecha: fechaActual,
+              TipoGastoId: tipoGastoId,
+              TipoGastoGrupoId: 1, // VENTA
+              RegistroDiarioCajaDetalle: `Alquiler #${nuevoAlquiler.AlquilerId} - Efectivo`,
+              RegistroDiarioCajaMonto: pagos.efectivo,
+              UsuarioId: UsuarioId,
+            })
+          );
+        }
+
+        // Transferencia -> TipoGastoGrupoId = 6 (TRANSFER)
+        if (pagos.transferencia && pagos.transferencia > 0) {
+          registrosPromesas.push(
+            RegistroDiarioCaja.create({
+              CajaId: CajaId,
+              RegistroDiarioCajaFecha: fechaActual,
+              TipoGastoId: tipoGastoId,
+              TipoGastoGrupoId: 6, // TRANSFER
+              RegistroDiarioCajaDetalle: `Alquiler #${nuevoAlquiler.AlquilerId} - Transferencia`,
+              RegistroDiarioCajaMonto: pagos.transferencia,
+              UsuarioId: UsuarioId,
+            })
+          );
+        }
+
+        // Tarjeta Débito (con 3% adicional) -> TipoGastoGrupoId = 4 (VENTA POS)
+        if (pagos.tarjetaDebito && pagos.tarjetaDebito > 0) {
+          const montoConAdicional = pagos.tarjetaDebito * 1.03;
+          registrosPromesas.push(
+            RegistroDiarioCaja.create({
+              CajaId: CajaId,
+              RegistroDiarioCajaFecha: fechaActual,
+              TipoGastoId: tipoGastoId,
+              TipoGastoGrupoId: 4, // VENTA POS
+              RegistroDiarioCajaDetalle: `Alquiler #${nuevoAlquiler.AlquilerId} - Tarjeta Débito (3% adicional)`,
+              RegistroDiarioCajaMonto: Math.round(montoConAdicional),
+              UsuarioId: UsuarioId,
+            })
+          );
+        }
+
+        // Tarjeta Crédito (con 5% adicional) -> TipoGastoGrupoId = 4 (VENTA POS)
+        if (pagos.tarjetaCredito && pagos.tarjetaCredito > 0) {
+          const montoConAdicional = pagos.tarjetaCredito * 1.05;
+          registrosPromesas.push(
+            RegistroDiarioCaja.create({
+              CajaId: CajaId,
+              RegistroDiarioCajaFecha: fechaActual,
+              TipoGastoId: tipoGastoId,
+              TipoGastoGrupoId: 4, // VENTA POS
+              RegistroDiarioCajaDetalle: `Alquiler #${nuevoAlquiler.AlquilerId} - Tarjeta Crédito (5% adicional)`,
+              RegistroDiarioCajaMonto: Math.round(montoConAdicional),
+              UsuarioId: UsuarioId,
+            })
+          );
+        }
+
+        // Voucher (descuento) -> No se registra como ingreso porque es un descuento
+        // El voucher reduce el total a pagar pero no genera ingreso real
+
+        // Ejecutar todas las promesas en paralelo
+        if (registrosPromesas.length > 0) {
+          await Promise.all(registrosPromesas);
+        }
+      } catch (error) {
+        // Si falla el registro en caja, solo loguear el error pero no fallar el alquiler
+        console.error("Error al registrar ingresos en caja:", error);
+        // El alquiler ya se creó exitosamente, así que continuamos
       }
     }
 

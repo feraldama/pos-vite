@@ -368,6 +368,29 @@ export default function Rentals() {
       return;
     }
 
+    // Validar que haya una caja aperturada
+    if (!cajaAperturada || !cajaAperturada.CajaId) {
+      Swal.fire({
+        icon: "warning",
+        title: "Caja no aperturada",
+        text: "Debes aperturar una caja antes de realizar el alquiler",
+        confirmButtonColor: "#2563eb",
+      }).then(() => {
+        navigate("/apertura-cierre-caja");
+      });
+      return;
+    }
+
+    // Validar que haya un usuario
+    if (!user || !user.id) {
+      Swal.fire({
+        icon: "error",
+        title: "Usuario no identificado",
+        text: "No se pudo identificar el usuario. Por favor, inicia sesión nuevamente.",
+      });
+      return;
+    }
+
     try {
       // Calcular el monto de entrega desde los métodos de pago
       // AlquilerEntrega = Efectivo + Transferencia + Tarjeta Débito (con 3%) + Tarjeta Crédito (con 5%)
@@ -383,6 +406,16 @@ export default function Rentals() {
         AlquilerEstado: "Pendiente",
         AlquilerTotal: total,
         AlquilerEntrega: Math.round(montoEntrega),
+        // Datos de pago para registro en caja
+        pagos: {
+          efectivo,
+          transferencia: banco,
+          tarjetaDebito: bancoDebito,
+          tarjetaCredito: bancoCredito,
+          voucher,
+        },
+        CajaId: cajaAperturada.CajaId,
+        UsuarioId: user.id,
       };
 
       const alquilerResponse = await createAlquiler(alquilerData);

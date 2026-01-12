@@ -128,12 +128,17 @@ export default function AperturaCierreCajaPage() {
     // Usar registros pasados como parámetro o cargar nuevos si no se proporcionan
     let registrosParaUsar = registrosPasados || registrosCaja;
 
+    // Normalizar UsuarioId para comparar (eliminar espacios en blanco)
+    const normalizeUserId = (id: string | number) => String(id).trim();
+    const userNormalized = normalizeUserId(user.id);
+
     if (registrosParaUsar.length === 0) {
       try {
+        // Cargar todos los registros de la caja (sin filtrar por usuario)
+        // para asegurar que se incluyan todos los registros entre apertura y cierre
         const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
         const registrosFiltrados = data.data.filter(
-          (r: RegistroDiarioCaja) =>
-            r.CajaId == cajaId && r.UsuarioId === user?.id
+          (r: RegistroDiarioCaja) => r.CajaId == cajaId
         );
         registrosParaUsar = registrosFiltrados;
 
@@ -164,7 +169,10 @@ export default function AperturaCierreCajaPage() {
     const hora = new Date().toLocaleTimeString();
 
     // --- Nueva lógica: buscar última apertura y cierre del usuario ---
-    const registros = registrosParaUsar.filter((r) => r.UsuarioId == user.id);
+    // Filtrar registros del usuario (ya normalizado arriba)
+    const registros = registrosParaUsar.filter(
+      (r) => normalizeUserId(r.UsuarioId) === userNormalized
+    );
 
     // Buscar la última apertura del usuario (ordenar por ID descendente y tomar el primero)
     const aperturas = registros
@@ -212,7 +220,7 @@ export default function AperturaCierreCajaPage() {
     // Filtrar los registros entre apertura y cierre (inclusive)
     const registrosFiltrados = registrosParaUsar.filter(
       (reg) =>
-        reg.UsuarioId == user.id &&
+        normalizeUserId(reg.UsuarioId) === userNormalized &&
         reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
         reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
     );

@@ -462,6 +462,7 @@ export default function Rentals() {
         setFechaAlquiler(new Date().toISOString().split("T")[0]);
         setFechaEntrega("");
         setFechaDevolucion("");
+        setClienteSeleccionado(null);
       });
     } catch (error) {
       console.error(error);

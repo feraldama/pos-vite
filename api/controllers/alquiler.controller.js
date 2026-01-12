@@ -312,6 +312,60 @@ exports.getAlquileresPendientesPorCliente = async (req, res) => {
   }
 };
 
+// Obtener deudas pendientes agrupadas por cliente
+exports.getDeudasPendientesPorCliente = async (req, res) => {
+  try {
+    const deudas = await Alquiler.getDeudasPendientesPorCliente();
+    res.json({ success: true, data: deudas });
+  } catch (error) {
+    console.error("Error al obtener deudas pendientes por cliente:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener deudas pendientes por cliente",
+      error: error.message,
+    });
+  }
+};
+
+// Obtener reporte de alquileres por cliente y rango de fechas
+exports.getReporteAlquileresPorCliente = async (req, res) => {
+  try {
+    const { clienteId, fechaDesde, fechaHasta } = req.query;
+
+    if (!clienteId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID del cliente es requerido",
+      });
+    }
+
+    if (!fechaDesde || !fechaHasta) {
+      return res.status(400).json({
+        success: false,
+        message: "Las fechas desde y hasta son requeridas",
+      });
+    }
+
+    const reporte = await Alquiler.getReporteAlquileresPorCliente(
+      clienteId,
+      fechaDesde,
+      fechaHasta
+    );
+
+    res.json({
+      success: true,
+      data: reporte,
+    });
+  } catch (error) {
+    console.error("Error al obtener reporte de alquileres:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener reporte de alquileres",
+      error: error.message,
+    });
+  }
+};
+
 // Procesar pago de alquileres (distribuir desde el más antiguo)
 exports.procesarPagoAlquileres = async (req, res) => {
   try {
@@ -401,7 +455,8 @@ exports.procesarPagoAlquileres = async (req, res) => {
     // Registrar en caja si se proporcionan datos
     if (cajaId && usuarioId) {
       try {
-        const fechaActual = new Date();
+        // Usar la fecha proporcionada en el request, o la fecha actual si no se proporciona
+        const fechaPago = fecha ? new Date(fecha + "T00:00:00") : new Date();
         const tipoGastoId = 2; // Ingresos
 
         // Mapear tipo de pago a TipoGastoGrupoId
@@ -412,12 +467,18 @@ exports.procesarPagoAlquileres = async (req, res) => {
           tipoGastoGrupoId = 4; // VENTA POS
         }
 
+        // Construir el detalle con los números de alquiler
+        const numerosAlquiler = actualizaciones
+          .map((act) => `#${act.AlquilerId}`)
+          .join(", ");
+        const detalle = `Pago de alquileres ${numerosAlquiler} - Cliente ${clienteId} - ${tipoPago}`;
+
         await RegistroDiarioCaja.create({
           CajaId: cajaId,
-          RegistroDiarioCajaFecha: fechaActual,
+          RegistroDiarioCajaFecha: fechaPago,
           TipoGastoId: tipoGastoId,
           TipoGastoGrupoId: tipoGastoGrupoId,
-          RegistroDiarioCajaDetalle: `Pago de alquileres - Cliente ${clienteId} - ${tipoPago}`,
+          RegistroDiarioCajaDetalle: detalle,
           RegistroDiarioCajaMonto: montoPago,
           UsuarioId: usuarioId,
         });

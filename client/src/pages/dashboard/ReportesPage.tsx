@@ -22,21 +22,19 @@ interface Cliente {
 }
 
 interface Pago {
-  VentaCreditoPagoId: number;
-  VentaCreditoPagoFecha: string;
-  VentaCreditoPagoMonto: number;
+  RegistroDiarioCajaId: number;
+  RegistroDiarioCajaFecha: string;
+  RegistroDiarioCajaMonto: number;
+  RegistroDiarioCajaDetalle: string;
 }
 
-interface Venta {
-  VentaId: number;
-  VentaFecha: string;
-  VentaTipo: string;
-  Total: number;
-  VentaEntrega: number;
+interface Alquiler {
+  AlquilerId: number;
+  AlquilerFechaAlquiler: string;
+  AlquilerTotal: number;
+  AlquilerEntrega: number;
   SaldoPendiente: number;
   Pagos: Pago[];
-  AlmacenNombre: string;
-  UsuarioNombre: string;
 }
 
 interface ReporteData {
@@ -48,7 +46,7 @@ interface ReporteData {
   };
   fechaDesde: string;
   fechaHasta: string;
-  ventas: Venta[];
+  alquileres: Alquiler[];
 }
 
 const ReportesPage: React.FC = () => {
@@ -96,11 +94,11 @@ const ReportesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/venta/pendientes");
+      const res = await api.get("/alquiler/pendientes");
       const deudas: DeudaCliente[] = res.data.data || [];
       const doc = new jsPDF();
       doc.setFontSize(18);
-      doc.text("Créditos Pendientes a Cobrar", 14, 18);
+      doc.text("Alquileres Pendientes a Cobrar", 14, 18);
       let y = 28;
       let totalGeneral = 0;
       const rows = deudas.map((d) => [
@@ -125,7 +123,7 @@ const ReportesPage: React.FC = () => {
       totalGeneral = deudas.reduce((acc, d) => acc + Number(d.Saldo), 0);
       doc.setFontSize(14);
       doc.text(`TOTAL GENERAL: Gs. ${formatMiles(totalGeneral)}`, 14, y);
-      doc.save("creditos_pendientes.pdf");
+      doc.save("alquileres_pendientes.pdf");
       // Abrir el PDF automáticamente después de descargarlo
       doc.output("dataurlnewwindow");
     } catch {
@@ -154,7 +152,7 @@ const ReportesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/venta/reporte", {
+      const res = await api.get("/alquiler/reporte", {
         params: {
           clienteId: clienteSeleccionado,
           fechaDesde,
@@ -169,7 +167,7 @@ const ReportesPage: React.FC = () => {
 
       // Título
       doc.setFontSize(18);
-      doc.text("Reporte de Ventas por Cliente", 14, y);
+      doc.text("Reporte de Alquileres por Cliente", 14, y);
       y += 10;
 
       // Información del cliente
@@ -193,53 +191,40 @@ const ReportesPage: React.FC = () => {
       );
       y += 10;
 
-      // Tabla de ventas
-      const ventasRows: string[][] = [];
-      let totalVentas = 0;
+      // Tabla de alquileres
+      const alquileresRows: string[][] = [];
+      let totalAlquileres = 0;
       let totalSaldoPendiente = 0;
 
-      reporte.ventas.forEach((venta) => {
-        const tipoVenta =
-          venta.VentaTipo === "CO"
-            ? "Contado"
-            : venta.VentaTipo === "CR"
-            ? "Crédito"
-            : venta.VentaTipo === "PO"
-            ? "POS"
-            : venta.VentaTipo === "TR"
-            ? "Transfer"
-            : venta.VentaTipo;
-
-        const fechaVenta = new Date(venta.VentaFecha)
+      reporte.alquileres.forEach((alquiler) => {
+        const fechaAlquiler = new Date(alquiler.AlquilerFechaAlquiler)
           .toLocaleDateString("es-PY")
           .split("/")
           .join("/");
 
-        ventasRows.push([
-          venta.VentaId.toString(),
-          fechaVenta,
-          tipoVenta,
-          formatMiles(venta.Total),
-          venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
+        alquileresRows.push([
+          alquiler.AlquilerId.toString(),
+          fechaAlquiler,
+          formatMiles(alquiler.AlquilerTotal),
+          formatMiles(alquiler.AlquilerEntrega),
+          formatMiles(alquiler.SaldoPendiente),
         ]);
 
-        totalVentas += Number(venta.Total);
-        if (venta.VentaTipo === "CR") {
-          totalSaldoPendiente += Number(venta.SaldoPendiente);
-        }
+        totalAlquileres += Number(alquiler.AlquilerTotal);
+        totalSaldoPendiente += Number(alquiler.SaldoPendiente);
 
-        // Si es crédito y tiene pagos, agregar información de pagos
-        if (venta.VentaTipo === "CR" && venta.Pagos && venta.Pagos.length > 0) {
-          venta.Pagos.forEach((pago) => {
-            const fechaPago = new Date(pago.VentaCreditoPagoFecha)
+        // Si tiene pagos, agregar información de pagos
+        if (alquiler.Pagos && alquiler.Pagos.length > 0) {
+          alquiler.Pagos.forEach((pago) => {
+            const fechaPago = new Date(pago.RegistroDiarioCajaFecha)
               .toLocaleDateString("es-PY")
               .split("/")
               .join("/");
-            ventasRows.push([
+            alquileresRows.push([
               "",
-              `  Pago ${pago.VentaCreditoPagoId}`,
+              `  Pago ${pago.RegistroDiarioCajaId}`,
               fechaPago,
-              formatMiles(pago.VentaCreditoPagoMonto),
+              formatMiles(pago.RegistroDiarioCajaMonto),
               "",
             ]);
           });
@@ -247,8 +232,8 @@ const ReportesPage: React.FC = () => {
       });
 
       autoTable(doc, {
-        head: [["ID", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]],
-        body: ventasRows,
+        head: [["ID", "FECHA", "TOTAL", "ENTREGA", "SALDO PEND."]],
+        body: alquileresRows,
         startY: y,
         theme: "grid",
         headStyles: { fillColor: [22, 163, 74] },
@@ -257,7 +242,7 @@ const ReportesPage: React.FC = () => {
         columnStyles: {
           0: { cellWidth: 20 },
           1: { cellWidth: 35 },
-          2: { cellWidth: 30 },
+          2: { cellWidth: 40 },
           3: { cellWidth: 40 },
           4: { cellWidth: 40 },
         },
@@ -269,7 +254,7 @@ const ReportesPage: React.FC = () => {
 
       // Totales
       doc.setFontSize(12);
-      doc.text(`Total Ventas: Gs. ${formatMiles(totalVentas)}`, 14, y);
+      doc.text(`Total Alquileres: Gs. ${formatMiles(totalAlquileres)}`, 14, y);
       y += 6;
       if (totalSaldoPendiente > 0) {
         doc.text(
@@ -279,14 +264,15 @@ const ReportesPage: React.FC = () => {
         );
       }
 
-      const nombreArchivo = `reporte_ventas_${reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
+      const nombreArchivo = `reporte_alquileres_${reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
       doc.save(nombreArchivo);
       // Abrir el PDF automáticamente después de descargarlo
       doc.output("dataurlnewwindow");
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(
-        error.response?.data?.message || "Error al generar el reporte de ventas"
+        error.response?.data?.message ||
+          "Error al generar el reporte de alquileres"
       );
     } finally {
       setLoading(false);
@@ -297,10 +283,10 @@ const ReportesPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
       <div className="flex flex-col items-center gap-8 max-w-2xl mx-auto">
-        {/* Reporte de Créditos Pendientes */}
+        {/* Reporte de Alquileres Pendientes */}
         <div className="w-full bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-4">
-            Créditos Pendientes a Cobrar
+            Alquileres Pendientes a Cobrar
           </h2>
           <button
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
@@ -311,10 +297,10 @@ const ReportesPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Reporte de Ventas por Cliente */}
+        {/* Reporte de Alquileres por Cliente */}
         <div className="w-full bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-4">
-            Reporte de Ventas por Cliente
+            Reporte de Alquileres por Cliente
           </h2>
           <div className="space-y-4">
             <div>

@@ -317,6 +317,146 @@ const Alquiler = {
       });
     });
   },
+
+  // Obtener deudas pendientes agrupadas por cliente
+  getDeudasPendientesPorCliente: () => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          c.ClienteId,
+          CONCAT(TRIM(c.ClienteNombre), ' ', TRIM(c.ClienteApellido)) AS Cliente,
+          SUM(a.AlquilerTotal) AS TotalVentas,
+          SUM(COALESCE(a.AlquilerEntrega, 0)) AS TotalEntregado,
+          SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) AS Saldo
+        FROM alquiler a
+        JOIN clientes c ON a.ClienteId = c.ClienteId
+        GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
+        HAVING Saldo > 0
+        ORDER BY Cliente
+      `;
+      db.query(query, (err, results) => {
+        if (err) {
+          console.error("Error en getDeudasPendientesPorCliente:", err);
+          return reject(err);
+        }
+        resolve(results);
+      });
+    });
+  },
+
+  // Obtener reporte de alquileres por cliente y rango de fechas
+  getReporteAlquileresPorCliente: (clienteId, fechaDesde, fechaHasta) => {
+    return new Promise((resolve, reject) => {
+      // Primero obtener información del cliente
+      const clienteQuery = "SELECT * FROM clientes WHERE ClienteId = ?";
+
+      db.query(clienteQuery, [clienteId], (err, clienteResults) => {
+        if (err) return reject(err);
+
+        if (clienteResults.length === 0) {
+          return reject(new Error("Cliente no encontrado"));
+        }
+
+        const cliente = clienteResults[0];
+
+        // Obtener alquileres en el rango de fechas
+        const alquileresQuery = `
+          SELECT 
+            a.*,
+            c.ClienteNombre,
+            c.ClienteApellido,
+            c.ClienteRUC
+          FROM alquiler a
+          LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+          WHERE a.ClienteId = ? 
+          AND DATE(a.AlquilerFechaAlquiler) BETWEEN ? AND ?
+          ORDER BY a.AlquilerFechaAlquiler ASC, a.AlquilerId ASC
+        `;
+
+        db.query(
+          alquileresQuery,
+          [clienteId, fechaDesde, fechaHasta],
+          async (err, alquileresResults) => {
+            if (err) return reject(err);
+
+            // Para cada alquiler, calcular saldo pendiente y obtener pagos desde RegistroDiarioCaja
+            const alquileresConDetalle = await Promise.all(
+              alquileresResults.map(async (alquiler) => {
+                const total = Number(alquiler.AlquilerTotal) || 0;
+                const entrega = Number(alquiler.AlquilerEntrega) || 0;
+                const saldoPendiente = total - entrega;
+
+                // Obtener pagos desde RegistroDiarioCaja que mencionen este alquiler
+                // Busca tanto "Alquiler #X" como "Pago de alquileres #X" o "Pago de alquileres #X, #Y"
+                const pagosQuery = `
+                  SELECT 
+                    r.RegistroDiarioCajaId,
+                    r.RegistroDiarioCajaFecha,
+                    r.RegistroDiarioCajaMonto,
+                    r.RegistroDiarioCajaDetalle
+                  FROM registrodiariocaja r
+                  WHERE (
+                    r.RegistroDiarioCajaDetalle LIKE ?
+                    OR r.RegistroDiarioCajaDetalle LIKE ?
+                  )
+                  AND DATE(r.RegistroDiarioCajaFecha) BETWEEN ? AND ?
+                  ORDER BY r.RegistroDiarioCajaFecha ASC, r.RegistroDiarioCajaId ASC
+                `;
+
+                const pagos = await new Promise((resolvePagos, rejectPagos) => {
+                  db.query(
+                    pagosQuery,
+                    [
+                      `%Alquiler #${alquiler.AlquilerId}%`,
+                      `%#${alquiler.AlquilerId}%`,
+                      fechaDesde,
+                      fechaHasta,
+                    ],
+                    (err, pagosResults) => {
+                      if (err) return rejectPagos(err);
+                      resolvePagos(
+                        pagosResults.map((pago) => ({
+                          RegistroDiarioCajaId: pago.RegistroDiarioCajaId,
+                          RegistroDiarioCajaFecha: pago.RegistroDiarioCajaFecha,
+                          RegistroDiarioCajaMonto: Number(
+                            pago.RegistroDiarioCajaMonto
+                          ),
+                          RegistroDiarioCajaDetalle:
+                            pago.RegistroDiarioCajaDetalle,
+                        }))
+                      );
+                    }
+                  );
+                });
+
+                return {
+                  ...alquiler,
+                  AlquilerId: alquiler.AlquilerId,
+                  AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
+                  AlquilerTotal: total,
+                  AlquilerEntrega: entrega,
+                  SaldoPendiente: saldoPendiente,
+                  Pagos: pagos || [],
+                };
+              })
+            );
+
+            resolve({
+              cliente: {
+                ClienteId: cliente.ClienteId,
+                ClienteNombre: cliente.ClienteNombre,
+                ClienteApellido: cliente.ClienteApellido,
+                ClienteRUC: cliente.ClienteRUC,
+              },
+              fechaDesde,
+              fechaHasta,
+              alquileres: alquileresConDetalle,
+            });
+          }
+        );
+      });
+    });
+  },
 };
 
 module.exports = Alquiler;

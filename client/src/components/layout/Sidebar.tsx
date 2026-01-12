@@ -14,14 +14,14 @@ import {
   BanknotesIcon,
   CurrencyDollarIcon,
   ArchiveBoxIcon,
-  RectangleGroupIcon,
+  // RectangleGroupIcon,
   CubeIcon,
   WrenchIcon,
   LockClosedIcon,
   ChartBarIcon,
   // ShoppingCartIcon,
   TagIcon,
-  ClockIcon,
+  // ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -47,20 +47,20 @@ const navigation: NavigationItem[] = [
     href: "/apertura-cierre-caja",
     icon: <LockClosedIcon className="h-7 w-6" />,
   },
-  {
-    name: "Ventas",
-    href: "/ventas",
-    icon: <CurrencyDollarIcon className="h-7 w-6" />,
-  },
-  {
-    name: "Alquileres",
-    href: "/alquileres",
-    icon: <ClockIcon className="h-7 w-6" />,
-  },
+  // {
+  //   name: "Ventas",
+  //   href: "/ventas",
+  //   icon: <CurrencyDollarIcon className="h-7 w-6" />,
+  // },
+  // {
+  //   name: "Alquileres",
+  //   href: "/alquileres",
+  //   icon: <ClockIcon className="h-7 w-6" />,
+  // },
   {
     name: "Alquileres Venta",
     href: "/alquileres-venta",
-    icon: <ClockIcon className="h-7 w-6" />,
+    icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
   // {
   //   name: "Compras",
@@ -88,11 +88,11 @@ const navigation: NavigationItem[] = [
     href: "/products",
     icon: <CubeIcon className="h-7 w-6" />,
   },
-  {
-    name: "Combos",
-    href: "/combos",
-    icon: <RectangleGroupIcon className="h-7 w-6" />,
-  },
+  // {
+  //   name: "Combos",
+  //   href: "/combos",
+  //   icon: <RectangleGroupIcon className="h-7 w-6" />,
+  // },
   {
     name: "Clientes",
     href: "/customers",
@@ -120,8 +120,8 @@ const navigation: NavigationItem[] = [
     icon: <WrenchIcon className="h-7 w-6" />,
     children: [
       { name: "Facturas", href: "/facturas" },
-      { name: "Ventas", href: "/modifications/ventas" },
-      { name: "Compras", href: "/modifications/compras" },
+      { name: "Alquileres", href: "/alquileres" },
+      // { name: "Compras", href: "/modifications/compras" },
       { name: "Inventario", href: "/inventario" },
     ],
   },

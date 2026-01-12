@@ -7,9 +7,19 @@ const authMiddleware = require("../middlewares/auth");
 router.get("/", authMiddleware, alquilerController.getAllAlquileres);
 router.get("/search", authMiddleware, alquilerController.searchAlquileres);
 router.get(
+  "/pendientes",
+  authMiddleware,
+  alquilerController.getDeudasPendientesPorCliente
+);
+router.get(
   "/pendientes/:clienteId",
   authMiddleware,
   alquilerController.getAlquileresPendientesPorCliente
+);
+router.get(
+  "/reporte",
+  authMiddleware,
+  alquilerController.getReporteAlquileresPorCliente
 );
 router.post(
   "/procesar-pago",

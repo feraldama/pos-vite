@@ -136,3 +136,35 @@ export const procesarPagoAlquileres = async (pagoData: {
     );
   }
 };
+
+export const getAlquileresProximosEntrega = async (dias = 7) => {
+  try {
+    const response = await api.get("/alquiler/proximos-entrega", {
+      params: { dias },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener alquileres próximos a entrega",
+      }
+    );
+  }
+};
+
+export const getAlquileresProximosDevolucion = async (dias = 7) => {
+  try {
+    const response = await api.get("/alquiler/proximos-devolucion", {
+      params: { dias },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener alquileres próximos a devolución",
+      }
+    );
+  }
+};

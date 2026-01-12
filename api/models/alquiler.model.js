@@ -388,6 +388,7 @@ const Alquiler = {
 
                 // Obtener pagos desde RegistroDiarioCaja que mencionen este alquiler
                 // Busca tanto "Alquiler #X" como "Pago de alquileres #X" o "Pago de alquileres #X, #Y"
+                // No filtramos por fecha para mostrar todos los pagos del alquiler
                 const pagosQuery = `
                   SELECT 
                     r.RegistroDiarioCajaId,
@@ -399,7 +400,6 @@ const Alquiler = {
                     r.RegistroDiarioCajaDetalle LIKE ?
                     OR r.RegistroDiarioCajaDetalle LIKE ?
                   )
-                  AND DATE(r.RegistroDiarioCajaFecha) BETWEEN ? AND ?
                   ORDER BY r.RegistroDiarioCajaFecha ASC, r.RegistroDiarioCajaId ASC
                 `;
 
@@ -409,8 +409,6 @@ const Alquiler = {
                     [
                       `%Alquiler #${alquiler.AlquilerId}%`,
                       `%#${alquiler.AlquilerId}%`,
-                      fechaDesde,
-                      fechaHasta,
                     ],
                     (err, pagosResults) => {
                       if (err) return rejectPagos(err);
@@ -454,6 +452,72 @@ const Alquiler = {
             });
           }
         );
+      });
+    });
+  },
+
+  // Obtener alquileres próximos a fecha de entrega (hoy y próximos días)
+  // También incluye alquileres con fecha pasada que siguen en estado Pendiente
+  getAlquileresProximosEntrega: (dias = 7) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          a.*,
+          c.ClienteNombre,
+          c.ClienteApellido,
+          c.ClienteTelefono
+        FROM alquiler a
+        LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+        WHERE a.AlquilerFechaEntrega IS NOT NULL
+        AND (
+          (DATE(a.AlquilerFechaEntrega) >= CURDATE()
+          AND DATE(a.AlquilerFechaEntrega) <= DATE_ADD(CURDATE(), INTERVAL ? DAY))
+          OR (DATE(a.AlquilerFechaEntrega) < CURDATE() AND a.AlquilerEstado = 'Pendiente')
+        )
+        AND a.AlquilerEstado != 'Completado'
+        ORDER BY a.AlquilerFechaEntrega ASC
+      `;
+
+      db.query(query, [dias], (err, results) => {
+        if (err) {
+          console.error("Error en getAlquileresProximosEntrega:", err);
+          return reject(err);
+        }
+        resolve(results);
+      });
+    });
+  },
+
+  // Obtener alquileres próximos a fecha de devolución (hoy y próximos días)
+  // También incluye alquileres con fecha pasada que siguen en estado Pendiente o Entregado
+  getAlquileresProximosDevolucion: (dias = 7) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          a.*,
+          c.ClienteNombre,
+          c.ClienteApellido,
+          c.ClienteTelefono
+        FROM alquiler a
+        LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+        WHERE a.AlquilerFechaDevolucion IS NOT NULL
+        AND (
+          (DATE(a.AlquilerFechaDevolucion) >= CURDATE()
+          AND DATE(a.AlquilerFechaDevolucion) <= DATE_ADD(CURDATE(), INTERVAL ? DAY))
+          OR (DATE(a.AlquilerFechaDevolucion) < CURDATE() 
+          AND (a.AlquilerEstado = 'Pendiente' OR a.AlquilerEstado = 'Entregado'))
+        )
+        AND a.AlquilerEstado != 'Devuelto'
+        AND a.AlquilerEstado != 'Cancelado'
+        ORDER BY a.AlquilerFechaDevolucion ASC
+      `;
+
+      db.query(query, [dias], (err, results) => {
+        if (err) {
+          console.error("Error en getAlquileresProximosDevolucion:", err);
+          return reject(err);
+        }
+        resolve(results);
       });
     });
   },

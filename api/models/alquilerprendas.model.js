@@ -31,6 +31,7 @@ const AlquilerPrendas = {
           p.ProductoNombre,
           p.ProductoCodigo,
           p.ProductoPrecioVenta,
+          p.ProductoImagen,
           tp.TipoPrendaNombre
         FROM alquilerprendas ap
         LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
@@ -40,7 +41,14 @@ const AlquilerPrendas = {
 
       db.query(query, [alquilerId], (err, results) => {
         if (err) return reject(err);
-        resolve(results);
+        // Convertir imágenes Buffer a base64
+        const processedResults = results.map((row) => {
+          if (row.ProductoImagen && Buffer.isBuffer(row.ProductoImagen)) {
+            row.ProductoImagen = row.ProductoImagen.toString("base64");
+          }
+          return row;
+        });
+        resolve(processedResults);
       });
     });
   },

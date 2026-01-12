@@ -327,6 +327,72 @@ exports.getDeudasPendientesPorCliente = async (req, res) => {
   }
 };
 
+// Obtener alquileres próximos a fecha de entrega
+exports.getAlquileresProximosEntrega = async (req, res) => {
+  try {
+    const dias = parseInt(req.query.dias) || 7;
+    const alquileres = await Alquiler.getAlquileresProximosEntrega(dias);
+
+    // Para cada alquiler, obtener sus prendas
+    const alquileresConPrendas = await Promise.all(
+      alquileres.map(async (alquiler) => {
+        const prendas = await AlquilerPrendas.getByAlquilerId(
+          alquiler.AlquilerId
+        );
+        return {
+          ...alquiler,
+          prendas: prendas || [],
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: alquileresConPrendas,
+    });
+  } catch (error) {
+    console.error("Error al obtener alquileres próximos a entrega:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener alquileres próximos a entrega",
+      error: error.message,
+    });
+  }
+};
+
+// Obtener alquileres próximos a fecha de devolución
+exports.getAlquileresProximosDevolucion = async (req, res) => {
+  try {
+    const dias = parseInt(req.query.dias) || 7;
+    const alquileres = await Alquiler.getAlquileresProximosDevolucion(dias);
+
+    // Para cada alquiler, obtener sus prendas
+    const alquileresConPrendas = await Promise.all(
+      alquileres.map(async (alquiler) => {
+        const prendas = await AlquilerPrendas.getByAlquilerId(
+          alquiler.AlquilerId
+        );
+        return {
+          ...alquiler,
+          prendas: prendas || [],
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: alquileresConPrendas,
+    });
+  } catch (error) {
+    console.error("Error al obtener alquileres próximos a devolución:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener alquileres próximos a devolución",
+      error: error.message,
+    });
+  }
+};
+
 // Obtener reporte de alquileres por cliente y rango de fechas
 exports.getReporteAlquileresPorCliente = async (req, res) => {
   try {
@@ -424,6 +490,18 @@ exports.procesarPagoAlquileres = async (req, res) => {
         continue;
       }
 
+      // Calcular el nuevo saldo después del pago
+      const totalAlquiler = Number(
+        alquilerCompleto.AlquilerTotal || alquiler.AlquilerTotal
+      );
+      const nuevoSaldo = totalAlquiler - nuevaEntrega;
+
+      // Si el saldo queda en cero, cambiar el estado a "Devuelto"
+      const nuevoEstado =
+        nuevoSaldo <= 0
+          ? "Devuelto"
+          : alquilerCompleto.AlquilerEstado || alquiler.AlquilerEstado;
+
       // Actualizar el alquiler
       const alquilerActualizado = await Alquiler.update(alquiler.AlquilerId, {
         ClienteId:
@@ -437,9 +515,8 @@ exports.procesarPagoAlquileres = async (req, res) => {
         AlquilerFechaDevolucion:
           alquilerCompleto.AlquilerFechaDevolucion ||
           alquiler.AlquilerFechaDevolucion,
-        AlquilerEstado:
-          alquilerCompleto.AlquilerEstado || alquiler.AlquilerEstado,
-        AlquilerTotal: alquilerCompleto.AlquilerTotal || alquiler.AlquilerTotal,
+        AlquilerEstado: nuevoEstado,
+        AlquilerTotal: totalAlquiler,
         AlquilerEntrega: nuevaEntrega,
       });
 

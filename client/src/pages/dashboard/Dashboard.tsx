@@ -1,15 +1,140 @@
-// import React from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/useAuth";
-import { Link } from "react-router-dom";
 import {
-  UserGroupIcon,
-  ChartBarIcon,
-  DocumentChartBarIcon,
-  Cog6ToothIcon,
-} from "@heroicons/react/24/outline";
+  getAlquileresProximosEntrega,
+  getAlquileresProximosDevolucion,
+  updateAlquiler,
+  getAlquilerById,
+} from "../../services/alquiler.service";
+import { formatCurrency } from "../../utils/utils";
+import Swal from "sweetalert2";
+
+interface AlquilerPrenda {
+  ProductoNombre: string;
+  ProductoCodigo: string;
+  TipoPrendaNombre: string;
+  AlquilerPrendasPrecio: number;
+  ProductoImagen?: string;
+}
+
+interface Alquiler {
+  AlquilerId: number;
+  ClienteId: number;
+  AlquilerFechaAlquiler: string;
+  AlquilerFechaEntrega?: string;
+  AlquilerFechaDevolucion?: string;
+  AlquilerEstado: string;
+  AlquilerTotal: number;
+  AlquilerEntrega: number;
+  ClienteNombre?: string;
+  ClienteApellido?: string;
+  ClienteTelefono?: string;
+  prendas: AlquilerPrenda[];
+}
 
 function Dashboard() {
   const { user } = useAuth();
+  const [alquileresEntrega, setAlquileresEntrega] = useState<Alquiler[]>([]);
+  const [alquileresDevolucion, setAlquileresDevolucion] = useState<Alquiler[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentAlquiler, setCurrentAlquiler] = useState<Alquiler | null>(null);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setLoading(true);
+        const [entregaRes, devolucionRes] = await Promise.all([
+          getAlquileresProximosEntrega(7),
+          getAlquileresProximosDevolucion(7),
+        ]);
+        setAlquileresEntrega(entregaRes.data || []);
+        setAlquileresDevolucion(devolucionRes.data || []);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
+
+  const formatearFecha = (fecha: string | null | undefined) => {
+    if (!fecha) return "-";
+    return new Date(fecha).toLocaleDateString("es-PY");
+  };
+
+  const handleAlquilerClick = async (alquiler: Alquiler) => {
+    try {
+      // Obtener el alquiler completo con todos los datos
+      const alquilerCompleto = await getAlquilerById(alquiler.AlquilerId);
+      // El servicio puede devolver el objeto directamente o dentro de data
+      const alquilerData =
+        (alquilerCompleto as { data?: Alquiler }).data || alquilerCompleto;
+      setCurrentAlquiler(alquilerData as Alquiler);
+      setEstadoSeleccionado(
+        (alquilerData as Alquiler).AlquilerEstado || "Pendiente"
+      );
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Error al cargar alquiler:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo cargar el alquiler",
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentAlquiler(null);
+    setEstadoSeleccionado("");
+  };
+
+  const handleUpdateEstado = async () => {
+    if (!currentAlquiler) return;
+
+    try {
+      await updateAlquiler(currentAlquiler.AlquilerId, {
+        ClienteId: currentAlquiler.ClienteId,
+        AlquilerFechaAlquiler: currentAlquiler.AlquilerFechaAlquiler,
+        AlquilerFechaEntrega: currentAlquiler.AlquilerFechaEntrega,
+        AlquilerFechaDevolucion: currentAlquiler.AlquilerFechaDevolucion,
+        AlquilerEstado: estadoSeleccionado,
+        AlquilerTotal: currentAlquiler.AlquilerTotal,
+        AlquilerEntrega: currentAlquiler.AlquilerEntrega,
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Éxito",
+        text: "Estado del alquiler actualizado correctamente",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+
+      handleCloseModal();
+      // Recargar los datos
+      const [entregaRes, devolucionRes] = await Promise.all([
+        getAlquileresProximosEntrega(7),
+        getAlquileresProximosDevolucion(7),
+      ]);
+      setAlquileresEntrega(entregaRes.data || []);
+      setAlquileresDevolucion(devolucionRes.data || []);
+    } catch (error) {
+      console.error("Error al actualizar alquiler:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo actualizar el estado del alquiler",
+      });
+    }
+  };
 
   return (
     <main className="py-6 px-6 space-y-12 bg-gray-100 w-full">
@@ -28,142 +153,298 @@ function Dashboard() {
         </section>
       )}
 
-      {/* Sección de Navegación */}
-      <section
-        className="flex flex-col md:grid md:grid-cols-4 bg-white divide-y md:divide-y-0 md:divide-x w-full rounded-lg shadow-md"
-        style={{ marginBottom: "1px" }}
-      >
-        <div className="flex px-8 py-5 text-gray-900 items-center hover:bg-gray-100 bg-blue-50 border-l-gray-100 border-b-blue-500 border-b-4">
-          <ChartBarIcon className="w-14 text-gray-600" />
-          <div className="ml-3">
-            <div className="font-medium leading-6 text-blue-600">Resumen</div>
-            <div className="mt-0.5 text-sm text-gray-500">
-              Vista general del sistema
-            </div>
+      {/* Sección de Alquileres Próximos a Entrega */}
+      <section className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          Alquileres Próximos a Entrega (Próximos 7 días)
+        </h2>
+        {loading ? (
+          <p className="text-gray-600">Cargando...</p>
+        ) : alquileresEntrega.length === 0 ? (
+          <p className="text-gray-600">No hay alquileres próximos a entrega</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Alquiler ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha Entrega
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prendas
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Entrega
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Saldo
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {alquileresEntrega.map((alquiler) => (
+                  <tr
+                    key={alquiler.AlquilerId}
+                    onClick={() => handleAlquilerClick(alquiler)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {alquiler.AlquilerId}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {alquiler.ClienteNombre} {alquiler.ClienteApellido}
+                      {alquiler.ClienteTelefono && (
+                        <span className="block text-xs text-gray-500">
+                          {alquiler.ClienteTelefono}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>{formatearFecha(alquiler.AlquilerFechaEntrega)}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Estado:{" "}
+                        <span className="font-semibold">
+                          {alquiler.AlquilerEstado}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="flex flex-wrap gap-2">
+                        {alquiler.prendas.map((prenda, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 border rounded p-2 bg-gray-50"
+                          >
+                            {prenda.ProductoImagen ? (
+                              <img
+                                src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                alt={prenda.ProductoNombre}
+                                className="w-16 h-16 object-contain rounded"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                                Sin imagen
+                              </div>
+                            )}
+                            <div className="text-xs">
+                              <div className="font-medium">
+                                {prenda.ProductoNombre}
+                              </div>
+                              <div className="text-gray-500">
+                                {prenda.TipoPrendaNombre}
+                              </div>
+                              {prenda.ProductoCodigo && (
+                                <div className="text-gray-400">
+                                  {prenda.ProductoCodigo}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(alquiler.AlquilerTotal)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(alquiler.AlquilerEntrega || 0)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(
+                        (alquiler.AlquilerTotal || 0) -
+                          (alquiler.AlquilerEntrega || 0)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-        <Link
-          to="/users"
-          className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100 no-underline"
-        >
-          <UserGroupIcon className="w-14 text-gray-600" />
-          <div className="ml-3">
-            <div className="font-medium leading-6 text-gray-600">Usuarios</div>
-            <div className="mt-0.5 text-sm text-gray-500">
-              Gestión de usuarios del sistema
-            </div>
-          </div>
-        </Link>
-        <Link
-          to="/reportes"
-          className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100 no-underline"
-        >
-          <DocumentChartBarIcon className="w-14 text-gray-600" />
-          <div className="ml-3">
-            <div className="font-medium leading-6 text-gray-600">Reportes</div>
-            <div className="mt-0.5 text-sm text-gray-500">
-              Generación de reportes
-            </div>
-          </div>
-        </Link>
-
-        <div className="flex px-8 py-5 cursor-pointer text-gray-900 items-center hover:bg-gray-100">
-          <Cog6ToothIcon className="w-14 text-gray-600" />
-          <div className="ml-3">
-            <div className="font-medium leading-6">Configuración</div>
-            <div className="mt-0.5 text-sm text-gray-500">
-              Ajustes del sistema
-            </div>
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* Sección de Contenido Principal */}
-      <div className="flex flex-col h-full w-full mx-auto space-y-6">
-        <section className="flex flex-col mx-auto bg-white rounded-lg p-6 shadow-md space-y-6 w-full">
-          {/* Barra de búsqueda y acciones */}
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <form className="flex flex-row md:col-span-3 w-full relative">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="24px"
-                  viewBox="0 -960 960 960"
-                  width="24px"
-                  fill="#5f6368"
-                >
-                  <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z" />
-                </svg>
-              </div>
+      {/* Sección de Alquileres Próximos a Devolución */}
+      <section className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          Alquileres Próximos a Devolución (Próximos 7 días)
+        </h2>
+        {loading ? (
+          <p className="text-gray-600">Cargando...</p>
+        ) : alquileresDevolucion.length === 0 ? (
+          <p className="text-gray-600">
+            No hay alquileres próximos a devolución
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Alquiler ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha Devolución
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prendas
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Entrega
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Saldo
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {alquileresDevolucion.map((alquiler) => (
+                  <tr
+                    key={alquiler.AlquilerId}
+                    onClick={() => handleAlquilerClick(alquiler)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {alquiler.AlquilerId}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {alquiler.ClienteNombre} {alquiler.ClienteApellido}
+                      {alquiler.ClienteTelefono && (
+                        <span className="block text-xs text-gray-500">
+                          {alquiler.ClienteTelefono}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        {formatearFecha(alquiler.AlquilerFechaDevolucion)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Estado:{" "}
+                        <span className="font-semibold">
+                          {alquiler.AlquilerEstado}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="flex flex-wrap gap-2">
+                        {alquiler.prendas.map((prenda, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 border rounded p-2 bg-gray-50"
+                          >
+                            {prenda.ProductoImagen ? (
+                              <img
+                                src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                alt={prenda.ProductoNombre}
+                                className="w-16 h-16 object-contain rounded"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                                Sin imagen
+                              </div>
+                            )}
+                            <div className="text-xs">
+                              <div className="font-medium">
+                                {prenda.ProductoNombre}
+                              </div>
+                              <div className="text-gray-500">
+                                {prenda.TipoPrendaNombre}
+                              </div>
+                              {prenda.ProductoCodigo && (
+                                <div className="text-gray-400">
+                                  {prenda.ProductoCodigo}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(alquiler.AlquilerTotal)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(alquiler.AlquilerEntrega || 0)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      {formatCurrency(
+                        (alquiler.AlquilerTotal || 0) -
+                          (alquiler.AlquilerEntrega || 0)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-              <input
-                type="search"
-                id="default-search"
-                className="flex-grow py-4 ps-12 text-sm text-gray-900 border border-gray-100 rounded-l bg-gray-50 focus:ring-blue-500"
-                placeholder="Buscar en el sistema..."
-                // style={{ paddingLeft: "35px" }}
-                required
-              />
-              <button
-                type="submit"
-                className="text-white bg-blue-500 hover:bg-blue-600 font-medium text-base px-4 py-2 rounded-r"
+      {/* Modal para editar estado del alquiler */}
+      {isModalOpen && currentAlquiler && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black opacity-50" />
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Editar Estado del Alquiler #{currentAlquiler.AlquilerId}
+            </h2>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Cliente: {currentAlquiler.ClienteNombre}{" "}
+                {currentAlquiler.ClienteApellido}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Estado actual:{" "}
+                <span className="font-semibold">
+                  {currentAlquiler.AlquilerEstado}
+                </span>
+              </p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nuevo Estado
+              </label>
+              <select
+                value={estadoSeleccionado}
+                onChange={(e) => setEstadoSeleccionado(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                Buscar
+                <option value="Pendiente">Pendiente</option>
+                <option value="Entregado">Entregado</option>
+                <option value="Devuelto">Devuelto</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
               </button>
-            </form>
-
-            <div className="col-span-1 flex items-center">
-              <button className="w-full h-full px-4 py-2 rounded bg-blue-500 text-white font-medium hover:bg-blue-600">
-                Nueva acción
+              <button
+                onClick={handleUpdateEstado}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Guardar
               </button>
             </div>
           </div>
-
-          {/* Tarjetas de estadísticas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full min-w-0">
-            <div className="flex flex-col px-6 py-2 bg-white shadow rounded-lg overflow-hidden">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="text-6xl font-bold tracking-tight leading-none text-blue-500">
-                  25
-                </div>
-                <div className="text-lg font-medium text-blue-500">
-                  Usuarios totales
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col px-6 py-2 bg-white shadow rounded-lg overflow-hidden">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="text-6xl font-bold tracking-tight leading-none text-amber-500">
-                  3
-                </div>
-                <div className="text-lg font-medium text-amber-600">
-                  Nuevos hoy
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col px-6 py-2 bg-white shadow rounded-lg overflow-hidden">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="text-6xl font-bold tracking-tight leading-none text-green-500">
-                  18
-                </div>
-                <div className="text-lg font-medium text-green-600">
-                  Activos
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col px-6 py-2 bg-white shadow rounded-lg overflow-hidden">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="text-6xl font-bold tracking-tight leading-none text-primary-900">
-                  4
-                </div>
-                <div className="text-lg font-medium text-primary-900">
-                  Administradores
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+        </div>
+      )}
     </main>
   );
 }

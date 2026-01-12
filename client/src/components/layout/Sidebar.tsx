@@ -58,7 +58,7 @@ const navigation: NavigationItem[] = [
   //   icon: <ClockIcon className="h-7 w-6" />,
   // },
   {
-    name: "Alquileres Venta",
+    name: "Alquiler Prendas",
     href: "/alquileres-venta",
     icon: <CurrencyDollarIcon className="h-7 w-6" />,
   },
@@ -68,7 +68,7 @@ const navigation: NavigationItem[] = [
   //   icon: <ShoppingCartIcon className="h-7 w-6" />,
   // },
   {
-    name: "Cobro de Créditos",
+    name: "Cobro de Alquileres",
     href: "/credito-pagos",
     icon: <BanknotesIcon className="h-7 w-6" />,
   },

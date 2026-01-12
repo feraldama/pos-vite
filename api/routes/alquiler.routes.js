@@ -21,6 +21,16 @@ router.get(
   authMiddleware,
   alquilerController.getReporteAlquileresPorCliente
 );
+router.get(
+  "/proximos-entrega",
+  authMiddleware,
+  alquilerController.getAlquileresProximosEntrega
+);
+router.get(
+  "/proximos-devolucion",
+  authMiddleware,
+  alquilerController.getAlquileresProximosDevolucion
+);
 router.post(
   "/procesar-pago",
   authMiddleware,

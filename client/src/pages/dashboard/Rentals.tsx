@@ -532,13 +532,157 @@ export default function Rentals() {
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
-    doc.text(
-      `Total a Pagar Gs. ${totalCost.toLocaleString("es-ES")}`,
-      0,
-      lastAutoTable.finalY + 5
-    );
 
-    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, lastAutoTable.finalY + 10);
+    let yPosition = lastAutoTable.finalY + 5;
+
+    // Línea separadora
+    doc.setLineWidth(0.2);
+    doc.line(0, yPosition, 75, yPosition);
+    yPosition += 5;
+
+    // Información de pagos
+    doc.setFontSize(7);
+
+    // Efectivo
+    if (efectivo > 0) {
+      doc.text(
+        `Efectivo: Gs. ${efectivo.toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+
+    // Transferencia
+    if (banco > 0) {
+      doc.text(
+        `Transferencia: Gs. ${banco.toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+
+    // Tarjeta Débito (con 3% adicional)
+    if (bancoDebito > 0) {
+      const debitoConAdicional = bancoDebito * 1.03;
+      doc.text(
+        `Tarjeta Débito (3% adicional): Gs. ${Math.round(
+          debitoConAdicional
+        ).toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+
+    // Tarjeta Crédito (con 5% adicional)
+    if (bancoCredito > 0) {
+      const creditoConAdicional = bancoCredito * 1.05;
+      doc.text(
+        `Tarjeta Crédito (5% adicional): Gs. ${Math.round(
+          creditoConAdicional
+        ).toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+
+    // Cuenta de cliente
+    if (cuentaCliente > 0) {
+      doc.text(
+        `Cuenta de cliente: Gs. ${cuentaCliente.toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+
+    // Voucher (descuento)
+    if (voucher > 0) {
+      doc.text(`Voucher: Gs. ${voucher.toLocaleString("es-ES")}`, 0, yPosition);
+      yPosition += 4;
+    }
+
+    // Línea separadora
+    yPosition += 2;
+    doc.line(0, yPosition, 75, yPosition);
+    yPosition += 5;
+
+    // Calcular total entregado (suma de todo menos voucher y cuenta cliente)
+    const totalEntregado =
+      efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
+
+    // Total con descuento de voucher
+    const totalConDescuento = totalCost - voucher;
+
+    // Saldo que falta
+    const saldoFalta = totalConDescuento - totalEntregado;
+
+    // Total entregado
+    doc.setFontSize(8);
+    doc.text(
+      `Total Entregado: Gs. ${Math.round(totalEntregado).toLocaleString(
+        "es-ES"
+      )}`,
+      0,
+      yPosition
+    );
+    yPosition += 5;
+
+    // Saldo que falta
+    if (saldoFalta > 0) {
+      doc.text(
+        `Saldo que falta: Gs. ${Math.round(saldoFalta).toLocaleString(
+          "es-ES"
+        )}`,
+        0,
+        yPosition
+      );
+      yPosition += 5;
+    } else if (saldoFalta < 0) {
+      doc.text(
+        `Vuelto: Gs. ${Math.round(Math.abs(saldoFalta)).toLocaleString(
+          "es-ES"
+        )}`,
+        0,
+        yPosition
+      );
+      yPosition += 5;
+    }
+
+    // Línea separadora
+    doc.line(0, yPosition, 75, yPosition);
+    yPosition += 5;
+
+    // Total a Pagar (con descuento si hay voucher)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    if (voucher > 0) {
+      doc.text(
+        `Subtotal: Gs. ${totalCost.toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+      doc.text(
+        `Descuento (Voucher): Gs. ${voucher.toLocaleString("es-ES")}`,
+        0,
+        yPosition
+      );
+      yPosition += 4;
+    }
+    doc.text(
+      `Total a Pagar: Gs. ${totalConDescuento.toLocaleString("es-ES")}`,
+      0,
+      yPosition
+    );
+    yPosition += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, yPosition);
 
     doc.save("ticket_alquiler.pdf");
   };

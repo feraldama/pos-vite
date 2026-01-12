@@ -47,36 +47,88 @@ const AlquilerPrendas = {
 
   create: (data) => {
     return new Promise((resolve, reject) => {
-      // Obtener el siguiente AlquilerPrendasId para este AlquilerId
-      db.query(
-        "SELECT COALESCE(MAX(AlquilerPrendasId), 0) as maxId FROM alquilerprendas WHERE AlquilerId = ?",
-        [data.AlquilerId],
-        (err, results) => {
-          if (err) return reject(err);
-          const nextPrendasId = (results[0]?.maxId || 0) + 1;
-
-          const query = `INSERT INTO alquilerprendas (
-            AlquilerId,
-            AlquilerPrendasId,
-            ProductoId,
-            AlquilerPrendasPrecio
-          ) VALUES (?, ?, ?, ?)`;
-
-          const values = [
-            data.AlquilerId,
-            nextPrendasId,
-            data.ProductoId,
-            data.AlquilerPrendasPrecio,
-          ];
-
-          db.query(query, values, (err, result) => {
-            if (err) return reject(err);
-            AlquilerPrendas.getById(data.AlquilerId, nextPrendasId)
-              .then((alquilerPrendas) => resolve(alquilerPrendas))
-              .catch((error) => reject(error));
-          });
+      const attemptInsert = (retries = 10) => {
+        if (retries <= 0) {
+          return reject(
+            new Error(
+              "No se pudo crear la prenda después de múltiples intentos"
+            )
+          );
         }
-      );
+
+        // Primero obtener el siguiente ID sin bloqueo (lectura rápida)
+        db.query(
+          `SELECT COALESCE(MAX(AlquilerPrendasId), 0) as maxId 
+           FROM alquilerprendas 
+           WHERE AlquilerId = ?`,
+          [data.AlquilerId],
+          (err, results) => {
+            if (err) {
+              if (
+                retries > 0 &&
+                (err.code === "ER_LOCK_DEADLOCK" ||
+                  err.code === "ER_LOCK_WAIT_TIMEOUT")
+              ) {
+                return setTimeout(
+                  () => attemptInsert(retries - 1),
+                  Math.random() * 50 + 10
+                );
+              }
+              return reject(err);
+            }
+
+            const maxId = results[0]?.maxId || 0;
+            const nextPrendasId = maxId + 1;
+
+            // Intentar insertar directamente (optimistic locking)
+            const insertQuery = `INSERT INTO alquilerprendas (
+              AlquilerId,
+              AlquilerPrendasId,
+              ProductoId,
+              AlquilerPrendasPrecio
+            ) VALUES (?, ?, ?, ?)`;
+
+            const values = [
+              data.AlquilerId,
+              nextPrendasId,
+              data.ProductoId,
+              data.AlquilerPrendasPrecio,
+            ];
+
+            db.query(insertQuery, values, (err, result) => {
+              if (err) {
+                // Si es error de clave duplicada, otra transacción insertó primero
+                // Reintentar con un nuevo cálculo del ID
+                if (err.code === "ER_DUP_ENTRY") {
+                  return setTimeout(
+                    () => attemptInsert(retries - 1),
+                    Math.random() * 30 + 10
+                  );
+                }
+                // Si es deadlock, reintentar
+                if (
+                  retries > 0 &&
+                  (err.code === "ER_LOCK_DEADLOCK" ||
+                    err.code === "ER_LOCK_WAIT_TIMEOUT")
+                ) {
+                  return setTimeout(
+                    () => attemptInsert(retries - 1),
+                    Math.random() * 100 + 50
+                  );
+                }
+                return reject(err);
+              }
+
+              // Éxito, obtener el registro creado
+              AlquilerPrendas.getById(data.AlquilerId, nextPrendasId)
+                .then((alquilerPrendas) => resolve(alquilerPrendas))
+                .catch((error) => reject(error));
+            });
+          }
+        );
+      };
+
+      attemptInsert();
     });
   },
 

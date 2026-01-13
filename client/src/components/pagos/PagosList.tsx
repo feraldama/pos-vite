@@ -126,6 +126,7 @@ export default function PagosList({
     SuscripcionFechaInicio: "",
     SuscripcionFechaFin: "",
   });
+  const [fechaError, setFechaError] = useState<string>("");
   const clienteSeleccionadoRef = useRef<Cliente | null>(null);
   const { user } = useAuth();
 
@@ -201,6 +202,7 @@ export default function PagosList({
         SuscripcionFechaInicio: new Date().toISOString().split("T")[0],
         SuscripcionFechaFin: "",
       });
+      setFechaError("");
     }
   }, [currentPago, user]);
 
@@ -269,6 +271,8 @@ export default function PagosList({
         if (fechaFin) {
           newData.SuscripcionFechaFin = fechaFin;
         }
+        // Limpiar error si se cambia la fecha de inicio
+        setFechaError("");
       }
 
       // Si cambió el plan y hay una fecha de inicio, recalcular fecha fin
@@ -284,6 +288,37 @@ export default function PagosList({
             ...prev,
             PagoMonto: Number(plan.PlanPrecio),
           }));
+        }
+        // Limpiar error si se cambia el plan
+        setFechaError("");
+      }
+
+      // Validar que la fecha fin no sea anterior a la fecha inicio
+      if (name === "SuscripcionFechaFin") {
+        const fechaInicio = newData.SuscripcionFechaInicio;
+        if (fechaInicio && value) {
+          const fechaInicioDate = new Date(fechaInicio);
+          const fechaFinDate = new Date(value);
+          if (fechaFinDate < fechaInicioDate) {
+            setFechaError(
+              "La fecha fin no puede ser anterior a la fecha inicio"
+            );
+          } else {
+            setFechaError("");
+          }
+        } else {
+          setFechaError("");
+        }
+      }
+
+      // Si cambió la fecha de inicio y ya hay una fecha fin, validar
+      if (name === "SuscripcionFechaInicio" && newData.SuscripcionFechaFin) {
+        const fechaInicioDate = new Date(value);
+        const fechaFinDate = new Date(newData.SuscripcionFechaFin);
+        if (fechaFinDate < fechaInicioDate) {
+          setFechaError("La fecha fin no puede ser anterior a la fecha inicio");
+        } else {
+          setFechaError("");
         }
       }
 
@@ -388,6 +423,21 @@ export default function PagosList({
           title: "Fecha de fin requerida",
           text: "Debe seleccionar una fecha de fin",
         });
+        return;
+      }
+
+      // Validar que la fecha fin no sea anterior a la fecha inicio
+      const fechaInicioDate = new Date(
+        suscripcionFormData.SuscripcionFechaInicio
+      );
+      const fechaFinDate = new Date(suscripcionFormData.SuscripcionFechaFin);
+      if (fechaFinDate < fechaInicioDate) {
+        Swal.fire({
+          icon: "error",
+          title: "Error de validación",
+          text: "La fecha fin no puede ser anterior a la fecha inicio",
+        });
+        setFechaError("La fecha fin no puede ser anterior a la fecha inicio");
         return;
       }
     } else {
@@ -619,6 +669,7 @@ export default function PagosList({
                                   .split("T")[0],
                                 SuscripcionFechaFin: "",
                               });
+                              setFechaError("");
                             }
                           }}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
@@ -659,6 +710,7 @@ export default function PagosList({
                                   .split("T")[0],
                                 SuscripcionFechaFin: "",
                               });
+                              setFechaError("");
                             }
                           }}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
@@ -739,9 +791,20 @@ export default function PagosList({
                           name="SuscripcionFechaFin"
                           value={suscripcionFormData.SuscripcionFechaFin}
                           onChange={handleSuscripcionInputChange}
-                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          min={
+                            suscripcionFormData.SuscripcionFechaInicio ||
+                            undefined
+                          }
+                          className={`bg-gray-50 border ${
+                            fechaError ? "border-red-500" : "border-gray-300"
+                          } text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5`}
                           required
                         />
+                        {fechaError && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {fechaError}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </>

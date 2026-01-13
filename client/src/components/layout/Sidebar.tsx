@@ -48,11 +48,6 @@ const navigation: NavigationItem[] = [
     icon: <LockClosedIcon className="h-7 w-6" />,
   },
   // {
-  //   name: "Ventas",
-  //   href: "/ventas",
-  //   icon: <CurrencyDollarIcon className="h-7 w-6" />,
-  // },
-  // {
   //   name: "Alquileres",
   //   href: "/alquileres",
   //   icon: <ClockIcon className="h-7 w-6" />,
@@ -99,6 +94,11 @@ const navigation: NavigationItem[] = [
     icon: <UsersIcon className="h-7 w-6" />,
   },
   {
+    name: "Venta Prendas",
+    href: "/ventas",
+    icon: <CurrencyDollarIcon className="h-7 w-6" />,
+  },
+  {
     name: "Reportes",
     href: "/reportes",
     icon: <ChartBarIcon className="h-7 w-6" />,
@@ -119,8 +119,9 @@ const navigation: NavigationItem[] = [
     href: "/modifications",
     icon: <WrenchIcon className="h-7 w-6" />,
     children: [
-      { name: "Facturas", href: "/facturas" },
       { name: "Alquileres", href: "/alquileres" },
+      { name: "Venta Prendas", href: "/modifications/ventas" },
+      { name: "Facturas", href: "/facturas" },
       // { name: "Compras", href: "/modifications/compras" },
       { name: "Inventario", href: "/inventario" },
     ],

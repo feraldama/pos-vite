@@ -457,7 +457,7 @@ const Alquiler = {
   },
 
   // Obtener alquileres próximos a fecha de entrega (hoy y próximos días)
-  // También incluye alquileres con fecha pasada que siguen en estado Pendiente
+  // Solo incluye alquileres en estado Pendiente
   getAlquileresProximosEntrega: (dias = 7) => {
     return new Promise((resolve, reject) => {
       const query = `
@@ -469,12 +469,11 @@ const Alquiler = {
         FROM alquiler a
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
         WHERE a.AlquilerFechaEntrega IS NOT NULL
+        AND a.AlquilerEstado = 'Pendiente'
         AND (
-          (DATE(a.AlquilerFechaEntrega) >= CURDATE()
-          AND DATE(a.AlquilerFechaEntrega) <= DATE_ADD(CURDATE(), INTERVAL ? DAY))
-          OR (DATE(a.AlquilerFechaEntrega) < CURDATE() AND a.AlquilerEstado = 'Pendiente')
+          DATE(a.AlquilerFechaEntrega) >= CURDATE()
+          AND DATE(a.AlquilerFechaEntrega) <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
         )
-        AND a.AlquilerEstado != 'Completado'
         ORDER BY a.AlquilerFechaEntrega ASC
       `;
 

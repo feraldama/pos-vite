@@ -314,6 +314,51 @@ const AlquilerPrendas = {
       });
     });
   },
+
+  // Verificar si una prenda está alquilada en un rango de fechas
+  // Retorna los alquileres que tienen conflicto con el rango de fechas especificado
+  verificarDisponibilidad: (productoId, fechaEntrega, fechaDevolucion) => {
+    return new Promise((resolve, reject) => {
+      // Verificar si hay alquileres existentes con el mismo ProductoId
+      // donde el rango de fechas se solape y el estado no sea "Devuelto" o "Cancelado"
+      const query = `
+        SELECT 
+          ap.ProductoId,
+          a.AlquilerId,
+          a.AlquilerFechaEntrega,
+          a.AlquilerFechaDevolucion,
+          a.AlquilerEstado,
+          p.ProductoNombre,
+          p.ProductoCodigo
+        FROM alquilerprendas ap
+        INNER JOIN alquiler a ON ap.AlquilerId = a.AlquilerId
+        LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
+        WHERE ap.ProductoId = ?
+        AND a.AlquilerEstado NOT IN ('Devuelto', 'Cancelado')
+        AND a.AlquilerFechaEntrega IS NOT NULL
+        AND a.AlquilerFechaDevolucion IS NOT NULL
+        AND (
+          -- El nuevo rango se solapa con el existente si:
+          -- fechaEntregaNueva <= fechaDevolucionExistente 
+          -- AND fechaDevolucionNueva >= fechaEntregaExistente
+          (DATE(?) <= DATE(a.AlquilerFechaDevolucion)
+          AND DATE(?) >= DATE(a.AlquilerFechaEntrega))
+        )
+      `;
+
+      db.query(
+        query,
+        [productoId, fechaEntrega, fechaDevolucion],
+        (err, results) => {
+          if (err) {
+            console.error("Error en verificarDisponibilidad:", err);
+            return reject(err);
+          }
+          resolve(results);
+        }
+      );
+    });
+  },
 };
 
 module.exports = AlquilerPrendas;

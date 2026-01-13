@@ -10,7 +10,6 @@ import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
 import { createAlquiler } from "../../services/alquiler.service";
-import { createAlquilerPrendas } from "../../services/alquilerprendas.service";
 import logo from "../../assets/img/logo.jpg";
 import {
   getAllClientesSinPaginacion,
@@ -397,7 +396,13 @@ export default function Rentals() {
       const montoEntrega =
         efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
 
-      // Crear el alquiler
+      // Preparar las prendas para enviar en el body del alquiler
+      const prendas = carrito.map((item) => ({
+        ProductoId: item.id,
+        AlquilerPrendasPrecio: item.precioAlquiler,
+      }));
+
+      // Crear el alquiler con las prendas incluidas para validación
       const alquilerData = {
         ClienteId: clienteSeleccionado.ClienteId,
         AlquilerFechaAlquiler: fechaAlquiler,
@@ -406,6 +411,7 @@ export default function Rentals() {
         AlquilerEstado: "Pendiente",
         AlquilerTotal: total,
         AlquilerEntrega: Math.round(montoEntrega),
+        prendas: prendas,
         // Datos de pago para registro en caja
         pagos: {
           efectivo,
@@ -425,16 +431,7 @@ export default function Rentals() {
         throw new Error("No se pudo obtener el ID del alquiler creado");
       }
 
-      // Crear las prendas del alquiler
-      const prendasPromises = carrito.map((item) =>
-        createAlquilerPrendas({
-          AlquilerId: alquilerId,
-          ProductoId: item.id,
-          AlquilerPrendasPrecio: item.precioAlquiler,
-        })
-      );
-
-      await Promise.all(prendasPromises);
+      // Las prendas ya fueron creadas por el controlador cuando se enviaron en el body
 
       if (printTicket) {
         generateTicketPDF();
@@ -464,12 +461,84 @@ export default function Rentals() {
         setFechaDevolucion("");
         setClienteSeleccionado(null);
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
+
+      // El servicio lanza axiosError.response?.data directamente, que es un objeto
+      // Verificar si es un error de disponibilidad de prendas
+      if (
+        error &&
+        typeof error === "object" &&
+        "success" in error &&
+        error.success === false &&
+        "prendasNoDisponibles" in error
+      ) {
+        const errorData = error as {
+          message?: string;
+          prendasNoDisponibles?: Array<{
+            ProductoId: number;
+            ProductoNombre: string;
+            ProductoCodigo?: string;
+            ProductoImagen?: string | null;
+            conflictos: Array<{
+              AlquilerId: number;
+              FechaEntregaFormateada: string;
+              FechaDevolucionFormateada: string;
+            }>;
+          }>;
+          detalles?: string[];
+        };
+        const prendasNoDisponibles = errorData.prendasNoDisponibles || [];
+        const mensajePrincipal =
+          errorData.message || "Una o más prendas no están disponibles";
+
+        // Construir HTML detallado con imágenes y fechas
+        let htmlContent = `<div style="text-align: left; max-width: 500px;">`;
+        htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${mensajePrincipal}:</p>`;
+
+        prendasNoDisponibles.forEach((prenda, index) => {
+          const conflicto = prenda.conflictos[0];
+          const imagenSrc = prenda.ProductoImagen
+            ? `data:image/jpeg;base64,${prenda.ProductoImagen}`
+            : logo;
+
+          htmlContent += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
+          htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px;" />`;
+          htmlContent += `<div style="flex: 1;">`;
+          htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
+            index + 1
+          }. ${prenda.ProductoNombre}</div>`;
+          htmlContent += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">📅 No disponible del <strong>${conflicto.FechaEntregaFormateada}</strong> al <strong>${conflicto.FechaDevolucionFormateada}</strong></div>`;
+          htmlContent += `<div style="font-size: 12px; color: #888;">Alquiler #${conflicto.AlquilerId}</div>`;
+          htmlContent += `</div>`;
+          htmlContent += `</div>`;
+        });
+
+        htmlContent += `</div>`;
+
+        Swal.fire({
+          icon: "warning",
+          title: "Prendas no disponibles",
+          html: htmlContent,
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#2563eb",
+          width: "600px",
+        });
+        return;
+      }
+
+      // Manejar otros errores - el servicio lanza el objeto de respuesta directamente
+      let mensajeError = "Error al realizar el alquiler";
+      if (error && typeof error === "object" && "message" in error) {
+        mensajeError = String(error.message);
+      } else if (error instanceof Error) {
+        mensajeError = error.message;
+      }
+
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Error al realizar el alquiler",
+        text: mensajeError,
       });
     }
   };

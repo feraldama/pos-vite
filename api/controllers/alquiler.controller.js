@@ -99,6 +99,91 @@ exports.createAlquiler = async (req, res) => {
         });
       }
     }
+
+    // Validar que se proporcionen fechas de entrega y devolución si se van a crear prendas
+    if (
+      req.body.prendas &&
+      Array.isArray(req.body.prendas) &&
+      req.body.prendas.length > 0
+    ) {
+      if (!req.body.AlquilerFechaEntrega || !req.body.AlquilerFechaDevolucion) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Las fechas de entrega y devolución son requeridas para alquilar prendas",
+        });
+      }
+
+      // Verificar disponibilidad de cada prenda antes de crear el alquiler
+      const prendasNoDisponibles = [];
+      for (const prenda of req.body.prendas) {
+        if (!prenda.ProductoId) {
+          continue; // Saltar si no tiene ProductoId
+        }
+
+        const conflictos = await AlquilerPrendas.verificarDisponibilidad(
+          prenda.ProductoId,
+          req.body.AlquilerFechaEntrega,
+          req.body.AlquilerFechaDevolucion
+        );
+
+        if (conflictos && conflictos.length > 0) {
+          // Obtener información del producto para el mensaje de error
+          const Producto = require("../models/producto.model");
+          const producto = await Producto.getById(prenda.ProductoId);
+          const nombreProducto = producto
+            ? `${producto.ProductoCodigo || ""} - ${
+                producto.ProductoNombre || "Producto"
+              }`
+            : `Producto ID: ${prenda.ProductoId}`;
+
+          // Formatear fechas para mostrar
+          const formatearFecha = (fecha) => {
+            if (!fecha) return "";
+            const date = new Date(fecha);
+            const dia = String(date.getDate()).padStart(2, "0");
+            const mes = String(date.getMonth() + 1).padStart(2, "0");
+            const año = date.getFullYear();
+            return `${dia}/${mes}/${año}`;
+          };
+
+          prendasNoDisponibles.push({
+            ProductoId: prenda.ProductoId,
+            ProductoNombre: nombreProducto,
+            ProductoCodigo: producto?.ProductoCodigo || "",
+            ProductoImagen: producto?.ProductoImagen
+              ? producto.ProductoImagen.toString("base64")
+              : null,
+            conflictos: conflictos.map((c) => ({
+              AlquilerId: c.AlquilerId,
+              AlquilerFechaEntrega: c.AlquilerFechaEntrega,
+              AlquilerFechaDevolucion: c.AlquilerFechaDevolucion,
+              FechaEntregaFormateada: formatearFecha(c.AlquilerFechaEntrega),
+              FechaDevolucionFormateada: formatearFecha(
+                c.AlquilerFechaDevolucion
+              ),
+            })),
+          });
+        }
+      }
+
+      // Si hay prendas no disponibles, retornar error con detalles
+      if (prendasNoDisponibles.length > 0) {
+        const mensajes = prendasNoDisponibles.map((p) => {
+          const conflicto = p.conflictos[0];
+          return `${p.ProductoNombre} está alquilada del ${conflicto.FechaEntregaFormateada} al ${conflicto.FechaDevolucionFormateada} (Alquiler #${conflicto.AlquilerId})`;
+        });
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Una o más prendas no están disponibles en el rango de fechas seleccionado",
+          prendasNoDisponibles: prendasNoDisponibles,
+          detalles: mensajes,
+        });
+      }
+    }
+
     const nuevoAlquiler = await Alquiler.create(req.body);
 
     // Si se proporcionan prendas, crearlas

@@ -392,6 +392,32 @@ export default function ProductsList({
                       </div>
                       <div>
                         <label
+                          htmlFor="ProductoPrecioVentaMayorista"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Precio Venta
+                        </label>
+                        <input
+                          type="text"
+                          name="ProductoPrecioVentaMayorista"
+                          id="ProductoPrecioVentaMayorista"
+                          value={formatMiles(
+                            formData.ProductoPrecioVentaMayorista || 0
+                          )}
+                          onChange={(e) => {
+                            // Eliminar puntos y formatear a número
+                            const raw = e.target.value.replace(/\./g, "");
+                            setFormData((prev) => ({
+                              ...prev,
+                              ProductoPrecioVentaMayorista: Number(raw),
+                            }));
+                          }}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
                           htmlFor="ProductoStock"
                           className="block mb-2 text-sm font-medium text-gray-900"
                         >
@@ -432,20 +458,6 @@ export default function ProductsList({
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="mt-8 w-full text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-2 text-sm font-medium cursor-pointer"
-                        >
-                          Seleccionar imagen
-                        </button>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                          ref={fileInputRef}
-                        />
                       </div>
                       <div>
                         <label
@@ -469,15 +481,33 @@ export default function ProductsList({
                             </option>
                           ))}
                         </select>
-                        {formData.ProductoImagen && (
+                      </div>
+                      <div className="col-span-2">
+                        <div className="flex gap-4">
                           <button
                             type="button"
-                            onClick={handleRemoveImage}
-                            className="mt-8 w-full text-red-600 hover:text-red-800 border border-red-300 bg-white rounded px-3 py-2 text-sm font-medium"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-2 text-sm font-medium cursor-pointer"
                           >
-                            Eliminar imagen
+                            Seleccionar imagen
                           </button>
-                        )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            ref={fileInputRef}
+                          />
+                          {formData.ProductoImagen && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveImage}
+                              className="w-full text-red-600 hover:text-red-800 border border-red-300 bg-white rounded px-3 py-2 text-sm font-medium"
+                            >
+                              Eliminar imagen
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -1262,7 +1262,7 @@ export default function Rentals() {
                     key={p.ProductoId}
                     nombre={p.ProductoNombre}
                     precio={p.ProductoPrecioVenta}
-                    precioMayorista={p.ProductoPrecioVenta}
+                    precioMayorista={undefined}
                     clienteTipo="MI"
                     imagen={
                       p.ProductoImagen

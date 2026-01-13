@@ -26,7 +26,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import InvoicePrintModal from "../../components/common/InvoicePrintModal";
-import { getCombos } from "../../services/combos.service";
+// Ya no se importa getCombos porque siempre es caja
 import Pagination from "../../components/common/Pagination";
 import {
   formatMiles,
@@ -53,14 +53,7 @@ interface Caja {
   [key: string]: unknown;
 }
 
-interface Combo {
-  ComboId: number;
-  ComboDescripcion: string;
-  ProductoId: number;
-  ComboCantidad: number;
-  ComboPrecio: number;
-  [key: string]: unknown;
-}
+// Ya no se usa la interfaz Combo porque siempre es caja
 
 export default function Sales() {
   const [carrito, setCarrito] = useState<
@@ -71,12 +64,9 @@ export default function Sales() {
       imagen: string;
       stock: number;
       cantidad: number;
-      caja: boolean;
       cartItemId: number;
-      // Precios guardados para no depender del array productos
-      precioVenta: number;
+      // Precio mayorista guardado
       precioVentaMayorista: number;
-      precioUnitario: number;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
@@ -134,7 +124,7 @@ export default function Sales() {
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
-  const [combos, setCombos] = useState<Combo[]>([]);
+  // Ya no se usan combos porque siempre es caja
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
@@ -165,27 +155,21 @@ export default function Sales() {
     stock: number;
     precioUnitario?: number;
   }) => {
-    const tipo = clienteSeleccionado?.ClienteTipo || "MI";
-    const precioFinal =
-      tipo === "MA" && producto.precioMayorista !== undefined
-        ? producto.precioMayorista
-        : producto.precio;
-
-    const precioSeguro = precioFinal ?? 0;
+    // Siempre usar precio mayorista
+    const precioMayorista = producto.precioMayorista ?? producto.precio;
 
     const nuevoCartItemId = Date.now() + Math.random();
     setCarrito([
       ...carrito,
       {
-        ...producto,
-        precio: precioSeguro,
+        id: producto.id,
+        nombre: producto.nombre,
+        imagen: producto.imagen,
+        stock: producto.stock,
         cantidad: 1,
-        caja: false,
         cartItemId: nuevoCartItemId,
-        // Guardar los precios originales para cálculos posteriores
-        precioVenta: producto.precio,
-        precioVentaMayorista: producto.precioMayorista ?? producto.precio,
-        precioUnitario: producto.precioUnitario ?? producto.precio,
+        precio: precioMayorista,
+        precioVentaMayorista: precioMayorista,
       },
     ]);
     setSelectedProductId(nuevoCartItemId); // Focus en el input de cantidad del producto nuevo
@@ -205,42 +189,14 @@ export default function Sales() {
     );
   };
 
-  // Función para obtener el precio unitario según el check Caja
+  // Función para obtener el precio unitario (siempre mayorista, siempre caja)
   const obtenerPrecio = (p: (typeof carrito)[0]) => {
-    // Usar los precios guardados en el carrito en lugar de buscar en productos
-    if (p.caja) {
-      return clienteSeleccionado?.ClienteTipo === "MA"
-        ? p.precioVentaMayorista
-        : p.precioVenta;
-    } else {
-      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
-      if (combo) {
-        // El precio unitario se calcula en base al combo
-        return (
-          calcularPrecioConCombo(p.id, p.cantidad, p.precioUnitario) /
-          p.cantidad
-        );
-      }
-      return p.precioUnitario;
-    }
+    return p.precioVentaMayorista;
   };
 
-  // Función para obtener el total según el check Caja
+  // Función para obtener el total (siempre mayorista, siempre caja)
   const obtenerTotal = (p: (typeof carrito)[0]) => {
-    // Usar los precios guardados en el carrito en lugar de buscar en productos
-    if (p.caja) {
-      const precio =
-        clienteSeleccionado?.ClienteTipo === "MA"
-          ? p.precioVentaMayorista
-          : p.precioVenta;
-      return precio * p.cantidad;
-    } else {
-      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
-      if (combo) {
-        return calcularPrecioConCombo(p.id, p.cantidad, p.precioUnitario);
-      }
-      return p.precioUnitario * p.cantidad;
-    }
+    return p.precioVentaMayorista * p.cantidad;
   };
 
   const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
@@ -286,10 +242,7 @@ export default function Sales() {
     }
   }, [cajaAperturada, busquedaDebounced, currentPage, itemsPerPage]);
 
-  // Cargar combos solo una vez al montar
-  useEffect(() => {
-    getCombos(1, 1000).then((data) => setCombos(data.data || []));
-  }, []);
+  // Ya no se cargan combos porque siempre es caja
 
   // Cargar productos cuando cambian las dependencias
   useEffect(() => {
@@ -386,27 +339,17 @@ export default function Sales() {
     }
   };
 
-  useEffect(() => {
-    if (!clienteSeleccionado) return;
-    setCarrito((carritoActual) =>
-      carritoActual.map((item) => {
-        // Usar los precios guardados en el carrito
-        const tipo = clienteSeleccionado.ClienteTipo;
-        const nuevoPrecio =
-          tipo === "MA" ? item.precioVentaMayorista : item.precioVenta;
-        return { ...item, precio: nuevoPrecio ?? 0 };
-      })
-    );
-  }, [clienteSeleccionado]);
+  // Ya no es necesario actualizar precios cuando cambia el cliente
+  // porque siempre usamos precio mayorista
 
-  // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
+  // Items del carrito para el cálculo del subtotal
   const cartItems = carrito.map((p) => ({
     id: p.id,
     nombre: p.nombre,
     quantity: p.cantidad,
     salePrice: p.precio,
     price: p.precio,
-    unidad: "U",
+    unidad: "C", // Siempre caja
     totalPrice: obtenerTotal(p),
   }));
 
@@ -417,24 +360,7 @@ export default function Sales() {
     );
   }
 
-  function calcularPrecioConCombo(
-    productoId: number,
-    cantidad: number,
-    precioUnitario: number
-  ) {
-    const combo = combos.find(
-      (c) => Number(c.ProductoId) === Number(productoId)
-    );
-    if (!combo) return cantidad * precioUnitario;
-    const comboCantidad = Number(combo.ComboCantidad);
-    const comboPrecio = Number(combo.ComboPrecio);
-    if (cantidad < comboCantidad) {
-      return cantidad * precioUnitario;
-    }
-    const cantidadCombos = Math.floor(cantidad / comboCantidad);
-    const cantidadRestante = cantidad % comboCantidad;
-    return cantidadCombos * comboPrecio + cantidadRestante * precioUnitario;
-  }
+  // Ya no se calcula precio con combo porque siempre es caja
 
   const sendRequest = async () => {
     const fecha = new Date();
@@ -447,26 +373,16 @@ export default function Sales() {
     const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
 
     const SDTProductoItem = carrito.map((p) => {
-      const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
-      // Usar el precio unitario guardado en el carrito
-      const precioUnitario = p.precioUnitario;
-      const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
-      const totalCombo = calcularPrecioConCombo(
-        p.id,
-        p.cantidad,
-        precioUnitario
-      );
-      const esCombo = combo && p.cantidad >= comboCantidad;
       return {
         ClienteId: clienteSeleccionado?.ClienteId,
         Producto: {
           ProductoId: p.id,
           VentaProductoCantidad: p.cantidad,
-          ProductoPrecioVenta: p.precio,
-          ProductoUnidad: p.caja ? "C" : "U",
+          ProductoPrecioVenta: p.precioVentaMayorista,
+          ProductoUnidad: "C", // Siempre caja
           VentaProductoPrecioTotal: obtenerTotal(p),
-          Combo: esCombo ? "S" : "N",
-          ComboPrecio: esCombo ? totalCombo : 0,
+          Combo: "N", // No se usan combos en modo caja
+          ComboPrecio: 0,
         },
       };
     });
@@ -635,41 +551,14 @@ export default function Sales() {
     // Encabezados de la tabla
     const headers = [["Desc.", "Cant", "Precio", "Total"]];
 
-    // Datos de la tabla
+    // Datos de la tabla (siempre caja, siempre precio mayorista)
     const tableData = carrito.map((p) => {
-      // Usar los precios guardados en el carrito
-      let precioUnitario = 0;
-      let precioLabel = "";
-      let totalLinea = 0;
-      if (p.caja) {
-        // Caja: precio minorista o mayorista
-        precioUnitario =
-          clienteSeleccionado?.ClienteTipo === "MA"
-            ? p.precioVentaMayorista
-            : p.precioVenta;
-        precioLabel = `Caja (${
-          clienteSeleccionado?.ClienteTipo === "MA" ? "Mayorista" : "Minorista"
-        })`;
-        totalLinea = precioUnitario * p.cantidad;
-      } else {
-        // Unidad: puede aplicar combo
-        const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
-        if (combo && p.cantidad >= combo.ComboCantidad) {
-          // Aplica combo
-          precioUnitario = p.precioUnitario;
-          precioLabel = `Unidad (Combo)`;
-          totalLinea = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
-        } else {
-          // Solo unidad
-          precioUnitario = p.precioUnitario;
-          precioLabel = `Unidad`;
-          totalLinea = precioUnitario * p.cantidad;
-        }
-      }
+      const precioUnitario = p.precioVentaMayorista;
+      const totalLinea = precioUnitario * p.cantidad;
       return [
         p.nombre,
         p.cantidad,
-        `Gs. ${precioUnitario.toLocaleString("es-ES")}\n${precioLabel}`,
+        `Gs. ${precioUnitario.toLocaleString("es-ES")}`,
         `Gs. ${totalLinea.toLocaleString("es-ES")}`,
       ];
     });
@@ -814,7 +703,7 @@ export default function Sales() {
       if (productosFiltrados.length > 0) {
         const primerProducto = productosFiltrados[0];
 
-        // Agregar el producto al carrito
+        // Agregar el producto al carrito (siempre con precio mayorista)
         agregarProducto({
           id: primerProducto.ProductoId,
           nombre: primerProducto.ProductoNombre,
@@ -950,29 +839,6 @@ export default function Sales() {
                           >
                             +
                           </button>
-                        </div>
-                        <div className="flex items-center mt-1">
-                          <input
-                            type="checkbox"
-                            id={`caja-checkbox-${p.cartItemId}`}
-                            checked={p.caja}
-                            onChange={() =>
-                              setCarrito(
-                                carrito.map((item) =>
-                                  item.cartItemId === p.cartItemId
-                                    ? { ...item, caja: !item.caja }
-                                    : item
-                                )
-                              )
-                            }
-                            className="cursor-pointer"
-                          />
-                          <label
-                            htmlFor={`caja-checkbox-${p.cartItemId}`}
-                            className="text-lg text-gray-700 cursor-pointer select-none font-medium"
-                          >
-                            Caja
-                          </label>
                         </div>
                       </div>
                     </td>
@@ -1149,7 +1015,7 @@ export default function Sales() {
                   <ProductCard
                     key={p.ProductoId}
                     nombre={p.ProductoNombre}
-                    precio={p.ProductoPrecioVenta}
+                    precio={p.ProductoPrecioVentaMayorista}
                     precioMayorista={p.ProductoPrecioVentaMayorista}
                     clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
                     imagen={
@@ -1172,7 +1038,6 @@ export default function Sales() {
                       })
                     }
                     precioUnitario={p.ProductoPrecioUnitario}
-                    stockUnitario={p.ProductoStockUnitario}
                   />
                 ))
               )}

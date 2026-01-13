@@ -21,7 +21,6 @@ export default function Inventario() {
       imagen: string;
       stock: number;
       caja: number; // Cantidad en cajas
-      unidad: number; // Cantidad en unidades
       cartItemId: number;
     }[]
   >([]);
@@ -47,7 +46,7 @@ export default function Inventario() {
   const puedeEditar = usePermiso("INVENTARIO", "editar");
   const puedeEliminar = usePermiso("INVENTARIO", "eliminar");
   const puedeLeer = usePermiso("INVENTARIO", "leer");
-  const [tipoInventario, setTipoInventario] = useState("S"); // F = Fijar, S = Sumar
+  const [tipoInventario, setTipoInventario] = useState("F"); // F = Fijar, S = Sumar
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
@@ -56,18 +55,14 @@ export default function Inventario() {
   const cantidadCajaRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
     {}
   );
-  const cantidadUnidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {}
-  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selectedProductId !== null) {
-      if (cantidadCajaRefs.current[selectedProductId]) {
-        cantidadCajaRefs.current[selectedProductId]?.focus();
-      } else if (cantidadUnidadRefs.current[selectedProductId]) {
-        cantidadUnidadRefs.current[selectedProductId]?.focus();
-      }
+    if (
+      selectedProductId !== null &&
+      cantidadCajaRefs.current[selectedProductId]
+    ) {
+      cantidadCajaRefs.current[selectedProductId]?.focus();
     }
   }, [selectedProductId, carrito.length]);
 
@@ -99,7 +94,6 @@ export default function Inventario() {
       {
         ...producto,
         caja: 0,
-        unidad: 0,
         cartItemId: nuevoCartItemId,
       },
     ]);
@@ -133,28 +127,6 @@ export default function Inventario() {
           return {
             ...p,
             caja: Math.max(0, cantidad),
-          };
-        }
-        return p;
-      })
-    );
-  };
-
-  const cambiarCantidadUnidad = (cartItemId: number, cantidad: number) => {
-    if (!puedeEditar) {
-      Swal.fire({
-        icon: "warning",
-        title: "Sin permisos",
-        text: "No tienes permiso para editar cantidades en el inventario.",
-      });
-      return;
-    }
-    setCarrito(
-      carrito.map((p) => {
-        if (p.cartItemId === cartItemId) {
-          return {
-            ...p,
-            unidad: Math.max(0, cantidad),
           };
         }
         return p;
@@ -212,13 +184,13 @@ export default function Inventario() {
     }
 
     // Validar que al menos un producto tenga cantidad mayor a 0
-    const productosValidos = carrito.filter((p) => p.caja > 0 || p.unidad > 0);
+    const productosValidos = carrito.filter((p) => p.caja > 0);
 
     if (productosValidos.length === 0) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Debes ingresar al menos una cantidad (caja o unidad) para algún producto",
+        text: "Debes ingresar al menos una cantidad de caja para algún producto",
       });
       return;
     }
@@ -236,7 +208,7 @@ export default function Inventario() {
                 _attributes: { xmlns: "Tech" },
                 Productoid: producto.id,
                 Caja: producto.caja,
-                Unidad: producto.unidad,
+                Unidad: 0,
                 Almacenid: Number(user.LocalId),
                 Tipo: tipoInventario,
               },
@@ -314,15 +286,12 @@ export default function Inventario() {
     setCarrito([]);
   };
 
-  const handleTecladoNumerico = (
-    valor: string | number,
-    tipo: "caja" | "unidad"
-  ) => {
+  const handleTecladoNumerico = (valor: string | number) => {
     if (selectedProductId === null) return;
     setCarrito((prev) =>
       prev.map((item) => {
         if (item.cartItemId !== selectedProductId) return item;
-        let nuevaCantidad = String(tipo === "caja" ? item.caja : item.unidad);
+        let nuevaCantidad = String(item.caja);
         if (valor === "C" || valor === "c") {
           nuevaCantidad = "0";
         } else if (valor === "←") {
@@ -334,9 +303,7 @@ export default function Inventario() {
           }
         }
         const cantidad = Math.max(0, Number(nuevaCantidad));
-        return tipo === "caja"
-          ? { ...item, caja: cantidad }
-          : { ...item, unidad: cantidad };
+        return { ...item, caja: cantidad };
       })
     );
   };
@@ -391,8 +358,7 @@ export default function Inventario() {
                   <th className="py-4 pl-6 font-semibold text-[15px]">
                     Nombre
                   </th>
-                  <th className="py-4 font-semibold text-[15px]">Caja</th>
-                  <th className="py-4 font-semibold text-[15px]">Unidad</th>
+                  <th className="py-4 font-semibold text-[15px]">Cantidad</th>
                 </tr>
               </thead>
               <tbody>
@@ -433,7 +399,7 @@ export default function Inventario() {
                       </div>
                     </td>
                     <td
-                      className="py-3 align-middle"
+                      className="py-3 pr-6 align-middle"
                       onClick={() => {
                         setSelectedProductId(p.cartItemId);
                         setTimeout(() => {
@@ -477,22 +443,19 @@ export default function Inventario() {
                             if (selectedProductId !== p.cartItemId) return;
                             if (e.key >= "0" && e.key <= "9") {
                               e.preventDefault();
-                              handleTecladoNumerico(e.key, "caja");
+                              handleTecladoNumerico(e.key);
                             } else if (e.key === "Backspace") {
                               e.preventDefault();
-                              handleTecladoNumerico("←", "caja");
+                              handleTecladoNumerico("←");
                             } else if (e.key.toLowerCase() === "c") {
                               e.preventDefault();
-                              handleTecladoNumerico("C", "caja");
+                              handleTecladoNumerico("C");
                             } else if (e.key === "ArrowUp") {
                               e.preventDefault();
                               cambiarCantidadCaja(p.cartItemId, p.caja + 1);
                             } else if (e.key === "ArrowDown") {
                               e.preventDefault();
                               cambiarCantidadCaja(p.cartItemId, p.caja - 1);
-                            } else if (e.key === "Tab" && !e.shiftKey) {
-                              e.preventDefault();
-                              cantidadUnidadRefs.current[p.cartItemId]?.focus();
                             }
                           }}
                         />
@@ -500,88 +463,6 @@ export default function Inventario() {
                           onClick={(e) => {
                             e.stopPropagation();
                             cambiarCantidadCaja(p.cartItemId, p.caja + 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td
-                      className="py-3 pr-6 align-middle"
-                      onClick={() => {
-                        setSelectedProductId(p.cartItemId);
-                        setTimeout(() => {
-                          cantidadUnidadRefs.current[p.cartItemId]?.focus();
-                        }, 0);
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadUnidad(p.cartItemId, p.unidad - 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={p.unidad}
-                          min={0}
-                          disabled={!puedeEditar}
-                          className={`w-16 h-8 text-center border border-gray-300 rounded text-base font-semibold mx-1 ${
-                            puedeEditar
-                              ? "bg-gray-50 text-[#222]"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                          readOnly
-                          ref={(el) => {
-                            cantidadUnidadRefs.current[p.cartItemId] =
-                              el || null;
-                          }}
-                          tabIndex={0}
-                          onFocus={() => setSelectedProductId(p.cartItemId)}
-                          onKeyDown={(e) => {
-                            if (selectedProductId !== p.cartItemId) return;
-                            if (e.key >= "0" && e.key <= "9") {
-                              e.preventDefault();
-                              handleTecladoNumerico(e.key, "unidad");
-                            } else if (e.key === "Backspace") {
-                              e.preventDefault();
-                              handleTecladoNumerico("←", "unidad");
-                            } else if (e.key.toLowerCase() === "c") {
-                              e.preventDefault();
-                              handleTecladoNumerico("C", "unidad");
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              cambiarCantidadUnidad(p.cartItemId, p.unidad + 1);
-                            } else if (e.key === "ArrowDown") {
-                              e.preventDefault();
-                              cambiarCantidadUnidad(p.cartItemId, p.unidad - 1);
-                            } else if (e.key === "Tab" && e.shiftKey) {
-                              e.preventDefault();
-                              cantidadCajaRefs.current[p.cartItemId]?.focus();
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadUnidad(p.cartItemId, p.unidad + 1);
                             setSelectedProductId(p.cartItemId);
                           }}
                           disabled={!puedeEditar}
@@ -741,7 +622,6 @@ export default function Inventario() {
                       }
                     }}
                     precioUnitario={0}
-                    stockUnitario={p.ProductoStockUnitario}
                   />
                 ))
             )}

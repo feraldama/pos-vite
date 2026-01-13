@@ -293,7 +293,7 @@ export default function ProductsList({
           {/* Fondo opacado */}
           <div className="absolute inset-0 bg-black opacity-50" />
 
-          <div className="relative w-full max-w-2xl max-h-full z-10">
+          <div className="relative w-full max-w-5xl max-h-full z-10">
             <form
               onSubmit={handleSubmit}
               className="relative bg-white rounded-lg shadow"
@@ -327,167 +327,179 @@ export default function ProductsList({
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-                <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoCodigo"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Código
-                    </label>
-                    <input
-                      type="text"
-                      name="ProductoCodigo"
-                      id="ProductoCodigo"
-                      value={formData.ProductoCodigo}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoNombre"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Nombre
-                    </label>
-                    <input
-                      type="text"
-                      name="ProductoNombre"
-                      id="ProductoNombre"
-                      value={formData.ProductoNombre}
-                      onChange={handleNombreChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 uppercase"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoPrecioVenta"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Precio Alquiler
-                    </label>
-                    <input
-                      type="text"
-                      name="ProductoPrecioVenta"
-                      id="ProductoPrecioVenta"
-                      value={formatMiles(formData.ProductoPrecioVenta)}
-                      onChange={(e) => {
-                        // Eliminar puntos y formatear a número
-                        const raw = e.target.value.replace(/\./g, "");
-                        setFormData((prev) => ({
-                          ...prev,
-                          ProductoPrecioVenta: Number(raw),
-                        }));
-                      }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStock"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStock"
-                      id="ProductoStock"
-                      value={formData.ProductoStock}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="TipoPrendaId"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Tipo de Prenda *
-                    </label>
-                    <select
-                      name="TipoPrendaId"
-                      id="TipoPrendaId"
-                      value={formData.TipoPrendaId || ""}
-                      onChange={handleInputChange}
-                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
-                      required
-                    >
-                      <option value="">Seleccione un tipo de prenda</option>
-                      {tiposPrenda.map((tipo) => (
-                        <option
-                          key={tipo.TipoPrendaId}
-                          value={tipo.TipoPrendaId}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Columna izquierda: Campos del formulario */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label
+                          htmlFor="ProductoCodigo"
+                          className="block mb-2 text-sm font-medium text-gray-900"
                         >
-                          {tipo.TipoPrendaNombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="LocalId"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Local
-                    </label>
-                    <select
-                      name="LocalId"
-                      id="LocalId"
-                      value={formData.LocalId}
-                      onChange={handleInputChange}
-                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
-                      required
-                    >
-                      <option value="">Seleccione un local</option>
-                      {locales.map((local) => (
-                        <option key={local.LocalId} value={local.LocalId}>
-                          {local.LocalNombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {/* Imagen: solo mostrar base64 si existe */}
-                  <div className="col-span-6">
-                    <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Imagen del producto
-                    </label>
-                    <div className="flex items-center gap-4 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium cursor-pointer"
-                      >
-                        Seleccionar imagen
-                      </button>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
-                        ref={fileInputRef}
-                      />
-                      {formData.ProductoImagen && (
-                        <>
-                          <img
-                            src={`data:image/jpeg;base64,${formData.ProductoImagen}`}
-                            alt="Imagen producto"
-                            className="w-32 h-32 object-contain border rounded"
-                          />
+                          Código
+                        </label>
+                        <input
+                          type="text"
+                          name="ProductoCodigo"
+                          id="ProductoCodigo"
+                          value={formData.ProductoCodigo}
+                          onChange={handleInputChange}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="ProductoNombre"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Nombre
+                        </label>
+                        <input
+                          type="text"
+                          name="ProductoNombre"
+                          id="ProductoNombre"
+                          value={formData.ProductoNombre}
+                          onChange={handleNombreChange}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 uppercase"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="ProductoPrecioVenta"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Precio Alquiler
+                        </label>
+                        <input
+                          type="text"
+                          name="ProductoPrecioVenta"
+                          id="ProductoPrecioVenta"
+                          value={formatMiles(formData.ProductoPrecioVenta)}
+                          onChange={(e) => {
+                            // Eliminar puntos y formatear a número
+                            const raw = e.target.value.replace(/\./g, "");
+                            setFormData((prev) => ({
+                              ...prev,
+                              ProductoPrecioVenta: Number(raw),
+                            }));
+                          }}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="ProductoStock"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Stock
+                        </label>
+                        <input
+                          type="number"
+                          name="ProductoStock"
+                          id="ProductoStock"
+                          value={formData.ProductoStock}
+                          onChange={handleInputChange}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="TipoPrendaId"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Tipo de Prenda *
+                        </label>
+                        <select
+                          name="TipoPrendaId"
+                          id="TipoPrendaId"
+                          value={formData.TipoPrendaId || ""}
+                          onChange={handleInputChange}
+                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                          required
+                        >
+                          <option value="">Seleccione un tipo de prenda</option>
+                          {tiposPrenda.map((tipo) => (
+                            <option
+                              key={tipo.TipoPrendaId}
+                              value={tipo.TipoPrendaId}
+                            >
+                              {tipo.TipoPrendaNombre}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-8 w-full text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-2 text-sm font-medium cursor-pointer"
+                        >
+                          Seleccionar imagen
+                        </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                          ref={fileInputRef}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="LocalId"
+                          className="block mb-2 text-sm font-medium text-gray-900"
+                        >
+                          Local
+                        </label>
+                        <select
+                          name="LocalId"
+                          id="LocalId"
+                          value={formData.LocalId}
+                          onChange={handleInputChange}
+                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                          required
+                        >
+                          <option value="">Seleccione un local</option>
+                          {locales.map((local) => (
+                            <option key={local.LocalId} value={local.LocalId}>
+                              {local.LocalNombre}
+                            </option>
+                          ))}
+                        </select>
+                        {formData.ProductoImagen && (
                           <button
                             type="button"
                             onClick={handleRemoveImage}
-                            className="text-red-600 hover:text-red-800 border border-red-300 bg-white rounded px-3 py-1 text-sm"
+                            className="mt-8 w-full text-red-600 hover:text-red-800 border border-red-300 bg-white rounded px-3 py-2 text-sm font-medium"
                           >
                             Eliminar imagen
                           </button>
-                        </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna derecha: Imagen del producto */}
+                  <div className="lg:col-span-1">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Imagen del producto
+                    </label>
+                    <div className="flex flex-col items-center gap-4">
+                      {formData.ProductoImagen ? (
+                        <img
+                          src={`data:image/jpeg;base64,${formData.ProductoImagen}`}
+                          alt="Imagen producto"
+                          className="w-full max-w-xs h-auto object-contain border rounded shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-full max-w-xs h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                          <p className="text-gray-400 text-sm text-center px-4">
+                            No hay imagen seleccionada
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>

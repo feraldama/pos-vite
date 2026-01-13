@@ -47,7 +47,7 @@ export default function Inventario() {
   const puedeEditar = usePermiso("INVENTARIO", "editar");
   const puedeEliminar = usePermiso("INVENTARIO", "eliminar");
   const puedeLeer = usePermiso("INVENTARIO", "leer");
-  const [tipoInventario, setTipoInventario] = useState("S"); // F = Fijar, S = Sumar
+  const [tipoInventario, setTipoInventario] = useState("F"); // F = Fijar, S = Sumar
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(

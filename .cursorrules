@@ -50,10 +50,9 @@ Ejemplos INCORRECTOS (en inglés - NO usar):
 ## Instrucciones Específicas para Mensajes de Commit
 
 1. **IDIOMA OBLIGATORIO**: Todos los mensajes de commit deben generarse en español
-2. **Formato**: Usar formato convencional: `tipo: descripción breve en español`
+2. **Formato**: Usar formato convencional: `tipo: descripción en español`
 3. **Verbos**: Usar infinitivo (añadir, corregir, actualizar, mejorar, etc.)
 4. **Claridad**: Ser específico sobre qué se cambió
-5. **Brevedad**: Mantener la descripción concisa pero informativa
 
 ## ⚠️ RECORDATORIO FINAL
 

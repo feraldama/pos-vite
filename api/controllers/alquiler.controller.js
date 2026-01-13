@@ -114,28 +114,60 @@ exports.createAlquiler = async (req, res) => {
         });
       }
 
-      // Verificar disponibilidad de cada prenda antes de crear el alquiler
-      const prendasNoDisponibles = [];
+      // Agrupar prendas por ProductoId y contar la cantidad total solicitada de cada producto
+      const prendasPorProducto = {};
       for (const prenda of req.body.prendas) {
         if (!prenda.ProductoId) {
           continue; // Saltar si no tiene ProductoId
         }
+        if (!prendasPorProducto[prenda.ProductoId]) {
+          prendasPorProducto[prenda.ProductoId] = 0;
+        }
+        // Cada prenda en el array representa 1 unidad
+        prendasPorProducto[prenda.ProductoId] += 1;
+      }
 
-        const conflictos = await AlquilerPrendas.verificarDisponibilidad(
-          prenda.ProductoId,
+      // Verificar disponibilidad y stock de cada producto
+      const prendasNoDisponibles = [];
+      const Producto = require("../models/producto.model");
+
+      for (const [productoId, cantidadSolicitada] of Object.entries(
+        prendasPorProducto
+      )) {
+        const productoIdNum = parseInt(productoId);
+
+        // Obtener información del producto
+        const producto = await Producto.getById(productoIdNum);
+        if (!producto) {
+          continue; // Saltar si el producto no existe
+        }
+
+        const stockDisponible = producto.ProductoStock || 0;
+
+        // Contar cuántas prendas están alquiladas en el rango de fechas
+        const prendasAlquiladas = await AlquilerPrendas.contarPrendasAlquiladas(
+          productoIdNum,
           req.body.AlquilerFechaEntrega,
           req.body.AlquilerFechaDevolucion
         );
 
-        if (conflictos && conflictos.length > 0) {
-          // Obtener información del producto para el mensaje de error
-          const Producto = require("../models/producto.model");
-          const producto = await Producto.getById(prenda.ProductoId);
+        // Calcular stock disponible (stock total - prendas ya alquiladas)
+        const stockRealDisponible = stockDisponible - prendasAlquiladas;
+
+        // Verificar si hay suficiente stock disponible
+        if (cantidadSolicitada > stockRealDisponible) {
+          // Obtener conflictos para mostrar información detallada
+          const conflictos = await AlquilerPrendas.verificarDisponibilidad(
+            productoIdNum,
+            req.body.AlquilerFechaEntrega,
+            req.body.AlquilerFechaDevolucion
+          );
+
           const nombreProducto = producto
             ? `${producto.ProductoCodigo || ""} - ${
                 producto.ProductoNombre || "Producto"
               }`
-            : `Producto ID: ${prenda.ProductoId}`;
+            : `Producto ID: ${productoIdNum}`;
 
           // Formatear fechas para mostrar
           const formatearFecha = (fecha) => {
@@ -148,12 +180,16 @@ exports.createAlquiler = async (req, res) => {
           };
 
           prendasNoDisponibles.push({
-            ProductoId: prenda.ProductoId,
+            ProductoId: productoIdNum,
             ProductoNombre: nombreProducto,
             ProductoCodigo: producto?.ProductoCodigo || "",
             ProductoImagen: producto?.ProductoImagen
               ? producto.ProductoImagen.toString("base64")
               : null,
+            cantidadSolicitada: cantidadSolicitada,
+            stockDisponible: stockDisponible,
+            prendasAlquiladas: prendasAlquiladas,
+            stockRealDisponible: stockRealDisponible,
             conflictos: conflictos.map((c) => ({
               AlquilerId: c.AlquilerId,
               AlquilerFechaEntrega: c.AlquilerFechaEntrega,
@@ -170,14 +206,18 @@ exports.createAlquiler = async (req, res) => {
       // Si hay prendas no disponibles, retornar error con detalles
       if (prendasNoDisponibles.length > 0) {
         const mensajes = prendasNoDisponibles.map((p) => {
-          const conflicto = p.conflictos[0];
-          return `${p.ProductoNombre} está alquilada del ${conflicto.FechaEntregaFormateada} al ${conflicto.FechaDevolucionFormateada} (Alquiler #${conflicto.AlquilerId})`;
+          if (p.conflictos && p.conflictos.length > 0) {
+            const conflicto = p.conflictos[0];
+            return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible}, Alquiladas: ${p.prendasAlquiladas})`;
+          } else {
+            return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible})`;
+          }
         });
 
         return res.status(400).json({
           success: false,
           message:
-            "Una o más prendas no están disponibles en el rango de fechas seleccionado",
+            "No hay suficiente stock disponible para una o más prendas en el rango de fechas seleccionado",
           prendasNoDisponibles: prendasNoDisponibles,
           detalles: mensajes,
         });

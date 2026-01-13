@@ -397,10 +397,20 @@ export default function Rentals() {
         efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
 
       // Preparar las prendas para enviar en el body del alquiler
-      const prendas = carrito.map((item) => ({
-        ProductoId: item.id,
-        AlquilerPrendasPrecio: item.precioAlquiler,
-      }));
+      // Crear un objeto por cada unidad (según la cantidad en el carrito)
+      const prendas: Array<{
+        ProductoId: number;
+        AlquilerPrendasPrecio: number;
+      }> = [];
+      carrito.forEach((item) => {
+        // Agregar tantas prendas como indique la cantidad
+        for (let i = 0; i < item.cantidad; i++) {
+          prendas.push({
+            ProductoId: item.id,
+            AlquilerPrendasPrecio: item.precioAlquiler,
+          });
+        }
+      });
 
       // Crear el alquiler con las prendas incluidas para validación
       const alquilerData = {
@@ -480,7 +490,11 @@ export default function Rentals() {
             ProductoNombre: string;
             ProductoCodigo?: string;
             ProductoImagen?: string | null;
-            conflictos: Array<{
+            cantidadSolicitada?: number;
+            stockDisponible?: number;
+            prendasAlquiladas?: number;
+            stockRealDisponible?: number;
+            conflictos?: Array<{
               AlquilerId: number;
               FechaEntregaFormateada: string;
               FechaDevolucionFormateada: string;
@@ -492,24 +506,45 @@ export default function Rentals() {
         const mensajePrincipal =
           errorData.message || "Una o más prendas no están disponibles";
 
-        // Construir HTML detallado con imágenes y fechas
-        let htmlContent = `<div style="text-align: left; max-width: 500px;">`;
+        // Construir HTML detallado con imágenes, fechas e información de stock
+        let htmlContent = `<div style="text-align: left; max-width: 600px;">`;
         htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${mensajePrincipal}:</p>`;
 
         prendasNoDisponibles.forEach((prenda, index) => {
-          const conflicto = prenda.conflictos[0];
+          const conflicto =
+            prenda.conflictos && prenda.conflictos.length > 0
+              ? prenda.conflictos[0]
+              : null;
           const imagenSrc = prenda.ProductoImagen
             ? `data:image/jpeg;base64,${prenda.ProductoImagen}`
             : logo;
 
-          htmlContent += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
-          htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px;" />`;
+          htmlContent += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
+          htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
           htmlContent += `<div style="flex: 1;">`;
           htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
             index + 1
           }. ${prenda.ProductoNombre}</div>`;
-          htmlContent += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">📅 No disponible del <strong>${conflicto.FechaEntregaFormateada}</strong> al <strong>${conflicto.FechaDevolucionFormateada}</strong></div>`;
-          htmlContent += `<div style="font-size: 12px; color: #888;">Alquiler #${conflicto.AlquilerId}</div>`;
+
+          // Mostrar información de stock
+          if (
+            prenda.cantidadSolicitada !== undefined &&
+            prenda.stockRealDisponible !== undefined
+          ) {
+            htmlContent += `<div style="font-size: 13px; color: #d32f2f; margin-bottom: 4px; font-weight: 500;">⚠️ Stock insuficiente</div>`;
+            htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📦 Solicitadas: <strong>${prenda.cantidadSolicitada}</strong> prenda(s)</div>`;
+            htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📊 Disponibles: <strong>${
+              prenda.stockRealDisponible
+            }</strong> de <strong>${prenda.stockDisponible || 0}</strong> (${
+              prenda.prendasAlquiladas || 0
+            } alquiladas)</div>`;
+          }
+
+          // Mostrar información de conflicto si existe
+          if (conflicto) {
+            htmlContent += `<div style="font-size: 12px; color: #666; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">📅 Ya alquilada del <strong>${conflicto.FechaEntregaFormateada}</strong> al <strong>${conflicto.FechaDevolucionFormateada}</strong> (Alquiler #${conflicto.AlquilerId})</div>`;
+          }
+
           htmlContent += `</div>`;
           htmlContent += `</div>`;
         });

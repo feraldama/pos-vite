@@ -359,6 +359,42 @@ const AlquilerPrendas = {
       );
     });
   },
+
+  // Contar cuántas prendas del mismo producto están alquiladas en un rango de fechas
+  // Retorna el número total de prendas alquiladas (COUNT)
+  contarPrendasAlquiladas: (productoId, fechaEntrega, fechaDevolucion) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT COUNT(*) as cantidadAlquilada
+        FROM alquilerprendas ap
+        INNER JOIN alquiler a ON ap.AlquilerId = a.AlquilerId
+        WHERE ap.ProductoId = ?
+        AND a.AlquilerEstado NOT IN ('Devuelto', 'Cancelado')
+        AND a.AlquilerFechaEntrega IS NOT NULL
+        AND a.AlquilerFechaDevolucion IS NOT NULL
+        AND (
+          -- El nuevo rango se solapa con el existente si:
+          -- fechaEntregaNueva <= fechaDevolucionExistente 
+          -- AND fechaDevolucionNueva >= fechaEntregaExistente
+          (DATE(?) <= DATE(a.AlquilerFechaDevolucion)
+          AND DATE(?) >= DATE(a.AlquilerFechaEntrega))
+        )
+      `;
+
+      db.query(
+        query,
+        [productoId, fechaEntrega, fechaDevolucion],
+        (err, results) => {
+          if (err) {
+            console.error("Error en contarPrendasAlquiladas:", err);
+            return reject(err);
+          }
+          // Retornar el número de prendas alquiladas
+          resolve(results[0]?.cantidadAlquilada || 0);
+        }
+      );
+    });
+  },
 };
 
 module.exports = AlquilerPrendas;

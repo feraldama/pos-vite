@@ -117,6 +117,7 @@ exports.delete = async (req, res) => {
       TipoGastoId,
       TipoGastoGrupoId,
       RegistroDiarioCajaMonto,
+      RegistroDiarioCajaCambio,
       RegistroDiarioCajaFecha,
       UsuarioId,
     } = registro;
@@ -127,6 +128,7 @@ exports.delete = async (req, res) => {
     // - Si era ingreso (sumó), ahora restamos
     const esIngreso = TipoGastoId === 2;
     const monto = Number(RegistroDiarioCajaMonto) || 0;
+    const cambio = Number(RegistroDiarioCajaCambio) || 0;
 
     // Conjunto de IDs de cajas a actualizar
     const cajasIdsParaActualizar = new Set();
@@ -153,10 +155,10 @@ exports.delete = async (req, res) => {
     if (cajasIdsParaActualizar.size > 0) {
       const actualizaciones = Array.from(cajasIdsParaActualizar).map(
         async (cajaIdParaActualizar) => {
-          // Obtener el monto actual de la caja
+          // Obtener el monto actual y el tipo de la caja
           const cajaActual = await new Promise((resolve, reject) => {
             db.query(
-              "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
+              "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
               [cajaIdParaActualizar],
               (err, results) => {
                 if (err) return reject(err);
@@ -167,14 +169,40 @@ exports.delete = async (req, res) => {
 
           if (cajaActual) {
             const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+            const cajaTipoId = Number(cajaActual.CajaTipoId);
+
+            // Determinar qué valor usar según CajaTipoId
+            // Si CajaTipoId === 3: usar RegistroDiarioCajaMonto / RegistroDiarioCajaCambio (cantidad)
+            // Si CajaTipoId !== 3: usar RegistroDiarioCajaMonto (monto)
+            let valorAUsar;
+            if (cajaTipoId === 3 && cambio > 0) {
+              valorAUsar = monto / cambio;
+            } else {
+              valorAUsar = monto;
+            }
+
             let nuevoMonto;
 
-            if (esIngreso) {
-              // Si era ingreso, al eliminar restamos el monto
-              nuevoMonto = cajaMontoActual - monto;
+            // Para CajaTipoId === 3 (cajas de divisa)
+            // Si fue compra (egreso): restar
+            // Si fue venta (ingreso): sumar
+            if (cajaTipoId === 3) {
+              if (esIngreso) {
+                // Si fue venta (ingreso), al eliminar sumamos (revertir la venta)
+                nuevoMonto = cajaMontoActual + valorAUsar;
+              } else {
+                // Si fue compra (egreso), al eliminar restamos (revertir la compra)
+                nuevoMonto = cajaMontoActual - valorAUsar;
+              }
             } else {
-              // Si era egreso, al eliminar sumamos el monto
-              nuevoMonto = cajaMontoActual + monto;
+              // Para otras cajas (guaraníes), la lógica normal
+              if (esIngreso) {
+                // Si era ingreso, al eliminar restamos el valor
+                nuevoMonto = cajaMontoActual - valorAUsar;
+              } else {
+                // Si era egreso, al eliminar sumamos el valor
+                nuevoMonto = cajaMontoActual + valorAUsar;
+              }
             }
 
             // Actualizar el monto de la caja

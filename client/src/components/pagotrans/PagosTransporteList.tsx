@@ -108,21 +108,23 @@ export default function PagosTransporteList({
     },
     {
       key: "PagoTransOrigen",
-      label: "Origen",
-    },
-    {
-      key: "PagoTransDestino",
-      label: "Destino",
+      label: "Origen/Destino",
+      render: (row: PagoTrans) => {
+        const origen = row.PagoTransOrigen || "";
+        const destino = row.PagoTransDestino || "";
+        return destino ? `${origen} - ${destino}` : origen;
+      },
     },
     {
       key: "PagoTransFechaEmbarque",
-      label: "Fecha Embarque",
-      render: (row: PagoTrans) =>
-        formatDateOnly(row.PagoTransFechaEmbarque || ""),
-    },
-    {
-      key: "PagoTransHora",
-      label: "Hora",
+      label: "Fecha/Hora Embarque",
+      render: (row: PagoTrans) => {
+        const fecha = row.PagoTransFechaEmbarque
+          ? formatDateOnly(row.PagoTransFechaEmbarque)
+          : "-";
+        const hora = row.PagoTransHora || "";
+        return hora ? `${fecha} ${hora}` : fecha;
+      },
     },
     {
       key: "PagoTransAsiento",
@@ -137,8 +139,8 @@ export default function PagosTransporteList({
       label: "Nombre/Apellido",
     },
     {
-      key: "PagoTransCI",
-      label: "CI",
+      key: "PagoTransClienteRUC",
+      label: "RUC",
     },
     {
       key: "PagoTransTelefono",
@@ -154,8 +156,9 @@ export default function PagosTransporteList({
       render: (item: PagoTrans) => formatAmount(item.PagoTransMonto || 0),
     },
     {
-      key: "PagoTransClienteRUC",
-      label: "RUC",
+      key: "PagoTransUsuarioId",
+      label: "Usuario",
+      render: (item: PagoTrans) => item.PagoTransUsuarioId || "-",
     },
   ];
 

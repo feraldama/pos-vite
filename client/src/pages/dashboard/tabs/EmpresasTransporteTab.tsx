@@ -5,8 +5,13 @@ import {
   type PagoTrans,
 } from "../../../services/pagotrans.service";
 import { getEstadoAperturaPorUsuario } from "../../../services/registrodiariocaja.service";
-import { getCajaById, getCajas } from "../../../services/cajas.service";
-import { getTransportes } from "../../../services/transporte.service";
+import { getCajaById, updateCajaMonto } from "../../../services/cajas.service";
+import {
+  getTransportes,
+  getTransporteById,
+} from "../../../services/transporte.service";
+import { getCajaGastosByTipoGastoAndGrupo } from "../../../services/cajagasto.service";
+import { createRegistroDiarioCaja } from "../../../services/registros.service";
 import {
   getAllClientesSinPaginacion,
   createCliente,
@@ -43,7 +48,6 @@ interface Cliente {
 export default function EmpresasTransporteTab() {
   const { user } = useAuth();
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
-  const [cajas, setCajas] = useState<Caja[]>([]);
 
   // Estados para formulario de pago de transporte
   const [transportes, setTransportes] = useState<Transporte[]>([]);
@@ -78,13 +82,13 @@ export default function EmpresasTransporteTab() {
           setCajaAperturada(null);
         }
 
-        // Obtener todas las cajas
-        const cajasData = await getCajas(1, 1000);
-        setCajas(cajasData.data || []);
-
         // Obtener datos para pagos de transporte
         const transportesData = await getTransportes(1, 1000);
-        setTransportes(transportesData.data || []);
+        const transportesOrdenados = (transportesData.data || []).sort(
+          (a: Transporte, b: Transporte) =>
+            a.TransporteNombre.localeCompare(b.TransporteNombre)
+        );
+        setTransportes(transportesOrdenados);
         const clientesData = await getAllClientesSinPaginacion();
         setClientes(clientesData.data || []);
 
@@ -137,7 +141,39 @@ export default function EmpresasTransporteTab() {
       return;
     }
 
+    if (!transporteIdPago) {
+      Swal.fire({
+        icon: "warning",
+        title: "Datos incompletos",
+        text: "Debes seleccionar un transporte.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
     try {
+      // Obtener el transporte para saber su TipoGastoId y TipoGastoGrupoId
+      const transporte = await getTransporteById(transporteIdPago);
+      if (
+        !transporte ||
+        !transporte.TipoGastoId ||
+        !transporte.TipoGastoGrupoId
+      ) {
+        Swal.fire({
+          icon: "warning",
+          title: "Error",
+          text: "El transporte no tiene TipoGastoId y TipoGastoGrupoId asignados.",
+          confirmButtonColor: "#2563eb",
+        });
+        return;
+      }
+
+      // Obtener todas las cajas que tengan este TipoGastoId y TipoGastoGrupoId asignado
+      const todasLasCajasConGasto = await getCajaGastosByTipoGastoAndGrupo(
+        transporte.TipoGastoId,
+        transporte.TipoGastoGrupoId
+      );
+
       const pagoTransData: PagoTrans = {
         PagoTransFecha: pagoTransFecha,
         TransporteId: transporteIdPago ? Number(transporteIdPago) : undefined,
@@ -163,7 +199,69 @@ export default function EmpresasTransporteTab() {
         PagoTransClienteRUC: clienteRUC,
       };
 
-      await createPagoTrans(pagoTransData);
+      // Crear el pago de transporte primero para obtener su ID
+      const pagoTransResponse = await createPagoTrans(pagoTransData);
+
+      // Obtener el ID del pago creado
+      const pagoTransId =
+        pagoTransResponse.data?.PagoTransId || pagoTransResponse.PagoTransId;
+
+      // Crear registro diario de caja con PagoTransId y TransporteId en el detalle
+      const detalleRegistro = `Pago Transporte: ${
+        transporte.TransporteNombre
+      } - ${origen.toUpperCase()} a ${destino.toUpperCase()} | PagoTransId:${pagoTransId} TransporteId:${transporteIdPago}`;
+
+      await createRegistroDiarioCaja({
+        CajaId: cajaId,
+        RegistroDiarioCajaFecha: pagoTransFecha,
+        TipoGastoId: transporte.TipoGastoId,
+        TipoGastoGrupoId: transporte.TipoGastoGrupoId,
+        RegistroDiarioCajaDetalle: detalleRegistro,
+        RegistroDiarioCajaMonto: monto ? Number(monto) : 0,
+        UsuarioId: user.id,
+        RegistroDiarioCajaCambio: 0,
+        RegistroDiarioCajaMTCN: 0,
+        RegistroDiarioCajaCargoEnvio: 0,
+      });
+
+      // Obtener IDs únicos de todas las cajas a actualizar
+      // Incluir todas las cajas que tengan este gasto asignado + la caja aperturada
+      const cajasIdsParaActualizar = new Set<number>();
+
+      // Agregar todas las cajas que tengan el gasto asignado
+      todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
+        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+      });
+
+      // Agregar también la caja aperturada
+      cajasIdsParaActualizar.add(Number(cajaId));
+
+      // Actualizar el monto de todas las cajas (las que tienen el gasto + la caja aperturada)
+      if (cajasIdsParaActualizar.size > 0) {
+        const montoNumero = Number(monto) || 0;
+        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+          async (cajaIdParaActualizar: number) => {
+            const cajaActual = await getCajaById(cajaIdParaActualizar);
+            const cajaMontoActual = Number(cajaActual.CajaMonto);
+
+            if (transporte.TipoGastoId === 1) {
+              // Egreso: restar el monto
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual - montoNumero
+              );
+            } else if (transporte.TipoGastoId === 2) {
+              // Ingreso: sumar el monto
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoNumero
+              );
+            }
+          }
+        );
+
+        await Promise.all(actualizaciones);
+      }
 
       Swal.fire(
         "Pago de transporte registrado",
@@ -314,27 +412,6 @@ export default function EmpresasTransporteTab() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 inputMode="numeric"
               />
-            </div>
-
-            {/* Caja */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Caja
-              </label>
-              <select
-                value={cajaId}
-                onChange={(e) => setCajaId(e.target.value)}
-                required
-                disabled={!!cajaAperturada}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Seleccione una caja</option>
-                {cajas.map((caja) => (
-                  <option key={caja.CajaId} value={caja.CajaId}>
-                    {caja.CajaDescripcion}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* N° Boleto */}

@@ -5,6 +5,7 @@ import ActionButton from "../../components/common/Button/ActionButton";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
+import Swal from "sweetalert2";
 import "../../App.css";
 
 // Componentes de las pestañas
@@ -74,13 +75,31 @@ export default function Sales() {
           setCajaAperturada(caja);
         } else {
           setCajaAperturada(null);
+          // Mostrar mensaje y redirigir a apertura/cierre de caja si no hay caja aperturada
+          await Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de realizar cobros.",
+            confirmButtonText: "Ir a aperturar caja",
+            confirmButtonColor: "#2563eb",
+          });
+          navigate("/apertura-cierre-caja");
         }
       } catch {
         setCajaAperturada(null);
+        // Mostrar mensaje y redirigir a apertura/cierre de caja si hay error
+        await Swal.fire({
+          icon: "warning",
+          title: "Caja no aperturada",
+          text: "Debes aperturar una caja antes de realizar cobros.",
+          confirmButtonText: "Ir a aperturar caja",
+          confirmButtonColor: "#2563eb",
+        });
+        navigate("/apertura-cierre-caja");
       }
     };
     fetchCaja();
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (user?.LocalId) {

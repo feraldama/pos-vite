@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../../services/registrodiariocaja.service";
-import { getCajaById, getCajas } from "../../../services/cajas.service";
+import { getCajaById } from "../../../services/cajas.service";
 import { createRegistroDiarioCaja } from "../../../services/registros.service";
 import { getTiposGasto } from "../../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../../services/tipogastogrupo.service";
@@ -32,7 +32,6 @@ interface TipoGastoGrupo {
 export default function PagosTab() {
   const { user } = useAuth();
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
-  const [cajas, setCajas] = useState<Caja[]>([]);
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupo, setTiposGastoGrupo] = useState<TipoGastoGrupo[]>([]);
 
@@ -60,10 +59,6 @@ export default function PagosTab() {
         } else {
           setCajaAperturada(null);
         }
-
-        // Obtener todas las cajas
-        const cajasData = await getCajas(1, 1000);
-        setCajas(cajasData.data);
 
         // Obtener tipos de gasto y grupos
         const tiposGastoData = await getTiposGasto();
@@ -220,27 +215,6 @@ export default function PagosTab() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Caja */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Caja
-              </label>
-              <select
-                value={cajaId}
-                onChange={(e) => setCajaId(e.target.value)}
-                required
-                disabled={!!cajaAperturada}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Seleccione una caja</option>
-                {cajas.map((caja) => (
-                  <option key={caja.CajaId} value={caja.CajaId}>
-                    {caja.CajaDescripcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Fecha */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

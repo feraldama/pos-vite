@@ -356,7 +356,7 @@ export default function AperturaCierreCajaPage() {
           icon: "success",
           title: "Apertura exitosa",
           text: result.message || "La caja se aperturó correctamente",
-          confirmButtonText: "Ir a ventas",
+          confirmButtonText: "Ir a cobros",
           confirmButtonColor: "#2563eb",
         });
         navigate("/ventas");

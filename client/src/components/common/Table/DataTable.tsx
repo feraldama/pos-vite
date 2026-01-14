@@ -22,7 +22,7 @@ interface DataTableProps<T extends DataTableRow> {
   columns: DataTableColumn<T>[];
   data: T[];
   onEdit?: (item: T) => void;
-  onDelete?: (item: T) => void;
+  onDelete?: (item: T, e?: React.MouseEvent) => void;
   onViewCredit?: (item: T) => void;
   emptyMessage?: string;
   actions?: boolean;
@@ -165,7 +165,10 @@ function DataTable<T extends DataTableRow>({
                       )}
                       {onDelete && (
                         <button
-                          onClick={() => onDelete(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(item, e);
+                          }}
                           className="font-medium text-red-600 hover:underline cursor-pointer"
                           title="Eliminar"
                         >

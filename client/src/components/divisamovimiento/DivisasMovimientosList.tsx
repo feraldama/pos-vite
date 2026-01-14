@@ -136,8 +136,7 @@ export default function DivisasMovimientosList({
           ? String(currentMovimiento.CajaId)
           : "",
         DivisaMovimientoFecha: fecha,
-        DivisaMovimientoTipo:
-          currentMovimiento.DivisaMovimientoTipo || "Compra",
+        DivisaMovimientoTipo: currentMovimiento.DivisaMovimientoTipo || "C",
         DivisaId: currentMovimiento.DivisaId
           ? String(currentMovimiento.DivisaId)
           : "",
@@ -158,7 +157,7 @@ export default function DivisasMovimientosList({
         DivisaMovimientoId: "",
         CajaId: "",
         DivisaMovimientoFecha: today,
-        DivisaMovimientoTipo: "Compra",
+        DivisaMovimientoTipo: "C",
         DivisaId: "",
         DivisaMovimientoCambio: 0,
         DivisaMovimientoCantidad: 0,
@@ -188,7 +187,7 @@ export default function DivisasMovimientosList({
       );
       if (divisa) {
         const cambio =
-          formData.DivisaMovimientoTipo === "Compra"
+          formData.DivisaMovimientoTipo === "C"
             ? divisa.DivisaCompraMonto
             : divisa.DivisaVentaMonto;
         setFormData((prev) => ({
@@ -266,7 +265,11 @@ export default function DivisasMovimientosList({
       key: "DivisaMovimientoTipo",
       label: "Tipo",
       render: (movimiento: DivisaMovimiento) =>
-        movimiento.DivisaMovimientoTipo || "",
+        movimiento.DivisaMovimientoTipo === "C"
+          ? "Compra"
+          : movimiento.DivisaMovimientoTipo === "V"
+          ? "Venta"
+          : movimiento.DivisaMovimientoTipo || "",
     },
     {
       key: "DivisaMovimientoCantidad",
@@ -426,8 +429,8 @@ export default function DivisasMovimientosList({
                       required
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     >
-                      <option value="Compra">Compra</option>
-                      <option value="Venta">Venta</option>
+                      <option value="C">Compra</option>
+                      <option value="V">Venta</option>
                     </select>
                   </div>
                   <div className="col-span-6 sm:col-span-3">

@@ -15,7 +15,7 @@ import WesternPagosTab from "./tabs/WesternPagosTab";
 import WesternEnviosTab from "./tabs/WesternEnviosTab";
 import CobranzaColegiosTab from "./tabs/CobranzaColegiosTab";
 import EmpresasTransporteTab from "./tabs/EmpresasTransporteTab";
-import CompraTab from "./tabs/CompraTab";
+import DivisasTab from "./tabs/DivisasTab";
 import JuntaSaneamientoTab from "./tabs/JuntaSaneamientoTab";
 
 interface Caja {
@@ -52,7 +52,7 @@ export default function Sales() {
       label: "EMPRESAS TRANSPORTE",
       component: EmpresasTransporteTab,
     },
-    { id: "compra", label: "COMPRA", component: CompraTab },
+    { id: "divisas", label: "DIVISAS", component: DivisasTab },
     { id: "venta", label: "VENTA", component: VentaTab },
     {
       id: "junta-saneamiento",

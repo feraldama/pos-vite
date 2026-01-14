@@ -6,6 +6,10 @@ import {
   createDivisaMovimiento,
   updateDivisaMovimiento,
 } from "../../services/divisamovimiento.service";
+import {
+  findRegistroDiarioCajaByDivisaMovimientoId,
+  deleteRegistroDiarioCaja,
+} from "../../services/registros.service";
 import DivisasMovimientosList from "../../components/divisamovimiento/DivisasMovimientosList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
@@ -120,6 +124,24 @@ export default function DivisasMovimientosPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          // Buscar y eliminar el registro diario de caja asociado
+          try {
+            const registroDiarioCaja =
+              await findRegistroDiarioCajaByDivisaMovimientoId(id);
+            if (registroDiarioCaja && registroDiarioCaja.RegistroDiarioCajaId) {
+              await deleteRegistroDiarioCaja(
+                registroDiarioCaja.RegistroDiarioCajaId
+              );
+            }
+          } catch (error) {
+            // Si no se encuentra el registro diario de caja, continuar con la eliminación del movimiento
+            console.warn(
+              "No se encontró registro diario de caja asociado:",
+              error
+            );
+          }
+
+          // Eliminar el movimiento de divisa
           await deleteDivisaMovimiento(id);
           Swal.fire({
             icon: "success",

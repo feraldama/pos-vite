@@ -4,7 +4,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import CajaGastosList from "./CajaGastosList";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
 import { getAllCajaTipos } from "../../services/cajatipo.service";
 
 interface Caja {
@@ -145,7 +145,15 @@ export default function CajasList({
     {
       key: "CajaMonto",
       label: "Monto",
-      render: (caja: Caja) => `Gs. ${formatMiles(caja.CajaMonto)}`,
+      render: (caja: Caja) => {
+        // Si CajaTipoId === 3, mostrar con decimales
+        // Si es distinto a 3, mostrar con formato de miles
+        const monto = Number(caja.CajaMonto);
+        if (caja.CajaTipoId === 3) {
+          return `Gs. ${formatMilesWithDecimals(monto)}`;
+        }
+        return `Gs. ${formatMiles(monto)}`;
+      },
     },
     {
       key: "CajaTipoId",

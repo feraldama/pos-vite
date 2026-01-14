@@ -107,3 +107,29 @@ export const deleteRegistroDiarioCaja = async (id: string | number) => {
     );
   }
 };
+
+export const findRegistroDiarioCajaByDivisaMovimientoId = async (
+  divisaMovimientoId: string | number
+) => {
+  try {
+    // Buscar registros que contengan "DivisaMovimientoId:X" en el detalle
+    const searchTerm = `DivisaMovimientoId:${divisaMovimientoId}`;
+    const response = await searchRegistrosDiariosCaja(searchTerm, 1, 100);
+
+    // Filtrar para encontrar el registro exacto
+    const registros = response.data || [];
+    const registroEncontrado = registros.find(
+      (reg: { RegistroDiarioCajaDetalle?: string }) =>
+        reg.RegistroDiarioCajaDetalle === searchTerm
+    );
+
+    return registroEncontrado || null;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al buscar registro diario de caja",
+      }
+    );
+  }
+};

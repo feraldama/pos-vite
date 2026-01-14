@@ -1,4 +1,9 @@
 const ColegioCobranza = require("../models/colegiocobranza.model");
+const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
+const CajaGasto = require("../models/cajagasto.model");
+const Nomina = require("../models/nomina.model");
+const Colegio = require("../models/colegio.model");
+const db = require("../config/db");
 
 // Obtener todas las cobranzas con paginación
 exports.getAll = async (req, res) => {
@@ -97,12 +102,154 @@ exports.update = async (req, res) => {
 // Eliminar una cobranza
 exports.delete = async (req, res) => {
   try {
+    // Obtener la cobranza antes de eliminarla para tener los datos necesarios
+    const cobranza = await ColegioCobranza.getById(req.params.id);
+    if (!cobranza) {
+      return res.status(404).json({ message: "Cobranza no encontrada" });
+    }
+
+    const { CajaId, ColegioCobranzaFecha, UsuarioId, NominaId } = cobranza;
+
+    // Obtener la nómina para saber el ColegioId
+    const nomina = await Nomina.getById(NominaId);
+    if (!nomina || !nomina.ColegioId) {
+      // Si no hay nómina o colegio, solo eliminar la cobranza
+      const success = await ColegioCobranza.delete(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Cobranza no encontrada" });
+      }
+      return res.json({ message: "Cobranza eliminada exitosamente" });
+    }
+
+    // Obtener el colegio para saber TipoGastoId y TipoGastoGrupoId
+    const colegio = await Colegio.getById(nomina.ColegioId);
+    if (!colegio || !colegio.TipoGastoId || !colegio.TipoGastoGrupoId) {
+      // Si no hay colegio o no tiene TipoGastoId/TipoGastoGrupoId, solo eliminar la cobranza
+      const success = await ColegioCobranza.delete(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Cobranza no encontrada" });
+      }
+      return res.json({ message: "Cobranza eliminada exitosamente" });
+    }
+
+    // Obtener el ColegioCobranzaId antes de eliminar
+    const colegioCobranzaId = cobranza.ColegioCobranzaId;
+
+    // Buscar el registro relacionado en registrodiariocaja usando NominaId y ColegioCobranzaId
+    const registrosRelacionados = await new Promise((resolve, reject) => {
+      db.query(
+        `SELECT RegistroDiarioCajaId, RegistroDiarioCajaMonto 
+         FROM registrodiariocaja 
+         WHERE RegistroDiarioCajaDetalle LIKE ?
+         AND RegistroDiarioCajaDetalle LIKE ?`,
+        [`%NominaId:${NominaId}%`, `%ColegioCobranzaId:${colegioCobranzaId}%`],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+
+    // Eliminar la cobranza primero
     const success = await ColegioCobranza.delete(req.params.id);
     if (!success) {
       return res.status(404).json({ message: "Cobranza no encontrada" });
     }
+
+    // Si hay registros relacionados, eliminar cada uno y actualizar montos
+    if (registrosRelacionados && registrosRelacionados.length > 0) {
+      for (const registro of registrosRelacionados) {
+        const registroCompleto = await RegistroDiarioCaja.getById(
+          registro.RegistroDiarioCajaId
+        );
+        if (registroCompleto) {
+          const {
+            TipoGastoId: regTipoGastoId,
+            TipoGastoGrupoId: regTipoGastoGrupoId,
+            RegistroDiarioCajaMonto: regMonto,
+            CajaId: regCajaId,
+          } = registroCompleto;
+
+          // Determinar si es ingreso (TipoGastoId === 2) o egreso (TipoGastoId === 1)
+          const esIngreso = regTipoGastoId === 2;
+          const monto = Number(regMonto) || 0;
+
+          // Conjunto de IDs de cajas a actualizar
+          const cajasIdsParaActualizar = new Set();
+
+          // Agregar la caja del registro
+          if (regCajaId) {
+            cajasIdsParaActualizar.add(Number(regCajaId));
+          }
+
+          // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
+          if (regTipoGastoId && regTipoGastoGrupoId) {
+            const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
+              regTipoGastoId,
+              regTipoGastoGrupoId
+            );
+            cajasConGasto.forEach((cajaGasto) => {
+              if (cajaGasto.CajaId) {
+                cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+              }
+            });
+          }
+
+          // Actualizar el monto de todas las cajas afectadas
+          if (cajasIdsParaActualizar.size > 0) {
+            const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+              async (cajaIdParaActualizar) => {
+                // Obtener el monto actual de la caja
+                const cajaActual = await new Promise((resolve, reject) => {
+                  db.query(
+                    "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
+                    [cajaIdParaActualizar],
+                    (err, results) => {
+                      if (err) return reject(err);
+                      resolve(results.length > 0 ? results[0] : null);
+                    }
+                  );
+                });
+
+                if (cajaActual) {
+                  const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+                  let nuevoMonto;
+
+                  if (esIngreso) {
+                    // Si era ingreso, al eliminar restamos el monto
+                    nuevoMonto = cajaMontoActual - monto;
+                  } else {
+                    // Si era egreso, al eliminar sumamos el monto
+                    nuevoMonto = cajaMontoActual + monto;
+                  }
+
+                  // Actualizar el monto de la caja
+                  await new Promise((resolve, reject) => {
+                    db.query(
+                      "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+                      [nuevoMonto, cajaIdParaActualizar],
+                      (err) => {
+                        if (err) return reject(err);
+                        resolve();
+                      }
+                    );
+                  });
+                }
+              }
+            );
+
+            await Promise.all(actualizaciones);
+          }
+
+          // Eliminar el registro de registrodiariocaja
+          await RegistroDiarioCaja.delete(registro.RegistroDiarioCajaId);
+        }
+      }
+    }
+
     res.json({ message: "Cobranza eliminada exitosamente" });
   } catch (error) {
+    console.error("Error al eliminar cobranza:", error);
     res.status(500).json({ message: error.message });
   }
 };

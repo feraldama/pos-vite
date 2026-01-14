@@ -131,9 +131,11 @@ export default function TransportesList({
     }
   }, [currentTransporte]);
 
-  const gruposFiltrados = tiposGastoGrupo.filter(
-    (g) => g.TipoGastoId === Number(formData.TipoGastoId)
-  );
+  const gruposFiltrados = tiposGastoGrupo
+    .filter((g) => g.TipoGastoId === Number(formData.TipoGastoId))
+    .sort((a, b) =>
+      a.TipoGastoGrupoDescripcion.localeCompare(b.TipoGastoGrupoDescripcion)
+    );
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

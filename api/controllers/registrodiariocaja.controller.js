@@ -1,4 +1,5 @@
 const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
+const CajaGasto = require("../models/cajagasto.model");
 const db = require("../config/db");
 
 // Obtener todos los registros con paginación
@@ -105,10 +106,101 @@ exports.update = async (req, res) => {
 // Eliminar un registro
 exports.delete = async (req, res) => {
   try {
+    // Obtener el registro antes de eliminarlo para tener los datos necesarios
+    const registro = await RegistroDiarioCaja.getById(req.params.id);
+    if (!registro) {
+      return res.status(404).json({ message: "Registro no encontrado" });
+    }
+
+    const {
+      CajaId,
+      TipoGastoId,
+      TipoGastoGrupoId,
+      RegistroDiarioCajaMonto,
+      RegistroDiarioCajaFecha,
+      UsuarioId,
+    } = registro;
+
+    // Determinar si es ingreso (TipoGastoId === 2) o egreso (TipoGastoId === 1)
+    // Al eliminar, invertimos la operación:
+    // - Si era egreso (restó), ahora sumamos
+    // - Si era ingreso (sumó), ahora restamos
+    const esIngreso = TipoGastoId === 2;
+    const monto = Number(RegistroDiarioCajaMonto) || 0;
+
+    // Conjunto de IDs de cajas a actualizar
+    const cajasIdsParaActualizar = new Set();
+
+    // Agregar la caja del registro
+    if (CajaId) {
+      cajasIdsParaActualizar.add(Number(CajaId));
+    }
+
+    // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
+    if (TipoGastoId && TipoGastoGrupoId) {
+      const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
+        TipoGastoId,
+        TipoGastoGrupoId
+      );
+      cajasConGasto.forEach((cajaGasto) => {
+        if (cajaGasto.CajaId) {
+          cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+        }
+      });
+    }
+
+    // Actualizar el monto de todas las cajas afectadas
+    if (cajasIdsParaActualizar.size > 0) {
+      const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+        async (cajaIdParaActualizar) => {
+          // Obtener el monto actual de la caja
+          const cajaActual = await new Promise((resolve, reject) => {
+            db.query(
+              "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
+              [cajaIdParaActualizar],
+              (err, results) => {
+                if (err) return reject(err);
+                resolve(results.length > 0 ? results[0] : null);
+              }
+            );
+          });
+
+          if (cajaActual) {
+            const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+            let nuevoMonto;
+
+            if (esIngreso) {
+              // Si era ingreso, al eliminar restamos el monto
+              nuevoMonto = cajaMontoActual - monto;
+            } else {
+              // Si era egreso, al eliminar sumamos el monto
+              nuevoMonto = cajaMontoActual + monto;
+            }
+
+            // Actualizar el monto de la caja
+            await new Promise((resolve, reject) => {
+              db.query(
+                "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+                [nuevoMonto, cajaIdParaActualizar],
+                (err) => {
+                  if (err) return reject(err);
+                  resolve();
+                }
+              );
+            });
+          }
+        }
+      );
+
+      await Promise.all(actualizaciones);
+    }
+
+    // Eliminar el registro
     const success = await RegistroDiarioCaja.delete(req.params.id);
     if (!success) {
       return res.status(404).json({ message: "Registro no encontrado" });
     }
+
     res.json({ message: "Registro eliminado exitosamente" });
   } catch (error) {
     if (
@@ -121,6 +213,7 @@ exports.delete = async (req, res) => {
           "No se puede eliminar el registro porque tiene movimientos asociados.",
       });
     }
+    console.error("Error al eliminar registro:", error);
     res.status(500).json({ message: error.message });
   }
 };

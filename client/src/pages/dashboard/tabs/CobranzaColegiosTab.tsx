@@ -206,8 +206,8 @@ export default function CobranzaColegiosTab() {
         colegio.TipoGastoGrupoId
       );
 
-      // Crear la cobranza
-      await createColegioCobranza({
+      // Crear la cobranza primero para obtener su ID
+      const cobranzaResponse = await createColegioCobranza({
         CajaId: cajaId,
         ColegioCobranzaFecha: fecha,
         NominaId: nominaId,
@@ -219,10 +219,17 @@ export default function CobranzaColegiosTab() {
         ColegioCobranzaDescuento: descuento || 0,
       });
 
-      // Crear registro diario de caja
+      // Obtener el ID de la cobranza creada
+      const colegioCobranzaId =
+        cobranzaResponse.data?.ColegioCobranzaId ||
+        cobranzaResponse.ColegioCobranzaId;
+
+      // Crear registro diario de caja con NominaId y ColegioCobranzaId en el detalle
       const detalleRegistro = `Cobranza Colegio: ${colegioNombre} - Nómina: ${
         nominaSeleccionada?.NominaApellido || ""
-      }, ${nominaSeleccionada?.NominaNombre || ""}`;
+      }, ${
+        nominaSeleccionada?.NominaNombre || ""
+      } | NominaId:${nominaId} ColegioCobranzaId:${colegioCobranzaId}`;
 
       await createRegistroDiarioCaja({
         CajaId: cajaId,

@@ -1,0 +1,251 @@
+import { useEffect, useState, useCallback } from "react";
+import {
+  getDivisaMovimientos,
+  deleteDivisaMovimiento,
+  searchDivisaMovimientos,
+  createDivisaMovimiento,
+  updateDivisaMovimiento,
+} from "../../services/divisamovimiento.service";
+import DivisasMovimientosList from "../../components/divisamovimiento/DivisasMovimientosList";
+import Pagination from "../../components/common/Pagination";
+import Swal from "sweetalert2";
+import { usePermiso } from "../../hooks/usePermiso";
+
+interface DivisaMovimiento {
+  id: string | number;
+  DivisaMovimientoId: string | number;
+  CajaId: number;
+  DivisaMovimientoFecha: string;
+  DivisaMovimientoTipo: string;
+  DivisaId: number;
+  DivisaMovimientoCambio: number;
+  DivisaMovimientoCantidad: number;
+  DivisaMovimientoMonto: number;
+  UsuarioId: number;
+  [key: string]: unknown;
+}
+
+interface Pagination {
+  totalItems: number;
+  totalPages: number;
+  [key: string]: unknown;
+}
+
+export default function DivisasMovimientosPage() {
+  const [movimientosData, setMovimientosData] = useState<{
+    movimientos: DivisaMovimiento[];
+    pagination: Pagination;
+  }>({ movimientos: [], pagination: { totalItems: 0, totalPages: 1 } });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentMovimiento, setCurrentMovimiento] =
+    useState<DivisaMovimiento | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortKey, setSortKey] = useState<string | undefined>();
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const puedeCrear = usePermiso("DIVISAMOVIMIENTO", "crear");
+  const puedeEditar = usePermiso("DIVISAMOVIMIENTO", "editar");
+  const puedeEliminar = usePermiso("DIVISAMOVIMIENTO", "eliminar");
+  const puedeLeer = usePermiso("DIVISAMOVIMIENTO", "leer");
+
+  const fetchMovimientos = useCallback(async () => {
+    try {
+      setLoading(true);
+      let data;
+      if (appliedSearchTerm) {
+        data = await searchDivisaMovimientos(
+          appliedSearchTerm,
+          currentPage,
+          itemsPerPage,
+          sortKey,
+          sortOrder
+        );
+      } else {
+        data = await getDivisaMovimientos(
+          currentPage,
+          itemsPerPage,
+          sortKey,
+          sortOrder
+        );
+      }
+      setMovimientosData({
+        movimientos: data.data,
+        pagination: data.pagination,
+      });
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error desconocido");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
+
+  useEffect(() => {
+    fetchMovimientos();
+  }, [fetchMovimientos]);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  const applySearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      applySearch();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar!",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteDivisaMovimiento(id);
+          Swal.fire({
+            icon: "success",
+            title: "Movimiento eliminado exitosamente",
+          });
+          setMovimientosData((prev) => ({
+            ...prev,
+            movimientos: prev.movimientos.filter(
+              (movimiento) => movimiento.DivisaMovimientoId !== id
+            ),
+          }));
+        } catch (error: unknown) {
+          const err = error as { message?: string };
+          const msg = err?.message || "No se pudo eliminar el movimiento";
+          Swal.fire({
+            icon: "warning",
+            title: "No permitido",
+            text: msg,
+          });
+        }
+      }
+    });
+  };
+
+  const handleCreate = () => {
+    setCurrentMovimiento(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (movimiento: DivisaMovimiento) => {
+    setCurrentMovimiento(movimiento);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (movimientoData: DivisaMovimiento) => {
+    let mensaje = "";
+    try {
+      if (currentMovimiento) {
+        await updateDivisaMovimiento(
+          currentMovimiento.DivisaMovimientoId,
+          movimientoData
+        );
+        mensaje = "Movimiento actualizado exitosamente";
+      } else {
+        const response = await createDivisaMovimiento(movimientoData);
+        mensaje = response.message || "Movimiento creado exitosamente";
+      }
+      setIsModalOpen(false);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: mensaje,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      fetchMovimientos();
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Error desconocido");
+      }
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  if (!puedeLeer)
+    return <div>No tienes permiso para ver los movimientos de divisa</div>;
+
+  if (loading) return <div>Cargando movimientos...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div className="container mx-auto px-4">
+      <h1 className="text-2xl font-medium mb-3">
+        Gestión de Movimientos de Divisa
+      </h1>
+      <DivisasMovimientosList
+        movimientos={movimientosData.movimientos.map((m) => ({
+          ...m,
+          id: m.DivisaMovimientoId,
+        }))}
+        onDelete={
+          puedeEliminar
+            ? (movimiento) =>
+                handleDelete(movimiento.DivisaMovimientoId as string)
+            : undefined
+        }
+        onEdit={puedeEditar ? handleEdit : undefined}
+        onCreate={puedeCrear ? handleCreate : undefined}
+        pagination={movimientosData.pagination}
+        onSearch={handleSearch}
+        searchTerm={searchTerm}
+        onKeyPress={handleKeyPress}
+        onSearchSubmit={applySearch}
+        isModalOpen={isModalOpen}
+        onCloseModal={() => setIsModalOpen(false)}
+        currentMovimiento={
+          currentMovimiento
+            ? { ...currentMovimiento, id: currentMovimiento.DivisaMovimientoId }
+            : null
+        }
+        onSubmit={handleSubmit}
+        sortKey={sortKey}
+        sortOrder={sortOrder}
+        onSort={(key, order) => {
+          setSortKey(key);
+          setSortOrder(order);
+          setCurrentPage(1);
+        }}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={movimientosData.pagination.totalPages}
+        onPageChange={handlePageChange}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
+      />
+    </div>
+  );
+}

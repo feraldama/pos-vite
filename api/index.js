@@ -32,6 +32,9 @@ const colegioRoutes = require("./routes/colegio.routes");
 const colegiocursoRoutes = require("./routes/colegiocurso.routes");
 const nominaRoutes = require("./routes/nomina.routes");
 const colegiocobranzaRoutes = require("./routes/colegiocobranza.routes");
+const divisaRoutes = require("./routes/divisa.routes");
+const divisaGastoRoutes = require("./routes/divisagasto.routes");
+const divisaMovimientoRoutes = require("./routes/divisamovimiento.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -80,6 +83,9 @@ app.use("/api/colegio", colegioRoutes);
 app.use("/api/colegiocurso", colegiocursoRoutes);
 app.use("/api/nomina", nominaRoutes);
 app.use("/api/colegiocobranza", colegiocobranzaRoutes);
+app.use("/api/divisa", divisaRoutes);
+app.use("/api/divisagasto", divisaGastoRoutes);
+app.use("/api/divisamovimiento", divisaMovimientoRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

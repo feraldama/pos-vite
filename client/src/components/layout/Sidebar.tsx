@@ -11,7 +11,7 @@ import {
   KeyIcon,
   UsersIcon,
   PencilSquareIcon,
-  // BanknotesIcon,
+  BanknotesIcon,
   CurrencyDollarIcon,
   // ArchiveBoxIcon,
   // RectangleGroupIcon,
@@ -100,6 +100,15 @@ const navigation: NavigationItem[] = [
     children: [
       { name: "Empresas de Transporte", href: "/movements/transporte" },
       { name: "Pagos Transporte", href: "/pagotrans" },
+    ],
+  },
+  {
+    name: "Divisas",
+    href: "/divisa",
+    icon: <BanknotesIcon className="h-7 w-6" />,
+    children: [
+      { name: "Divisas", href: "/movements/divisa" },
+      { name: "Movimientos", href: "/movements/divisamovimiento" },
     ],
   },
   {

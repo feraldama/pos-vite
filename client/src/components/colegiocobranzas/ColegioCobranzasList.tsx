@@ -6,7 +6,9 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import { getNominas } from "../../services/nomina.service";
 import { getCajas } from "../../services/cajas.service";
 import { getUsuarios } from "../../services/usuarios.service";
-import { formatMiles } from "../../utils/utils";
+import { getNominaById } from "../../services/nomina.service";
+import { getColegioCursos } from "../../services/colegio.service";
+import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
 
 interface ColegioCobranza {
   id: string | number;
@@ -101,6 +103,9 @@ export default function ColegioCobranzasList({
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [nominas, setNominas] = useState<Nomina[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [importesPorNomina, setImportesPorNomina] = useState<
+    Map<number, number>
+  >(new Map());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -119,6 +124,51 @@ export default function ColegioCobranzasList({
     };
     fetchData();
   }, []);
+
+  // Cargar importes de cursos cuando cambien las cobranzas
+  useEffect(() => {
+    const loadImportes = async () => {
+      if (cobranzas.length === 0) return;
+
+      // Obtener IDs únicos de nóminas
+      const nominaIdsUnicos = new Set<number>();
+      cobranzas.forEach((c) => {
+        if (c.NominaId) {
+          nominaIdsUnicos.add(Number(c.NominaId));
+        }
+      });
+
+      const importesMap = new Map<number, number>();
+      await Promise.all(
+        Array.from(nominaIdsUnicos).map(async (nominaId) => {
+          try {
+            const nomina = await getNominaById(nominaId);
+            if (nomina && nomina.ColegioId && nomina.ColegioCursoId) {
+              const cursos = await getColegioCursos(nomina.ColegioId);
+              const curso = cursos.find(
+                (c: { ColegioCursoId: number }) =>
+                  c.ColegioCursoId === nomina.ColegioCursoId
+              );
+              if (curso && curso.ColegioCursoImporte) {
+                importesMap.set(
+                  nominaId,
+                  Number(curso.ColegioCursoImporte) || 0
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              `Error al cargar importe para nómina ${nominaId}:`,
+              error
+            );
+          }
+        })
+      );
+      setImportesPorNomina(importesMap);
+    };
+
+    loadImportes();
+  }, [cobranzas]);
 
   useEffect(() => {
     if (currentCobranza) {
@@ -213,6 +263,19 @@ export default function ColegioCobranzasList({
     });
   };
 
+  // Función para calcular el total abonado
+  const calcularTotalAbonado = (cobranza: ColegioCobranza): number => {
+    const importe = importesPorNomina.get(Number(cobranza.NominaId)) || 0;
+    const mes = Number(cobranza.ColegioCobranzaMes) || 0;
+    const subtotalCuota = importe * mes;
+    const diasMora = Number(cobranza.ColegioCobranzaDiasMora) || 0;
+    const multa = diasMora * 1000;
+    const examen = Number(cobranza.ColegioCobranzaExamen) || 0;
+    const descuento = Number(cobranza.ColegioCobranzaDescuento) || 0;
+    const total = subtotalCuota + multa + examen - descuento;
+    return Math.max(0, total);
+  };
+
   const columns = [
     { key: "ColegioCobranzaId", label: "ID" },
     {
@@ -250,12 +313,6 @@ export default function ColegioCobranzasList({
       },
     },
     {
-      key: "UsuarioNombre",
-      label: "Usuario",
-      render: (cobranza: ColegioCobranza) =>
-        cobranza.UsuarioNombre || cobranza.UsuarioId,
-    },
-    {
       key: "ColegioCobranzaDescuento",
       label: "Descuento",
       render: (cobranza: ColegioCobranza) => {
@@ -265,6 +322,19 @@ export default function ColegioCobranzasList({
           ? cobranza.ColegioCobranzaDescuento
           : `Gs. ${formatMiles(value)}`;
       },
+    },
+    {
+      key: "TotalAbonado",
+      label: "Total Abonado",
+      render: (cobranza: ColegioCobranza) => {
+        const total = calcularTotalAbonado(cobranza);
+        return `Gs. ${formatMilesWithDecimals(total)}`;
+      },
+    },
+    {
+      key: "UsuarioId",
+      label: "Usuario",
+      render: (cobranza: ColegioCobranza) => cobranza.UsuarioId,
     },
   ];
 

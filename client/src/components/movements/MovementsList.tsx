@@ -3,7 +3,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
-interface Movimiento {
+export interface Movimiento {
   id: string | number;
   RegistroDiarioCajaId: string | number;
   RegistroDiarioCajaFecha: string;
@@ -29,7 +29,7 @@ interface Pagination {
 
 interface MovementsListProps {
   movimientos: Movimiento[];
-  onDelete?: (item: Movimiento) => void;
+  onDelete?: (item: Movimiento) => void | Promise<void>;
   onEdit?: (item: Movimiento) => void;
   onCreate?: () => void;
   pagination?: Pagination;
@@ -37,7 +37,7 @@ interface MovementsListProps {
   isModalOpen?: boolean;
   onCloseModal: () => void;
   currentMovement?: Movimiento | null;
-  onSubmit: (formData: Movimiento) => void;
+  onSubmit: (formData: Movimiento) => void | Promise<void>;
   searchTerm: string;
   onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
   onSearchSubmit: () => void;

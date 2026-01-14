@@ -6,30 +6,12 @@ import {
   createRegistroDiarioCaja,
   updateRegistroDiarioCaja,
 } from "../../services/registros.service";
-import MovementsList from "../../components/movements/MovementsList";
+import MovementsList, {
+  type Movimiento,
+} from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
-
-// Tipos auxiliares
-interface Movimiento {
-  id: string | number;
-  RegistroDiarioCajaId: string | number;
-  RegistroDiarioCajaFecha: string;
-  RegistroDiarioCajaDetalle: string;
-  RegistroDiarioCajaMonto: number;
-  UsuarioId: string | number;
-  CajaId: string | number;
-  TipoGastoId: string | number;
-  TipoGastoGrupoId: string | number;
-  CajaDescripcion: string;
-  TipoGastoDescripcion: string;
-  TipoGastoGrupoDescripcion: string;
-  RegistroDiarioCajaMTCN: string;
-  RegistroDiarioCajaCargoEnvio: number;
-  RegistroDiarioCajaCambio: number;
-  [key: string]: unknown;
-}
 
 interface Pagination {
   totalItems: number;

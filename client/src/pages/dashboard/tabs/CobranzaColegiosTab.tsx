@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../../services/registrodiariocaja.service";
-import {
-  getCajaById,
-  getCajas,
-  updateCajaMonto,
-} from "../../../services/cajas.service";
+import { getCajaById, updateCajaMonto } from "../../../services/cajas.service";
 import {
   getNominaById,
   createNomina,
@@ -14,6 +10,8 @@ import {
 import { getColegioById } from "../../../services/colegio.service";
 import { getColegioCursos } from "../../../services/colegio.service";
 import { createColegioCobranza } from "../../../services/colegiocobranza.service";
+import { getCajaGastosByTipoGastoAndGrupo } from "../../../services/cajagasto.service";
+import { createRegistroDiarioCaja } from "../../../services/registros.service";
 import NominaModal from "../../../components/common/NominaModal";
 import Swal from "sweetalert2";
 import { formatMiles, formatMilesWithDecimals } from "../../../utils/utils";
@@ -44,7 +42,6 @@ interface ColegioCurso {
 export default function CobranzaColegiosTab() {
   const { user } = useAuth();
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
-  const [cajas, setCajas] = useState<Caja[]>([]);
   const [nominas, setNominas] = useState<Nomina[]>([]);
   const [showNominaModal, setShowNominaModal] = useState(false);
   const [nominaSeleccionada, setNominaSeleccionada] = useState<Nomina | null>(
@@ -82,10 +79,6 @@ export default function CobranzaColegiosTab() {
         } else {
           setCajaAperturada(null);
         }
-
-        // Obtener todas las cajas
-        const cajasData = await getCajas(1, 1000);
-        setCajas(cajasData.data);
 
         // Obtener todas las nominas sin paginación
         const nominasData = await getAllNominasSinPaginacion();
@@ -195,6 +188,24 @@ export default function CobranzaColegiosTab() {
     }
 
     try {
+      // Obtener el colegio para saber su TipoGastoId y TipoGastoGrupoId
+      const colegio = await getColegioById(colegioId);
+      if (!colegio || !colegio.TipoGastoId || !colegio.TipoGastoGrupoId) {
+        Swal.fire({
+          icon: "warning",
+          title: "Error",
+          text: "El colegio no tiene TipoGastoId y TipoGastoGrupoId asignados.",
+          confirmButtonColor: "#2563eb",
+        });
+        return;
+      }
+
+      // Obtener todas las cajas que tengan este TipoGastoId y TipoGastoGrupoId asignado
+      const todasLasCajasConGasto = await getCajaGastosByTipoGastoAndGrupo(
+        colegio.TipoGastoId,
+        colegio.TipoGastoGrupoId
+      );
+
       // Crear la cobranza
       await createColegioCobranza({
         CajaId: cajaId,
@@ -208,15 +219,53 @@ export default function CobranzaColegiosTab() {
         ColegioCobranzaDescuento: descuento || 0,
       });
 
-      // Actualizar monto de la caja (sumar el total)
-      const estado = await getEstadoAperturaPorUsuario(user.id);
-      const cajaAperturadaId = estado.cajaId;
-      const cajaActualizada = await getCajaById(cajaAperturadaId);
-      const cajaMontoActual = cajaActualizada.CajaMonto;
-      await updateCajaMonto(
-        cajaAperturadaId,
-        Number(cajaMontoActual) + Number(total)
-      );
+      // Crear registro diario de caja
+      const detalleRegistro = `Cobranza Colegio: ${colegioNombre} - Nómina: ${
+        nominaSeleccionada?.NominaApellido || ""
+      }, ${nominaSeleccionada?.NominaNombre || ""}`;
+
+      await createRegistroDiarioCaja({
+        CajaId: cajaId,
+        RegistroDiarioCajaFecha: fecha,
+        TipoGastoId: colegio.TipoGastoId,
+        TipoGastoGrupoId: colegio.TipoGastoGrupoId,
+        RegistroDiarioCajaDetalle: detalleRegistro,
+        RegistroDiarioCajaMonto: total,
+        UsuarioId: user.id,
+        RegistroDiarioCajaCambio: 0,
+        RegistroDiarioCajaMTCN: 0,
+        RegistroDiarioCajaCargoEnvio: 0,
+      });
+
+      // Obtener IDs únicos de todas las cajas a actualizar
+      // Incluir todas las cajas que tengan este gasto asignado + la caja aperturada
+      const cajasIdsParaActualizar = new Set<number>();
+
+      // Agregar todas las cajas que tengan el gasto asignado
+      todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
+        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+      });
+
+      // Agregar también la caja aperturada
+      cajasIdsParaActualizar.add(Number(cajaId));
+
+      // Actualizar el monto de todas las cajas (las que tienen el gasto + la caja aperturada)
+      if (cajasIdsParaActualizar.size > 0) {
+        const totalNumero = Number(total);
+        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+          async (cajaIdParaActualizar: number) => {
+            const cajaActual = await getCajaById(cajaIdParaActualizar);
+            const cajaMontoActual = Number(cajaActual.CajaMonto);
+            // Sumar el total (las cobranzas siempre son ingresos)
+            await updateCajaMonto(
+              cajaIdParaActualizar,
+              cajaMontoActual + totalNumero
+            );
+          }
+        );
+
+        await Promise.all(actualizaciones);
+      }
 
       Swal.fire(
         "Cobranza registrada",
@@ -267,41 +316,6 @@ export default function CobranzaColegiosTab() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Id */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Id
-              </label>
-              <input
-                type="text"
-                value="0"
-                readOnly
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-              />
-            </div>
-
-            {/* Caja */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Caja
-              </label>
-              <select
-                value={cajaId}
-                onChange={(e) => setCajaId(e.target.value)}
-                required
-                disabled={!!cajaAperturada}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Seleccione una caja</option>
-                {cajas.map((caja) => (
-                  <option key={caja.CajaId} value={caja.CajaId}>
-                    {caja.CajaDescripcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Fecha */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

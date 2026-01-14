@@ -100,7 +100,15 @@ export default function TiposGastoList({
     if (currentTipoGasto && currentTipoGasto.TipoGastoId) {
       setLoadingGrupos(true);
       getTipoGastoGrupoByTipoGastoId(currentTipoGasto.TipoGastoId)
-        .then((data) => setGrupos(data))
+        .then((data) => {
+          // Convertir descripciones a mayúsculas al cargar
+          const gruposConMayusculas = data.map((g: TipoGastoGrupo) => ({
+            ...g,
+            TipoGastoGrupoDescripcion:
+              g.TipoGastoGrupoDescripcion.toUpperCase(),
+          }));
+          setGrupos(gruposConMayusculas);
+        })
         .catch(() => setGrupos([]))
         .finally(() => setLoadingGrupos(false));
     } else {
@@ -253,7 +261,9 @@ export default function TiposGastoList({
                                     className="border rounded px-2 py-1 text-sm"
                                     value={editGrupoDesc}
                                     onChange={(e) =>
-                                      setEditGrupoDesc(e.target.value)
+                                      setEditGrupoDesc(
+                                        e.target.value.toUpperCase()
+                                      )
                                     }
                                   />
                                   <button
@@ -266,7 +276,7 @@ export default function TiposGastoList({
                                           g.TipoGastoGrupoId,
                                           {
                                             TipoGastoGrupoDescripcion:
-                                              editGrupoDesc,
+                                              editGrupoDesc.toUpperCase(),
                                           }
                                         );
                                         setEditGrupoId(null);
@@ -276,7 +286,15 @@ export default function TiposGastoList({
                                           await getTipoGastoGrupoByTipoGastoId(
                                             currentTipoGasto.TipoGastoId
                                           );
-                                        setGrupos(data);
+                                        // Convertir descripciones a mayúsculas al cargar
+                                        const gruposConMayusculas = data.map(
+                                          (gr: TipoGastoGrupo) => ({
+                                            ...gr,
+                                            TipoGastoGrupoDescripcion:
+                                              gr.TipoGastoGrupoDescripcion.toUpperCase(),
+                                          })
+                                        );
+                                        setGrupos(gruposConMayusculas);
                                         setLoadingGrupos(false);
                                       } catch (error: unknown) {
                                         const err = error as {
@@ -320,7 +338,7 @@ export default function TiposGastoList({
                                     onClick={() => {
                                       setEditGrupoId(g.TipoGastoGrupoId);
                                       setEditGrupoDesc(
-                                        g.TipoGastoGrupoDescripcion
+                                        g.TipoGastoGrupoDescripcion.toUpperCase()
                                       );
                                     }}
                                   >
@@ -352,7 +370,15 @@ export default function TiposGastoList({
                                           await getTipoGastoGrupoByTipoGastoId(
                                             currentTipoGasto.TipoGastoId
                                           );
-                                        setGrupos(data);
+                                        // Convertir descripciones a mayúsculas al cargar
+                                        const gruposConMayusculas = data.map(
+                                          (gr: TipoGastoGrupo) => ({
+                                            ...gr,
+                                            TipoGastoGrupoDescripcion:
+                                              gr.TipoGastoGrupoDescripcion.toUpperCase(),
+                                          })
+                                        );
+                                        setGrupos(gruposConMayusculas);
                                         setLoadingGrupos(false);
                                         if (
                                           res.TipoGastoCantGastos !== undefined
@@ -406,7 +432,9 @@ export default function TiposGastoList({
                             className="border rounded px-2 py-1 text-sm flex-1"
                             placeholder="Nuevo grupo..."
                             value={nuevoGrupo}
-                            onChange={(e) => setNuevoGrupo(e.target.value)}
+                            onChange={(e) =>
+                              setNuevoGrupo(e.target.value.toUpperCase())
+                            }
                           />
                           <button
                             type="button"
@@ -415,14 +443,23 @@ export default function TiposGastoList({
                               if (!nuevoGrupo.trim()) return;
                               const res = await createTipoGastoGrupo({
                                 TipoGastoId: currentTipoGasto.TipoGastoId,
-                                TipoGastoGrupoDescripcion: nuevoGrupo,
+                                TipoGastoGrupoDescripcion:
+                                  nuevoGrupo.toUpperCase(),
                               });
                               setNuevoGrupo("");
                               setLoadingGrupos(true);
                               const data = await getTipoGastoGrupoByTipoGastoId(
                                 currentTipoGasto.TipoGastoId
                               );
-                              setGrupos(data);
+                              // Convertir descripciones a mayúsculas al cargar
+                              const gruposConMayusculas = data.map(
+                                (gr: TipoGastoGrupo) => ({
+                                  ...gr,
+                                  TipoGastoGrupoDescripcion:
+                                    gr.TipoGastoGrupoDescripcion.toUpperCase(),
+                                })
+                              );
+                              setGrupos(gruposConMayusculas);
                               setLoadingGrupos(false);
                               if (res.TipoGastoCantGastos !== undefined) {
                                 setFormData((prev) => ({

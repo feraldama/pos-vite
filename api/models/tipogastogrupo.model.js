@@ -38,13 +38,14 @@ const TipoGastoGrupo = {
 
   create: (data) => {
     return new Promise((resolve, reject) => {
-      // 1. Obtener el contador actual
+      // 1. Obtener el máximo TipoGastoGrupoId existente para este TipoGastoId
       db.query(
-        "SELECT TipoGastoCantGastos FROM TipoGasto WHERE TipoGastoId = ?",
+        "SELECT MAX(TipoGastoGrupoId) as maxId FROM tipogastogrupo WHERE TipoGastoId = ?",
         [data.TipoGastoId],
         (err, results) => {
           if (err) return reject(err);
-          const nextGrupoId = (results[0]?.TipoGastoCantGastos || 0) + 1;
+          // Si no hay datos, empezar desde 1, sino usar el máximo + 1
+          const nextGrupoId = results[0]?.maxId ? results[0].maxId + 1 : 1;
           // 2. Insertar con el nuevo ID
           db.query(
             "INSERT INTO tipogastogrupo (TipoGastoId, TipoGastoGrupoId, TipoGastoGrupoDescripcion) VALUES (?, ?, ?)",

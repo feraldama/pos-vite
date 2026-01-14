@@ -229,6 +229,11 @@ export default function CajaGastosList({ cajaId }: CajaGastosListProps) {
             .filter(
               (gg) => String(gg.TipoGastoId) === String(nuevoGasto.TipoGastoId)
             )
+            .sort((a, b) =>
+              a.TipoGastoGrupoDescripcion.localeCompare(
+                b.TipoGastoGrupoDescripcion
+              )
+            )
             .map((gg) => (
               <option key={gg.TipoGastoGrupoId} value={gg.TipoGastoGrupoId}>
                 {gg.TipoGastoGrupoDescripcion}

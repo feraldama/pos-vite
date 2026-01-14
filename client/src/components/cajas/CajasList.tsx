@@ -303,11 +303,17 @@ export default function CajasList({
                       required
                     >
                       <option value="">Seleccione un tipo</option>
-                      {cajaTipos.map((tipo) => (
-                        <option key={tipo.CajaTipoId} value={tipo.CajaTipoId}>
-                          {tipo.CajaTipoDescripcion}
-                        </option>
-                      ))}
+                      {cajaTipos
+                        .sort((a, b) =>
+                          a.CajaTipoDescripcion.localeCompare(
+                            b.CajaTipoDescripcion
+                          )
+                        )
+                        .map((tipo) => (
+                          <option key={tipo.CajaTipoId} value={tipo.CajaTipoId}>
+                            {tipo.CajaTipoDescripcion}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>

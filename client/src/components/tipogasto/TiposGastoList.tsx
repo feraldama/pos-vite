@@ -184,12 +184,12 @@ export default function TiposGastoList({
           onClick={handleBackdropClick}
         >
           <div className="absolute inset-0 bg-black opacity-50" />
-          <div className="relative w-full max-w-2xl max-h-full z-10">
+          <div className="relative w-full max-w-2xl max-h-[90vh] z-10 flex flex-col">
             <form
               onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-lg shadow flex flex-col max-h-[90vh]"
             >
-              <div className="flex items-start justify-between p-4 border-b rounded-t">
+              <div className="flex items-start justify-between p-4 border-b rounded-t flex-shrink-0">
                 <h3 className="text-xl font-semibold text-gray-900">
                   {currentTipoGasto
                     ? `Editar tipo de gasto: ${currentTipoGasto.TipoGastoDescripcion}`
@@ -217,7 +217,7 @@ export default function TiposGastoList({
                   </svg>
                 </button>
               </div>
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 <div className="grid grid-cols-6 gap-6">
                   <div className="col-span-6 sm:col-span-4">
                     <label
@@ -495,7 +495,7 @@ export default function TiposGastoList({
                   </div>
                 )}
               </div>
-              <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
+              <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b flex-shrink-0">
                 <ActionButton
                   label={currentTipoGasto ? "Actualizar" : "Crear"}
                   type="submit"

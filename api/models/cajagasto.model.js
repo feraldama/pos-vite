@@ -40,6 +40,23 @@ const CajaGasto = {
     });
   },
 
+  getByTipoGastoAndGrupo: (tipoGastoId, tipoGastoGrupoId) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        `SELECT cg.*, tg.TipoGastoDescripcion, tgg.TipoGastoGrupoDescripcion
+         FROM cajagasto cg
+         LEFT JOIN tipogasto tg ON cg.TipoGastoId = tg.TipoGastoId
+         LEFT JOIN tipogastogrupo tgg ON cg.TipoGastoId = tgg.TipoGastoId AND cg.TipoGastoGrupoId = tgg.TipoGastoGrupoId
+         WHERE cg.TipoGastoId = ? AND cg.TipoGastoGrupoId = ?`,
+        [tipoGastoId, tipoGastoGrupoId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+  },
+
   create: (data) => {
     return new Promise((resolve, reject) => {
       // Obtener el siguiente CajaGastoId disponible para la caja

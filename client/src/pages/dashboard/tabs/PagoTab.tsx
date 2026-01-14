@@ -6,6 +6,7 @@ import { createRegistroDiarioCaja } from "../../../services/registros.service";
 import { getTiposGasto } from "../../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../../services/tipogastogrupo.service";
 import { updateCajaMonto } from "../../../services/cajas.service";
+import { getCajaGastosByTipoGastoAndGrupo } from "../../../services/cajagasto.service";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../../utils/utils";
 
@@ -85,9 +86,11 @@ export default function PagosTab() {
     fetchData();
   }, [user]);
 
-  const gruposFiltrados = tiposGastoGrupo.filter(
-    (g) => g.TipoGastoId === tipoGastoId
-  );
+  const gruposFiltrados = tiposGastoGrupo
+    .filter((g) => g.TipoGastoId === tipoGastoId)
+    .sort((a, b) =>
+      a.TipoGastoGrupoDescripcion.localeCompare(b.TipoGastoGrupoDescripcion)
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +105,13 @@ export default function PagosTab() {
     }
 
     try {
+      // Obtener todas las cajas que tengan este TipoGastoId y TipoGastoGrupoId asignado
+      const todasLasCajasConGasto = await getCajaGastosByTipoGastoAndGrupo(
+        tipoGastoId,
+        tipoGastoGrupoId
+      );
+
+      // Crear el registro diario de caja
       await createRegistroDiarioCaja({
         CajaId: cajaId,
         RegistroDiarioCajaFecha: fecha,
@@ -115,23 +125,43 @@ export default function PagosTab() {
         RegistroDiarioCajaCargoEnvio: cargoEnvio || 0,
       });
 
-      // Actualizar monto de la caja
-      const estado = await getEstadoAperturaPorUsuario(user.id);
-      const cajaAperturadaId = estado.cajaId;
-      const cajaActualizada = await getCajaById(cajaAperturadaId);
-      const cajaMontoActual = cajaActualizada.CajaMonto;
-      if (tipoGastoId === 1) {
-        // Restar el monto
-        await updateCajaMonto(
-          cajaAperturadaId,
-          Number(cajaMontoActual) - Number(monto)
+      // Obtener IDs únicos de todas las cajas a actualizar
+      // Incluir todas las cajas que tengan este gasto asignado + la caja aperturada
+      const cajasIdsParaActualizar = new Set<number>();
+
+      // Agregar todas las cajas que tengan el gasto asignado
+      todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
+        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+      });
+
+      // Agregar también la caja aperturada
+      cajasIdsParaActualizar.add(Number(cajaId));
+
+      // Actualizar el monto de todas las cajas (las que tienen el gasto + la caja aperturada)
+      if (cajasIdsParaActualizar.size > 0) {
+        const montoNumero = Number(monto);
+        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+          async (cajaIdParaActualizar: number) => {
+            const cajaActual = await getCajaById(cajaIdParaActualizar);
+            const cajaMontoActual = Number(cajaActual.CajaMonto);
+
+            if (tipoGastoId === 1) {
+              // Egreso: restar el monto
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual - montoNumero
+              );
+            } else if (tipoGastoId === 2) {
+              // Ingreso: sumar el monto
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoNumero
+              );
+            }
+          }
         );
-      } else if (tipoGastoId === 2) {
-        // Sumar el monto
-        await updateCajaMonto(
-          cajaAperturadaId,
-          Number(cajaMontoActual) + Number(monto)
-        );
+
+        await Promise.all(actualizaciones);
       }
 
       Swal.fire(

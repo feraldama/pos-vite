@@ -9,6 +9,11 @@ router.use(authMiddleware);
 // Rutas para CajaGasto
 router.get("/", authMiddleware, cajagastoController.getAll);
 router.get("/caja/:cajaId", authMiddleware, cajagastoController.getByCajaId);
+router.get(
+  "/tipo/:tipoGastoId/grupo/:tipoGastoGrupoId",
+  authMiddleware,
+  cajagastoController.getByTipoGastoAndGrupo
+);
 router.get("/:id", authMiddleware, cajagastoController.getById);
 router.post("/", authMiddleware, cajagastoController.create);
 router.put("/:id", authMiddleware, cajagastoController.update);

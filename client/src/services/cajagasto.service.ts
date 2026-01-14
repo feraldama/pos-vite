@@ -49,6 +49,25 @@ export const getCajaGastosByCajaId = async (cajaId: string | number) => {
   }
 };
 
+export const getCajaGastosByTipoGastoAndGrupo = async (
+  tipoGastoId: string | number,
+  tipoGastoGrupoId: string | number
+) => {
+  try {
+    const response = await api.get(
+      `/cajagasto/tipo/${tipoGastoId}/grupo/${tipoGastoGrupoId}`
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener gastos por tipo y grupo",
+      }
+    );
+  }
+};
+
 export const createCajaGasto = async (data: Omit<CajaGasto, "CajaGastoId">) => {
   try {
     const response = await api.post("/cajagasto", data);

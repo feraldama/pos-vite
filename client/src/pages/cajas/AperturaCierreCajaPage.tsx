@@ -17,6 +17,7 @@ interface Caja {
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
+  CajaTipoId?: number | null;
 }
 
 interface RegistroDiarioCaja {
@@ -46,14 +47,20 @@ export default function AperturaCierreCajaPage() {
   const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
   const [descargarPDF, setDescargarPDF] = useState(false);
   const [operacionCompletada, setOperacionCompletada] = useState(false);
+  const [todasLasCajas, setTodasLasCajas] = useState<Caja[]>([]);
 
   useEffect(() => {
     const fetchCajas = async () => {
       try {
         setLoading(true);
         const data = await getCajas(1, 1000);
-        setCajas(data.data);
-        if (data.data.length > 0) setCajaId(data.data[0].CajaId);
+        setTodasLasCajas(data.data);
+        // Filtrar solo cajas con CajaTipoId = 1 para apertura (por defecto)
+        const cajasFiltradas = data.data.filter(
+          (caja: Caja) => caja.CajaTipoId === 1
+        );
+        setCajas(cajasFiltradas);
+        if (cajasFiltradas.length > 0) setCajaId(cajasFiltradas[0].CajaId);
       } catch {
         setError("Error al cargar cajas");
       } finally {
@@ -66,7 +73,7 @@ export default function AperturaCierreCajaPage() {
   useEffect(() => {
     // Lógica para detectar si el usuario tiene una caja aperturada
     const checkCajaAperturada = async () => {
-      if (!user) return;
+      if (!user || todasLasCajas.length === 0) return;
       try {
         const data = await getEstadoAperturaPorUsuario(user.id);
         // Si apertura > cierre, forzar cierre y deshabilitar el select de tipo y de caja
@@ -74,19 +81,42 @@ export default function AperturaCierreCajaPage() {
           setTipo("1"); // Cierre
           setTipoDisabled(true);
           setCajaDisabled(true); // Solo puede cerrar la caja que tiene abierta
-          if (data.cajaId) setCajaId(data.cajaId);
+          if (data.cajaId) {
+            setCajaId(data.cajaId);
+            // Si la caja abierta no está en la lista filtrada, agregarla para poder cerrarla
+            const cajaAbierta = todasLasCajas.find(
+              (c) => c.CajaId == data.cajaId
+            );
+            if (cajaAbierta) {
+              setCajas((prevCajas) => {
+                const existeEnLista = prevCajas.some(
+                  (c) => c.CajaId == data.cajaId
+                );
+                if (!existeEnLista) {
+                  return [cajaAbierta];
+                }
+                return prevCajas;
+              });
+            }
+          }
         } else {
           // No tiene ninguna caja abierta, forzar apertura y deshabilitar solo el select de tipo
           setTipo("0");
           setTipoDisabled(true);
           setCajaDisabled(false); // Puede elegir la caja que desee
+          // Asegurar que solo se muestren cajas tipo 1 para apertura
+          const cajasFiltradas = todasLasCajas.filter(
+            (caja: Caja) => caja.CajaTipoId === 1
+          );
+          setCajas(cajasFiltradas);
+          if (cajasFiltradas.length > 0) setCajaId(cajasFiltradas[0].CajaId);
         }
       } catch {
         // Si hay error, no forzar nada
       }
     };
     checkCajaAperturada();
-  }, [user, location.pathname]);
+  }, [user, location.pathname, todasLasCajas]);
 
   useEffect(() => {
     if (error) {
@@ -216,36 +246,20 @@ export default function AperturaCierreCajaPage() {
         reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
         reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
     );
-    // Calcular totales
+    // Calcular totales (todos en efectivo)
     const apertura = Number(aperturaReg.RegistroDiarioCajaMonto);
     const cierre = Number(cierreReg.RegistroDiarioCajaMonto);
     let egresos = 0;
     let ingresos = 0;
-    let ingresosPOS = 0;
-    let ingresosVoucher = 0;
-    let ingresosTransfer = 0;
     for (const reg of registrosFiltrados) {
       const monto = Number(reg.RegistroDiarioCajaMonto);
-      if (
-        reg.TipoGastoId === 2 &&
-        reg.TipoGastoGrupoId !== 2 &&
-        reg.TipoGastoGrupoId !== 4 &&
-        reg.TipoGastoGrupoId !== 5 &&
-        reg.TipoGastoGrupoId !== 6
-      ) {
+      // Todos los ingresos son efectivo (excepto apertura que es TipoGastoGrupoId === 2)
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId !== 2) {
         ingresos += monto;
       }
+      // Todos los egresos son efectivo (excepto cierre que es TipoGastoGrupoId === 2)
       if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
         egresos += monto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
-        ingresosPOS += monto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
-        ingresosVoucher += monto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
-        ingresosTransfer += monto;
       }
     }
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
@@ -283,25 +297,12 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    doc.text(`Ingresos Efectivo: ${formatMiles(ingresos)}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos POS: ${formatMiles(ingresosPOS)}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos Voucher: ${formatMiles(ingresosVoucher)}`, 10, y);
-    y += 8;
-    doc.text(`Ingresos Transfer: ${formatMiles(ingresosTransfer)}`, 10, y);
+    doc.text(`Ingresos: ${formatMiles(ingresos)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    const totalIngresos =
-      ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
-    doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
-    y += 8;
-    // Línea nueva para Total Egresos
-    doc.text(`Total Egresos: ${formatMiles(egresos)}`, 10, y);
-    y += 8;
     // Línea nueva para Diferencia
-    const diferencia = totalIngresos - egresos;
+    const diferencia = ingresos - egresos;
     doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);

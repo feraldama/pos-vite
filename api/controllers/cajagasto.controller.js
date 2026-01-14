@@ -30,6 +30,19 @@ exports.getByCajaId = async (req, res) => {
   }
 };
 
+exports.getByTipoGastoAndGrupo = async (req, res) => {
+  try {
+    const { tipoGastoId, tipoGastoGrupoId } = req.params;
+    const gastos = await CajaGasto.getByTipoGastoAndGrupo(
+      tipoGastoId,
+      tipoGastoGrupoId
+    );
+    res.json(gastos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const gasto = await CajaGasto.create(req.body);

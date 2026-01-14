@@ -86,6 +86,7 @@ const navigation: NavigationItem[] = [
     href: "/movements",
     icon: <PencilSquareIcon className="h-7 w-6" />,
     children: [
+      { name: "Tipos de Caja", href: "/movements/cajatipo" },
       { name: "Cajas", href: "/movements/cajas" },
       { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
       // { name: "Compras", href: "/movements/purchases" },

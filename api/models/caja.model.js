@@ -21,11 +21,12 @@ const Caja = {
 
   create: (cajaData) => {
     return new Promise((resolve, reject) => {
-      const query = `INSERT INTO Caja (CajaDescripcion, CajaMonto, CajaGastoCantidad) VALUES (?, ?, ?)`;
+      const query = `INSERT INTO Caja (CajaDescripcion, CajaMonto, CajaGastoCantidad, CajaTipoId) VALUES (?, ?, ?, ?)`;
       const values = [
         cajaData.CajaDescripcion,
         cajaData.CajaMonto,
         cajaData.CajaGastoCantidad,
+        cajaData.CajaTipoId || null,
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
@@ -39,11 +40,12 @@ const Caja = {
 
   update: (id, cajaData) => {
     return new Promise((resolve, reject) => {
-      const query = `UPDATE Caja SET CajaDescripcion = ?, CajaMonto = ?, CajaGastoCantidad = ? WHERE CajaId = ?`;
+      const query = `UPDATE Caja SET CajaDescripcion = ?, CajaMonto = ?, CajaGastoCantidad = ?, CajaTipoId = ? WHERE CajaId = ?`;
       const values = [
         cajaData.CajaDescripcion,
         cajaData.CajaMonto,
         cajaData.CajaGastoCantidad,
+        cajaData.CajaTipoId || null,
         id,
       ];
       db.query(query, values, (err, result) => {
@@ -72,6 +74,7 @@ const Caja = {
         "CajaDescripcion",
         "CajaMonto",
         "CajaGastoCantidad",
+        "CajaTipoId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
@@ -105,6 +108,7 @@ const Caja = {
         "CajaDescripcion",
         "CajaMonto",
         "CajaGastoCantidad",
+        "CajaTipoId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";

@@ -1,23 +1,20 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  getCajas,
-  deleteCaja,
-  searchCajas,
-  createCaja,
-  updateCaja,
-} from "../../services/cajas.service";
-import CajasList from "../../components/cajas/CajasList";
+  getCajaTipos,
+  deleteCajaTipo,
+  searchCajaTipos,
+  createCajaTipo,
+  updateCajaTipo,
+} from "../../services/cajatipo.service";
+import CajaTipoList from "../../components/cajatipo/CajaTipoList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
-interface Caja {
+interface CajaTipo {
   id: string | number;
-  CajaId: string | number;
-  CajaDescripcion: string;
-  CajaMonto: number;
-  CajaGastoCantidad: number;
-  CajaTipoId?: number | null;
+  CajaTipoId: string | number;
+  CajaTipoDescripcion: string;
   [key: string]: unknown;
 }
 
@@ -27,33 +24,33 @@ interface Pagination {
   [key: string]: unknown;
 }
 
-export default function CajasPage() {
-  const [cajasData, setCajasData] = useState<{
-    cajas: Caja[];
+export default function CajaTipoPage() {
+  const [cajaTiposData, setCajaTiposData] = useState<{
+    cajaTipos: CajaTipo[];
     pagination: Pagination;
-  }>({ cajas: [], pagination: { totalItems: 0, totalPages: 1 } });
+  }>({ cajaTipos: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
+  const [currentCajaTipo, setCurrentCajaTipo] = useState<CajaTipo | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const puedeCrear = usePermiso("CAJAS", "crear");
-  const puedeEditar = usePermiso("CAJAS", "editar");
-  const puedeEliminar = usePermiso("CAJAS", "eliminar");
-  const puedeLeer = usePermiso("CAJAS", "leer");
+  const puedeCrear = usePermiso("CAJATIPO", "crear");
+  const puedeEditar = usePermiso("CAJATIPO", "editar");
+  const puedeEliminar = usePermiso("CAJATIPO", "eliminar");
+  const puedeLeer = usePermiso("CAJATIPO", "leer");
 
-  const fetchCajas = useCallback(async () => {
+  const fetchCajaTipos = useCallback(async () => {
     try {
       setLoading(true);
       let data;
       if (appliedSearchTerm) {
-        data = await searchCajas(
+        data = await searchCajaTipos(
           appliedSearchTerm,
           currentPage,
           itemsPerPage,
@@ -61,10 +58,15 @@ export default function CajasPage() {
           sortOrder
         );
       } else {
-        data = await getCajas(currentPage, itemsPerPage, sortKey, sortOrder);
+        data = await getCajaTipos(
+          currentPage,
+          itemsPerPage,
+          sortKey,
+          sortOrder
+        );
       }
-      setCajasData({
-        cajas: data.data,
+      setCajaTiposData({
+        cajaTipos: data.data,
         pagination: data.pagination,
       });
     } catch (err) {
@@ -79,8 +81,8 @@ export default function CajasPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchCajas();
-  }, [fetchCajas]);
+    fetchCajaTipos();
+  }, [fetchCajaTipos]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -110,18 +112,20 @@ export default function CajasPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteCaja(id);
+          await deleteCajaTipo(id);
           Swal.fire({
             icon: "success",
-            title: "Caja eliminada exitosamente",
+            title: "Tipo de caja eliminado exitosamente",
           });
-          setCajasData((prev) => ({
+          setCajaTiposData((prev) => ({
             ...prev,
-            cajas: prev.cajas.filter((caja) => caja.CajaId !== id),
+            cajaTipos: prev.cajaTipos.filter(
+              (cajaTipo) => cajaTipo.CajaTipoId !== id
+            ),
           }));
         } catch (error: unknown) {
           const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar la caja";
+          const msg = err?.message || "No se pudo eliminar el tipo de caja";
           Swal.fire({
             icon: "warning",
             title: "No permitido",
@@ -133,24 +137,24 @@ export default function CajasPage() {
   };
 
   const handleCreate = () => {
-    setCurrentCaja(null);
+    setCurrentCajaTipo(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (caja: Caja) => {
-    setCurrentCaja(caja);
+  const handleEdit = (cajaTipo: CajaTipo) => {
+    setCurrentCajaTipo(cajaTipo);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (cajaData: Caja) => {
+  const handleSubmit = async (cajaTipoData: CajaTipo) => {
     let mensaje = "";
     try {
-      if (currentCaja) {
-        await updateCaja(currentCaja.CajaId, cajaData);
-        mensaje = "Caja actualizada exitosamente";
+      if (currentCajaTipo) {
+        await updateCajaTipo(currentCajaTipo.CajaTipoId, cajaTipoData);
+        mensaje = "Tipo de caja actualizado exitosamente";
       } else {
-        const response = await createCaja(cajaData);
-        mensaje = response.message || "Caja creada exitosamente";
+        const response = await createCajaTipo(cajaTipoData);
+        mensaje = response.message || "Tipo de caja creado exitosamente";
       }
       setIsModalOpen(false);
       Swal.fire({
@@ -160,7 +164,7 @@ export default function CajasPage() {
         showConfirmButton: false,
         timer: 2000,
       });
-      fetchCajas();
+      fetchCajaTipos();
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -179,32 +183,38 @@ export default function CajasPage() {
     setCurrentPage(1);
   };
 
-  if (!puedeLeer) return <div>No tienes permiso para ver las cajas</div>;
+  if (!puedeLeer)
+    return <div>No tienes permiso para ver los tipos de caja</div>;
 
-  if (loading) return <div>Cargando cajas...</div>;
+  if (loading) return <div>Cargando tipos de caja...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Cajas</h1>
-      <CajasList
-        cajas={cajasData.cajas.map((c) => ({ ...c, id: c.CajaId }))}
+      <h1 className="text-2xl font-medium mb-3">Gestión de Tipos de Caja</h1>
+      <CajaTipoList
+        cajaTipos={cajaTiposData.cajaTipos.map((c) => ({
+          ...c,
+          id: c.CajaTipoId,
+        }))}
         onDelete={
           puedeEliminar
-            ? (caja) => handleDelete(caja.CajaId as string)
+            ? (cajaTipo) => handleDelete(cajaTipo.CajaTipoId as string)
             : undefined
         }
         onEdit={puedeEditar ? handleEdit : undefined}
         onCreate={puedeCrear ? handleCreate : undefined}
-        pagination={cajasData.pagination}
+        pagination={cajaTiposData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         onKeyPress={handleKeyPress}
         onSearchSubmit={applySearch}
         isModalOpen={isModalOpen}
         onCloseModal={() => setIsModalOpen(false)}
-        currentCaja={
-          currentCaja ? { ...currentCaja, id: currentCaja.CajaId } : null
+        currentCajaTipo={
+          currentCajaTipo
+            ? { ...currentCajaTipo, id: currentCajaTipo.CajaTipoId }
+            : null
         }
         onSubmit={handleSubmit}
         sortKey={sortKey}
@@ -217,7 +227,7 @@ export default function CajasPage() {
       />
       <Pagination
         currentPage={currentPage}
-        totalPages={cajasData.pagination.totalPages}
+        totalPages={cajaTiposData.pagination.totalPages}
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}

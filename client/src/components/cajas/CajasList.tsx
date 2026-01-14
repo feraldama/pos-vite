@@ -5,6 +5,7 @@ import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import CajaGastosList from "./CajaGastosList";
 import { formatMiles } from "../../utils/utils";
+import { getAllCajaTipos } from "../../services/cajatipo.service";
 
 interface Caja {
   id: string | number;
@@ -12,7 +13,13 @@ interface Caja {
   CajaDescripcion: string;
   CajaMonto: number;
   CajaGastoCantidad: number;
+  CajaTipoId?: number | null;
   [key: string]: unknown;
+}
+
+interface CajaTipo {
+  CajaTipoId: number;
+  CajaTipoDescripcion: string;
 }
 
 interface Pagination {
@@ -62,7 +69,21 @@ export default function CajasList({
     CajaDescripcion: "",
     CajaMonto: 0,
     CajaGastoCantidad: 0,
+    CajaTipoId: null as number | null,
   });
+  const [cajaTipos, setCajaTipos] = useState<CajaTipo[]>([]);
+
+  useEffect(() => {
+    const loadCajaTipos = async () => {
+      try {
+        const tipos = await getAllCajaTipos();
+        setCajaTipos(tipos);
+      } catch (error) {
+        console.error("Error al cargar tipos de caja:", error);
+      }
+    };
+    loadCajaTipos();
+  }, []);
 
   useEffect(() => {
     if (currentCaja) {
@@ -72,6 +93,7 @@ export default function CajasList({
         CajaDescripcion: currentCaja.CajaDescripcion,
         CajaMonto: currentCaja.CajaMonto,
         CajaGastoCantidad: currentCaja.CajaGastoCantidad,
+        CajaTipoId: currentCaja.CajaTipoId || null,
       });
     } else {
       setFormData({
@@ -80,6 +102,7 @@ export default function CajasList({
         CajaDescripcion: "",
         CajaMonto: 0,
         CajaGastoCantidad: 0,
+        CajaTipoId: null,
       });
     }
   }, [currentCaja]);
@@ -93,12 +116,20 @@ export default function CajasList({
       [name]:
         name === "CajaMonto" || name === "CajaGastoCantidad"
           ? Number(value)
+          : name === "CajaTipoId"
+          ? value === "" || value === "null"
+            ? null
+            : Number(value)
           : value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!formData.CajaTipoId) {
+      alert("Debe seleccionar un tipo de caja");
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -115,6 +146,14 @@ export default function CajasList({
       key: "CajaMonto",
       label: "Monto",
       render: (caja: Caja) => `Gs. ${formatMiles(caja.CajaMonto)}`,
+    },
+    {
+      key: "CajaTipoId",
+      label: "Tipo de Caja",
+      render: (caja: Caja) => {
+        const tipo = cajaTipos.find((t) => t.CajaTipoId === caja.CajaTipoId);
+        return tipo ? tipo.CajaTipoDescripcion : "-";
+      },
     },
   ];
 
@@ -247,6 +286,29 @@ export default function CajasList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
                     />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="CajaTipoId"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Tipo de Caja <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="CajaTipoId"
+                      id="CajaTipoId"
+                      value={formData.CajaTipoId || ""}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
+                    >
+                      <option value="">Seleccione un tipo</option>
+                      {cajaTipos.map((tipo) => (
+                        <option key={tipo.CajaTipoId} value={tipo.CajaTipoId}>
+                          {tipo.CajaTipoDescripcion}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 {/* Detalle: gastos de la caja */}

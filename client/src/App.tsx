@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import UsersPage from "./pages/users/UsersPage";
 import MovementsPage from "./pages/movements/MovementsPage";
 import CajasPage from "./pages/cajas/CajasPage";
+import CajaTipoPage from "./pages/cajatipo/CajaTipoPage";
 import TiposGastoPage from "./pages/tipogasto/TiposGastoPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import AperturaCierreCajaPage from "./pages/cajas/AperturaCierreCajaPage";
@@ -76,6 +77,7 @@ function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/movements/summary" element={<MovementsPage />} />;
             <Route path="/movements/cajas" element={<CajasPage />} />;
+            <Route path="/movements/cajatipo" element={<CajaTipoPage />} />;
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
             <Route path="/movements/transporte" element={<TransportesPage />} />
             <Route path="/pagotrans" element={<PagosTransportePage />} />

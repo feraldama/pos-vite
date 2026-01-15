@@ -12,7 +12,6 @@ import "../../App.css";
 import VentaTab from "./tabs/VentaTab";
 import PagoTab from "./tabs/PagoTab";
 import WesternPagosTab from "./tabs/WesternPagosTab";
-import WesternEnviosTab from "./tabs/WesternEnviosTab";
 import CobranzaColegiosTab from "./tabs/CobranzaColegiosTab";
 import EmpresasTransporteTab from "./tabs/EmpresasTransporteTab";
 import DivisasTab from "./tabs/DivisasTab";
@@ -36,11 +35,10 @@ export default function Sales() {
   // Configuración de las pestañas
   const tabs = [
     { id: "pago", label: "PAGO", component: PagoTab },
-    { id: "western-pagos", label: "WESTERN PAGOS", component: WesternPagosTab },
     {
-      id: "western-envios",
-      label: "WESTERN ENVÍOS",
-      component: WesternEnviosTab,
+      id: "western-pagos",
+      label: "WESTERN PAGOS/ENVÍOS",
+      component: WesternPagosTab,
     },
     {
       id: "cobranza-colegios",

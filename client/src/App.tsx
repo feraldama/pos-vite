@@ -38,6 +38,7 @@ import NominasPage from "./pages/nominas/NominasPage";
 import ColegioCobranzasPage from "./pages/colegiocobranzas/ColegioCobranzasPage";
 import DivisasPage from "./pages/divisa/DivisasPage";
 import DivisasMovimientosPage from "./pages/divisamovimiento/DivisasMovimientosPage";
+import JSICobroPage from "./pages/jsicobro/JSICobroPage";
 
 function App() {
   return (
@@ -78,6 +79,7 @@ function App() {
             {/* Agrega aquí más rutas protegidas */}
             <Route path="/users" element={<UsersPage />} />
             <Route path="/movements/summary" element={<MovementsPage />} />;
+            <Route path="/movements/jsicobro" element={<JSICobroPage />} />
             <Route path="/movements/cajas" element={<CajasPage />} />;
             <Route path="/movements/cajatipo" element={<CajaTipoPage />} />;
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;

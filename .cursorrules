@@ -17,17 +17,30 @@ Cuando generes mensajes de commit usando la función "Generate Commit Message":
 
 ### Formato de Mensajes de Commit
 
-Usar el formato: `[tipo]: Descripción en español`
+Usar el formato: `[tipo]: Descripción detallada y explicativa en español`
 
-Ejemplos CORRECTOS (en español):
+Los mensajes deben ser **LARGOS Y EXPLICATIVOS**, incluyendo:
 
-- `feat: Añadir función de registro de usuarios`
-- `fix: Corregir error al cargar lista de productos`
-- `docs: Actualizar documentación de la API`
-- `refactor: Reorganizar estructura de componentes`
-- `chore: Actualizar dependencias del proyecto`
-- `fix: Agregar validación de fecha en componente PagosList`
-- `feat: Implementar creación automática de suscripciones`
+- Qué se cambió específicamente
+- Por qué se hizo el cambio (si es relevante)
+- Qué componente/archivo/funcionalidad se afectó
+- Detalles importantes sobre la implementación
+
+Ejemplos CORRECTOS (en español - mensajes largos y explicativos):
+
+- `feat: Añadir función de registro de usuarios con validación de email y contraseña segura. Incluye formulario de registro, validación en tiempo real y mensajes de error personalizados. Se integra con el backend para crear nuevos usuarios en la base de datos.`
+
+- `fix: Corregir error al cargar lista de productos cuando la respuesta del servidor está vacía. Se agregó validación para manejar arrays vacíos y se mejoró el manejo de errores en el componente ProductosList para evitar crashes cuando no hay datos disponibles.`
+
+- `docs: Actualizar documentación de la API con ejemplos de uso para todos los endpoints. Se agregaron descripciones detalladas de parámetros, respuestas esperadas y códigos de error para facilitar la integración con el frontend.`
+
+- `refactor: Reorganizar estructura de componentes de clientes para mejorar mantenibilidad. Se separaron componentes de presentación de lógica de negocio, se crearon hooks personalizados para manejo de estado y se mejoró la reutilización de código entre ClienteForm y ClienteModal.`
+
+- `chore: Actualizar dependencias del proyecto incluyendo React 18.3, TypeScript 5.2 y todas las dependencias de desarrollo. Se resolvieron conflictos de versiones y se actualizaron los tipos para compatibilidad con las nuevas versiones.`
+
+- `fix: Agregar validación de fecha en componente PagosList para prevenir errores al procesar pagos con fechas inválidas. Se implementó validación tanto en el frontend como en el backend, mostrando mensajes de error claros al usuario cuando la fecha no es válida.`
+
+- `feat: Implementar creación automática de suscripciones cuando se registra un nuevo cliente con plan activo. El sistema ahora crea automáticamente el registro de suscripción, establece la fecha de inicio y configura los recordatorios de renovación según el tipo de plan seleccionado.`
 
 Ejemplos INCORRECTOS (en inglés - NO usar):
 
@@ -50,10 +63,16 @@ Ejemplos INCORRECTOS (en inglés - NO usar):
 ## Instrucciones Específicas para Mensajes de Commit
 
 1. **IDIOMA OBLIGATORIO**: Todos los mensajes de commit deben generarse en español
-2. **Formato**: Usar formato convencional: `tipo: descripción breve en español`
+2. **Formato**: Usar formato convencional: `tipo: descripción detallada y explicativa en español`
 3. **Verbos**: Usar infinitivo (añadir, corregir, actualizar, mejorar, etc.)
-4. **Claridad**: Ser específico sobre qué se cambió
-5. **Brevedad**: Mantener la descripción concisa pero informativa
+4. **Claridad**: Ser específico sobre qué se cambió, incluyendo nombres de componentes, archivos o funciones afectadas
+5. **DETALLES Y EXPLICACIÓN**: Los mensajes deben ser **LARGOS Y EXPLICATIVOS**. Incluir:
+   - Qué componente, archivo o funcionalidad se modificó
+   - Qué problema se resolvió o qué funcionalidad se agregó
+   - Detalles importantes sobre la implementación (validaciones, integraciones, mejoras)
+   - Por qué se hizo el cambio (si es relevante para entender el contexto)
+   - Impacto del cambio en otras partes del sistema
+6. **Longitud**: Los mensajes deben tener al menos 2-3 oraciones completas, preferiblemente más. Evitar mensajes de una sola línea o muy cortos.
 
 ## ⚠️ RECORDATORIO FINAL
 

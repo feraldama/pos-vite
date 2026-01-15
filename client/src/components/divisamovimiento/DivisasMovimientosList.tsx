@@ -290,9 +290,9 @@ export default function DivisasMovimientosList({
         `Gs. ${formatMiles(Number(movimiento.DivisaMovimientoMonto))}`,
     },
     {
-      key: "UsuarioNombre",
+      key: "UsuarioId",
       label: "Usuario",
-      render: (movimiento: DivisaMovimiento) => movimiento.UsuarioNombre || "",
+      render: (movimiento: DivisaMovimiento) => movimiento.UsuarioId || "",
     },
   ];
 

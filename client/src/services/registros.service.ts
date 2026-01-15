@@ -113,14 +113,19 @@ export const findRegistroDiarioCajaByDivisaMovimientoId = async (
 ) => {
   try {
     // Buscar registros que contengan "DivisaMovimientoId:X" en el detalle
+    // Ahora puede tener "Compra DivisaMovimientoId:X" o "Venta DivisaMovimientoId:X"
     const searchTerm = `DivisaMovimientoId:${divisaMovimientoId}`;
     const response = await searchRegistrosDiariosCaja(searchTerm, 1, 100);
 
-    // Filtrar para encontrar el registro exacto
+    // Filtrar para encontrar el registro que contenga el patrón
+    // Puede ser "Compra DivisaMovimientoId:X" o "Venta DivisaMovimientoId:X"
     const registros = response.data || [];
     const registroEncontrado = registros.find(
-      (reg: { RegistroDiarioCajaDetalle?: string }) =>
-        reg.RegistroDiarioCajaDetalle === searchTerm
+      (reg: { RegistroDiarioCajaDetalle?: string }) => {
+        const detalle = reg.RegistroDiarioCajaDetalle || "";
+        // Buscar que contenga "DivisaMovimientoId:X" (puede tener "Compra" o "Venta" antes)
+        return detalle.includes(searchTerm);
+      }
     );
 
     return registroEncontrado || null;

@@ -190,7 +190,7 @@ export default function DivisasTab() {
         RegistroDiarioCajaFecha: fechaFormateada,
         TipoGastoId: tipoGastoIdRegistro,
         TipoGastoGrupoId: tipoGastoGrupoIdRegistro,
-        RegistroDiarioCajaDetalle: `DivisaMovimientoId:${divisaMovimientoId}`,
+        RegistroDiarioCajaDetalle: `Compra DivisaMovimientoId:${divisaMovimientoId}`,
         RegistroDiarioCajaMonto: montoCompra,
         UsuarioId: user.id,
         RegistroDiarioCajaCambio: cambioCompra || 0,
@@ -412,13 +412,18 @@ export default function DivisasTab() {
 
       // Obtener los gastos de la divisa
       const divisaGastos = await getDivisaGastosByDivisaId(divisaIdVenta);
-      const divisaGastosData = divisaGastos.data || divisaGastos || [];
+      const todosLosGastos = divisaGastos.data || divisaGastos || [];
 
-      // Obtener el primer TipoGastoId y TipoGastoGrupoId de los gastos de la divisa
-      // Si no hay gastos, usar valores por defecto (1, 2) que existen en la BD
+      // Para venta: filtrar solo los gastos con TipoGastoId = 2 (INGRESO)
+      const divisaGastosData = todosLosGastos.filter(
+        (gasto: { TipoGastoId: number }) => gasto.TipoGastoId === 2
+      );
+
+      // Obtener el primer TipoGastoId y TipoGastoGrupoId de los gastos de INGRESO de la divisa
+      // Si no hay gastos de ingreso, usar valores por defecto (2 para Ingreso en venta, 2 para grupo) que existen en la BD
       const primerGasto =
         divisaGastosData.length > 0 ? divisaGastosData[0] : null;
-      const tipoGastoIdRegistro = primerGasto?.TipoGastoId || 1;
+      const tipoGastoIdRegistro = primerGasto?.TipoGastoId || 2; // 2 = Ingreso (recibes dinero al vender)
       const tipoGastoGrupoIdRegistro = primerGasto?.TipoGastoGrupoId || 2;
 
       // Crear registro diario de caja con DivisaMovimientoId en el detalle
@@ -427,7 +432,7 @@ export default function DivisasTab() {
         RegistroDiarioCajaFecha: fechaFormateada,
         TipoGastoId: tipoGastoIdRegistro,
         TipoGastoGrupoId: tipoGastoGrupoIdRegistro,
-        RegistroDiarioCajaDetalle: `DivisaMovimientoId:${divisaMovimientoId}`,
+        RegistroDiarioCajaDetalle: `Venta DivisaMovimientoId:${divisaMovimientoId}`,
         RegistroDiarioCajaMonto: montoVenta,
         UsuarioId: user.id,
         RegistroDiarioCajaCambio: cambioVenta || 0,
@@ -511,14 +516,16 @@ export default function DivisasTab() {
             // Si CajaTipoId !== 3: usar DivisaMovimientoMonto
             const valorAUsar = cajaTipoId === 3 ? cantidadNumero : montoNumero;
 
+            // En venta: la lógica es opuesta a compra
+            // Al vender: recibes dinero (ingreso), por lo que sumas
             if (tipoGastoId === 1) {
-              // Egreso: restar el valor
+              // Egreso: en venta esto no debería pasar normalmente, pero si pasa, restamos
               await updateCajaMonto(
                 cajaIdParaActualizar,
                 cajaMontoActual - valorAUsar
               );
             } else if (tipoGastoId === 2) {
-              // Ingreso: sumar el valor
+              // Ingreso: sumar el valor (recibes dinero al vender)
               await updateCajaMonto(
                 cajaIdParaActualizar,
                 cajaMontoActual + valorAUsar
@@ -532,15 +539,15 @@ export default function DivisasTab() {
 
       // Actualizar la caja de divisa (CajaTipoId = 3)
       // Al vender: la caja aperturada aumenta (ya se hizo arriba) y la caja de divisa disminuye
-      // Solo actualizar la caja que tenga el mismo TipoGastoId y TipoGastoGrupoId que la divisa
+      // Usar TODOS los gastos de la divisa (no solo los de ingreso) para buscar la caja de divisa
       const divisaSeleccionadaVenta = divisas.find(
         (d) => d.DivisaId === Number(divisaIdVenta)
       );
-      if (divisaSeleccionadaVenta && divisaGastosData.length > 0) {
+      if (divisaSeleccionadaVenta && todosLosGastos.length > 0) {
         const cantidadNumero = Number(cantidadVenta);
 
-        // Para cada gasto de la divisa, buscar la caja de divisa correspondiente
-        for (const divisaGasto of divisaGastosData) {
+        // Para cada gasto de la divisa (TODOS, no solo los de ingreso), buscar la caja de divisa correspondiente
+        for (const divisaGasto of todosLosGastos) {
           const tipoGastoId = divisaGasto.TipoGastoId;
           const tipoGastoGrupoId = divisaGasto.TipoGastoGrupoId;
 

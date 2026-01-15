@@ -49,8 +49,10 @@ export default function DivisasMovimientosPage() {
   const [currentMovimiento, setCurrentMovimiento] =
     useState<DivisaMovimiento | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string | undefined>();
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<string | undefined>(
+    "DivisaMovimientoId"
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const puedeCrear = usePermiso("DIVISAMOVIMIENTO", "crear");
   const puedeEditar = usePermiso("DIVISAMOVIMIENTO", "editar");

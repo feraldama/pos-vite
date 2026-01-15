@@ -11,7 +11,7 @@ interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
-  CajaMonto: number;
+  CajaMonto: number | string;
   CajaGastoCantidad: number;
   CajaTipoId?: number | null;
   [key: string]: unknown;
@@ -87,11 +87,13 @@ export default function CajasList({
 
   useEffect(() => {
     if (currentCaja) {
+      // Convertir CajaMonto igual que en la tabla: Number() maneja correctamente strings con punto decimal
+      const monto = Number(currentCaja.CajaMonto);
       setFormData({
         id: String(currentCaja.id ?? currentCaja.CajaId),
         CajaId: String(currentCaja.CajaId),
         CajaDescripcion: currentCaja.CajaDescripcion,
-        CajaMonto: currentCaja.CajaMonto,
+        CajaMonto: monto,
         CajaGastoCantidad: currentCaja.CajaGastoCantidad,
         CajaTipoId: currentCaja.CajaTipoId || null,
       });
@@ -280,15 +282,32 @@ export default function CajasList({
                       name="CajaMonto"
                       id="CajaMonto"
                       value={
-                        formData.CajaMonto ? formatMiles(formData.CajaMonto) : 0
+                        formData.CajaMonto !== undefined &&
+                        formData.CajaMonto !== null
+                          ? formData.CajaTipoId === 3
+                            ? formatMilesWithDecimals(formData.CajaMonto)
+                            : formatMiles(formData.CajaMonto)
+                          : "0"
                       }
                       onChange={(e) => {
-                        const raw = e.target.value
-                          .replace(/\./g, "")
-                          .replace(/\s/g, "");
-                        const num = Number(raw);
+                        let raw = e.target.value
+                          .replace(/\s/g, "")
+                          .replace(/\./g, ""); // Eliminar puntos de miles
+                        // Manejar signo negativo
+                        const isNegative = raw.startsWith("-");
+                        if (isNegative) {
+                          raw = raw.substring(1);
+                        }
+                        // Reemplazar coma por punto para parseFloat (el backend usa punto como decimal)
+                        raw = raw.replace(/,/g, ".");
+                        const num = parseFloat(raw);
                         if (!isNaN(num)) {
-                          setFormData((prev) => ({ ...prev, CajaMonto: num }));
+                          setFormData((prev) => ({
+                            ...prev,
+                            CajaMonto: isNegative ? -num : num,
+                          }));
+                        } else if (raw === "" || raw === "-") {
+                          setFormData((prev) => ({ ...prev, CajaMonto: 0 }));
                         }
                       }}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"

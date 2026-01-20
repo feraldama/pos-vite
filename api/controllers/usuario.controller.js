@@ -123,6 +123,48 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Verificar horario de uso si NO es administrador
+    if (usuario.UsuarioIsAdmin !== "S") {
+      const HorarioUso = require("../models/horariouso.model");
+      const horarios = await HorarioUso.getAll();
+      
+      if (horarios && horarios.length > 0) {
+        const ahora = new Date();
+        const horaActual = ahora.getHours() * 60 + ahora.getMinutes(); // Convertir a minutos desde medianoche
+        
+        let dentroDelHorario = false;
+        
+        for (const horario of horarios) {
+          const desde = new Date(horario.HorarioUsoDesde);
+          const hasta = new Date(horario.HorarioUsoHasta);
+          const horaDesde = desde.getHours() * 60 + desde.getMinutes();
+          const horaHasta = hasta.getHours() * 60 + hasta.getMinutes();
+          
+          // Verificar si la hora actual está dentro del rango
+          if (horaDesde <= horaHasta) {
+            // Rango normal (ej: 08:00 - 17:00)
+            if (horaActual >= horaDesde && horaActual <= horaHasta) {
+              dentroDelHorario = true;
+              break;
+            }
+          } else {
+            // Rango que cruza medianoche (ej: 22:00 - 06:00)
+            if (horaActual >= horaDesde || horaActual <= horaHasta) {
+              dentroDelHorario = true;
+              break;
+            }
+          }
+        }
+        
+        if (!dentroDelHorario) {
+          return res.status(403).json({
+            success: false,
+            message: "No está dentro del horario de uso permitido. Por favor, contacte al administrador.",
+          });
+        }
+      }
+    }
+
     // Crear payload seguro
     const payload = {
       id: usuario.UsuarioId,

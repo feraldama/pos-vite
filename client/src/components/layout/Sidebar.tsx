@@ -133,6 +133,7 @@ const navigation: NavigationItem[] = [
     href: "/access-control",
     icon: <KeyIcon className="h-7 w-6" />,
     children: [
+      { name: "Horarios de Uso", href: "/horariouso" },
       { name: "Locales", href: "/locales" },
       { name: "Usuarios", href: "/users" },
       { name: "Perfiles", href: "/perfiles" },

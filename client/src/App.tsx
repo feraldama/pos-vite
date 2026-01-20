@@ -24,6 +24,7 @@ import AlmacenesPage from "./pages/almacenes/AlmacenesPage";
 import CombosPage from "./pages/combos/CombosPage";
 import PerfilesPage from "./pages/perfiles/PerfilesPage";
 import MenusPage from "./pages/menus/MenusPage";
+import HorarioUsoPage from "./pages/horariouso/HorarioUsoPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
@@ -106,6 +107,7 @@ function App() {
             <Route path="/combos" element={<CombosPage />} />
             <Route path="/perfiles" element={<PerfilesPage />} />
             <Route path="/menus" element={<MenusPage />} />
+            <Route path="/horariouso" element={<HorarioUsoPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/modifications/ventas" element={<VentasPage />} />
             <Route path="/modifications/compras" element={<ComprasPage />} />

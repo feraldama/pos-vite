@@ -36,6 +36,9 @@ function Login() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      // El backend verifica automáticamente:
+      // - Si el usuario NO es administrador, valida que la hora actual esté dentro del rango de HorarioUsoDesde y HorarioUsoHasta
+      // - Si es administrador, permite el login sin restricciones de horario
       await login(credentials);
       navigate("/dashboard");
     } catch (error) {

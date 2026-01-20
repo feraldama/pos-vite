@@ -9,7 +9,6 @@ import Swal from "sweetalert2";
 import "../../App.css";
 
 // Componentes de las pestañas
-import VentaTab from "./tabs/VentaTab";
 import PagoTab from "./tabs/PagoTab";
 import WesternPagosTab from "./tabs/WesternPagosTab";
 import CobranzaColegiosTab from "./tabs/CobranzaColegiosTab";
@@ -51,7 +50,6 @@ export default function Sales() {
       component: EmpresasTransporteTab,
     },
     { id: "divisas", label: "DIVISAS", component: DivisasTab },
-    { id: "venta", label: "VENTA", component: VentaTab },
     {
       id: "junta-saneamiento",
       label: "JUNTA DE SANEAMIENTO",

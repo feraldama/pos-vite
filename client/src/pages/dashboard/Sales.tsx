@@ -11,6 +11,7 @@ import "../../App.css";
 // Componentes de las pestañas
 import PagoTab from "./tabs/PagoTab";
 import WesternPagosTab from "./tabs/WesternPagosTab";
+import PaseCajasTab from "./tabs/PaseCajasTab";
 import CobranzaColegiosTab from "./tabs/CobranzaColegiosTab";
 import EmpresasTransporteTab from "./tabs/EmpresasTransporteTab";
 import DivisasTab from "./tabs/DivisasTab";
@@ -38,6 +39,11 @@ export default function Sales() {
       id: "western-pagos",
       label: "WESTERN PAGOS/ENVÍOS",
       component: WesternPagosTab,
+    },
+    {
+      id: "pase-cajas",
+      label: "PASE DE CAJAS",
+      component: PaseCajasTab,
     },
     {
       id: "cobranza-colegios",

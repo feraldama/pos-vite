@@ -18,7 +18,6 @@ export default function ClienteForm({
   onSubmit,
   onCancel,
   isEditing = false,
-  showCodJSI = true,
 }: ClienteFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -104,24 +103,22 @@ export default function ClienteForm({
             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
           />
         </div>
-        {showCodJSI && (
-          <div className="col-span-6 sm:col-span-3">
-            <label
-              htmlFor="ClienteCodJSI"
-              className="block mb-2 text-sm font-medium text-gray-900"
-            >
-              Código JSI
-            </label>
-            <input
-              type="text"
-              name="ClienteCodJSI"
-              id="ClienteCodJSI"
-              value={formData.ClienteCodJSI || ""}
-              onChange={onInputChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-            />
-          </div>
-        )}
+        <div className="col-span-6 sm:col-span-3">
+          <label
+            htmlFor="ClienteCodJSI"
+            className="block mb-2 text-sm font-medium text-gray-900"
+          >
+            Código JSI
+          </label>
+          <input
+            type="text"
+            name="ClienteCodJSI"
+            id="ClienteCodJSI"
+            value={formData.ClienteCodJSI || ""}
+            onChange={onInputChange}
+            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+          />
+        </div>
         <div className="col-span-6 sm:col-span-3">
           <label
             htmlFor="UsuarioId"

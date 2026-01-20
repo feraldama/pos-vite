@@ -57,9 +57,14 @@ export default function ClienteFormModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    // Convertir a mayúsculas los campos de nombre y apellido
+    const processedValue =
+      name === "ClienteNombre" || name === "ClienteApellido"
+        ? value.toUpperCase()
+        : value;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 

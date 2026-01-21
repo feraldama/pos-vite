@@ -16,6 +16,7 @@ import CobranzaColegiosTab from "./tabs/CobranzaColegiosTab";
 import EmpresasTransporteTab from "./tabs/EmpresasTransporteTab";
 import DivisasTab from "./tabs/DivisasTab";
 import JuntaSaneamientoTab from "./tabs/JuntaSaneamientoTab";
+import CobranzaTab from "./tabs/CobranzaTab";
 
 interface Caja {
   id: string | number;
@@ -35,6 +36,11 @@ export default function Sales() {
   // Configuración de las pestañas
   const tabs = [
     { id: "pago", label: "PAGO", component: PagoTab },
+    {
+      id: "cobranza",
+      label: "COBRANZA",
+      component: CobranzaTab,
+    },
     {
       id: "western-pagos",
       label: "WESTERN PAGOS/ENVÍOS",

@@ -224,39 +224,39 @@ export default function EmpresasTransporteTab() {
         RegistroDiarioCajaCargoEnvio: 0,
       });
 
-      // Obtener IDs únicos de todas las cajas a actualizar
-      // Incluir todas las cajas que tengan este gasto asignado + la caja aperturada
-      const cajasIdsParaActualizar = new Set<number>();
-
-      // Agregar todas las cajas que tengan el gasto asignado
+      // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
+      const cajasIdsConGasto = new Set<number>();
       todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
-        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+        cajasIdsConGasto.add(Number(cajaGasto.CajaId));
       });
 
-      // Agregar también la caja aperturada
-      cajasIdsParaActualizar.add(Number(cajaId));
+      const montoNumero = Number(monto) || 0;
+      const cajaIdNumero = Number(cajaId);
 
-      // Actualizar el monto de todas las cajas (las que tienen el gasto + la caja aperturada)
-      if (cajasIdsParaActualizar.size > 0) {
-        const montoNumero = Number(monto) || 0;
-        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+      // Actualizar la caja aperturada: SUMAR el monto
+      const cajaAperturadaActual = await getCajaById(cajaIdNumero);
+      const cajaAperturadaMontoActual = Number(cajaAperturadaActual.CajaMonto);
+      await updateCajaMonto(
+        cajaIdNumero,
+        cajaAperturadaMontoActual + montoNumero
+      );
+
+      // Actualizar las demás cajas que tienen el gasto asignado: RESTAR el monto
+      // (excluyendo la caja aperturada si está en la lista)
+      const cajasParaRestar = Array.from(cajasIdsConGasto).filter(
+        (id) => id !== cajaIdNumero
+      );
+
+      if (cajasParaRestar.length > 0) {
+        const actualizaciones = cajasParaRestar.map(
           async (cajaIdParaActualizar: number) => {
             const cajaActual = await getCajaById(cajaIdParaActualizar);
             const cajaMontoActual = Number(cajaActual.CajaMonto);
-
-            if (transporte.TipoGastoId === 1) {
-              // Egreso: restar el monto
-              await updateCajaMonto(
-                cajaIdParaActualizar,
-                cajaMontoActual - montoNumero
-              );
-            } else if (transporte.TipoGastoId === 2) {
-              // Ingreso: sumar el monto
-              await updateCajaMonto(
-                cajaIdParaActualizar,
-                cajaMontoActual + montoNumero
-              );
-            }
+            // Restar el monto (es un gasto para estas cajas)
+            await updateCajaMonto(
+              cajaIdParaActualizar,
+              cajaMontoActual - montoNumero
+            );
           }
         );
 

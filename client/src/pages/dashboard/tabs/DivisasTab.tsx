@@ -177,11 +177,11 @@ export default function DivisasTab() {
       const divisaGastos = await getDivisaGastosByDivisaId(divisaIdCompra);
       const divisaGastosData = divisaGastos.data || divisaGastos || [];
 
-      // Obtener el primer TipoGastoId y TipoGastoGrupoId de los gastos de la divisa
-      // Si no hay gastos, usar valores por defecto (1, 2) que existen en la BD
+      // Para compra: TipoGastoId = 1 (Egreso) porque estás gastando dinero
+      // Obtener el TipoGastoGrupoId del primer gasto de la divisa, o usar 2 por defecto
       const primerGasto =
         divisaGastosData.length > 0 ? divisaGastosData[0] : null;
-      const tipoGastoIdRegistro = primerGasto?.TipoGastoId || 1;
+      const tipoGastoIdRegistro = 1; // Siempre Egreso para compra
       const tipoGastoGrupoIdRegistro = primerGasto?.TipoGastoGrupoId || 2;
 
       // Crear registro diario de caja con DivisaMovimientoId en el detalle
@@ -254,13 +254,12 @@ export default function DivisasTab() {
           });
         }
 
-        // Agregar la caja aperturada con el primer TipoGastoId encontrado
-        if (divisaGastosData.length > 0 && divisaGastosData[0].TipoGastoId) {
-          cajasConTipoGasto.set(
-            Number(cajaAperturada.CajaId),
-            divisaGastosData[0].TipoGastoId
-          );
-        }
+        // Agregar la caja aperturada con TipoGastoId = 1 (Egreso) para compra
+        // Al comprar divisa, estás gastando dinero de tu caja, por lo que es un egreso
+        cajasConTipoGasto.set(
+          Number(cajaAperturada.CajaId),
+          1 // TipoGastoId = 1 (Egreso) para compra
+        );
 
         const actualizaciones = Array.from(cajasIdsParaActualizar).map(
           async (cajaIdParaActualizar: number) => {
@@ -268,6 +267,12 @@ export default function DivisasTab() {
             const cajaMontoActual = Number(cajaActual.CajaMonto);
             const tipoGastoId = cajasConTipoGasto.get(cajaIdParaActualizar);
             const cajaTipoId = Number(cajaActual.CajaTipoId);
+
+            // IMPORTANTE: Excluir las cajas de divisa (CajaTipoId = 3) de esta actualización
+            // porque se actualizan específicamente más abajo para evitar duplicados
+            if (cajaTipoId === 3) {
+              return; // Saltar la actualización de cajas de divisa aquí
+            }
 
             // Determinar qué valor usar según CajaTipoId
             // Si CajaTipoId === 3: usar DivisaMovimientoCantidad
@@ -295,15 +300,19 @@ export default function DivisasTab() {
 
       // Actualizar la caja de divisa (CajaTipoId = 3)
       // Al comprar: la caja aperturada disminuye (ya se hizo arriba) y la caja de divisa aumenta
-      // Solo actualizar la caja que tenga el mismo TipoGastoId y TipoGastoGrupoId que la divisa
-      const divisaSeleccionada = divisas.find(
-        (d) => d.DivisaId === Number(divisaIdCompra)
-      );
-      if (divisaSeleccionada && divisaGastosData.length > 0) {
+      // Buscar la caja de divisa usando TipoGastoId y TipoGastoGrupoId de divisagasto
+      // IMPORTANTE: Solo procesar gastos de INGRESOS (TipoGastoId = 2) para actualizar la caja de divisa en compra
+      if (divisaGastosData.length > 0) {
         const cantidadNumero = Number(cantidadCompra);
+        const cajasDivisaEncontradas = new Set<number>(); // Para evitar actualizar la misma caja múltiples veces
 
-        // Para cada gasto de la divisa, buscar la caja de divisa correspondiente
-        for (const divisaGasto of divisaGastosData) {
+        // Filtrar solo los gastos de INGRESOS (TipoGastoId = 2) para la actualización de la caja de divisa
+        const gastosIngresos = divisaGastosData.filter(
+          (gasto: { TipoGastoId: number }) => gasto.TipoGastoId === 2
+        );
+
+        // Para cada gasto de INGRESOS de la divisa, buscar la caja de divisa correspondiente
+        for (const divisaGasto of gastosIngresos) {
           const tipoGastoId = divisaGasto.TipoGastoId;
           const tipoGastoGrupoId = divisaGasto.TipoGastoGrupoId;
 
@@ -316,17 +325,13 @@ export default function DivisasTab() {
           );
           const cajasConGastoData = cajasConGasto.data || cajasConGasto || [];
 
-          // Buscar la caja con CajaTipoId = 3 que tenga el mismo nombre que la divisa
+          // Buscar la caja con CajaTipoId = 3 entre las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId
           for (const cajaGasto of cajasConGastoData) {
             const cajaId = Number(cajaGasto.CajaId);
             const caja = todasLasCajas.find((c) => c.CajaId === cajaId);
 
-            if (
-              caja &&
-              caja.CajaTipoId === 3 &&
-              caja.CajaDescripcion.toUpperCase() ===
-                divisaSeleccionada.DivisaNombre.toUpperCase()
-            ) {
+            if (caja && caja.CajaTipoId === 3 && !cajasDivisaEncontradas.has(cajaId)) {
+              // Solo actualizar si no se ha actualizado antes
               const cajaDivisaActual = await getCajaById(cajaId);
               const cajaDivisaMontoActual = Number(cajaDivisaActual.CajaMonto);
 
@@ -335,7 +340,8 @@ export default function DivisasTab() {
                 cajaId,
                 cajaDivisaMontoActual + cantidadNumero
               );
-              break; // Solo actualizar una vez
+              cajasDivisaEncontradas.add(cajaId); // Marcar como actualizada
+              break; // Solo actualizar una caja por cada TipoGastoId/TipoGastoGrupoId
             }
           }
         }
@@ -419,11 +425,11 @@ export default function DivisasTab() {
         (gasto: { TipoGastoId: number }) => gasto.TipoGastoId === 2
       );
 
-      // Obtener el primer TipoGastoId y TipoGastoGrupoId de los gastos de INGRESO de la divisa
-      // Si no hay gastos de ingreso, usar valores por defecto (2 para Ingreso en venta, 2 para grupo) que existen en la BD
+      // Para venta: TipoGastoId = 2 (Ingreso) porque estás recibiendo dinero
+      // Obtener el TipoGastoGrupoId del primer gasto de ingreso de la divisa, o usar 2 por defecto
       const primerGasto =
         divisaGastosData.length > 0 ? divisaGastosData[0] : null;
-      const tipoGastoIdRegistro = primerGasto?.TipoGastoId || 2; // 2 = Ingreso (recibes dinero al vender)
+      const tipoGastoIdRegistro = 2; // Siempre Ingreso para venta
       const tipoGastoGrupoIdRegistro = primerGasto?.TipoGastoGrupoId || 2;
 
       // Crear registro diario de caja con DivisaMovimientoId en el detalle
@@ -496,13 +502,12 @@ export default function DivisasTab() {
           });
         }
 
-        // Agregar la caja aperturada con el primer TipoGastoId encontrado
-        if (divisaGastosData.length > 0 && divisaGastosData[0].TipoGastoId) {
-          cajasConTipoGasto.set(
-            Number(cajaAperturada.CajaId),
-            divisaGastosData[0].TipoGastoId
-          );
-        }
+        // Agregar la caja aperturada con TipoGastoId = 2 (Ingreso) para venta
+        // Al vender divisa, estás recibiendo dinero en tu caja, por lo que es un ingreso
+        cajasConTipoGasto.set(
+          Number(cajaAperturada.CajaId),
+          2 // TipoGastoId = 2 (Ingreso) para venta
+        );
 
         const actualizaciones = Array.from(cajasIdsParaActualizar).map(
           async (cajaIdParaActualizar: number) => {
@@ -510,6 +515,12 @@ export default function DivisasTab() {
             const cajaMontoActual = Number(cajaActual.CajaMonto);
             const tipoGastoId = cajasConTipoGasto.get(cajaIdParaActualizar);
             const cajaTipoId = Number(cajaActual.CajaTipoId);
+
+            // IMPORTANTE: Excluir las cajas de divisa (CajaTipoId = 3) de esta actualización
+            // porque se actualizan específicamente más abajo para evitar duplicados
+            if (cajaTipoId === 3) {
+              return; // Saltar la actualización de cajas de divisa aquí
+            }
 
             // Determinar qué valor usar según CajaTipoId
             // Si CajaTipoId === 3: usar DivisaMovimientoCantidad
@@ -539,15 +550,19 @@ export default function DivisasTab() {
 
       // Actualizar la caja de divisa (CajaTipoId = 3)
       // Al vender: la caja aperturada aumenta (ya se hizo arriba) y la caja de divisa disminuye
-      // Usar TODOS los gastos de la divisa (no solo los de ingreso) para buscar la caja de divisa
-      const divisaSeleccionadaVenta = divisas.find(
-        (d) => d.DivisaId === Number(divisaIdVenta)
-      );
-      if (divisaSeleccionadaVenta && todosLosGastos.length > 0) {
+      // Buscar la caja de divisa usando TipoGastoId y TipoGastoGrupoId de divisagasto
+      // IMPORTANTE: Solo procesar gastos de EGRESOS (TipoGastoId = 1) para actualizar la caja de divisa en venta
+      if (todosLosGastos.length > 0) {
         const cantidadNumero = Number(cantidadVenta);
+        const cajasDivisaEncontradas = new Set<number>(); // Para evitar actualizar la misma caja múltiples veces
 
-        // Para cada gasto de la divisa (TODOS, no solo los de ingreso), buscar la caja de divisa correspondiente
-        for (const divisaGasto of todosLosGastos) {
+        // Filtrar solo los gastos de EGRESOS (TipoGastoId = 1) para la actualización de la caja de divisa
+        const gastosEgresos = todosLosGastos.filter(
+          (gasto: { TipoGastoId: number }) => gasto.TipoGastoId === 1
+        );
+
+        // Para cada gasto de EGRESOS de la divisa, buscar la caja de divisa correspondiente
+        for (const divisaGasto of gastosEgresos) {
           const tipoGastoId = divisaGasto.TipoGastoId;
           const tipoGastoGrupoId = divisaGasto.TipoGastoGrupoId;
 
@@ -560,17 +575,13 @@ export default function DivisasTab() {
           );
           const cajasConGastoData = cajasConGasto.data || cajasConGasto || [];
 
-          // Buscar la caja con CajaTipoId = 3 que tenga el mismo nombre que la divisa
+          // Buscar la caja con CajaTipoId = 3 entre las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId
           for (const cajaGasto of cajasConGastoData) {
             const cajaId = Number(cajaGasto.CajaId);
             const caja = todasLasCajas.find((c) => c.CajaId === cajaId);
 
-            if (
-              caja &&
-              caja.CajaTipoId === 3 &&
-              caja.CajaDescripcion.toUpperCase() ===
-                divisaSeleccionadaVenta.DivisaNombre.toUpperCase()
-            ) {
+            if (caja && caja.CajaTipoId === 3 && !cajasDivisaEncontradas.has(cajaId)) {
+              // Solo actualizar si no se ha actualizado antes
               const cajaDivisaActual = await getCajaById(cajaId);
               const cajaDivisaMontoActual = Number(cajaDivisaActual.CajaMonto);
 
@@ -579,7 +590,8 @@ export default function DivisasTab() {
                 cajaId,
                 cajaDivisaMontoActual - cantidadNumero
               );
-              break; // Solo actualizar una vez
+              cajasDivisaEncontradas.add(cajaId); // Marcar como actualizada
+              break; // Solo actualizar una caja por cada TipoGastoId/TipoGastoGrupoId
             }
           }
         }
@@ -774,7 +786,7 @@ export default function DivisasTab() {
             </label>
             <input
               type="text"
-              value={user?.nombre || user?.id || ""}
+              value={user?.id || ""}
               readOnly
               disabled
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"

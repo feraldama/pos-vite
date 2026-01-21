@@ -151,11 +151,76 @@ exports.delete = async (req, res) => {
       });
     }
 
-    // Actualizar el monto de todas las cajas afectadas
-    if (cajasIdsParaActualizar.size > 0) {
-      const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+    // Verificar casos especiales para WESTERN PAGOS
+    const esCasoEspecial19 = TipoGastoId === 1 && TipoGastoGrupoId === 19;
+    const esCasoEspecial13 = TipoGastoId === 1 && TipoGastoGrupoId === 13;
+    const cambioNumero = cambio > 0 ? cambio : 1; // Evitar división por 0
+
+    // Separar la caja del registro de las demás cajas
+    const cajaIdRegistro = CajaId ? Number(CajaId) : null;
+    const cajasIdsConGasto = new Set();
+    
+    // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
+    if (TipoGastoId && TipoGastoGrupoId) {
+      const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
+        TipoGastoId,
+        TipoGastoGrupoId
+      );
+      cajasConGasto.forEach((cajaGasto) => {
+        if (cajaGasto.CajaId) {
+          cajasIdsConGasto.add(Number(cajaGasto.CajaId));
+        }
+      });
+    }
+
+    // Actualizar la caja del registro (caja aperturada)
+    if (cajaIdRegistro && !esCasoEspecial13) {
+      // Caso especial 13: no tocar la caja aperturada al eliminar
+      const cajaActual = await new Promise((resolve, reject) => {
+        db.query(
+          "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
+          [cajaIdRegistro],
+          (err, results) => {
+            if (err) return reject(err);
+            resolve(results.length > 0 ? results[0] : null);
+          }
+        );
+      });
+
+      if (cajaActual) {
+        const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+        const cajaTipoId = Number(cajaActual.CajaTipoId);
+        
+        // Al eliminar, revertir la operación: si restó, ahora sumar
+        let montoAplicar = monto;
+        if (cajaTipoId === 3) {
+          // Operación opuesta para CajaTipoId=3
+          montoAplicar = -monto;
+        }
+        
+        const nuevoMonto = cajaMontoActual + montoAplicar;
+        
+        await new Promise((resolve, reject) => {
+          db.query(
+            "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+            [nuevoMonto, cajaIdRegistro],
+            (err) => {
+              if (err) return reject(err);
+              resolve();
+            }
+          );
+        });
+      }
+    }
+
+    // Actualizar las demás cajas
+    const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
+      (id) => id !== cajaIdRegistro
+    );
+
+    if (cajasParaActualizar.length > 0) {
+      const actualizaciones = cajasParaActualizar.map(
         async (cajaIdParaActualizar) => {
-          // Obtener el monto actual y el tipo de la caja
           const cajaActual = await new Promise((resolve, reject) => {
             db.query(
               "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
@@ -170,42 +235,43 @@ exports.delete = async (req, res) => {
           if (cajaActual) {
             const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
             const cajaTipoId = Number(cajaActual.CajaTipoId);
-
-            // Determinar qué valor usar según CajaTipoId
-            // Si CajaTipoId === 3: usar RegistroDiarioCajaMonto / RegistroDiarioCajaCambio (cantidad)
-            // Si CajaTipoId !== 3: usar RegistroDiarioCajaMonto (monto)
-            let valorAUsar;
-            if (cajaTipoId === 3 && cambio > 0) {
-              valorAUsar = monto / cambio;
-            } else {
-              valorAUsar = monto;
-            }
-
             let nuevoMonto;
 
-            // Para CajaTipoId === 3 (cajas de divisa)
-            // Si fue compra (egreso): restar
-            // Si fue venta (ingreso): sumar
-            if (cajaTipoId === 3) {
-              if (esIngreso) {
-                // Si fue venta (ingreso), al eliminar sumamos (revertir la venta)
-                nuevoMonto = cajaMontoActual + valorAUsar;
-              } else {
-                // Si fue compra (egreso), al eliminar restamos (revertir la compra)
-                nuevoMonto = cajaMontoActual - valorAUsar;
+            if (esCasoEspecial19 || esCasoEspecial13) {
+              // Casos especiales: revertir la suma de Monto/CambioDolar (restar)
+              const montoConvertido = monto / cambioNumero;
+              let montoAplicar = -montoConvertido; // Revertir: restar
+              
+              if (cajaTipoId === 3) {
+                // Operación opuesta para CajaTipoId=3
+                montoAplicar = montoConvertido;
               }
+              
+              nuevoMonto = cajaMontoActual + montoAplicar;
             } else {
-              // Para otras cajas (guaraníes), la lógica normal
+              // Caso normal: revertir la operación
+              let valorAUsar = monto;
+              if (cajaTipoId === 3 && cambio > 0) {
+                valorAUsar = monto / cambio;
+              }
+
+              let montoAplicar;
               if (esIngreso) {
                 // Si era ingreso, al eliminar restamos el valor
-                nuevoMonto = cajaMontoActual - valorAUsar;
+                montoAplicar = -valorAUsar;
               } else {
                 // Si era egreso, al eliminar sumamos el valor
-                nuevoMonto = cajaMontoActual + valorAUsar;
+                montoAplicar = valorAUsar;
               }
+
+              if (cajaTipoId === 3) {
+                // Operación opuesta para CajaTipoId=3
+                montoAplicar = -montoAplicar;
+              }
+
+              nuevoMonto = cajaMontoActual + montoAplicar;
             }
 
-            // Actualizar el monto de la caja
             await new Promise((resolve, reject) => {
               db.query(
                 "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",

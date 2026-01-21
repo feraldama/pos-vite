@@ -149,34 +149,70 @@ export default function WesternPagosTab() {
         RegistroDiarioCajaMonto: montoPagos,
         UsuarioId: user.id,
         RegistroDiarioCajaCambio: cambioDolarPagos || 0,
-        RegistroDiarioCajaMTCN: 0, // No se usa en Pagos
+        RegistroDiarioCajaMTCN: mtcnPagos || 0,
         RegistroDiarioCajaCargoEnvio: 0, // No se usa en Pagos
       });
 
-      // Obtener IDs únicos de todas las cajas a actualizar
-      const cajasIdsParaActualizar = new Set<number>();
-
-      // Agregar todas las cajas que tengan el gasto asignado
+      // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
+      const cajasIdsConGasto = new Set<number>();
       todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
-        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+        cajasIdsConGasto.add(Number(cajaGasto.CajaId));
       });
 
-      // Agregar también la caja aperturada
-      cajasIdsParaActualizar.add(Number(cajaIdPagos));
+      const montoNumero = Number(montoPagos);
+      const cambioDolarNumero = Number(cambioDolarPagos) || 1; // Si no hay cambio, usar 1 para evitar división por 0
+      const cajaIdNumero = Number(cajaIdPagos);
 
-      // Actualizar el monto de todas las cajas
-      if (cajasIdsParaActualizar.size > 0) {
-        const montoNumero = Number(montoPagos);
-        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+      // Verificar casos especiales
+      const esCasoEspecial19 = tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 19;
+      const esCasoEspecial13 = tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 13;
+
+      // Actualizar la caja aperturada
+      if (!esCasoEspecial13) {
+        // Caso especial 13: no tocar la caja aperturada
+        // Otros casos: restar el monto (Egreso)
+        const cajaAperturadaActual = await getCajaById(cajaIdNumero);
+        const cajaAperturadaMontoActual = Number(cajaAperturadaActual.CajaMonto);
+        const cajaAperturadaTipoId = cajaAperturadaActual.CajaTipoId;
+        
+        // Si CajaTipoId=3, hacer operación opuesta (sumar en lugar de restar)
+        const montoAplicar = cajaAperturadaTipoId === 3 ? montoNumero : -montoNumero;
+        await updateCajaMonto(
+          cajaIdNumero,
+          cajaAperturadaMontoActual + montoAplicar
+        );
+      }
+
+      // Actualizar las demás cajas
+      const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
+        (id) => id !== cajaIdNumero
+      );
+
+      if (cajasParaActualizar.length > 0) {
+        const actualizaciones = cajasParaActualizar.map(
           async (cajaIdParaActualizar: number) => {
             const cajaActual = await getCajaById(cajaIdParaActualizar);
             const cajaMontoActual = Number(cajaActual.CajaMonto);
+            const cajaTipoId = cajaActual.CajaTipoId;
 
-            // tipoGastoIdPagos siempre es 1 (Egreso): restar el monto
-            await updateCajaMonto(
-              cajaIdParaActualizar,
-              cajaMontoActual - montoNumero
-            );
+            if (esCasoEspecial19 || esCasoEspecial13) {
+              // Casos especiales 19 y 13: sumar Monto/CambioDolar
+              const montoConvertido = montoNumero / cambioDolarNumero;
+              // Si CajaTipoId=3, hacer operación opuesta (restar en lugar de sumar)
+              const montoAplicar = cajaTipoId === 3 ? -montoConvertido : montoConvertido;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            } else {
+              // Caso normal: restar el monto (Egreso)
+              // Si CajaTipoId=3, hacer operación opuesta (sumar en lugar de restar)
+              const montoAplicar = cajaTipoId === 3 ? montoNumero : -montoNumero;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            }
           }
         );
 
@@ -356,7 +392,8 @@ export default function WesternPagosTab() {
     gruposFiltrados: TipoGastoGrupo[],
     onSubmit: (e: React.FormEvent) => void,
     onCancel: () => void,
-    mostrarMTCNYCargoEnvio: boolean = true
+    mostrarMTCN: boolean = true,
+    mostrarCargoEnvio: boolean = true
   ) => (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
       <h2 className="text-2xl font-bold text-green-800 mb-6 border-b-2 border-green-500 pb-2">
@@ -422,18 +459,22 @@ export default function WesternPagosTab() {
               Cambio Dolar
             </label>
             <input
-              type="number"
-              step="0.01"
-              value={cambioDolar}
-              onChange={(e) =>
-                setCambioDolar(e.target.value ? Number(e.target.value) : "")
-              }
+              type="text"
+              value={cambioDolar !== "" ? formatMiles(cambioDolar) : ""}
+              onChange={(e) => {
+                const raw = e.target.value
+                  .replace(/\./g, "")
+                  .replace(/,/g, ".");
+                const num = Number(raw);
+                setCambioDolar(isNaN(num) ? "" : num);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              inputMode="numeric"
             />
           </div>
 
-          {/* MTCN - Solo para Envíos */}
-          {mostrarMTCNYCargoEnvio && (
+          {/* MTCN */}
+          {mostrarMTCN && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 MTCN
@@ -449,8 +490,8 @@ export default function WesternPagosTab() {
             </div>
           )}
 
-          {/* Cargo Envio - Solo para Envíos */}
-          {mostrarMTCNYCargoEnvio && (
+          {/* Cargo Envio */}
+          {mostrarCargoEnvio && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cargo Envio
@@ -568,7 +609,8 @@ export default function WesternPagosTab() {
             gruposFiltradosPagos,
             handleSubmitPagos,
             handleCancelPagos,
-            false // No mostrar MTCN y Cargo Envío para Pagos
+            true, // Mostrar MTCN para Pagos
+            false // No mostrar Cargo Envío para Pagos
           )}
         </div>
 
@@ -594,7 +636,8 @@ export default function WesternPagosTab() {
             gruposFiltradosEnvios,
             handleSubmitEnvios,
             handleCancelEnvios,
-            true // Mostrar MTCN y Cargo Envío para Envíos
+            true, // Mostrar MTCN para Envíos
+            true // Mostrar Cargo Envío para Envíos
           )}
         </div>
       </div>

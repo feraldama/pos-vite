@@ -92,6 +92,7 @@ const navigation: NavigationItem[] = [
       { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
       // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
+      { name: "Pagos Admin", href: "/movements/pagoadmin" },
     ],
   },
   {

@@ -40,6 +40,7 @@ import ColegioCobranzasPage from "./pages/colegiocobranzas/ColegioCobranzasPage"
 import DivisasPage from "./pages/divisa/DivisasPage";
 import DivisasMovimientosPage from "./pages/divisamovimiento/DivisasMovimientosPage";
 import JSICobroPage from "./pages/jsicobro/JSICobroPage";
+import PagoAdminPage from "./pages/pagoadmin/PagoAdminPage";
 
 function App() {
   return (
@@ -86,6 +87,7 @@ function App() {
             <Route path="/movements/tiposgasto" element={<TiposGastoPage />} />;
             <Route path="/movements/transporte" element={<TransportesPage />} />
             <Route path="/movements/divisa" element={<DivisasPage />} />
+            <Route path="/movements/pagoadmin" element={<PagoAdminPage />} />
             <Route
               path="/movements/divisamovimiento"
               element={<DivisasMovimientosPage />}

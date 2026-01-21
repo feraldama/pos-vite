@@ -383,3 +383,97 @@ exports.estadoAperturaPorUsuario = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Reporte de pase de cajas
+exports.reportePaseCajas = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({
+        message: "Faltan los parámetros fechaInicio y fechaFin",
+      });
+    }
+
+    const registros = await RegistroDiarioCaja.getReportePaseCajas(
+      fechaInicio,
+      fechaFin
+    );
+
+    // Agrupar por caja y separar ingresos y egresos
+    const reportePorCaja = {};
+
+    registros.forEach((registro) => {
+      const cajaId = registro.CajaId;
+      const cajaKey = `caja_${cajaId}`;
+
+      if (!reportePorCaja[cajaKey]) {
+        reportePorCaja[cajaKey] = {
+          CajaId: cajaId,
+          CajaDescripcion: registro.CajaDescripcion || "",
+          ingresos: [],
+          egresos: [],
+          totalIngresos: 0,
+          totalEgresos: 0,
+          saldo: 0,
+        };
+      }
+
+      const monto = Number(registro.RegistroDiarioCajaMonto) || 0;
+
+      // TipoGastoId === 2 es ingreso, TipoGastoId === 1 es egreso
+      if (registro.TipoGastoId === 2) {
+        reportePorCaja[cajaKey].ingresos.push(registro);
+        reportePorCaja[cajaKey].totalIngresos += monto;
+      } else if (registro.TipoGastoId === 1) {
+        reportePorCaja[cajaKey].egresos.push(registro);
+        reportePorCaja[cajaKey].totalEgresos += monto;
+      }
+    });
+
+    // Calcular saldo para cada caja
+    Object.keys(reportePorCaja).forEach((key) => {
+      reportePorCaja[key].saldo =
+        reportePorCaja[key].totalIngresos - reportePorCaja[key].totalEgresos;
+    });
+
+    // Convertir a array
+    const reporte = Object.values(reportePorCaja);
+
+    res.json({
+      fechaInicio,
+      fechaFin,
+      data: reporte,
+    });
+  } catch (error) {
+    console.error("Error al generar reporte de pase de cajas:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Reporte de movimientos de todas las cajas (CajaTipoId=1)
+exports.reporteMovimientosCajas = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({
+        message: "Faltan los parámetros fechaInicio y fechaFin",
+      });
+    }
+
+    const registros = await RegistroDiarioCaja.getReporteMovimientosCajas(
+      fechaInicio,
+      fechaFin
+    );
+
+    res.json({
+      fechaInicio,
+      fechaFin,
+      data: registros,
+    });
+  } catch (error) {
+    console.error("Error al generar reporte de movimientos de cajas:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

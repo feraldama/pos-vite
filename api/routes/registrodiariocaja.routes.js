@@ -13,6 +13,16 @@ router.get(
   "/estado-apertura",
   registroDiarioCajaController.estadoAperturaPorUsuario
 );
+router.get(
+  "/reporte-pase-cajas",
+  authMiddleware,
+  registroDiarioCajaController.reportePaseCajas
+);
+router.get(
+  "/reporte-movimientos-cajas",
+  authMiddleware,
+  registroDiarioCajaController.reporteMovimientosCajas
+);
 router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
 router.post("/", authMiddleware, registroDiarioCajaController.create);
 router.post(

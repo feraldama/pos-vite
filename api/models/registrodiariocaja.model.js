@@ -376,6 +376,68 @@ const RegistroDiarioCaja = {
       );
     });
   },
+
+  getReportePaseCajas: (fechaInicio, fechaFin) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          r.RegistroDiarioCajaId,
+          r.CajaId,
+          r.RegistroDiarioCajaFecha,
+          r.RegistroDiarioCajaMonto,
+          r.RegistroDiarioCajaDetalle,
+          r.TipoGastoId,
+          r.TipoGastoGrupoId,
+          r.UsuarioId,
+          c.CajaDescripcion,
+          t.TipoGastoDescripcion,
+          tg.TipoGastoGrupoDescripcion
+        FROM registrodiariocaja r
+        LEFT JOIN Caja c ON r.CajaId = c.CajaId
+        LEFT JOIN TipoGasto t ON r.TipoGastoId = t.TipoGastoId
+        LEFT JOIN tipogastogrupo tg ON r.TipoGastoId = tg.TipoGastoId AND r.TipoGastoGrupoId = tg.TipoGastoGrupoId
+        WHERE DATE(r.RegistroDiarioCajaFecha) BETWEEN ? AND ?
+        ORDER BY r.CajaId, r.TipoGastoId, r.RegistroDiarioCajaFecha
+      `;
+
+      db.query(query, [fechaInicio, fechaFin], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
+
+  getReporteMovimientosCajas: (fechaInicio, fechaFin) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          r.RegistroDiarioCajaId,
+          r.CajaId,
+          r.RegistroDiarioCajaFecha,
+          r.RegistroDiarioCajaMonto,
+          r.RegistroDiarioCajaDetalle,
+          r.TipoGastoId,
+          r.TipoGastoGrupoId,
+          r.UsuarioId,
+          c.CajaDescripcion,
+          c.CajaTipoId,
+          t.TipoGastoDescripcion,
+          tg.TipoGastoGrupoDescripcion
+        FROM registrodiariocaja r
+        LEFT JOIN Caja c ON r.CajaId = c.CajaId
+        LEFT JOIN TipoGasto t ON r.TipoGastoId = t.TipoGastoId
+        LEFT JOIN tipogastogrupo tg ON r.TipoGastoId = tg.TipoGastoId AND r.TipoGastoGrupoId = tg.TipoGastoGrupoId
+        WHERE DATE(r.RegistroDiarioCajaFecha) BETWEEN ? AND ?
+          AND c.CajaTipoId = 1
+        ORDER BY r.RegistroDiarioCajaId ASC
+      `;
+
+      db.query(query, [fechaInicio, fechaFin], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
 };
 
 module.exports = RegistroDiarioCaja;

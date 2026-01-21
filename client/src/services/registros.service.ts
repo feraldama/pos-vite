@@ -138,3 +138,44 @@ export const findRegistroDiarioCajaByDivisaMovimientoId = async (
     );
   }
 };
+
+export const getReportePaseCajas = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get("/registrodiariocaja/reporte-pase-cajas", {
+      params: { fechaInicio, fechaFin },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de pase de cajas",
+      }
+    );
+  }
+};
+
+export const getReporteMovimientosCajas = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get(
+      "/registrodiariocaja/reporte-movimientos-cajas",
+      {
+        params: { fechaInicio, fechaFin },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de movimientos de cajas",
+      }
+    );
+  }
+};

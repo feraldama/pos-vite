@@ -15,7 +15,7 @@ interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
-  CajaMonto: number;
+  CajaMonto: number | string;
   CajaGastoCantidad: number;
   CajaTipoId?: number | null;
   [key: string]: unknown;
@@ -39,8 +39,8 @@ export default function CajasPage() {
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<string | undefined>();
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [sortKey, setSortKey] = useState<string | undefined>("CajaDescripcion");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const puedeCrear = usePermiso("CAJAS", "crear");

@@ -520,6 +520,7 @@ export default function WesternPagosTab() {
     onSubmit: (e: React.FormEvent) => void,
     onCancel: () => void,
     mostrarMTCN: boolean = true,
+    mtcnRequired: boolean = false,
     mostrarCargoEnvio: boolean = true
   ) => (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
@@ -612,6 +613,7 @@ export default function WesternPagosTab() {
                 onChange={(e) =>
                   setMtcn(e.target.value ? Number(e.target.value) : "")
                 }
+                required={mtcnRequired}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -817,6 +819,7 @@ export default function WesternPagosTab() {
             handleSubmitPagos,
             handleCancelPagos,
             true, // Mostrar MTCN para Pagos
+            true, // MTCN requerido para Pagos
             false // No mostrar Cargo Envío para Pagos
           )}
         </div>
@@ -852,6 +855,7 @@ export default function WesternPagosTab() {
             handleSubmitEnvios,
             handleCancelEnvios,
             true, // Mostrar MTCN para Envíos
+            true, // MTCN requerido para Envíos
             true // Mostrar Cargo Envío para Envíos
           )}
         </div>

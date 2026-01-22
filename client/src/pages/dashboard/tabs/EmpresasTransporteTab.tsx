@@ -434,7 +434,11 @@ export default function EmpresasTransporteTab() {
               </label>
               <button
                 type="button"
-                onClick={() => setShowClienteModal(true)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowClienteModal(true);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-left bg-white hover:bg-gray-50 transition"
               >
                 {clienteSeleccionado
@@ -443,48 +447,6 @@ export default function EmpresasTransporteTab() {
                     }`
                   : "Seleccione un cliente..."}
               </button>
-              <ClienteModal
-                show={showClienteModal}
-                onClose={() => setShowClienteModal(false)}
-                clientes={clientes as unknown as Cliente[]}
-                onSelect={(cliente) => {
-                  setClienteSeleccionado(cliente as unknown as Cliente);
-                  setClienteRUC(cliente.ClienteRUC || "");
-                  setTelefono(cliente.ClienteTelefono || "");
-                  setShowClienteModal(false);
-                }}
-                onCreateCliente={async (clienteData) => {
-                  try {
-                    const nuevoCliente = await createCliente(
-                      clienteData as unknown as Record<string, unknown>
-                    );
-                    const response = await getAllClientesSinPaginacion();
-                    setClientes(response.data || []);
-                    if (nuevoCliente.data) {
-                      setClienteSeleccionado(
-                        nuevoCliente.data as unknown as Cliente
-                      );
-                      setClienteRUC(
-                        (nuevoCliente.data as Cliente).ClienteRUC || ""
-                      );
-                      setShowClienteModal(false);
-                    }
-                    Swal.fire({
-                      icon: "success",
-                      title: "Cliente creado exitosamente",
-                      text: "El cliente ha sido creado y seleccionado",
-                    });
-                  } catch (error) {
-                    console.error("Error al crear cliente:", error);
-                    Swal.fire({
-                      icon: "error",
-                      title: "Error al crear cliente",
-                      text: "Hubo un problema al crear el cliente",
-                    });
-                  }
-                }}
-                currentUserId={user?.id}
-              />
             </div>
 
             {/* Cliente RUC */}
@@ -533,6 +495,54 @@ export default function EmpresasTransporteTab() {
             </button>
           </div>
         </form>
+        <ClienteModal
+          show={showClienteModal}
+          onClose={() => setShowClienteModal(false)}
+          clientes={clientes as unknown as Cliente[]}
+          onSelect={(cliente) => {
+            setClienteSeleccionado(cliente as unknown as Cliente);
+            setClienteRUC(cliente.ClienteRUC || "");
+            setTelefono(cliente.ClienteTelefono || "");
+            setShowClienteModal(false);
+          }}
+          onCreateCliente={async (clienteData) => {
+            try {
+              const nuevoCliente = await createCliente(
+                clienteData as unknown as Record<string, unknown>
+              );
+              const response = await getAllClientesSinPaginacion();
+              setClientes(response.data || []);
+              if (nuevoCliente.data) {
+                const clienteCreado = nuevoCliente.data as unknown as Cliente;
+                setClienteSeleccionado(clienteCreado);
+                setClienteRUC(clienteCreado.ClienteRUC || "");
+                setTelefono(clienteCreado.ClienteTelefono || "");
+                setShowClienteModal(false);
+                Swal.fire({
+                  icon: "success",
+                  title: "Cliente creado exitosamente",
+                  text: "El cliente ha sido creado y seleccionado",
+                  timer: 2000,
+                  showConfirmButton: false,
+                });
+              } else {
+                Swal.fire({
+                  icon: "error",
+                  title: "Error al crear cliente",
+                  text: "No se recibió la información del cliente creado",
+                });
+              }
+            } catch (error) {
+              console.error("Error al crear cliente:", error);
+              Swal.fire({
+                icon: "error",
+                title: "Error al crear cliente",
+                text: "Hubo un problema al crear el cliente",
+              });
+            }
+          }}
+          currentUserId={user?.id}
+        />
       </div>
     </div>
   );

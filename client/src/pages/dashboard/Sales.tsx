@@ -29,13 +29,24 @@ interface Caja {
 export default function Sales() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("pago");
+  
+  // Obtener el último tab usado desde localStorage, o "cobranza" por defecto
+  const getInitialTab = () => {
+    const savedTab = localStorage.getItem("sales-active-tab");
+    return savedTab || "cobranza";
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
+  
+  // Guardar el tab activo en localStorage cuando cambie
+  useEffect(() => {
+    localStorage.setItem("sales-active-tab", activeTab);
+  }, [activeTab]);
 
   // Configuración de las pestañas
   const tabs = [
-    { id: "pago", label: "PAGO", component: PagoTab },
     {
       id: "cobranza",
       label: "COBRANZA",
@@ -67,10 +78,11 @@ export default function Sales() {
       label: "JUNTA DE SANEAMIENTO",
       component: JuntaSaneamientoTab,
     },
+    { id: "pago", label: "PAGO", component: PagoTab },
   ];
 
   const ActiveComponent =
-    tabs.find((tab) => tab.id === activeTab)?.component || PagoTab;
+    tabs.find((tab) => tab.id === activeTab)?.component || CobranzaTab;
 
   // Obtener información de caja y local
   useEffect(() => {

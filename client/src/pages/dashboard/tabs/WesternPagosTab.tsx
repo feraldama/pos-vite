@@ -76,6 +76,7 @@ export default function WesternPagosTab() {
   const [mtcnPagos, setMtcnPagos] = useState<number | "">("");
   const [cargoEnvioPagos, setCargoEnvioPagos] = useState<number | "">("");
   const [montoPagos, setMontoPagos] = useState<number | "">("");
+  const [valorEspecialPagos, setValorEspecialPagos] = useState<number | "">("");
 
   // Formulario Envíos (tipogastoid = 2)
   const [cajaIdEnvios, setCajaIdEnvios] = useState<string | number>("");
@@ -89,6 +90,7 @@ export default function WesternPagosTab() {
   const [mtcnEnvios, setMtcnEnvios] = useState<number | "">("");
   const [cargoEnvioEnvios, setCargoEnvioEnvios] = useState<number | "">("");
   const [montoEnvios, setMontoEnvios] = useState<number | "">("");
+  const [valorEspecialEnvios, setValorEspecialEnvios] = useState<number | "">("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,6 +133,50 @@ export default function WesternPagosTab() {
     };
     fetchData();
   }, [user]);
+
+  // Limpiar valor especial y monto cuando cambie el grupo en pagos
+  useEffect(() => {
+    setValorEspecialPagos("");
+    setMontoPagos("");
+    // Limpiar cambio dolar cuando es grupo 13
+    if (tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 13) {
+      setCambioDolarPagos("");
+    }
+  }, [tipoGastoGrupoIdPagos, tipoGastoIdPagos]);
+
+  // Limpiar valor especial y monto cuando cambie el grupo en envíos
+  useEffect(() => {
+    setValorEspecialEnvios("");
+    setMontoEnvios("");
+    // Limpiar cambio dolar cuando es grupo 13
+    if (tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 13) {
+      setCambioDolarEnvios("");
+    }
+  }, [tipoGastoGrupoIdEnvios, tipoGastoIdEnvios]);
+
+  // Calcular monto automáticamente para pagos cuando TipoGastoId=1 y TipoGastoGrupoId=19
+  useEffect(() => {
+    if (tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 19) {
+      if (valorEspecialPagos !== "" && cambioDolarPagos !== "" && cambioDolarPagos !== 0) {
+        const montoCalculado = Number(valorEspecialPagos) * Number(cambioDolarPagos);
+        setMontoPagos(montoCalculado);
+      } else {
+        setMontoPagos("");
+      }
+    }
+  }, [valorEspecialPagos, cambioDolarPagos, tipoGastoIdPagos, tipoGastoGrupoIdPagos]);
+
+  // Calcular monto automáticamente para envíos cuando TipoGastoId=2 y TipoGastoGrupoId=24
+  useEffect(() => {
+    if (tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 24) {
+      if (valorEspecialEnvios !== "" && cambioDolarEnvios !== "" && cambioDolarEnvios !== 0) {
+        const montoCalculado = Number(valorEspecialEnvios) * Number(cambioDolarEnvios);
+        setMontoEnvios(montoCalculado);
+      } else {
+        setMontoEnvios("");
+      }
+    }
+  }, [valorEspecialEnvios, cambioDolarEnvios, tipoGastoIdEnvios, tipoGastoGrupoIdEnvios]);
 
   // Filtrar grupos: solo los que tienen "western" en TipoGastoGrupoDescripcion y coinciden con el tipoGastoId
   const gruposFiltradosPagos = tiposGastoGrupo
@@ -284,6 +330,7 @@ export default function WesternPagosTab() {
       setMtcnPagos("");
       setCargoEnvioPagos("");
       setMontoPagos("");
+      setValorEspecialPagos("");
       setClienteSeleccionadoPagos(null);
       setClienteRUCPagos("");
       setTelefonoPagos("");
@@ -434,6 +481,7 @@ export default function WesternPagosTab() {
       setMtcnEnvios("");
       setCargoEnvioEnvios("");
       setMontoEnvios("");
+      setValorEspecialEnvios("");
       setClienteSeleccionadoEnvios(null);
       setClienteRUCEnvios("");
       setTelefonoEnvios("");
@@ -460,6 +508,7 @@ export default function WesternPagosTab() {
     setMtcnPagos("");
     setCargoEnvioPagos("");
     setMontoPagos("");
+    setValorEspecialPagos("");
     setClienteSeleccionadoPagos(null);
     setClienteRUCPagos("");
     setTelefonoPagos("");
@@ -479,6 +528,7 @@ export default function WesternPagosTab() {
     setMtcnEnvios("");
     setCargoEnvioEnvios("");
     setMontoEnvios("");
+    setValorEspecialEnvios("");
     setClienteSeleccionadoEnvios(null);
     setClienteRUCEnvios("");
     setTelefonoEnvios("");
@@ -521,8 +571,21 @@ export default function WesternPagosTab() {
     onCancel: () => void,
     mostrarMTCN: boolean = true,
     mtcnRequired: boolean = false,
-    mostrarCargoEnvio: boolean = true
-  ) => (
+    mostrarCargoEnvio: boolean = true,
+    valorEspecial: number | "" = "",
+    setValorEspecial: (value: number | "") => void = () => {}
+  ) => {
+    // Determinar si debe mostrar el input especial
+    const mostrarInputEspecial = 
+      (tipoGastoId === 1 && tipoGastoGrupoId === 19) ||
+      (tipoGastoId === 2 && tipoGastoGrupoId === 24);
+    
+    // Determinar si debe ocultar el cambio dolar (grupo 13)
+    const ocultarCambioDolar = 
+      (tipoGastoId === 1 && tipoGastoGrupoId === 13) ||
+      (tipoGastoId === 2 && tipoGastoGrupoId === 13);
+
+    return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
       <h2 className="text-2xl font-bold text-green-800 mb-6 border-b-2 border-green-500 pb-2">
         {titulo.toUpperCase()}
@@ -582,24 +645,26 @@ export default function WesternPagosTab() {
           </div>
 
           {/* Cambio Dolar */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cambio Dolar
-            </label>
-            <input
-              type="text"
-              value={cambioDolar !== "" ? formatMiles(cambioDolar) : ""}
-              onChange={(e) => {
-                const raw = e.target.value
-                  .replace(/\./g, "")
-                  .replace(/,/g, ".");
-                const num = Number(raw);
-                setCambioDolar(isNaN(num) ? "" : num);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              inputMode="numeric"
-            />
-          </div>
+          {!ocultarCambioDolar && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cambio Dolar
+              </label>
+              <input
+                type="text"
+                value={cambioDolar !== "" ? formatMiles(cambioDolar) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setCambioDolar(isNaN(num) ? "" : num);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                inputMode="numeric"
+              />
+            </div>
+          )}
 
           {/* MTCN */}
           {mostrarMTCN && (
@@ -641,6 +706,29 @@ export default function WesternPagosTab() {
             </div>
           )}
 
+          {/* Input Especial - Solo para casos específicos */}
+          {mostrarInputEspecial && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dólares (se calculará Monto = Dólares × Cambio Dolar)
+              </label>
+              <input
+                type="text"
+                value={valorEspecial !== "" ? formatMiles(valorEspecial) : ""}
+                onChange={(e) => {
+                  const raw = e.target.value
+                    .replace(/\./g, "")
+                    .replace(/,/g, ".");
+                  const num = Number(raw);
+                  setValorEspecial(isNaN(num) ? "" : num);
+                }}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                inputMode="numeric"
+              />
+            </div>
+          )}
+
           {/* Monto */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -657,7 +745,10 @@ export default function WesternPagosTab() {
                 setMonto(isNaN(num) ? "" : num);
               }}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              disabled={mostrarInputEspecial}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                mostrarInputEspecial ? "bg-gray-100 text-gray-600 cursor-not-allowed" : ""
+              }`}
               inputMode="numeric"
             />
           </div>
@@ -669,7 +760,11 @@ export default function WesternPagosTab() {
             </label>
             <button
               type="button"
-              onClick={() => setShowClienteModal(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowClienteModal(true);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-left bg-white hover:bg-gray-50 transition"
             >
               {clienteSeleccionado
@@ -678,46 +773,6 @@ export default function WesternPagosTab() {
                   }`
                 : "Seleccione un cliente..."}
             </button>
-            <ClienteModal
-              show={showClienteModal}
-              onClose={() => setShowClienteModal(false)}
-              clientes={clientes as unknown as Cliente[]}
-              onSelect={(cliente) => {
-                setClienteSeleccionado(cliente as unknown as Cliente);
-                setClienteRUC(cliente.ClienteRUC || "");
-                setTelefono(cliente.ClienteTelefono || "");
-                setShowClienteModal(false);
-              }}
-              onCreateCliente={async (clienteData) => {
-                try {
-                  const nuevoCliente = await createCliente(
-                    clienteData as unknown as Record<string, unknown>
-                  );
-                  const response = await getAllClientesSinPaginacion();
-                  setClientes(response.data || []);
-                  if (nuevoCliente.data) {
-                    const cliente = nuevoCliente.data as unknown as Cliente;
-                    setClienteSeleccionado(cliente);
-                    setClienteRUC(cliente.ClienteRUC || "");
-                    setTelefono(cliente.ClienteTelefono || "");
-                    setShowClienteModal(false);
-                  }
-                  Swal.fire({
-                    icon: "success",
-                    title: "Cliente creado exitosamente",
-                    text: "El cliente ha sido creado y seleccionado",
-                  });
-                } catch (error) {
-                  console.error("Error al crear cliente:", error);
-                  Swal.fire({
-                    icon: "error",
-                    title: "Error al crear cliente",
-                    text: "Hubo un problema al crear el cliente",
-                  });
-                }
-              }}
-              currentUserId={user?.id}
-            />
           </div>
 
           {/* Cliente RUC */}
@@ -757,7 +812,6 @@ export default function WesternPagosTab() {
           <textarea
             value={detalle}
             onChange={(e) => setDetalle(e.target.value)}
-            required
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             placeholder="Ingrese el detalle del registro..."
@@ -781,8 +835,57 @@ export default function WesternPagosTab() {
           </button>
         </div>
       </form>
+      <ClienteModal
+        show={showClienteModal}
+        onClose={() => setShowClienteModal(false)}
+        clientes={clientes as unknown as Cliente[]}
+        onSelect={(cliente) => {
+          setClienteSeleccionado(cliente as unknown as Cliente);
+          setClienteRUC(cliente.ClienteRUC || "");
+          setTelefono(cliente.ClienteTelefono || "");
+          setShowClienteModal(false);
+        }}
+        onCreateCliente={async (clienteData) => {
+          try {
+            const nuevoCliente = await createCliente(
+              clienteData as unknown as Record<string, unknown>
+            );
+            const response = await getAllClientesSinPaginacion();
+            setClientes(response.data || []);
+            if (nuevoCliente.data) {
+              const clienteCreado = nuevoCliente.data as unknown as Cliente;
+              setClienteSeleccionado(clienteCreado);
+              setClienteRUC(clienteCreado.ClienteRUC || "");
+              setTelefono(clienteCreado.ClienteTelefono || "");
+              setShowClienteModal(false);
+              Swal.fire({
+                icon: "success",
+                title: "Cliente creado exitosamente",
+                text: "El cliente ha sido creado y seleccionado",
+                timer: 2000,
+                showConfirmButton: false,
+              });
+            } else {
+              Swal.fire({
+                icon: "error",
+                title: "Error al crear cliente",
+                text: "No se recibió la información del cliente creado",
+              });
+            }
+          } catch (error) {
+            console.error("Error al crear cliente:", error);
+            Swal.fire({
+              icon: "error",
+              title: "Error al crear cliente",
+              text: "Hubo un problema al crear el cliente",
+            });
+          }
+        }}
+        currentUserId={user?.id}
+      />
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -820,7 +923,9 @@ export default function WesternPagosTab() {
             handleCancelPagos,
             true, // Mostrar MTCN para Pagos
             true, // MTCN requerido para Pagos
-            false // No mostrar Cargo Envío para Pagos
+            false, // No mostrar Cargo Envío para Pagos
+            valorEspecialPagos,
+            setValorEspecialPagos
           )}
         </div>
 
@@ -856,7 +961,9 @@ export default function WesternPagosTab() {
             handleCancelEnvios,
             true, // Mostrar MTCN para Envíos
             true, // MTCN requerido para Envíos
-            true // Mostrar Cargo Envío para Envíos
+            true, // Mostrar Cargo Envío para Envíos
+            valorEspecialEnvios,
+            setValorEspecialEnvios
           )}
         </div>
       </div>

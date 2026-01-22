@@ -38,6 +38,7 @@ const divisaMovimientoRoutes = require("./routes/divisamovimiento.routes");
 const jsicobroRoutes = require("./routes/jsicobro.routes");
 const horarioUsoRoutes = require("./routes/horariouso.routes");
 const pagoAdminRoutes = require("./routes/pagoadmin.routes");
+const westernEnvioRoutes = require("./routes/westernenvio.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -92,6 +93,7 @@ app.use("/api/divisamovimiento", divisaMovimientoRoutes);
 app.use("/api/jsicobro", jsicobroRoutes);
 app.use("/api/horariouso", horarioUsoRoutes);
 app.use("/api/pagoadmin", pagoAdminRoutes);
+app.use("/api/westernenvio", westernEnvioRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

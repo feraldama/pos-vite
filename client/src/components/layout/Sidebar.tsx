@@ -93,6 +93,7 @@ const navigation: NavigationItem[] = [
       // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
       { name: "Pagos Admin", href: "/movements/pagoadmin" },
+      { name: "Western", href: "/movements/western" },
     ],
   },
   {

@@ -41,6 +41,7 @@ import DivisasPage from "./pages/divisa/DivisasPage";
 import DivisasMovimientosPage from "./pages/divisamovimiento/DivisasMovimientosPage";
 import JSICobroPage from "./pages/jsicobro/JSICobroPage";
 import PagoAdminPage from "./pages/pagoadmin/PagoAdminPage";
+import WesternEnvioPage from "./pages/westernenvio/WesternEnvioPage";
 
 function App() {
   return (
@@ -91,6 +92,10 @@ function App() {
             <Route
               path="/movements/divisamovimiento"
               element={<DivisasMovimientosPage />}
+            />
+            <Route
+              path="/movements/western"
+              element={<WesternEnvioPage />}
             />
             <Route path="/pagotrans" element={<PagosTransportePage />} />
             <Route path="/colegios" element={<ColegiosPage />} />

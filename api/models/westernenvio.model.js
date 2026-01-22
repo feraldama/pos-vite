@@ -22,7 +22,7 @@ const WesternEnvio = {
         LEFT JOIN Caja c ON we.CajaId = c.CajaId
         LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
         LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.UsuarioId = u.UsuarioId
+        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
         WHERE we.WesternEnvioId = ?`,
         [id],
         (err, results) => {
@@ -48,7 +48,7 @@ const WesternEnvio = {
         "WesternEnvioDetalle",
         "TipoGastoId",
         "TipoGastoGrupoId",
-        "UsuarioId",
+        "WesternEnvioUsuarioId",
         "CajaId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -70,7 +70,7 @@ const WesternEnvio = {
         LEFT JOIN Caja c ON we.CajaId = c.CajaId
         LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
         LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.UsuarioId = u.UsuarioId
+        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
         ORDER BY we.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -114,7 +114,7 @@ const WesternEnvio = {
         "WesternEnvioDetalle",
         "TipoGastoId",
         "TipoGastoGrupoId",
-        "UsuarioId",
+        "WesternEnvioUsuarioId",
         "CajaId",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
@@ -136,9 +136,9 @@ const WesternEnvio = {
         LEFT JOIN Caja c ON we.CajaId = c.CajaId
         LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
         LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.UsuarioId = u.UsuarioId
+        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
         WHERE we.WesternEnvioDetalle LIKE ? 
-          OR CAST(we.UsuarioId AS CHAR) LIKE ?
+          OR CAST(we.WesternEnvioUsuarioId AS CHAR) LIKE ?
           OR CAST(we.CajaId AS CHAR) LIKE ?
           OR CAST(we.TipoGastoId AS CHAR) LIKE ?
           OR CAST(we.TipoGastoGrupoId AS CHAR) LIKE ?
@@ -146,6 +146,7 @@ const WesternEnvio = {
           OR CAST(we.WesternEnvioMTCN AS CHAR) LIKE ?
           OR CAST(we.WesternEnvioFactura AS CHAR) LIKE ?
           OR CAST(we.WesternEnvioTimbrado AS CHAR) LIKE ?
+          OR CAST(we.ClienteId AS CHAR) LIKE ?
           OR DATE_FORMAT(we.WesternEnvioFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
         ORDER BY we.${sortField} ${order}
         LIMIT ? OFFSET ?
@@ -156,7 +157,7 @@ const WesternEnvio = {
         searchQuery,
         [
           searchValue, // Detalle
-          searchValue, // UsuarioId
+          searchValue, // WesternEnvioUsuarioId
           searchValue, // CajaId
           searchValue, // TipoGastoId
           searchValue, // TipoGastoGrupoId
@@ -164,6 +165,7 @@ const WesternEnvio = {
           searchValue, // MTCN
           searchValue, // Factura
           searchValue, // Timbrado
+          searchValue, // ClienteId
           searchValue, // Fecha
           limit,
           offset,
@@ -177,7 +179,7 @@ const WesternEnvio = {
           const countQuery = `
             SELECT COUNT(*) as total FROM westernenvio 
             WHERE WesternEnvioDetalle LIKE ? 
-              OR CAST(UsuarioId AS CHAR) LIKE ?
+              OR CAST(WesternEnvioUsuarioId AS CHAR) LIKE ?
               OR CAST(CajaId AS CHAR) LIKE ?
               OR CAST(TipoGastoId AS CHAR) LIKE ?
               OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
@@ -185,12 +187,14 @@ const WesternEnvio = {
               OR CAST(WesternEnvioMTCN AS CHAR) LIKE ?
               OR CAST(WesternEnvioFactura AS CHAR) LIKE ?
               OR CAST(WesternEnvioTimbrado AS CHAR) LIKE ?
+              OR CAST(ClienteId AS CHAR) LIKE ?
               OR DATE_FORMAT(WesternEnvioFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
           `;
 
           db.query(
             countQuery,
             [
+              searchValue,
               searchValue,
               searchValue,
               searchValue,
@@ -241,8 +245,9 @@ const WesternEnvio = {
           WesternEnvioFactura,
           WesternEnvioTimbrado,
           WesternEnvioMonto,
-          UsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          WesternEnvioUsuarioId,
+          ClienteId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const values = [
@@ -257,7 +262,8 @@ const WesternEnvio = {
         envioData.WesternEnvioFactura || "",
         envioData.WesternEnvioTimbrado || "",
         envioData.WesternEnvioMonto,
-        envioData.UsuarioId,
+        envioData.WesternEnvioUsuarioId,
+        envioData.ClienteId || null,
       ];
 
       db.query(query, values, (err, result) => {
@@ -289,7 +295,8 @@ const WesternEnvio = {
         "WesternEnvioFactura",
         "WesternEnvioTimbrado",
         "WesternEnvioMonto",
-        "UsuarioId",
+        "WesternEnvioUsuarioId",
+        "ClienteId",
       ];
 
       camposActualizables.forEach((campo) => {

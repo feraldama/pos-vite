@@ -7,6 +7,12 @@ import { getTiposGasto } from "../../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../../services/tipogastogrupo.service";
 import { updateCajaMonto } from "../../../services/cajas.service";
 import { getCajaGastosByTipoGastoAndGrupo } from "../../../services/cajagasto.service";
+import { createWesternEnvio } from "../../../services/westernenvio.service";
+import {
+  getAllClientesSinPaginacion,
+  createCliente,
+} from "../../../services/clientes.service";
+import ClienteModal from "../../../components/common/ClienteModal";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../../utils/utils";
 
@@ -29,11 +35,34 @@ interface TipoGastoGrupo {
   TipoGastoId: number;
 }
 
+interface Cliente {
+  ClienteId: number;
+  ClienteNombre: string;
+  ClienteApellido: string;
+  ClienteRUC: string;
+  ClienteDireccion: string;
+  ClienteTelefono: string;
+  ClienteTipo: string;
+  UsuarioId: string;
+  [key: string]: unknown;
+}
+
 export default function WesternPagosTab() {
   const { user } = useAuth();
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [tiposGasto, setTiposGasto] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupo, setTiposGastoGrupo] = useState<TipoGastoGrupo[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [showClienteModalPagos, setShowClienteModalPagos] = useState(false);
+  const [showClienteModalEnvios, setShowClienteModalEnvios] = useState(false);
+  const [clienteSeleccionadoPagos, setClienteSeleccionadoPagos] =
+    useState<Cliente | null>(null);
+  const [clienteSeleccionadoEnvios, setClienteSeleccionadoEnvios] =
+    useState<Cliente | null>(null);
+  const [clienteRUCPagos, setClienteRUCPagos] = useState("");
+  const [telefonoPagos, setTelefonoPagos] = useState("");
+  const [clienteRUCEnvios, setClienteRUCEnvios] = useState("");
+  const [telefonoEnvios, setTelefonoEnvios] = useState("");
 
   // Formulario Pagos (tipogastoid = 1)
   const [cajaIdPagos, setCajaIdPagos] = useState<string | number>("");
@@ -81,6 +110,10 @@ export default function WesternPagosTab() {
         setTiposGasto(tiposGastoData);
         const tiposGastoGrupoData = await getTiposGastoGrupo();
         setTiposGastoGrupo(tiposGastoGrupoData);
+
+        // Obtener clientes
+        const clientesData = await getAllClientesSinPaginacion();
+        setClientes(clientesData.data || []);
 
         // Inicializar fecha actual
         const hoy = new Date();
@@ -151,6 +184,25 @@ export default function WesternPagosTab() {
         RegistroDiarioCajaCambio: cambioDolarPagos || 0,
         RegistroDiarioCajaMTCN: mtcnPagos || 0,
         RegistroDiarioCajaCargoEnvio: 0, // No se usa en Pagos
+      });
+
+      // Crear registro en westernenvio para pagos (TipoGastoId=1)
+      await createWesternEnvio({
+        CajaId: cajaIdPagos,
+        WesternEnvioFecha: fechaPagos,
+        TipoGastoId: tipoGastoIdPagos, // 1 para pagos
+        TipoGastoGrupoId: tipoGastoGrupoIdPagos,
+        WesternEnvioCambio: cambioDolarPagos || 0,
+        WesternEnvioDetalle: detallePagos,
+        WesternEnvioMTCN: mtcnPagos || 0,
+        WesternEnvioCargoEnvio: 0,
+        WesternEnvioFactura: "",
+        WesternEnvioTimbrado: "",
+        WesternEnvioMonto: montoPagos,
+        WesternEnvioUsuarioId: user.id,
+        ClienteId: clienteSeleccionadoPagos
+          ? Number(clienteSeleccionadoPagos.ClienteId)
+          : null,
       });
 
       // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
@@ -232,6 +284,9 @@ export default function WesternPagosTab() {
       setMtcnPagos("");
       setCargoEnvioPagos("");
       setMontoPagos("");
+      setClienteSeleccionadoPagos(null);
+      setClienteRUCPagos("");
+      setTelefonoPagos("");
 
       // Resetear fecha a actual
       const hoy = new Date();
@@ -279,6 +334,25 @@ export default function WesternPagosTab() {
         RegistroDiarioCajaCambio: cambioDolarEnvios || 0,
         RegistroDiarioCajaMTCN: mtcnEnvios || 0,
         RegistroDiarioCajaCargoEnvio: cargoEnvioEnvios || 0,
+      });
+
+      // Crear registro en westernenvio para envíos (TipoGastoId=2)
+      await createWesternEnvio({
+        CajaId: cajaIdEnvios,
+        WesternEnvioFecha: fechaEnvios,
+        TipoGastoId: tipoGastoIdEnvios, // 2 para envíos
+        TipoGastoGrupoId: tipoGastoGrupoIdEnvios,
+        WesternEnvioCambio: cambioDolarEnvios || 0,
+        WesternEnvioDetalle: detalleEnvios,
+        WesternEnvioMTCN: mtcnEnvios || 0,
+        WesternEnvioCargoEnvio: cargoEnvioEnvios || 0,
+        WesternEnvioFactura: "",
+        WesternEnvioTimbrado: "",
+        WesternEnvioMonto: montoEnvios,
+        WesternEnvioUsuarioId: user.id,
+        ClienteId: clienteSeleccionadoEnvios
+          ? Number(clienteSeleccionadoEnvios.ClienteId)
+          : null,
       });
 
       // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
@@ -360,6 +434,9 @@ export default function WesternPagosTab() {
       setMtcnEnvios("");
       setCargoEnvioEnvios("");
       setMontoEnvios("");
+      setClienteSeleccionadoEnvios(null);
+      setClienteRUCEnvios("");
+      setTelefonoEnvios("");
 
       // Resetear fecha a actual
       const hoy = new Date();
@@ -383,6 +460,9 @@ export default function WesternPagosTab() {
     setMtcnPagos("");
     setCargoEnvioPagos("");
     setMontoPagos("");
+    setClienteSeleccionadoPagos(null);
+    setClienteRUCPagos("");
+    setTelefonoPagos("");
     const hoy = new Date();
     const yyyy = hoy.getFullYear();
     const mm = String(hoy.getMonth() + 1).padStart(2, "0");
@@ -399,6 +479,9 @@ export default function WesternPagosTab() {
     setMtcnEnvios("");
     setCargoEnvioEnvios("");
     setMontoEnvios("");
+    setClienteSeleccionadoEnvios(null);
+    setClienteRUCEnvios("");
+    setTelefonoEnvios("");
     const hoy = new Date();
     const yyyy = hoy.getFullYear();
     const mm = String(hoy.getMonth() + 1).padStart(2, "0");
@@ -425,6 +508,14 @@ export default function WesternPagosTab() {
     setCargoEnvio: (value: number | "") => void,
     monto: number | "",
     setMonto: (value: number | "") => void,
+    clienteSeleccionado: Cliente | null,
+    setClienteSeleccionado: (value: Cliente | null) => void,
+    showClienteModal: boolean,
+    setShowClienteModal: (value: boolean) => void,
+    clienteRUC: string,
+    setClienteRUC: (value: string) => void,
+    telefono: string,
+    setTelefono: (value: string) => void,
     gruposFiltrados: TipoGastoGrupo[],
     onSubmit: (e: React.FormEvent) => void,
     onCancel: () => void,
@@ -569,14 +660,86 @@ export default function WesternPagosTab() {
             />
           </div>
 
-          {/* Usuario */}
+          {/* Cliente */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Usuario
+              Cliente
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowClienteModal(true)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-left bg-white hover:bg-gray-50 transition"
+            >
+              {clienteSeleccionado
+                ? `${clienteSeleccionado.ClienteNombre} ${
+                    clienteSeleccionado.ClienteApellido || ""
+                  }`
+                : "Seleccione un cliente..."}
+            </button>
+            <ClienteModal
+              show={showClienteModal}
+              onClose={() => setShowClienteModal(false)}
+              clientes={clientes as unknown as Cliente[]}
+              onSelect={(cliente) => {
+                setClienteSeleccionado(cliente as unknown as Cliente);
+                setClienteRUC(cliente.ClienteRUC || "");
+                setTelefono(cliente.ClienteTelefono || "");
+                setShowClienteModal(false);
+              }}
+              onCreateCliente={async (clienteData) => {
+                try {
+                  const nuevoCliente = await createCliente(
+                    clienteData as unknown as Record<string, unknown>
+                  );
+                  const response = await getAllClientesSinPaginacion();
+                  setClientes(response.data || []);
+                  if (nuevoCliente.data) {
+                    const cliente = nuevoCliente.data as unknown as Cliente;
+                    setClienteSeleccionado(cliente);
+                    setClienteRUC(cliente.ClienteRUC || "");
+                    setTelefono(cliente.ClienteTelefono || "");
+                    setShowClienteModal(false);
+                  }
+                  Swal.fire({
+                    icon: "success",
+                    title: "Cliente creado exitosamente",
+                    text: "El cliente ha sido creado y seleccionado",
+                  });
+                } catch (error) {
+                  console.error("Error al crear cliente:", error);
+                  Swal.fire({
+                    icon: "error",
+                    title: "Error al crear cliente",
+                    text: "Hubo un problema al crear el cliente",
+                  });
+                }
+              }}
+              currentUserId={user?.id}
+            />
+          </div>
+
+          {/* Cliente RUC */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cliente RUC
             </label>
             <input
               type="text"
-              value={user?.id || ""}
+              value={clienteRUC}
+              readOnly
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+            />
+          </div>
+
+          {/* Teléfono */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Teléfono
+            </label>
+            <input
+              type="text"
+              value={telefono}
               readOnly
               disabled
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
@@ -642,6 +805,14 @@ export default function WesternPagosTab() {
             setCargoEnvioPagos,
             montoPagos,
             setMontoPagos,
+            clienteSeleccionadoPagos,
+            setClienteSeleccionadoPagos,
+            showClienteModalPagos,
+            setShowClienteModalPagos,
+            clienteRUCPagos,
+            setClienteRUCPagos,
+            telefonoPagos,
+            setTelefonoPagos,
             gruposFiltradosPagos,
             handleSubmitPagos,
             handleCancelPagos,
@@ -669,6 +840,14 @@ export default function WesternPagosTab() {
             setCargoEnvioEnvios,
             montoEnvios,
             setMontoEnvios,
+            clienteSeleccionadoEnvios,
+            setClienteSeleccionadoEnvios,
+            showClienteModalEnvios,
+            setShowClienteModalEnvios,
+            clienteRUCEnvios,
+            setClienteRUCEnvios,
+            telefonoEnvios,
+            setTelefonoEnvios,
             gruposFiltradosEnvios,
             handleSubmitEnvios,
             handleCancelEnvios,

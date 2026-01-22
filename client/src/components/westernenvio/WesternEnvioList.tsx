@@ -22,7 +22,8 @@ export interface WesternEnvio {
   WesternEnvioFactura: string;
   WesternEnvioTimbrado: string;
   WesternEnvioMonto: number;
-  UsuarioId: string | number;
+  WesternEnvioUsuarioId: string | number;
+  ClienteId?: string | number;
   CajaDescripcion?: string;
   TipoGastoDescripcion?: string;
   TipoGastoGrupoDescripcion?: string;
@@ -103,7 +104,8 @@ export default function WesternEnvioList({
     WesternEnvioFactura: "",
     WesternEnvioTimbrado: "",
     WesternEnvioMonto: 0,
-    UsuarioId: "",
+    WesternEnvioUsuarioId: "",
+    ClienteId: "",
     id: "",
   });
 
@@ -158,7 +160,7 @@ export default function WesternEnvioList({
         WesternEnvioFactura: "",
         WesternEnvioTimbrado: "",
         WesternEnvioMonto: 0,
-        UsuarioId: "",
+        WesternEnvioUsuarioId: "",
         id: "",
       });
     }
@@ -200,6 +202,9 @@ export default function WesternEnvioList({
       WesternEnvioCambio: Number(formData.WesternEnvioCambio) || 0,
       WesternEnvioMTCN: Number(formData.WesternEnvioMTCN) || 0,
       WesternEnvioCargoEnvio: Number(formData.WesternEnvioCargoEnvio) || 0,
+      ClienteId: formData.ClienteId && formData.ClienteId !== "" 
+        ? Number(formData.ClienteId) 
+        : undefined,
     });
   };
 
@@ -265,14 +270,6 @@ export default function WesternEnvioList({
       label: "MTCN",
     },
     {
-      key: "WesternEnvioFactura",
-      label: "Factura",
-    },
-    {
-      key: "WesternEnvioTimbrado",
-      label: "Timbrado",
-    },
-    {
       key: "WesternEnvioCargoEnvio",
       label: "Cargo Envío",
       render: (item: WesternEnvio) =>
@@ -291,8 +288,12 @@ export default function WesternEnvioList({
         `Gs. ${formatMiles(item.WesternEnvioMonto || 0)}`,
     },
     {
-      key: "UsuarioId",
+      key: "WesternEnvioUsuarioId",
       label: "Usuario",
+    },
+    {
+      key: "ClienteId",
+      label: "Cliente ID",
     },
   ];
 
@@ -480,7 +481,7 @@ export default function WesternEnvioList({
                           : "0"
                       }
                       onChange={(e) => {
-                        let raw = e.target.value
+                        const raw = e.target.value
                           .replace(/\s/g, "")
                           .replace(/\./g, "");
                         const num = parseFloat(raw);
@@ -566,7 +567,7 @@ export default function WesternEnvioList({
                           : "0"
                       }
                       onChange={(e) => {
-                        let raw = e.target.value
+                        const raw = e.target.value
                           .replace(/\s/g, "")
                           .replace(/\./g, "");
                         const num = parseFloat(raw);
@@ -629,6 +630,22 @@ export default function WesternEnvioList({
                       rows={3}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       required
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteId"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Cliente ID
+                    </label>
+                    <input
+                      type="number"
+                      name="ClienteId"
+                      id="ClienteId"
+                      value={formData.ClienteId || ""}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
                 </div>

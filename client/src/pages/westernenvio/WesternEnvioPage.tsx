@@ -146,7 +146,7 @@ export default function WesternEnvioPage() {
       } else {
         const response = await createWesternEnvio({
           ...envioData,
-          UsuarioId: user?.id,
+          WesternEnvioUsuarioId: user?.id,
         });
         mensaje = response.message || "Envío western creado exitosamente";
       }

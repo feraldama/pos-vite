@@ -183,8 +183,30 @@ export default function PagoAdminList({
       label: "Caja Origen",
     },
     {
+      key: "MontoCajaOrigen",
+      label: "Monto Caja Origen",
+      render: (item: PagoAdmin) => {
+        const cajaOrigen = cajas.find(
+          (c) => c.CajaId === Number(item.CajaOrigenId)
+        );
+        const monto = cajaOrigen?.CajaMonto ?? 0;
+        return `Gs. ${formatMiles(monto)}`;
+      },
+    },
+    {
       key: "CajaDescripcion",
       label: "Caja Destino",
+    },
+    {
+      key: "MontoCajaDestino",
+      label: "Monto Caja Destino",
+      render: (item: PagoAdmin) => {
+        const cajaDestino = cajas.find(
+          (c) => c.CajaId === Number(item.CajaId)
+        );
+        const monto = cajaDestino?.CajaMonto ?? 0;
+        return `Gs. ${formatMiles(monto)}`;
+      },
     },
     {
       key: "PagoAdminFecha",

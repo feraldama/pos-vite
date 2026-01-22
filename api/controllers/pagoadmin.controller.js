@@ -161,12 +161,19 @@ exports.create = async (req, res) => {
       RegistroDiarioCajaCargoEnvio: 0,
     });
 
-    // Actualizar monto de la caja origen (restar - es egreso)
+    // Actualizar monto de la caja origen
     const cajaOrigenMontoActual = Number(cajaOrigen.CajaMonto) || 0;
+    const cajaOrigenTipoId = Number(cajaOrigen.CajaTipoId);
+    
+    // Si CajaTipoId !== 1, hacer operación opuesta (sumar en lugar de restar)
+    const nuevoMontoOrigen = cajaOrigenTipoId === 1 
+      ? cajaOrigenMontoActual - monto  // Restar (comportamiento normal)
+      : cajaOrigenMontoActual + monto; // Sumar (operación opuesta)
+    
     await new Promise((resolve, reject) => {
       db.query(
         "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-        [cajaOrigenMontoActual - monto, CajaOrigenId],
+        [nuevoMontoOrigen, CajaOrigenId],
         (err) => {
           if (err) return reject(err);
           resolve();
@@ -238,100 +245,85 @@ exports.delete = async (req, res) => {
       );
     });
 
+    // Obtener las cajas para revertir los cambios directos
+    const [cajaOrigen] = await new Promise((resolve, reject) => {
+      db.query(
+        "SELECT * FROM Caja WHERE CajaId = ?",
+        [pagoAdmin.CajaOrigenId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+
+    const [cajaDestino] = await new Promise((resolve, reject) => {
+      db.query(
+        "SELECT * FROM Caja WHERE CajaId = ?",
+        [pagoAdmin.CajaId],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+
+    const monto = Number(pagoAdmin.PagoAdminMonto) || 0;
+
     // Eliminar el pago admin primero
     const success = await PagoAdmin.delete(req.params.id);
     if (!success) {
       return res.status(404).json({ message: "Pago admin no encontrado" });
     }
 
-    // Si hay registros relacionados, eliminar cada uno y actualizar montos
+    // Revertir el cambio directo en la caja origen
+    if (cajaOrigen) {
+      const cajaOrigenMontoActual = Number(cajaOrigen.CajaMonto) || 0;
+      const cajaOrigenTipoId = Number(cajaOrigen.CajaTipoId);
+      
+      let nuevoMontoOrigen;
+      if (cajaOrigenTipoId === 1) {
+        // Si CajaTipoId === 1: se había restado, al eliminar se suma (revertir normal)
+        nuevoMontoOrigen = cajaOrigenMontoActual + monto;
+      } else {
+        // Si CajaTipoId !== 1: se había sumado, al eliminar se resta (revertir normal)
+        nuevoMontoOrigen = cajaOrigenMontoActual - monto;
+      }
+      
+      await new Promise((resolve, reject) => {
+        db.query(
+          "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+          [nuevoMontoOrigen, pagoAdmin.CajaOrigenId],
+          (err) => {
+            if (err) return reject(err);
+            resolve();
+          }
+        );
+      });
+    }
+
+    // Revertir el cambio directo en la caja destino (siempre se había sumado, ahora restar)
+    if (cajaDestino) {
+      const cajaDestinoMontoActual = Number(cajaDestino.CajaMonto) || 0;
+      await new Promise((resolve, reject) => {
+        db.query(
+          "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+          [cajaDestinoMontoActual - monto, pagoAdmin.CajaId],
+          (err) => {
+            if (err) return reject(err);
+            resolve();
+          }
+        );
+      });
+    }
+
+    // Si hay registros relacionados, eliminarlos directamente sin actualizar cajas
+    // Las cajas ya se actualizaron directamente arriba (caja origen y destino)
     if (registrosRelacionados && registrosRelacionados.length > 0) {
       for (const registro of registrosRelacionados) {
-        const registroCompleto = await RegistroDiarioCaja.getById(
-          registro.RegistroDiarioCajaId
-        );
-        if (registroCompleto) {
-          const {
-            TipoGastoId: regTipoGastoId,
-            TipoGastoGrupoId: regTipoGastoGrupoId,
-            RegistroDiarioCajaMonto: regMonto,
-            CajaId: regCajaId,
-          } = registroCompleto;
-
-          // Determinar si es ingreso (TipoGastoId === 2) o egreso (TipoGastoId === 1)
-          const esIngreso = regTipoGastoId === 2;
-          const monto = Number(regMonto) || 0;
-
-          // Conjunto de IDs de cajas a actualizar
-          const cajasIdsParaActualizar = new Set();
-
-          // Agregar la caja del registro
-          if (regCajaId) {
-            cajasIdsParaActualizar.add(Number(regCajaId));
-          }
-
-          // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
-          if (regTipoGastoId && regTipoGastoGrupoId) {
-            const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
-              regTipoGastoId,
-              regTipoGastoGrupoId
-            );
-            cajasConGasto.forEach((cajaGasto) => {
-              if (cajaGasto.CajaId) {
-                cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
-              }
-            });
-          }
-
-          // Actualizar el monto de todas las cajas afectadas
-          if (cajasIdsParaActualizar.size > 0) {
-            const actualizaciones = Array.from(cajasIdsParaActualizar).map(
-              async (cajaIdParaActualizar) => {
-                // Obtener el monto actual de la caja
-                const cajaActual = await new Promise((resolve, reject) => {
-                  db.query(
-                    "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
-                    [cajaIdParaActualizar],
-                    (err, results) => {
-                      if (err) return reject(err);
-                      resolve(results.length > 0 ? results[0] : null);
-                    }
-                  );
-                });
-
-                if (cajaActual) {
-                  const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
-                  let nuevoMonto;
-
-                  if (esIngreso) {
-                    // Si era ingreso, al eliminar restamos el monto
-                    nuevoMonto = cajaMontoActual - monto;
-                  } else {
-                    // Si era egreso, al eliminar sumamos el monto
-                    nuevoMonto = cajaMontoActual + monto;
-                  }
-
-                  // Actualizar el monto de la caja
-                  await new Promise((resolve, reject) => {
-                    db.query(
-                      "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-                      [nuevoMonto, cajaIdParaActualizar],
-                      (err) => {
-                        if (err) return reject(err);
-                        resolve();
-                      }
-                    );
-                  });
-                }
-              }
-            );
-
-            await Promise.all(actualizaciones);
-          }
-
-          // Eliminar el registro de registrodiariocaja
-          await RegistroDiarioCaja.delete(registro.RegistroDiarioCajaId);
-        }
+        // Eliminar el registro de registrodiariocaja directamente sin pasar por el controlador
+        // para evitar que se actualicen las cajas dos veces
+        await RegistroDiarioCaja.delete(registro.RegistroDiarioCajaId);
       }
     }
 

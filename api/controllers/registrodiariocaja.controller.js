@@ -120,7 +120,16 @@ exports.delete = async (req, res) => {
       RegistroDiarioCajaCambio,
       RegistroDiarioCajaFecha,
       UsuarioId,
+      RegistroDiarioCajaDetalle,
     } = registro;
+
+    // Verificar si es un registro de PAGO ADMIN
+    // Pago admin usa TipoGastoId=1, TipoGastoGrupoId=21 para egreso
+    // y TipoGastoId=2, TipoGastoGrupoId=26 para ingreso
+    const esPagoAdmin = 
+      (TipoGastoId === 1 && TipoGastoGrupoId === 21) ||
+      (TipoGastoId === 2 && TipoGastoGrupoId === 26) ||
+      (RegistroDiarioCajaDetalle && RegistroDiarioCajaDetalle.includes("PAGO ADMIN"));
 
     // Determinar si es ingreso (TipoGastoId === 2) o egreso (TipoGastoId === 1)
     // Al eliminar, invertimos la operación:
@@ -156,24 +165,27 @@ exports.delete = async (req, res) => {
     const esCasoEspecial13 = TipoGastoId === 1 && TipoGastoGrupoId === 13;
     const cambioNumero = cambio > 0 ? cambio : 1; // Evitar división por 0
 
-    // Separar la caja del registro de las demás cajas
-    const cajaIdRegistro = CajaId ? Number(CajaId) : null;
-    const cajasIdsConGasto = new Set();
-    
-    // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
-    if (TipoGastoId && TipoGastoGrupoId) {
-      const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
-        TipoGastoId,
-        TipoGastoGrupoId
-      );
-      cajasConGasto.forEach((cajaGasto) => {
-        if (cajaGasto.CajaId) {
-          cajasIdsConGasto.add(Number(cajaGasto.CajaId));
-        }
-      });
-    }
+    // Si es un registro de PAGO ADMIN, no actualizar las cajas aquí
+    // porque ya se actualizan en pagoadmin.controller.js al eliminar el pago admin
+    if (!esPagoAdmin) {
+      // Separar la caja del registro de las demás cajas
+      const cajaIdRegistro = CajaId ? Number(CajaId) : null;
+      const cajasIdsConGasto = new Set();
+      
+      // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
+      if (TipoGastoId && TipoGastoGrupoId) {
+        const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
+          TipoGastoId,
+          TipoGastoGrupoId
+        );
+        cajasConGasto.forEach((cajaGasto) => {
+          if (cajaGasto.CajaId) {
+            cajasIdsConGasto.add(Number(cajaGasto.CajaId));
+          }
+        });
+      }
 
-    // Actualizar la caja del registro (caja aperturada)
+      // Actualizar la caja del registro (caja aperturada)
     if (cajaIdRegistro && !esCasoEspecial13) {
       // Caso especial 13: no tocar la caja aperturada al eliminar
       const cajaActual = await new Promise((resolve, reject) => {
@@ -288,6 +300,7 @@ exports.delete = async (req, res) => {
 
       await Promise.all(actualizaciones);
     }
+    } // Fin del if (!esPagoAdmin)
 
     // Eliminar el registro
     const success = await RegistroDiarioCaja.delete(req.params.id);

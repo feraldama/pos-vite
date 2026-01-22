@@ -302,11 +302,15 @@ export default function PagoAdminList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
-                      {cajas.map((c) => (
-                        <option key={c.CajaId} value={c.CajaId}>
-                          {c.CajaDescripcion}
-                        </option>
-                      ))}
+                      {cajas
+                        .sort((a, b) =>
+                          a.CajaDescripcion.localeCompare(b.CajaDescripcion)
+                        )
+                        .map((c) => (
+                          <option key={c.CajaId} value={c.CajaId}>
+                            {c.CajaDescripcion}
+                          </option>
+                        ))}
                     </select>
                     {formData.CajaOrigenId && (
                       <p className="mt-1 text-sm text-gray-600">
@@ -314,9 +318,11 @@ export default function PagoAdminList({
                         <span className="font-semibold">
                           Gs.{" "}
                           {formatMiles(
-                            cajas.find(
-                              (c) => c.CajaId === Number(formData.CajaOrigenId)
-                            )?.CajaMonto || 0
+                            Number(
+                              cajas.find(
+                                (c) => c.CajaId === Number(formData.CajaOrigenId)
+                              )?.CajaMonto || 0
+                            )
                           )}
                         </span>
                       </p>
@@ -338,11 +344,15 @@ export default function PagoAdminList({
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
-                      {cajas.map((c) => (
-                        <option key={c.CajaId} value={c.CajaId}>
-                          {c.CajaDescripcion}
-                        </option>
-                      ))}
+                      {cajas
+                        .sort((a, b) =>
+                          a.CajaDescripcion.localeCompare(b.CajaDescripcion)
+                        )
+                        .map((c) => (
+                          <option key={c.CajaId} value={c.CajaId}>
+                            {c.CajaDescripcion}
+                          </option>
+                        ))}
                     </select>
                     {formData.CajaId && (
                       <p className="mt-1 text-sm text-gray-600">
@@ -350,9 +360,11 @@ export default function PagoAdminList({
                         <span className="font-semibold">
                           Gs.{" "}
                           {formatMiles(
-                            cajas.find(
-                              (c) => c.CajaId === Number(formData.CajaId)
-                            )?.CajaMonto || 0
+                            Number(
+                              cajas.find(
+                                (c) => c.CajaId === Number(formData.CajaId)
+                              )?.CajaMonto || 0
+                            )
                           )}
                         </span>
                       </p>

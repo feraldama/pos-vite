@@ -325,8 +325,8 @@ export default function CobranzaTab() {
               </select>
             </div>
 
-            {/* Cambio Dolar */}
-            <div>
+            {/* Cambio Dolar - OCULTO */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cambio Dolar
               </label>
@@ -339,10 +339,10 @@ export default function CobranzaTab() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
-            </div>
+            </div> */}
 
-            {/* MTCN */}
-            <div>
+            {/* MTCN - OCULTO */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 MTCN
               </label>
@@ -354,10 +354,10 @@ export default function CobranzaTab() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
-            </div>
+            </div> */}
 
-            {/* Cargo Envio */}
-            <div>
+            {/* Cargo Envio - OCULTO */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cargo Envio
               </label>
@@ -374,7 +374,7 @@ export default function CobranzaTab() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 inputMode="numeric"
               />
-            </div>
+            </div> */}
 
             {/* Monto */}
             <div>

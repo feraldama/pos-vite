@@ -281,30 +281,66 @@ export default function WesternPagosTab() {
         RegistroDiarioCajaCargoEnvio: cargoEnvioEnvios || 0,
       });
 
-      // Obtener IDs únicos de todas las cajas a actualizar
-      const cajasIdsParaActualizar = new Set<number>();
-
-      // Agregar todas las cajas que tengan el gasto asignado
+      // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
+      const cajasIdsConGasto = new Set<number>();
       todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
-        cajasIdsParaActualizar.add(Number(cajaGasto.CajaId));
+        cajasIdsConGasto.add(Number(cajaGasto.CajaId));
       });
 
-      // Agregar también la caja aperturada
-      cajasIdsParaActualizar.add(Number(cajaIdEnvios));
+      const montoNumero = Number(montoEnvios);
+      const cambioDolarNumero = Number(cambioDolarEnvios) || 1; // Si no hay cambio, usar 1 para evitar división por 0
+      const cajaIdNumero = Number(cajaIdEnvios);
 
-      // Actualizar el monto de todas las cajas
-      if (cajasIdsParaActualizar.size > 0) {
-        const montoNumero = Number(montoEnvios);
-        const actualizaciones = Array.from(cajasIdsParaActualizar).map(
+      // Verificar casos especiales (opuestos a los de pagos)
+      const esCasoEspecial24 = tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 24;
+      const esCasoEspecial13 = tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 13;
+
+      // Actualizar la caja aperturada
+      if (!esCasoEspecial13) {
+        // Caso especial 13: no tocar la caja aperturada
+        // Otros casos: sumar el monto (Ingreso)
+        const cajaAperturadaActual = await getCajaById(cajaIdNumero);
+        const cajaAperturadaMontoActual = Number(cajaAperturadaActual.CajaMonto);
+        const cajaAperturadaTipoId = cajaAperturadaActual.CajaTipoId;
+        
+        // Si CajaTipoId=3, hacer operación opuesta (restar en lugar de sumar)
+        const montoAplicar = cajaAperturadaTipoId === 3 ? -montoNumero : montoNumero;
+        await updateCajaMonto(
+          cajaIdNumero,
+          cajaAperturadaMontoActual + montoAplicar
+        );
+      }
+
+      // Actualizar las demás cajas
+      const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
+        (id) => id !== cajaIdNumero
+      );
+
+      if (cajasParaActualizar.length > 0) {
+        const actualizaciones = cajasParaActualizar.map(
           async (cajaIdParaActualizar: number) => {
             const cajaActual = await getCajaById(cajaIdParaActualizar);
             const cajaMontoActual = Number(cajaActual.CajaMonto);
+            const cajaTipoId = cajaActual.CajaTipoId;
 
-            // tipoGastoIdEnvios siempre es 2 (Ingreso): sumar el monto
-            await updateCajaMonto(
-              cajaIdParaActualizar,
-              cajaMontoActual + montoNumero
-            );
+            if (esCasoEspecial24 || esCasoEspecial13) {
+              // Casos especiales 24 y 13: restar Monto/CambioDolar (opuesto a pagos que suma)
+              const montoConvertido = montoNumero / cambioDolarNumero;
+              // Si CajaTipoId=3, hacer operación opuesta (sumar en lugar de restar)
+              const montoAplicar = cajaTipoId === 3 ? montoConvertido : -montoConvertido;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            } else {
+              // Caso normal: sumar el monto (Ingreso)
+              // Si CajaTipoId=3, hacer operación opuesta (restar en lugar de sumar)
+              const montoAplicar = cajaTipoId === 3 ? -montoNumero : montoNumero;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            }
           }
         );
 

@@ -163,6 +163,9 @@ exports.delete = async (req, res) => {
     // Verificar casos especiales para WESTERN PAGOS
     const esCasoEspecial19 = TipoGastoId === 1 && TipoGastoGrupoId === 19;
     const esCasoEspecial13 = TipoGastoId === 1 && TipoGastoGrupoId === 13;
+    // Verificar casos especiales para WESTERN ENVÍOS (opuestos a los de pagos)
+    const esCasoEspecial24 = TipoGastoId === 2 && TipoGastoGrupoId === 24;
+    const esCasoEspecial13Envios = TipoGastoId === 2 && TipoGastoGrupoId === 13;
     const cambioNumero = cambio > 0 ? cambio : 1; // Evitar división por 0
 
     // Si es un registro de PAGO ADMIN, no actualizar las cajas aquí
@@ -186,8 +189,8 @@ exports.delete = async (req, res) => {
       }
 
       // Actualizar la caja del registro (caja aperturada)
-    if (cajaIdRegistro && !esCasoEspecial13) {
-      // Caso especial 13: no tocar la caja aperturada al eliminar
+    if (cajaIdRegistro && !esCasoEspecial13 && !esCasoEspecial13Envios) {
+      // Casos especiales 13 (pagos y envíos): no tocar la caja aperturada al eliminar
       const cajaActual = await new Promise((resolve, reject) => {
         db.query(
           "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
@@ -203,11 +206,13 @@ exports.delete = async (req, res) => {
         const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
         const cajaTipoId = Number(cajaActual.CajaTipoId);
         
-        // Al eliminar, revertir la operación: si restó, ahora sumar
-        let montoAplicar = monto;
+        // Al eliminar, revertir la operación:
+        // - Si era egreso (restó), ahora sumar
+        // - Si era ingreso (sumó), ahora restar
+        let montoAplicar = esIngreso ? -monto : monto;
         if (cajaTipoId === 3) {
           // Operación opuesta para CajaTipoId=3
-          montoAplicar = -monto;
+          montoAplicar = -montoAplicar;
         }
         
         const nuevoMonto = cajaMontoActual + montoAplicar;
@@ -250,13 +255,24 @@ exports.delete = async (req, res) => {
             let nuevoMonto;
 
             if (esCasoEspecial19 || esCasoEspecial13) {
-              // Casos especiales: revertir la suma de Monto/CambioDolar (restar)
+              // Casos especiales de PAGOS: revertir la suma de Monto/CambioDolar (restar)
               const montoConvertido = monto / cambioNumero;
               let montoAplicar = -montoConvertido; // Revertir: restar
               
               if (cajaTipoId === 3) {
                 // Operación opuesta para CajaTipoId=3
                 montoAplicar = montoConvertido;
+              }
+              
+              nuevoMonto = cajaMontoActual + montoAplicar;
+            } else if (esCasoEspecial24 || esCasoEspecial13Envios) {
+              // Casos especiales de ENVÍOS: revertir la resta de Monto/CambioDolar (sumar)
+              const montoConvertido = monto / cambioNumero;
+              let montoAplicar = montoConvertido; // Revertir: sumar (opuesto a pagos)
+              
+              if (cajaTipoId === 3) {
+                // Operación opuesta para CajaTipoId=3
+                montoAplicar = -montoConvertido;
               }
               
               nuevoMonto = cajaMontoActual + montoAplicar;

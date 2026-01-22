@@ -438,6 +438,28 @@ const RegistroDiarioCaja = {
       });
     });
   },
+
+  findByWesternEnvio: (TipoGastoId, TipoGastoGrupoId, detalle, MTCN) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM registrodiariocaja 
+        WHERE TipoGastoId = ? 
+          AND TipoGastoGrupoId = ? 
+          AND RegistroDiarioCajaDetalle = ? 
+          AND RegistroDiarioCajaMTCN = ?
+        LIMIT 1
+      `;
+
+      db.query(
+        query,
+        [TipoGastoId, TipoGastoGrupoId, detalle, MTCN],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results.length > 0 ? results[0] : null);
+        }
+      );
+    });
+  },
 };
 
 module.exports = RegistroDiarioCaja;

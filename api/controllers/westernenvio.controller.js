@@ -1,4 +1,6 @@
 const WesternEnvio = require("../models/westernenvio.model");
+const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
+const registroDiarioCajaController = require("./registrodiariocaja.controller");
 
 // Obtener todos los envíos western con paginación
 exports.getAll = async (req, res) => {
@@ -100,6 +102,74 @@ exports.update = async (req, res) => {
 // Eliminar un envío western
 exports.delete = async (req, res) => {
   try {
+    // Obtener el registro de westernenvio antes de eliminarlo
+    const envio = await WesternEnvio.getById(req.params.id);
+    if (!envio) {
+      return res.status(404).json({ message: "Envío western no encontrado" });
+    }
+
+    // Buscar el registro correspondiente en registrodiariocaja
+    // usando TipoGastoId, TipoGastoGrupoId, detalle y MTCN
+    const registroDiarioCaja = await RegistroDiarioCaja.findByWesternEnvio(
+      envio.TipoGastoId,
+      envio.TipoGastoGrupoId,
+      envio.WesternEnvioDetalle,
+      envio.WesternEnvioMTCN || 0
+    );
+
+    // Si se encuentra el registro en registrodiariocaja, eliminarlo
+    // usando las reglas existentes del controlador
+    if (registroDiarioCaja) {
+      // Crear un objeto request simulado para el controlador de registrodiariocaja
+      const mockReq = {
+        params: { id: registroDiarioCaja.RegistroDiarioCajaId },
+        user: req.user, // Pasar el usuario del request original
+      };
+      
+      let deleteSuccess = false;
+      let deleteError = null;
+      
+      const mockRes = {
+        status: (code) => ({
+          json: (data) => {
+            if (code === 200) {
+              deleteSuccess = true;
+            } else {
+              deleteError = data;
+              console.error(
+                "Error al eliminar registro diario de caja:",
+                data
+              );
+            }
+            return mockRes;
+          },
+        }),
+        json: (data) => {
+          deleteSuccess = true;
+          return data;
+        },
+      };
+
+      try {
+        // Llamar al controlador de registrodiariocaja para eliminar
+        // Esto aplicará todas las reglas de eliminación existentes
+        await registroDiarioCajaController.delete(mockReq, mockRes);
+        
+        if (!deleteSuccess && deleteError) {
+          console.warn(
+            "No se pudo eliminar el registro diario de caja asociado, pero se continuará con la eliminación del westernenvio"
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Error al eliminar registro diario de caja asociado:",
+          error
+        );
+        // Continuar con la eliminación del westernenvio aunque falle la eliminación del registro
+      }
+    }
+
+    // Eliminar el registro de westernenvio
     const success = await WesternEnvio.delete(req.params.id);
     if (!success) {
       return res.status(404).json({ message: "Envío western no encontrado" });

@@ -34,6 +34,7 @@ export default function CobranzaTab() {
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [tiposGastoDisponibles, setTiposGastoDisponibles] = useState<TipoGasto[]>([]);
   const [tiposGastoGrupoDisponibles, setTiposGastoGrupoDisponibles] = useState<TipoGastoGrupo[]>([]);
+  const [gruposValidos, setGruposValidos] = useState<Set<string>>(new Set()); // Set de "TipoGastoId-TipoGastoGrupoId" válidos
 
   // Formulario
   const [cajaId, setCajaId] = useState<string | number>("");
@@ -71,13 +72,35 @@ export default function CobranzaTab() {
         );
 
         // Obtener todos los gastos de estas cajas y extraer TipoGastoId y TipoGastoGrupoId únicos
+        // Para tipos de gasto: incluir todos los que tienen gastos en estas cajas
+        // Para grupos: solo incluir donde TipoGastoGrupoDescripcion está contenido en CajaDescripcion
         const gastosUnicos = new Set<string>();
+        const gruposValidosSet = new Set<string>(); // Set de "TipoGastoId-TipoGastoGrupoId" válidos
+        
         for (const caja of cajasTipo9) {
           try {
             const gastos = await getCajaGastosByCajaId(caja.CajaId);
             if (Array.isArray(gastos)) {
               gastos.forEach((gasto: { TipoGastoId: number; TipoGastoGrupoId: number }) => {
-                gastosUnicos.add(`${gasto.TipoGastoId}-${gasto.TipoGastoGrupoId}`);
+                const gastoKey = `${gasto.TipoGastoId}-${gasto.TipoGastoGrupoId}`;
+                
+                // Agregar todos los tipos de gasto (sin filtrar)
+                gastosUnicos.add(gastoKey);
+                
+                // Buscar el grupo completo para obtener su descripción
+                const grupo = tiposGastoGrupoData.find(
+                  (g: TipoGastoGrupo) => g.TipoGastoId === gasto.TipoGastoId && g.TipoGastoGrupoId === gasto.TipoGastoGrupoId
+                );
+                
+                // Solo agregar a grupos válidos si TipoGastoGrupoDescripcion está contenido en CajaDescripcion
+                // Comparación case-insensitive
+                if (grupo) {
+                  const cajaDescUpper = caja.CajaDescripcion.toUpperCase();
+                  const grupoDescUpper = grupo.TipoGastoGrupoDescripcion.toUpperCase();
+                  if (cajaDescUpper.includes(grupoDescUpper)) {
+                    gruposValidosSet.add(gastoKey);
+                  }
+                }
               });
             }
           } catch (error) {
@@ -85,7 +108,7 @@ export default function CobranzaTab() {
           }
         }
 
-        // Filtrar tipos de gasto y grupos disponibles
+        // Filtrar tipos de gasto disponibles (todos los que tienen gastos en estas cajas)
         const tiposGastoIds = new Set<number>();
         const gruposMap = new Map<string, TipoGastoGrupo>();
 
@@ -107,6 +130,7 @@ export default function CobranzaTab() {
 
         setTiposGastoDisponibles(tiposFiltrados);
         setTiposGastoGrupoDisponibles(gruposFiltrados);
+        setGruposValidos(gruposValidosSet);
 
         // Inicializar fecha actual
         const hoy = new Date();
@@ -124,7 +148,13 @@ export default function CobranzaTab() {
   }, [user]);
 
   const gruposFiltrados = tiposGastoGrupoDisponibles
-    .filter((g) => g.TipoGastoId === tipoGastoId)
+    .filter((g) => {
+      // Filtrar por TipoGastoId seleccionado
+      if (g.TipoGastoId !== tipoGastoId) return false;
+      // Filtrar solo los grupos válidos (donde TipoGastoGrupoDescripcion está contenido en CajaDescripcion)
+      const grupoKey = `${g.TipoGastoId}-${g.TipoGastoGrupoId}`;
+      return gruposValidos.has(grupoKey);
+    })
     .sort((a, b) =>
       a.TipoGastoGrupoDescripcion.localeCompare(b.TipoGastoGrupoDescripcion)
     );
@@ -420,7 +450,6 @@ export default function CobranzaTab() {
             <textarea
               value={detalle}
               onChange={(e) => setDetalle(e.target.value)}
-              required
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Ingrese el detalle del registro..."

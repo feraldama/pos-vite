@@ -11,6 +11,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import PrivateRoute from "./components/common/PrivateRoute";
 import Layout from "./components/layout/Layout";
 import NotFound from "./pages/NotFound";
+import DocumentTitle from "./components/common/DocumentTitle";
 import UsersPage from "./pages/users/UsersPage";
 import MovementsPage from "./pages/movements/MovementsPage";
 import CajasPage from "./pages/cajas/CajasPage";
@@ -46,6 +47,7 @@ import WesternEnvioPage from "./pages/westernenvio/WesternEnvioPage";
 function App() {
   return (
     <Router>
+      <DocumentTitle />
       <AuthProvider>
         <Routes>
           {/* Redirige la raíz / a /login */}

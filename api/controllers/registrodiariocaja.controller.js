@@ -163,9 +163,11 @@ exports.delete = async (req, res) => {
     // Verificar casos especiales para WESTERN PAGOS
     const esCasoEspecial19 = TipoGastoId === 1 && TipoGastoGrupoId === 19;
     const esCasoEspecial13 = TipoGastoId === 1 && TipoGastoGrupoId === 13;
+    const esCasoEspecial4 = TipoGastoId === 1 && TipoGastoGrupoId === 4; // PAGOS: suma a demás cajas
     // Verificar casos especiales para WESTERN ENVÍOS (opuestos a los de pagos)
     const esCasoEspecial24 = TipoGastoId === 2 && TipoGastoGrupoId === 24;
     const esCasoEspecial13Envios = TipoGastoId === 2 && TipoGastoGrupoId === 13;
+    const esCasoEspecial5 = TipoGastoId === 2 && TipoGastoGrupoId === 5; // ENVÍOS: resta a demás cajas
     const cambioNumero = cambio > 0 ? cambio : 1; // Evitar división por 0
 
     // Si es un registro de PAGO ADMIN, no actualizar las cajas aquí
@@ -206,10 +208,22 @@ exports.delete = async (req, res) => {
         const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
         const cajaTipoId = Number(cajaActual.CajaTipoId);
         
-        // Al eliminar, revertir la operación:
-        // - Si era egreso (restó), ahora sumar
-        // - Si era ingreso (sumó), ahora restar
-        let montoAplicar = esIngreso ? -monto : monto;
+        // Al eliminar, revertir la operación según la nueva lógica:
+        // - Si era EGRESO: se había restado, ahora SUMAR
+        // - Si era INGRESO: se había sumado, ahora RESTAR
+        const esEgreso = TipoGastoId === 1;
+        let montoAplicar;
+        if (esEgreso) {
+          // EGRESO: revertir la resta (sumar)
+          montoAplicar = monto;
+        } else if (esIngreso) {
+          // INGRESO: revertir la suma (restar)
+          montoAplicar = -monto;
+        } else {
+          // Por defecto, mantener lógica anterior
+          montoAplicar = esIngreso ? -monto : monto;
+        }
+        
         if (cajaTipoId === 3) {
           // Operación opuesta para CajaTipoId=3
           montoAplicar = -montoAplicar;
@@ -276,20 +290,60 @@ exports.delete = async (req, res) => {
               }
               
               nuevoMonto = cajaMontoActual + montoAplicar;
+            } else if (esCasoEspecial4) {
+              // Caso especial 4 (PAGOS): se había sumado a las demás cajas, al eliminar RESTAR
+              // Misma lógica que CobranzaTab para EGRESO
+              let valorAUsar = monto;
+              if (cajaTipoId === 3 && cambio > 0) {
+                valorAUsar = monto / cambio;
+              }
+              
+              let montoAplicar = -valorAUsar; // Revertir: restar
+              
+              if (cajaTipoId === 3) {
+                // Operación opuesta para CajaTipoId=3
+                montoAplicar = -montoAplicar;
+              }
+              
+              nuevoMonto = cajaMontoActual + montoAplicar;
+            } else if (esCasoEspecial5) {
+              // Caso especial 5 (ENVÍOS): se había restado a las demás cajas, al eliminar SUMAR
+              // Misma lógica que CobranzaTab para INGRESO
+              let valorAUsar = monto;
+              if (cajaTipoId === 3 && cambio > 0) {
+                valorAUsar = monto / cambio;
+              }
+              
+              let montoAplicar = valorAUsar; // Revertir: sumar
+              
+              if (cajaTipoId === 3) {
+                // Operación opuesta para CajaTipoId=3
+                montoAplicar = -montoAplicar;
+              }
+              
+              nuevoMonto = cajaMontoActual + montoAplicar;
             } else {
-              // Caso normal: revertir la operación
+              // Caso normal: revertir la operación según la nueva lógica
               let valorAUsar = monto;
               if (cajaTipoId === 3 && cambio > 0) {
                 valorAUsar = monto / cambio;
               }
 
+              const esEgreso = TipoGastoId === 1;
               let montoAplicar;
-              if (esIngreso) {
-                // Si era ingreso, al eliminar restamos el valor
+              if (esEgreso) {
+                // EGRESO: se había sumado a las demás cajas, al eliminar RESTAR
                 montoAplicar = -valorAUsar;
-              } else {
-                // Si era egreso, al eliminar sumamos el valor
+              } else if (esIngreso) {
+                // INGRESO: se había restado a las demás cajas, al eliminar SUMAR
                 montoAplicar = valorAUsar;
+              } else {
+                // Por defecto, mantener lógica anterior
+                if (esIngreso) {
+                  montoAplicar = -valorAUsar;
+                } else {
+                  montoAplicar = valorAUsar;
+                }
               }
 
               if (cajaTipoId === 3) {

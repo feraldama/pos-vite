@@ -211,30 +211,52 @@ export default function CobranzaTab() {
       const montoNumero = Number(monto) || 0;
       const cajaIdNumero = Number(cajaId);
 
-      // Actualizar la caja aperturada: SUMAR el monto
+      // Determinar si es EGRESO (TipoGastoId = 1) o INGRESO (TipoGastoId = 2)
+      const esEgreso = tipoGastoId === 1;
+      const esIngreso = tipoGastoId === 2;
+
+      // Actualizar la caja aperturada
+      // Si es EGRESO: RESTAR el monto
+      // Si es INGRESO: SUMAR el monto
       const cajaAperturadaActual = await getCajaById(cajaIdNumero);
       const cajaAperturadaMontoActual = Number(cajaAperturadaActual.CajaMonto);
-      await updateCajaMonto(
-        cajaIdNumero,
-        cajaAperturadaMontoActual + montoNumero
-      );
+      if (esEgreso) {
+        await updateCajaMonto(
+          cajaIdNumero,
+          cajaAperturadaMontoActual - montoNumero
+        );
+      } else if (esIngreso) {
+        await updateCajaMonto(
+          cajaIdNumero,
+          cajaAperturadaMontoActual + montoNumero
+        );
+      }
 
-      // Actualizar las demás cajas que tienen el gasto asignado: RESTAR el monto
+      // Actualizar las demás cajas que tienen el gasto asignado
       // (excluyendo la caja aperturada si está en la lista)
-      const cajasParaRestar = Array.from(cajasIdsConGasto).filter(
+      const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
         (id) => id !== cajaIdNumero
       );
 
-      if (cajasParaRestar.length > 0) {
-        const actualizaciones = cajasParaRestar.map(
+      if (cajasParaActualizar.length > 0) {
+        const actualizaciones = cajasParaActualizar.map(
           async (cajaIdParaActualizar: number) => {
             const cajaActual = await getCajaById(cajaIdParaActualizar);
             const cajaMontoActual = Number(cajaActual.CajaMonto);
-            // Restar el monto (es un gasto para estas cajas)
-            await updateCajaMonto(
-              cajaIdParaActualizar,
-              cajaMontoActual - montoNumero
-            );
+            
+            // Si es EGRESO: SUMAR el monto a las demás cajas
+            // Si es INGRESO: RESTAR el monto a las demás cajas
+            if (esEgreso) {
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoNumero
+              );
+            } else if (esIngreso) {
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual - montoNumero
+              );
+            }
           }
         );
 

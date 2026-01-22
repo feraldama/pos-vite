@@ -264,8 +264,9 @@ export default function WesternPagosTab() {
       // Verificar casos especiales
       const esCasoEspecial19 = tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 19;
       const esCasoEspecial13 = tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 13;
+      const esCasoEspecial4 = tipoGastoIdPagos === 1 && tipoGastoGrupoIdPagos === 4; // PAGOS: sumar a demás cajas
 
-      // Actualizar la caja aperturada
+      // Actualizar la caja aperturada (mantener lógica actual)
       if (!esCasoEspecial13) {
         // Caso especial 13: no tocar la caja aperturada
         // Otros casos: restar el monto (Egreso)
@@ -298,6 +299,14 @@ export default function WesternPagosTab() {
               const montoConvertido = montoNumero / cambioDolarNumero;
               // Si CajaTipoId=3, hacer operación opuesta (restar en lugar de sumar)
               const montoAplicar = cajaTipoId === 3 ? -montoConvertido : montoConvertido;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            } else if (esCasoEspecial4) {
+              // Caso especial 4 (PAGOS): SUMAR el monto a las demás cajas (misma lógica que CobranzaTab para EGRESO)
+              // Si CajaTipoId=3, hacer operación opuesta (restar en lugar de sumar)
+              const montoAplicar = cajaTipoId === 3 ? -montoNumero : montoNumero;
               await updateCajaMonto(
                 cajaIdParaActualizar,
                 cajaMontoActual + montoAplicar
@@ -415,8 +424,9 @@ export default function WesternPagosTab() {
       // Verificar casos especiales (opuestos a los de pagos)
       const esCasoEspecial24 = tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 24;
       const esCasoEspecial13 = tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 13;
+      const esCasoEspecial5 = tipoGastoIdEnvios === 2 && tipoGastoGrupoIdEnvios === 5; // ENVÍOS: restar a demás cajas
 
-      // Actualizar la caja aperturada
+      // Actualizar la caja aperturada (mantener lógica actual)
       if (!esCasoEspecial13) {
         // Caso especial 13: no tocar la caja aperturada
         // Otros casos: sumar el monto (Ingreso)
@@ -449,6 +459,14 @@ export default function WesternPagosTab() {
               const montoConvertido = montoNumero / cambioDolarNumero;
               // Si CajaTipoId=3, hacer operación opuesta (sumar en lugar de restar)
               const montoAplicar = cajaTipoId === 3 ? montoConvertido : -montoConvertido;
+              await updateCajaMonto(
+                cajaIdParaActualizar,
+                cajaMontoActual + montoAplicar
+              );
+            } else if (esCasoEspecial5) {
+              // Caso especial 5 (ENVÍOS): RESTAR el monto a las demás cajas (misma lógica que CobranzaTab para INGRESO)
+              // Si CajaTipoId=3, hacer operación opuesta (sumar en lugar de restar)
+              const montoAplicar = cajaTipoId === 3 ? montoNumero : -montoNumero;
               await updateCajaMonto(
                 cajaIdParaActualizar,
                 cajaMontoActual + montoAplicar

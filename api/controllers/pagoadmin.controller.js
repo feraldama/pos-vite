@@ -165,8 +165,9 @@ exports.create = async (req, res) => {
     const cajaOrigenMontoActual = Number(cajaOrigen.CajaMonto) || 0;
     const cajaOrigenTipoId = Number(cajaOrigen.CajaTipoId);
     
-    // Si CajaTipoId !== 1, hacer operación opuesta (sumar en lugar de restar)
-    const nuevoMontoOrigen = cajaOrigenTipoId === 1 
+    // Si CajaTipoId === 1, CajaTipoId === 3 o CajaTipoId === 9, restar (comportamiento normal)
+    // Si CajaTipoId es otro valor, hacer operación opuesta (sumar en lugar de restar)
+    const nuevoMontoOrigen = (cajaOrigenTipoId === 1 || cajaOrigenTipoId === 3 || cajaOrigenTipoId === 9)
       ? cajaOrigenMontoActual - monto  // Restar (comportamiento normal)
       : cajaOrigenMontoActual + monto; // Sumar (operación opuesta)
     
@@ -282,11 +283,11 @@ exports.delete = async (req, res) => {
       const cajaOrigenTipoId = Number(cajaOrigen.CajaTipoId);
       
       let nuevoMontoOrigen;
-      if (cajaOrigenTipoId === 1) {
-        // Si CajaTipoId === 1: se había restado, al eliminar se suma (revertir normal)
+      if (cajaOrigenTipoId === 1 || cajaOrigenTipoId === 3 || cajaOrigenTipoId === 9) {
+        // Si CajaTipoId === 1, CajaTipoId === 3 o CajaTipoId === 9: se había restado, al eliminar se suma (revertir normal)
         nuevoMontoOrigen = cajaOrigenMontoActual + monto;
       } else {
-        // Si CajaTipoId !== 1: se había sumado, al eliminar se resta (revertir normal)
+        // Si CajaTipoId es otro valor: se había sumado, al eliminar se resta (revertir normal)
         nuevoMontoOrigen = cajaOrigenMontoActual - monto;
       }
       

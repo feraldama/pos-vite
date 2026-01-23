@@ -94,6 +94,21 @@ export default function PagoAdminList({
     fetchCajas();
   }, []);
 
+  // Recargar cajas cuando se abre el modal en modo creación (para actualizar montos)
+  useEffect(() => {
+    if (isModalOpen && !currentPagoAdmin) {
+      const fetchCajas = async () => {
+        try {
+          const response = await getCajas(1, 1000);
+          setCajas(response.data || []);
+        } catch (error) {
+          console.error("Error al obtener cajas:", error);
+        }
+      };
+      fetchCajas();
+    }
+  }, [isModalOpen, currentPagoAdmin]);
+
   useEffect(() => {
     if (currentPagoAdmin) {
       // Formatear fecha para input datetime-local

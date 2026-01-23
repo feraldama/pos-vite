@@ -184,10 +184,10 @@ exports.delete = async (req, res) => {
           if (cajasIdsParaActualizar.size > 0) {
             const actualizaciones = Array.from(cajasIdsParaActualizar).map(
               async (cajaIdParaActualizar) => {
-                // Obtener el monto actual de la caja
+                // Obtener el monto actual y CajaTipoId de la caja
                 const cajaActual = await new Promise((resolve, reject) => {
                   db.query(
-                    "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
+                    "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
                     [cajaIdParaActualizar],
                     (err, results) => {
                       if (err) return reject(err);
@@ -198,14 +198,32 @@ exports.delete = async (req, res) => {
 
                 if (cajaActual) {
                   const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+                  const cajaTipoId = Number(cajaActual.CajaTipoId);
                   let nuevoMonto;
 
+                  // Determinar la operación base
+                  let operacionBase;
                   if (esIngreso) {
-                    // Si era ingreso, al eliminar restamos el monto
-                    nuevoMonto = cajaMontoActual - monto;
+                    // Si era ingreso, al eliminar sumamos el monto
+                    operacionBase = cajaMontoActual + monto;
                   } else {
-                    // Si era egreso, al eliminar sumamos el monto
-                    nuevoMonto = cajaMontoActual + monto;
+                    // Si era egreso, al eliminar restamos el monto
+                    operacionBase = cajaMontoActual - monto;
+                  }
+
+                  // Si CajaTipoId === 1, hacer operación opuesta
+                  if (cajaTipoId === 1) {
+                    // Invertir la operación
+                    if (esIngreso) {
+                      // Si era ingreso y CajaTipoId=1: restar en lugar de sumar
+                      nuevoMonto = cajaMontoActual - monto;
+                    } else {
+                      // Si era egreso y CajaTipoId=1: sumar en lugar de restar
+                      nuevoMonto = cajaMontoActual + monto;
+                    }
+                  } else {
+                    // Para otros CajaTipoId, usar la operación base
+                    nuevoMonto = operacionBase;
                   }
 
                   // Actualizar el monto de la caja

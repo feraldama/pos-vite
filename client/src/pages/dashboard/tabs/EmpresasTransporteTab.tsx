@@ -100,6 +100,8 @@ export default function EmpresasTransporteTab() {
         const hh = String(hoy.getHours()).padStart(2, "0");
         const min = String(hoy.getMinutes()).padStart(2, "0");
         setPagoTransFecha(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+        // Inicializar fecha de embarque con la fecha de hoy
+        setFechaEmbarque(`${yyyy}-${mm}-${dd}`);
       } catch (error) {
         console.error("Error al cargar datos:", error);
       }
@@ -118,7 +120,8 @@ export default function EmpresasTransporteTab() {
     setTransporteIdPago("");
     setOrigen("");
     setDestino("");
-    setFechaEmbarque("");
+    // Resetear fecha de embarque con la fecha de hoy
+    setFechaEmbarque(`${yyyy}-${mm}-${dd}`);
     setHora("");
     setAsiento("");
     setMonto("");

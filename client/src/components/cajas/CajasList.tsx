@@ -43,6 +43,8 @@ interface CajasListProps {
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
+  cajaTipoId?: number | null;
+  onCajaTipoFilter?: (tipoId: number | null) => void;
 }
 
 export default function CajasList({
@@ -62,6 +64,8 @@ export default function CajasList({
   sortKey,
   sortOrder,
   onSort,
+  cajaTipoId,
+  onCajaTipoFilter,
 }: CajasListProps) {
   const [formData, setFormData] = useState({
     id: "",
@@ -179,6 +183,31 @@ export default function CajasList({
             placeholder="Buscar cajas"
           />
         </div>
+        {onCajaTipoFilter && (
+          <div className="flex items-center gap-2">
+            <select
+              value={cajaTipoId || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                onCajaTipoFilter(value === "" ? null : Number(value));
+              }}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 h-[42px]"
+            >
+              <option value="">Todos los tipos</option>
+              {cajaTipos
+                .sort((a, b) =>
+                  a.CajaTipoDescripcion.localeCompare(
+                    b.CajaTipoDescripcion
+                  )
+                )
+                .map((tipo) => (
+                  <option key={tipo.CajaTipoId} value={tipo.CajaTipoId}>
+                    {tipo.CajaTipoDescripcion}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
         <div className="py-4">
           {onCreate && (
             <ActionButton

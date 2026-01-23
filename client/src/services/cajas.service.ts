@@ -5,14 +5,16 @@ export const getCajas = async (
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  cajaTipoId?: number | null
 ) => {
-  const params: { [key: string]: string | number | undefined } = {
+  const params: { [key: string]: string | number | undefined | null } = {
     page,
     limit,
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (cajaTipoId !== undefined && cajaTipoId !== null) params.cajaTipoId = cajaTipoId;
   try {
     const response = await api.get("/caja", { params });
     return response.data;
@@ -70,15 +72,17 @@ export const searchCajas = async (
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  cajaTipoId?: number | null
 ) => {
-  const params: { [key: string]: string | number | undefined } = {
+  const params: { [key: string]: string | number | undefined | null } = {
     q: searchTerm,
     page,
     limit,
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (cajaTipoId !== undefined && cajaTipoId !== null) params.cajaTipoId = cajaTipoId;
   try {
     const response = await api.get("/caja/search", { params });
     return response.data;

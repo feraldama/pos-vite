@@ -67,7 +67,7 @@ const Caja = {
     });
   },
 
-  getAllPaginated: (limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+  getAllPaginated: (limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
         "CajaId",
@@ -82,26 +82,37 @@ const Caja = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
-      db.query(
-        `SELECT * FROM Caja ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
+      let query = `SELECT * FROM Caja`;
+      let countQuery = `SELECT COUNT(*) as total FROM Caja`;
+      const queryParams = [];
+      const countParams = [];
+
+      if (cajaTipoId !== null && cajaTipoId !== undefined && cajaTipoId !== "") {
+        query += ` WHERE CajaTipoId = ?`;
+        countQuery += ` WHERE CajaTipoId = ?`;
+        queryParams.push(cajaTipoId);
+        countParams.push(cajaTipoId);
+      }
+
+      query += ` ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`;
+      queryParams.push(limit, offset);
+
+      db.query(query, queryParams, (err, results) => {
+        if (err) return reject(err);
+
+        db.query(countQuery, countParams, (err, countResult) => {
           if (err) return reject(err);
 
-          db.query("SELECT COUNT(*) as total FROM Caja", (err, countResult) => {
-            if (err) return reject(err);
-
-            resolve({
-              cajas: results,
-              total: countResult[0].total,
-            });
+          resolve({
+            cajas: results,
+            total: countResult[0].total,
           });
-        }
-      );
+        });
+      });
     });
   },
 
-  searchCajas: (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+  searchCajas: (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
         "CajaId",
@@ -116,41 +127,42 @@ const Caja = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM Caja
-        WHERE CajaDescripcion LIKE ?
-        OR CAST(CajaMonto AS CHAR) LIKE ?
-        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
       const searchValue = `%${term}%`;
+      let searchQuery = `
+        SELECT * FROM Caja
+        WHERE (CajaDescripcion LIKE ?
+        OR CAST(CajaMonto AS CHAR) LIKE ?
+        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?)`;
+      let countQuery = `
+        SELECT COUNT(*) as total FROM Caja
+        WHERE (CajaDescripcion LIKE ?
+        OR CAST(CajaMonto AS CHAR) LIKE ?
+        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?)`;
+      
+      const searchParams = [searchValue, searchValue, searchValue];
+      const countParams = [searchValue, searchValue, searchValue];
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
-        (err, results) => {
+      if (cajaTipoId !== null && cajaTipoId !== undefined && cajaTipoId !== "") {
+        searchQuery += ` AND CajaTipoId = ?`;
+        countQuery += ` AND CajaTipoId = ?`;
+        searchParams.push(cajaTipoId);
+        countParams.push(cajaTipoId);
+      }
+
+      searchQuery += ` ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`;
+      searchParams.push(limit, offset);
+
+      db.query(searchQuery, searchParams, (err, results) => {
+        if (err) return reject(err);
+
+        db.query(countQuery, countParams, (err, countResult) => {
           if (err) return reject(err);
-
-          const countQuery = `
-            SELECT COUNT(*) as total FROM Caja
-            WHERE CajaDescripcion LIKE ?
-            OR CAST(CajaMonto AS CHAR) LIKE ?
-            OR CAST(CajaGastoCantidad AS CHAR) LIKE ?
-          `;
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
-              resolve({
-                cajas: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
+          resolve({
+            cajas: results,
+            total: countResult[0]?.total || 0,
+          });
+        });
+      });
     });
   },
 };

@@ -7,8 +7,11 @@ exports.getAll = async (req, res) => {
   const offset = (page - 1) * limit;
   const sortBy = req.query.sortBy || "CajaId";
   const sortOrder = req.query.sortOrder || "ASC";
+  const cajaTipoId = req.query.cajaTipoId !== undefined && req.query.cajaTipoId !== "" 
+    ? parseInt(req.query.cajaTipoId) 
+    : null;
   try {
-    const result = await Caja.getAllPaginated(limit, offset, sortBy, sortOrder);
+    const result = await Caja.getAllPaginated(limit, offset, sortBy, sortOrder, cajaTipoId);
     res.json({
       data: result.cajas,
       pagination: {
@@ -86,6 +89,9 @@ exports.searchCajas = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "CajaId";
     const sortOrder = req.query.sortOrder || "ASC";
+    const cajaTipoId = req.query.cajaTipoId !== undefined && req.query.cajaTipoId !== "" 
+      ? parseInt(req.query.cajaTipoId) 
+      : null;
 
     if (!searchTerm || searchTerm.trim() === "") {
       return res
@@ -98,7 +104,8 @@ exports.searchCajas = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
+      cajaTipoId
     );
 
     res.json({

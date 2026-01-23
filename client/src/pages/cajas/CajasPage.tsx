@@ -37,6 +37,7 @@ export default function CajasPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+  const [cajaTipoId, setCajaTipoId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -58,10 +59,11 @@ export default function CajasPage() {
           currentPage,
           itemsPerPage,
           sortKey,
-          sortOrder
+          sortOrder,
+          cajaTipoId
         );
       } else {
-        data = await getCajas(currentPage, itemsPerPage, sortKey, sortOrder);
+        data = await getCajas(currentPage, itemsPerPage, sortKey, sortOrder, cajaTipoId);
       }
       setCajasData({
         cajas: data.data,
@@ -76,7 +78,7 @@ export default function CajasPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
+  }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder, cajaTipoId]);
 
   useEffect(() => {
     fetchCajas();
@@ -88,6 +90,11 @@ export default function CajasPage() {
 
   const applySearch = () => {
     setAppliedSearchTerm(searchTerm);
+    setCurrentPage(1);
+  };
+
+  const handleCajaTipoFilter = (tipoId: number | null) => {
+    setCajaTipoId(tipoId);
     setCurrentPage(1);
   };
 
@@ -214,6 +221,8 @@ export default function CajasPage() {
           setSortOrder(order);
           setCurrentPage(1);
         }}
+        cajaTipoId={cajaTipoId}
+        onCajaTipoFilter={handleCajaTipoFilter}
       />
       <Pagination
         currentPage={currentPage}

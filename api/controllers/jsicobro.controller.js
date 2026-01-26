@@ -160,9 +160,6 @@ exports.delete = async (req, res) => {
             cajasIdsParaActualizar.add(Number(regCajaId));
           }
 
-          // Agregar también la caja JSI (ID 23)
-          cajasIdsParaActualizar.add(CAJA_JSI_ID);
-
           // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
           if (regTipoGastoId && regTipoGastoGrupoId) {
             const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
@@ -180,10 +177,10 @@ exports.delete = async (req, res) => {
           if (cajasIdsParaActualizar.size > 0) {
             const actualizaciones = Array.from(cajasIdsParaActualizar).map(
               async (cajaIdParaActualizar) => {
-                // Obtener el monto actual de la caja
+                // Obtener el monto actual y CajaTipoId de la caja
                 const cajaActual = await new Promise((resolve, reject) => {
                   db.query(
-                    "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
+                    "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
                     [cajaIdParaActualizar],
                     (err, results) => {
                       if (err) return reject(err);
@@ -194,13 +191,15 @@ exports.delete = async (req, res) => {
 
                 if (cajaActual) {
                   const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+                  const cajaTipoId = Number(cajaActual.CajaTipoId);
                   let nuevoMonto;
 
-                  if (esIngreso) {
-                    // Si era ingreso, al eliminar restamos el monto
+                  // Lógica según CajaTipoId
+                  if (cajaTipoId === 1) {
+                    // Si CajaTipoId === 1: RESTAR el monto
                     nuevoMonto = cajaMontoActual - monto;
                   } else {
-                    // Si era egreso, al eliminar sumamos el monto
+                    // Si CajaTipoId !== 1: SUMAR el monto
                     nuevoMonto = cajaMontoActual + monto;
                   }
 

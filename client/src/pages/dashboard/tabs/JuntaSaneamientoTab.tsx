@@ -5,7 +5,10 @@ import {
   type JSICobro,
 } from "../../../services/jsicobro.service";
 import { getCajaById, updateCajaMonto } from "../../../services/cajas.service";
-import { getCajaGastosByCajaId } from "../../../services/cajagasto.service";
+import {
+  getCajaGastosByCajaId,
+  getCajaGastosByTipoGastoAndGrupo,
+} from "../../../services/cajagasto.service";
 import { createRegistroDiarioCaja } from "../../../services/registros.service";
 import { getEstadoAperturaPorUsuario } from "../../../services/registrodiariocaja.service";
 import {
@@ -227,6 +230,12 @@ export default function JuntaSaneamientoTab() {
       // El cobro es un ingreso, TipoGastoId debe ser 2
       const tipoGastoIdIngreso = 2;
 
+      // Obtener todas las cajas que tengan este TipoGastoId y TipoGastoGrupoId asignado
+      const todasLasCajasConGasto = await getCajaGastosByTipoGastoAndGrupo(
+        tipoGastoIdIngreso,
+        tipoGastoGrupoId
+      );
+
       // Crear el cobro de JSI usando la caja aperturada del usuario
       const jsicobroData: JSICobro = {
         JSICobroFecha: jsicobroFecha,
@@ -265,19 +274,43 @@ export default function JuntaSaneamientoTab() {
         RegistroDiarioCajaCargoEnvio: 0,
       });
 
-      // Actualizar el monto en la caja del usuario (ingreso: sumar)
+      // Obtener IDs únicos de todas las cajas que tienen el gasto asignado
+      const cajasIdsConGasto = new Set<number>();
+      todasLasCajasConGasto.forEach((cajaGasto: { CajaId: number }) => {
+        cajasIdsConGasto.add(Number(cajaGasto.CajaId));
+      });
+
       const montoNumero = Number(monto) || 0;
-      const cajaUsuarioActual = await getCajaById(cajaAperturadaId);
-      const cajaUsuarioMontoActual = Number(cajaUsuarioActual.CajaMonto);
+
+      // Actualizar la caja aperturada: SUMAR el monto
+      const cajaAperturadaActual = await getCajaById(cajaAperturadaId);
+      const cajaAperturadaMontoActual = Number(cajaAperturadaActual.CajaMonto);
       await updateCajaMonto(
         cajaAperturadaId,
-        cajaUsuarioMontoActual + montoNumero
+        cajaAperturadaMontoActual + montoNumero
       );
 
-      // También actualizar el monto en la caja JSI (ingreso: sumar)
-      const cajaJSIActual = await getCajaById(CAJA_JSI_ID);
-      const cajaJSIMontoActual = Number(cajaJSIActual.CajaMonto);
-      await updateCajaMonto(CAJA_JSI_ID, cajaJSIMontoActual + montoNumero);
+      // Actualizar las demás cajas que tienen el gasto asignado: RESTAR el monto
+      // (excluyendo la caja aperturada si está en la lista)
+      const cajasParaRestar = Array.from(cajasIdsConGasto).filter(
+        (id) => id !== cajaAperturadaId
+      );
+
+      if (cajasParaRestar.length > 0) {
+        const actualizaciones = cajasParaRestar.map(
+          async (cajaIdParaActualizar: number) => {
+            const cajaActual = await getCajaById(cajaIdParaActualizar);
+            const cajaMontoActual = Number(cajaActual.CajaMonto);
+            // Restar el monto (es un gasto para estas cajas)
+            await updateCajaMonto(
+              cajaIdParaActualizar,
+              cajaMontoActual - montoNumero
+            );
+          }
+        );
+
+        await Promise.all(actualizaciones);
+      }
 
       Swal.fire(
         "Cobro de JSI registrado",

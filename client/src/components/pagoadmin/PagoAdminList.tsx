@@ -78,6 +78,8 @@ export default function PagoAdminList({
     CajaId: "",
     CajaOrigenId: "",
     id: "",
+    Cotizacion: 0,
+    MontoDolar: 0,
   });
 
   const [cajas, setCajas] = useState<Caja[]>([]);
@@ -120,6 +122,8 @@ export default function PagoAdminList({
       setFormData({
         ...currentPagoAdmin,
         PagoAdminFecha: fecha,
+        Cotizacion: currentPagoAdmin.Cotizacion ? Number(currentPagoAdmin.Cotizacion) : 0,
+        MontoDolar: currentPagoAdmin.MontoDolar ? Number(currentPagoAdmin.MontoDolar) : 0,
       });
     } else {
       // Resetear formulario
@@ -133,6 +137,8 @@ export default function PagoAdminList({
         CajaId: "",
         CajaOrigenId: "",
         id: "",
+        Cotizacion: 0,
+        MontoDolar: 0,
       });
     }
   }, [currentPagoAdmin, isModalOpen]);
@@ -141,13 +147,31 @@ export default function PagoAdminList({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "PagoAdminMonto" || name === "CajaId" || name === "CajaOrigenId"
-          ? value === "" ? "" : Number(value)
-          : value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]:
+          name === "PagoAdminMonto" || name === "CajaId" || name === "CajaOrigenId" || name === "Cotizacion" || name === "MontoDolar"
+            ? value === "" ? "" : Number(value)
+            : value,
+      };
+      
+      // Si MontoDolar tiene valor distinto a cero, calcular PagoAdminMonto
+      if (name === "Cotizacion" || name === "MontoDolar") {
+        const cotizacion = name === "Cotizacion" 
+          ? (value === "" ? 0 : Number(value)) 
+          : (Number(prev.Cotizacion) || 0);
+        const montoDolar = name === "MontoDolar" 
+          ? (value === "" ? 0 : Number(value)) 
+          : (Number(prev.MontoDolar) || 0);
+        
+        if (montoDolar !== 0 && cotizacion !== 0) {
+          updated.PagoAdminMonto = cotizacion * montoDolar;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -409,19 +433,38 @@ export default function PagoAdminList({
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label
-                      htmlFor="PagoAdminFecha"
+                      htmlFor="Cotizacion"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Fecha
+                      Cotización
                     </label>
                     <input
-                      type="datetime-local"
-                      name="PagoAdminFecha"
-                      id="PagoAdminFecha"
-                      value={formData.PagoAdminFecha}
+                      type="number"
+                      name="Cotizacion"
+                      id="Cotizacion"
+                      value={Number(formData.Cotizacion) || 0}
                       onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="MontoDolar"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Monto Dólar
+                    </label>
+                    <input
+                      type="number"
+                      name="MontoDolar"
+                      id="MontoDolar"
+                      value={Number(formData.MontoDolar) || 0}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -462,11 +505,30 @@ export default function PagoAdminList({
                           setFormData((prev) => ({ ...prev, PagoAdminMonto: 0 }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      disabled={(Number(formData.MontoDolar) || 0) !== 0}
+                      className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                        (Number(formData.MontoDolar) || 0) !== 0 ? "opacity-60 cursor-not-allowed" : ""
+                      }`}
                       required
                     />
                   </div>
-                  <div className="col-span-6">
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="PagoAdminFecha"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Fecha
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="PagoAdminFecha"
+                      id="PagoAdminFecha"
+                      value={formData.PagoAdminFecha}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      required
+                    />
+                  </div>  <div className="col-span-6">
                     <label
                       htmlFor="PagoAdminDetalle"
                       className="block mb-2 text-sm font-medium text-gray-900"

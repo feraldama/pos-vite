@@ -461,8 +461,9 @@ exports.aperturaCierreCaja = async (req, res) => {
       );
     });
     const CajaDescripcion = caja ? caja.CajaDescripcion : "";
-    // APERTURA
+    // APERTURA: el monto de apertura es el CajaMonto de la caja (valor fijo)
     if (apertura == 0) {
+      const montoApertura = Number(caja?.CajaMonto) || 0;
       // Crear registro de apertura
       await RegistroDiarioCaja.create({
         CajaId,
@@ -470,37 +471,16 @@ exports.aperturaCierreCaja = async (req, res) => {
         TipoGastoId: 2,
         TipoGastoGrupoId: 2,
         RegistroDiarioCajaDetalle: "APERTURA " + CajaDescripcion,
-        RegistroDiarioCajaMonto: Monto,
+        RegistroDiarioCajaMonto: montoApertura,
         UsuarioId,
       });
-      // Sumar monto a la caja
-      await new Promise((resolve, reject) => {
-        db.query(
-          "UPDATE Caja SET CajaMonto = CajaMonto + ? WHERE CajaId = ?",
-          [Monto, CajaId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          },
-        );
-      });
+      // CajaMonto en la tabla Caja no se modifica (queda fijo)
       return res.json({
         success: true,
         message: "Apertura realizada correctamente",
       });
     } else {
-      // CIERRE
-      // Poner monto de caja en 0
-      await new Promise((resolve, reject) => {
-        db.query(
-          "UPDATE Caja SET CajaMonto = 0 WHERE CajaId = ?",
-          [CajaId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          },
-        );
-      });
+      // CIERRE: CajaMonto en la tabla Caja no se modifica (queda fijo)
       // Crear registro de cierre (con pendientes 1-4)
       await RegistroDiarioCaja.create({
         CajaId,

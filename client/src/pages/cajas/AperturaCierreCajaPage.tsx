@@ -125,6 +125,16 @@ export default function AperturaCierreCajaPage() {
     fetchCajas();
   }, []);
 
+  // Monto de apertura = CajaMonto de la caja seleccionada (valor fijo)
+  useEffect(() => {
+    if (tipo === "0" && cajaId && todasLasCajas.length > 0) {
+      const caja = todasLasCajas.find((c) => c.CajaId == cajaId);
+      if (caja != null) {
+        setMontoApertura(Number(caja.CajaMonto) || 0);
+      }
+    }
+  }, [tipo, cajaId, todasLasCajas]);
+
   useEffect(() => {
     const checkCajaAperturada = async () => {
       if (!user || todasLasCajas.length === 0) return;
@@ -649,7 +659,7 @@ export default function AperturaCierreCajaPage() {
           </div>
         </div>
 
-        {/* Apertura: solo monto de apertura */}
+        {/* Apertura: monto de apertura = CajaMonto de la caja (solo lectura) */}
         {tipo === "0" && (
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -657,19 +667,14 @@ export default function AperturaCierreCajaPage() {
             </label>
             <input
               type="text"
-              inputMode="numeric"
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5"
+              readOnly
+              tabIndex={-1}
+              className="bg-gray-100 border border-gray-200 text-gray-900 text-sm rounded-lg block w-full p-2.5 pointer-events-none"
               value={montoApertura ? formatMiles(montoApertura) : ""}
-              onChange={(e) => {
-                const raw = e.target.value
-                  .replace(/\./g, "")
-                  .replace(/\s/g, "");
-                const num = Number(raw);
-                if (!isNaN(num)) setMontoApertura(num);
-              }}
-              min={0}
-              required={tipo === "0"}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Corresponde al monto fijo de la caja seleccionada.
+            </p>
           </div>
         )}
 

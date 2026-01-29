@@ -139,19 +139,38 @@ export default function PagosTab() {
           async (cajaIdParaActualizar: number) => {
             const cajaActual = await getCajaById(cajaIdParaActualizar);
             const cajaMontoActual = Number(cajaActual.CajaMonto);
+            const esCajaActual = cajaIdParaActualizar === Number(cajaId);
 
             if (tipoGastoId === 1) {
-              // Egreso: restar el monto
-              await updateCajaMonto(
-                cajaIdParaActualizar,
-                cajaMontoActual - montoNumero
-              );
+              // EGRESO
+              if (esCajaActual) {
+                // Caja actual: Restar (sale dinero)
+                await updateCajaMonto(
+                  cajaIdParaActualizar,
+                  cajaMontoActual - montoNumero
+                );
+              } else {
+                // Otras cajas: Sumar (entra dinero/transferencia)
+                await updateCajaMonto(
+                  cajaIdParaActualizar,
+                  cajaMontoActual + montoNumero
+                );
+              }
             } else if (tipoGastoId === 2) {
-              // Ingreso: sumar el monto
-              await updateCajaMonto(
-                cajaIdParaActualizar,
-                cajaMontoActual + montoNumero
-              );
+              // INGRESO
+              if (esCajaActual) {
+                // Caja actual: Sumar (entra dinero)
+                await updateCajaMonto(
+                  cajaIdParaActualizar,
+                  cajaMontoActual + montoNumero
+                );
+              } else {
+                // Otras cajas: Restar (sale dinero/transferencia)
+                await updateCajaMonto(
+                  cajaIdParaActualizar,
+                  cajaMontoActual - montoNumero
+                );
+              }
             }
           }
         );

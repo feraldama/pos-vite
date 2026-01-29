@@ -193,6 +193,11 @@ export default function AperturaCierreCajaPage() {
 
   const generarResumenCierrePDF = async (
     registrosPasados?: RegistroDiarioCaja[],
+    datosCierre?: {
+      billetes: { denominacion: number; cantidad: number; subtotal: number }[];
+      monedas: { denominacion: number; cantidad: number; subtotal: number }[];
+      pendientes: Pendiente[];
+    },
   ) => {
     if (!user || !cajaId) return;
 
@@ -290,48 +295,182 @@ export default function AperturaCierreCajaPage() {
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
-      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(sobranteFaltante)}`;
+      txtSobranteFaltante = `Faltante de: ${formatMiles(sobranteFaltante)}`;
     } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(Math.abs(sobranteFaltante))}`;
+      txtSobranteFaltante = `Sobrante de: ${formatMiles(Math.abs(sobranteFaltante))}`;
     } else {
-      txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
+      txtSobranteFaltante = "Sobrante/Faltante: 0";
     }
+    const diferencia = ingresos - egresos;
+
+    const billetesTicket =
+      datosCierre?.billetes ??
+      BILLETES.map((d) => ({ denominacion: d, cantidad: 0, subtotal: 0 }));
+    const monedasTicket =
+      datosCierre?.monedas ??
+      MONEDAS.map((d) => ({ denominacion: d, cantidad: 0, subtotal: 0 }));
+    const pendientesTicket = datosCierre?.pendientes ?? [];
+    const totalEfectivo =
+      billetesTicket.reduce((s, x) => s + x.subtotal, 0) +
+      monedasTicket.reduce((s, x) => s + x.subtotal, 0);
+    const totalPendientes = pendientesTicket.reduce(
+      (s, p) => s + (p.monto || 0),
+      0,
+    );
+
+    const pendientesConContenido = pendientesTicket.filter(
+      (p) => p.monto > 0 || (p.detalle && p.detalle.trim()),
+    );
+    const lineasPendientes = pendientesConContenido.length || 1;
+
+    const ALTURA_MINIMA = 0;
+    const MARGEN_INFERIOR = 0;
+    const calcularAlturaTicket = () => {
+      let h = 10;
+      h += 6 + 6;
+      h += 5 * 3 + 5;
+      h += 5 * 2 + 5 + 5;
+      h += 5 * 3 + 5 + 5;
+      h += 5 + 6 + 6 + 6;
+      h += 5 + billetesTicket.length * 4 + 5;
+      h += 5 + monedasTicket.length * 4 + 5;
+      h += 6 + 6 + 6;
+      h += 5 + lineasPendientes * 4 + 4 + 4 + 6 + 6 + 6;
+      h += 5 + 5 + 5 + 5 + 5 + 6 + 6 + 6;
+      h += 5 + 5 + 5 + 5;
+      return Math.max(ALTURA_MINIMA, h + MARGEN_INFERIOR);
+    };
+    const alturaPagina = calcularAlturaTicket();
 
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: [80, 200],
+      format: [80, alturaPagina],
     });
-    doc.setFontSize(16);
-    doc.text("RESUMEN CIERRE CAJA", 40, 15, { align: "center" });
-    doc.setFontSize(11);
-    doc.text(`Fecha: ${fecha} - Hora: ${hora}`, 10, 30);
-    doc.text(`Usuario: ${user.nombre}`, 10, 38);
-    doc.text(`Caja: ${cajaDescripcion}`, 10, 46);
-    doc.line(10, 50, 200, 50);
-    let y = 58;
-    doc.text(`Apertura: ${formatMiles(apertura)}`, 10, y);
-    y += 8;
-    doc.text(`Cierre: ${formatMiles(cierre)}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    doc.text(`Egresos: ${formatMiles(egresos)}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    doc.text(`Ingresos: ${formatMiles(ingresos)}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    const diferencia = ingresos - egresos;
-    doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
-    y += 8;
-    doc.line(10, y, 200, y);
-    y += 8;
-    doc.text(txtSobranteFaltante, 10, y);
-    y += 12;
-    doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
+    const pageW = 80;
+    const margin = 5;
+    let y = 10;
+
+    doc.setFontSize(12);
+    doc.text("RESUMEN CIERRE CAJA", pageW / 2, y, { align: "center" });
+    y += 6;
+    doc.line(margin, y, pageW - margin, y);
+    y += 6;
+
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${fecha} - Hora: ${hora}`, margin, y);
+    y += 5;
+    doc.text(`Usuario: ${user.nombre}`, margin, y);
+    y += 5;
+    doc.text(`Caja: ${cajaDescripcion}`, margin, y);
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+
+    doc.text(`Apertura: ${formatMiles(apertura)}`, margin, y);
+    y += 5;
+    doc.text(`Cierre: ${formatMiles(cierre)}`, margin, y);
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+
+    doc.text(`Egresos: ${formatMiles(egresos)}`, margin, y);
+    y += 5;
+    doc.text(`Ingresos: ${formatMiles(ingresos)}`, margin, y);
+    y += 5;
+    doc.text(`Diferencia: ${formatMiles(diferencia)}`, margin, y);
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    doc.text(txtSobranteFaltante, margin, y);
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    doc.setLineWidth(0.1);
+    y += 6;
+
+    doc.setFontSize(9);
+    doc.text("Billete: Monto - Cantidad", pageW / 2, y, { align: "center" });
+    y += 5;
+    billetesTicket.forEach((b) => {
+      doc.text(
+        `${formatMiles(b.denominacion)}: ${b.cantidad} - ${formatMiles(b.subtotal)}`,
+        margin,
+        y,
+      );
+      y += 4;
+    });
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+
+    doc.text("Moneda: Monto - Cantidad", pageW / 2, y, { align: "center" });
+    y += 5;
+    monedasTicket.forEach((m) => {
+      doc.text(
+        `${formatMiles(m.denominacion)}: ${m.cantidad} - ${formatMiles(m.subtotal)}`,
+        margin,
+        y,
+      );
+      y += 4;
+    });
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+
+    doc.text(`Total: ${formatMiles(totalEfectivo)}`, margin, y);
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    doc.setLineWidth(0.1);
+    y += 6;
+
+    doc.text("Pendientes: Monto - Detalle", pageW / 2, y, { align: "center" });
+    y += 5;
+    pendientesTicket.forEach((p, i) => {
+      if (p.monto > 0 || (p.detalle && p.detalle.trim())) {
+        doc.text(
+          `${i + 1}) ${formatMiles(p.monto)} - ${(p.detalle || "").trim() || "-"}`,
+          margin,
+          y,
+        );
+        y += 4;
+      }
+    });
+    if (
+      pendientesTicket.every(
+        (p) => !p.monto && !(p.detalle && p.detalle.trim()),
+      )
+    ) {
+      y += 4;
+    }
+    doc.line(margin, y, pageW - margin, y);
+    y += 4;
+    doc.text(`Total Pendientes: ${formatMiles(totalPendientes)}`, margin, y);
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    doc.setLineWidth(0.1);
+    y += 6;
+
+    doc.text("EGRESOS", pageW / 2, y, { align: "center" });
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    doc.text(`CIERRE CAJA: ${formatMiles(cierre)}`, margin, y);
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    doc.text(`TOTAL EGRESOS: ${formatMiles(cierre)}`, margin, y);
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageW - margin, y);
+    doc.setLineWidth(0.1);
+    y += 6;
+
+    doc.text("INGRESOS", pageW / 2, y, { align: "center" });
+    y += 5;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    doc.text(`TOTAL INGRESOS: ${formatMiles(ingresos)}`, margin, y);
 
     const pdfBlob = doc.output("blob");
     const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -393,7 +532,13 @@ export default function AperturaCierreCajaPage() {
         setSuccess(result.message || "Operación realizada correctamente");
         await fetchRegistrosCaja();
         setDescargarPDF(true);
-        setTimeout(() => generarResumenCierrePDF(), 2000);
+        setTimeout(() => {
+          generarResumenCierrePDF(undefined, {
+            billetes: subtotalesBilletes,
+            monedas: subtotalesMonedas,
+            pendientes,
+          });
+        }, 2000);
       }
     } catch (err) {
       setError(
@@ -688,7 +833,13 @@ export default function AperturaCierreCajaPage() {
         <div className="flex justify-center mt-4">
           <ActionButton
             label="Descargar Resumen PDF"
-            onClick={() => generarResumenCierrePDF()}
+            onClick={() =>
+              generarResumenCierrePDF(undefined, {
+                billetes: subtotalesBilletes,
+                monedas: subtotalesMonedas,
+                pendientes,
+              })
+            }
           />
         </div>
       )}

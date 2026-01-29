@@ -18,7 +18,7 @@ exports.getAll = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
     );
     res.json(result);
   } catch (error) {
@@ -48,7 +48,7 @@ exports.search = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
     );
 
     res.json(result);
@@ -126,10 +126,11 @@ exports.delete = async (req, res) => {
     // Verificar si es un registro de PAGO ADMIN
     // Pago admin usa TipoGastoId=1, TipoGastoGrupoId=21 para egreso
     // y TipoGastoId=2, TipoGastoGrupoId=26 para ingreso
-    const esPagoAdmin = 
+    const esPagoAdmin =
       (TipoGastoId === 1 && TipoGastoGrupoId === 21) ||
       (TipoGastoId === 2 && TipoGastoGrupoId === 26) ||
-      (RegistroDiarioCajaDetalle && RegistroDiarioCajaDetalle.includes("PAGO ADMIN"));
+      (RegistroDiarioCajaDetalle &&
+        RegistroDiarioCajaDetalle.includes("PAGO ADMIN"));
 
     // Determinar si es ingreso (TipoGastoId === 2) o egreso (TipoGastoId === 1)
     // Al eliminar, invertimos la operación:
@@ -151,7 +152,7 @@ exports.delete = async (req, res) => {
     if (TipoGastoId && TipoGastoGrupoId) {
       const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
         TipoGastoId,
-        TipoGastoGrupoId
+        TipoGastoGrupoId,
       );
       cajasConGasto.forEach((cajaGasto) => {
         if (cajaGasto.CajaId) {
@@ -176,12 +177,12 @@ exports.delete = async (req, res) => {
       // Separar la caja del registro de las demás cajas
       const cajaIdRegistro = CajaId ? Number(CajaId) : null;
       const cajasIdsConGasto = new Set();
-      
+
       // Obtener todas las cajas que tienen el mismo TipoGastoId y TipoGastoGrupoId en cajagasto
       if (TipoGastoId && TipoGastoGrupoId) {
         const cajasConGasto = await CajaGasto.getByTipoGastoAndGrupo(
           TipoGastoId,
-          TipoGastoGrupoId
+          TipoGastoGrupoId,
         );
         cajasConGasto.forEach((cajaGasto) => {
           if (cajaGasto.CajaId) {
@@ -191,185 +192,185 @@ exports.delete = async (req, res) => {
       }
 
       // Actualizar la caja del registro (caja aperturada)
-    if (cajaIdRegistro && !esCasoEspecial13 && !esCasoEspecial13Envios) {
-      // Casos especiales 13 (pagos y envíos): no tocar la caja aperturada al eliminar
-      const cajaActual = await new Promise((resolve, reject) => {
-        db.query(
-          "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
-          [cajaIdRegistro],
-          (err, results) => {
-            if (err) return reject(err);
-            resolve(results.length > 0 ? results[0] : null);
-          }
-        );
-      });
-
-      if (cajaActual) {
-        const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
-        const cajaTipoId = Number(cajaActual.CajaTipoId);
-        
-        // Al eliminar, revertir la operación según la nueva lógica:
-        // - Si era EGRESO: se había restado, ahora SUMAR
-        // - Si era INGRESO: se había sumado, ahora RESTAR
-        const esEgreso = TipoGastoId === 1;
-        let montoAplicar;
-        if (esEgreso) {
-          // EGRESO: revertir la resta (sumar)
-          montoAplicar = monto;
-        } else if (esIngreso) {
-          // INGRESO: revertir la suma (restar)
-          montoAplicar = -monto;
-        } else {
-          // Por defecto, mantener lógica anterior
-          montoAplicar = esIngreso ? -monto : monto;
-        }
-        
-        if (cajaTipoId === 3) {
-          // Operación opuesta para CajaTipoId=3
-          montoAplicar = -montoAplicar;
-        }
-        
-        const nuevoMonto = cajaMontoActual + montoAplicar;
-        
-        await new Promise((resolve, reject) => {
+      if (cajaIdRegistro && !esCasoEspecial13 && !esCasoEspecial13Envios) {
+        // Casos especiales 13 (pagos y envíos): no tocar la caja aperturada al eliminar
+        const cajaActual = await new Promise((resolve, reject) => {
           db.query(
-            "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-            [nuevoMonto, cajaIdRegistro],
-            (err) => {
+            "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
+            [cajaIdRegistro],
+            (err, results) => {
               if (err) return reject(err);
-              resolve();
-            }
+              resolve(results.length > 0 ? results[0] : null);
+            },
           );
         });
-      }
-    }
 
-    // Actualizar las demás cajas
-    const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
-      (id) => id !== cajaIdRegistro
-    );
+        if (cajaActual) {
+          const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+          const cajaTipoId = Number(cajaActual.CajaTipoId);
 
-    if (cajasParaActualizar.length > 0) {
-      const actualizaciones = cajasParaActualizar.map(
-        async (cajaIdParaActualizar) => {
-          const cajaActual = await new Promise((resolve, reject) => {
+          // Al eliminar, revertir la operación según la nueva lógica:
+          // - Si era EGRESO: se había restado, ahora SUMAR
+          // - Si era INGRESO: se había sumado, ahora RESTAR
+          const esEgreso = TipoGastoId === 1;
+          let montoAplicar;
+          if (esEgreso) {
+            // EGRESO: revertir la resta (sumar)
+            montoAplicar = monto;
+          } else if (esIngreso) {
+            // INGRESO: revertir la suma (restar)
+            montoAplicar = -monto;
+          } else {
+            // Por defecto, mantener lógica anterior
+            montoAplicar = esIngreso ? -monto : monto;
+          }
+
+          if (cajaTipoId === 3) {
+            // Operación opuesta para CajaTipoId=3
+            montoAplicar = -montoAplicar;
+          }
+
+          const nuevoMonto = cajaMontoActual + montoAplicar;
+
+          await new Promise((resolve, reject) => {
             db.query(
-              "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
-              [cajaIdParaActualizar],
-              (err, results) => {
+              "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+              [nuevoMonto, cajaIdRegistro],
+              (err) => {
                 if (err) return reject(err);
-                resolve(results.length > 0 ? results[0] : null);
-              }
+                resolve();
+              },
             );
           });
-
-          if (cajaActual) {
-            const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
-            const cajaTipoId = Number(cajaActual.CajaTipoId);
-            let nuevoMonto;
-
-            if (esCasoEspecial19 || esCasoEspecial13) {
-              // Casos especiales de PAGOS: revertir la suma de Monto/CambioDolar (restar)
-              const montoConvertido = monto / cambioNumero;
-              let montoAplicar = -montoConvertido; // Revertir: restar
-              
-              if (cajaTipoId === 3) {
-                // Operación opuesta para CajaTipoId=3
-                montoAplicar = montoConvertido;
-              }
-              
-              nuevoMonto = cajaMontoActual + montoAplicar;
-            } else if (esCasoEspecial24 || esCasoEspecial13Envios) {
-              // Casos especiales de ENVÍOS: revertir la resta de Monto/CambioDolar (sumar)
-              const montoConvertido = monto / cambioNumero;
-              let montoAplicar = montoConvertido; // Revertir: sumar (opuesto a pagos)
-              
-              if (cajaTipoId === 3) {
-                // Operación opuesta para CajaTipoId=3
-                montoAplicar = -montoConvertido;
-              }
-              
-              nuevoMonto = cajaMontoActual + montoAplicar;
-            } else if (esCasoEspecial4) {
-              // Caso especial 4 (PAGOS): se había sumado a las demás cajas, al eliminar RESTAR
-              // Misma lógica que CobranzaTab para EGRESO
-              let valorAUsar = monto;
-              if (cajaTipoId === 3 && cambio > 0) {
-                valorAUsar = monto / cambio;
-              }
-              
-              let montoAplicar = -valorAUsar; // Revertir: restar
-              
-              if (cajaTipoId === 3) {
-                // Operación opuesta para CajaTipoId=3
-                montoAplicar = -montoAplicar;
-              }
-              
-              nuevoMonto = cajaMontoActual + montoAplicar;
-            } else if (esCasoEspecial5) {
-              // Caso especial 5 (ENVÍOS): se había restado a las demás cajas, al eliminar SUMAR
-              // Misma lógica que CobranzaTab para INGRESO
-              let valorAUsar = monto;
-              if (cajaTipoId === 3 && cambio > 0) {
-                valorAUsar = monto / cambio;
-              }
-              
-              let montoAplicar = valorAUsar; // Revertir: sumar
-              
-              if (cajaTipoId === 3) {
-                // Operación opuesta para CajaTipoId=3
-                montoAplicar = -montoAplicar;
-              }
-              
-              nuevoMonto = cajaMontoActual + montoAplicar;
-            } else {
-              // Caso normal: revertir la operación según la nueva lógica
-              let valorAUsar = monto;
-              if (cajaTipoId === 3 && cambio > 0) {
-                valorAUsar = monto / cambio;
-              }
-
-              const esEgreso = TipoGastoId === 1;
-              let montoAplicar;
-              if (esEgreso) {
-                // EGRESO: se había sumado a las demás cajas, al eliminar RESTAR
-                montoAplicar = -valorAUsar;
-              } else if (esIngreso) {
-                // INGRESO: se había restado a las demás cajas, al eliminar SUMAR
-                montoAplicar = valorAUsar;
-              } else {
-                // Por defecto, mantener lógica anterior
-                if (esIngreso) {
-                  montoAplicar = -valorAUsar;
-                } else {
-                  montoAplicar = valorAUsar;
-                }
-              }
-
-              if (cajaTipoId === 3) {
-                // Operación opuesta para CajaTipoId=3
-                montoAplicar = -montoAplicar;
-              }
-
-              nuevoMonto = cajaMontoActual + montoAplicar;
-            }
-
-            await new Promise((resolve, reject) => {
-              db.query(
-                "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-                [nuevoMonto, cajaIdParaActualizar],
-                (err) => {
-                  if (err) return reject(err);
-                  resolve();
-                }
-              );
-            });
-          }
         }
+      }
+
+      // Actualizar las demás cajas
+      const cajasParaActualizar = Array.from(cajasIdsConGasto).filter(
+        (id) => id !== cajaIdRegistro,
       );
 
-      await Promise.all(actualizaciones);
-    }
+      if (cajasParaActualizar.length > 0) {
+        const actualizaciones = cajasParaActualizar.map(
+          async (cajaIdParaActualizar) => {
+            const cajaActual = await new Promise((resolve, reject) => {
+              db.query(
+                "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
+                [cajaIdParaActualizar],
+                (err, results) => {
+                  if (err) return reject(err);
+                  resolve(results.length > 0 ? results[0] : null);
+                },
+              );
+            });
+
+            if (cajaActual) {
+              const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
+              const cajaTipoId = Number(cajaActual.CajaTipoId);
+              let nuevoMonto;
+
+              if (esCasoEspecial19 || esCasoEspecial13) {
+                // Casos especiales de PAGOS: revertir la suma de Monto/CambioDolar (restar)
+                const montoConvertido = monto / cambioNumero;
+                let montoAplicar = -montoConvertido; // Revertir: restar
+
+                if (cajaTipoId === 3) {
+                  // Operación opuesta para CajaTipoId=3
+                  montoAplicar = montoConvertido;
+                }
+
+                nuevoMonto = cajaMontoActual + montoAplicar;
+              } else if (esCasoEspecial24 || esCasoEspecial13Envios) {
+                // Casos especiales de ENVÍOS: revertir la resta de Monto/CambioDolar (sumar)
+                const montoConvertido = monto / cambioNumero;
+                let montoAplicar = montoConvertido; // Revertir: sumar (opuesto a pagos)
+
+                if (cajaTipoId === 3) {
+                  // Operación opuesta para CajaTipoId=3
+                  montoAplicar = -montoConvertido;
+                }
+
+                nuevoMonto = cajaMontoActual + montoAplicar;
+              } else if (esCasoEspecial4) {
+                // Caso especial 4 (PAGOS): se había sumado a las demás cajas, al eliminar RESTAR
+                // Misma lógica que CobranzaTab para EGRESO
+                let valorAUsar = monto;
+                if (cajaTipoId === 3 && cambio > 0) {
+                  valorAUsar = monto / cambio;
+                }
+
+                let montoAplicar = -valorAUsar; // Revertir: restar
+
+                if (cajaTipoId === 3) {
+                  // Operación opuesta para CajaTipoId=3
+                  montoAplicar = -montoAplicar;
+                }
+
+                nuevoMonto = cajaMontoActual + montoAplicar;
+              } else if (esCasoEspecial5) {
+                // Caso especial 5 (ENVÍOS): se había restado a las demás cajas, al eliminar SUMAR
+                // Misma lógica que CobranzaTab para INGRESO
+                let valorAUsar = monto;
+                if (cajaTipoId === 3 && cambio > 0) {
+                  valorAUsar = monto / cambio;
+                }
+
+                let montoAplicar = valorAUsar; // Revertir: sumar
+
+                if (cajaTipoId === 3) {
+                  // Operación opuesta para CajaTipoId=3
+                  montoAplicar = -montoAplicar;
+                }
+
+                nuevoMonto = cajaMontoActual + montoAplicar;
+              } else {
+                // Caso normal: revertir la operación según la nueva lógica
+                let valorAUsar = monto;
+                if (cajaTipoId === 3 && cambio > 0) {
+                  valorAUsar = monto / cambio;
+                }
+
+                const esEgreso = TipoGastoId === 1;
+                let montoAplicar;
+                if (esEgreso) {
+                  // EGRESO: se había sumado a las demás cajas, al eliminar RESTAR
+                  montoAplicar = -valorAUsar;
+                } else if (esIngreso) {
+                  // INGRESO: se había restado a las demás cajas, al eliminar SUMAR
+                  montoAplicar = valorAUsar;
+                } else {
+                  // Por defecto, mantener lógica anterior
+                  if (esIngreso) {
+                    montoAplicar = -valorAUsar;
+                  } else {
+                    montoAplicar = valorAUsar;
+                  }
+                }
+
+                if (cajaTipoId === 3) {
+                  // Operación opuesta para CajaTipoId=3
+                  montoAplicar = -montoAplicar;
+                }
+
+                nuevoMonto = cajaMontoActual + montoAplicar;
+              }
+
+              await new Promise((resolve, reject) => {
+                db.query(
+                  "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
+                  [nuevoMonto, cajaIdParaActualizar],
+                  (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  },
+                );
+              });
+            }
+          },
+        );
+
+        await Promise.all(actualizaciones);
+      }
     } // Fin del if (!esPagoAdmin)
 
     // Eliminar el registro
@@ -397,7 +398,15 @@ exports.delete = async (req, res) => {
 
 exports.aperturaCierreCaja = async (req, res) => {
   try {
-    const { apertura, CajaId, Monto } = req.body;
+    const {
+      apertura,
+      CajaId,
+      Monto,
+      RegistroDiarioCajaPendiente1,
+      RegistroDiarioCajaPendiente2,
+      RegistroDiarioCajaPendiente3,
+      RegistroDiarioCajaPendiente4,
+    } = req.body;
     const UsuarioId = req.user?.id || req.body.UsuarioId;
     if (
       !CajaId ||
@@ -448,7 +457,7 @@ exports.aperturaCierreCaja = async (req, res) => {
         (err, results) => {
           if (err) return reject(err);
           resolve(results);
-        }
+        },
       );
     });
     const CajaDescripcion = caja ? caja.CajaDescripcion : "";
@@ -472,7 +481,7 @@ exports.aperturaCierreCaja = async (req, res) => {
           (err) => {
             if (err) return reject(err);
             resolve();
-          }
+          },
         );
       });
       return res.json({
@@ -489,10 +498,10 @@ exports.aperturaCierreCaja = async (req, res) => {
           (err) => {
             if (err) return reject(err);
             resolve();
-          }
+          },
         );
       });
-      // Crear registro de cierre
+      // Crear registro de cierre (con pendientes 1-4)
       await RegistroDiarioCaja.create({
         CajaId,
         RegistroDiarioCajaFecha: new Date(),
@@ -501,6 +510,10 @@ exports.aperturaCierreCaja = async (req, res) => {
         RegistroDiarioCajaDetalle: "CIERRE " + CajaDescripcion,
         RegistroDiarioCajaMonto: Monto,
         UsuarioId,
+        RegistroDiarioCajaPendiente1: Number(RegistroDiarioCajaPendiente1) || 0,
+        RegistroDiarioCajaPendiente2: Number(RegistroDiarioCajaPendiente2) || 0,
+        RegistroDiarioCajaPendiente3: Number(RegistroDiarioCajaPendiente3) || 0,
+        RegistroDiarioCajaPendiente4: Number(RegistroDiarioCajaPendiente4) || 0,
       });
       return res.json({
         success: true,
@@ -524,9 +537,8 @@ exports.estadoAperturaPorUsuario = async (req, res) => {
     if (!usuarioId) {
       return res.status(400).json({ message: "Falta el parámetro usuarioId" });
     }
-    const estado = await RegistroDiarioCaja.getEstadoAperturaPorUsuario(
-      usuarioId
-    );
+    const estado =
+      await RegistroDiarioCaja.getEstadoAperturaPorUsuario(usuarioId);
     res.json(estado);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -546,7 +558,7 @@ exports.reportePaseCajas = async (req, res) => {
 
     const registros = await RegistroDiarioCaja.getReportePaseCajas(
       fechaInicio,
-      fechaFin
+      fechaFin,
     );
 
     // Agrupar por caja y separar ingresos y egresos
@@ -613,7 +625,7 @@ exports.reporteMovimientosCajas = async (req, res) => {
 
     const registros = await RegistroDiarioCaja.getReporteMovimientosCajas(
       fechaInicio,
-      fechaFin
+      fechaFin,
     );
 
     res.json({

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getCajas } from "../../services/cajas.service";
 import ActionButton from "../../components/common/Button/ActionButton";
 import {
@@ -11,6 +11,9 @@ import { formatMiles } from "../../utils/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { getRegistrosDiariosCaja } from "../../services/registros.service";
+
+const BILLETES = [100000, 50000, 20000, 10000, 5000, 2000];
+const MONEDAS = [1000, 500, 100, 50];
 
 interface Caja {
   id: string | number;
@@ -30,12 +33,39 @@ interface RegistroDiarioCaja {
   TipoGastoGrupoId: number;
 }
 
+interface Pendiente {
+  monto: number;
+  detalle: string;
+}
+
 export default function AperturaCierreCajaPage() {
   const [tipo, setTipo] = useState<"0" | "1">("0");
   const [tipoDisabled, setTipoDisabled] = useState(false);
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [cajaId, setCajaId] = useState<string | number>("");
-  const [monto, setMonto] = useState<number>(0);
+  const [cantidadesBilletes, setCantidadesBilletes] = useState<
+    Record<number, number>
+  >(() =>
+    BILLETES.reduce(
+      (acc, d) => ({ ...acc, [d]: 0 }),
+      {} as Record<number, number>,
+    ),
+  );
+  const [cantidadesMonedas, setCantidadesMonedas] = useState<
+    Record<number, number>
+  >(() =>
+    MONEDAS.reduce(
+      (acc, d) => ({ ...acc, [d]: 0 }),
+      {} as Record<number, number>,
+    ),
+  );
+  const [pendientes, setPendientes] = useState<Pendiente[]>([
+    { monto: 0, detalle: "" },
+    { monto: 0, detalle: "" },
+    { monto: 0, detalle: "" },
+    { monto: 0, detalle: "" },
+  ]);
+  const [montoApertura, setMontoApertura] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,15 +79,40 @@ export default function AperturaCierreCajaPage() {
   const [operacionCompletada, setOperacionCompletada] = useState(false);
   const [todasLasCajas, setTodasLasCajas] = useState<Caja[]>([]);
 
+  const subtotalesBilletes = useMemo(
+    () =>
+      BILLETES.map((d) => ({
+        denominacion: d,
+        cantidad: cantidadesBilletes[d] ?? 0,
+        subtotal: (cantidadesBilletes[d] ?? 0) * d,
+      })),
+    [cantidadesBilletes],
+  );
+
+  const subtotalesMonedas = useMemo(
+    () =>
+      MONEDAS.map((d) => ({
+        denominacion: d,
+        cantidad: cantidadesMonedas[d] ?? 0,
+        subtotal: (cantidadesMonedas[d] ?? 0) * d,
+      })),
+    [cantidadesMonedas],
+  );
+
+  const montoTotal = useMemo(() => {
+    const sb = subtotalesBilletes.reduce((s, x) => s + x.subtotal, 0);
+    const sm = subtotalesMonedas.reduce((s, x) => s + x.subtotal, 0);
+    return sb + sm;
+  }, [subtotalesBilletes, subtotalesMonedas]);
+
   useEffect(() => {
     const fetchCajas = async () => {
       try {
         setLoading(true);
         const data = await getCajas(1, 1000);
         setTodasLasCajas(data.data);
-        // Filtrar solo cajas con CajaTipoId = 1 para apertura (por defecto)
         const cajasFiltradas = data.data.filter(
-          (caja: Caja) => caja.CajaTipoId === 1
+          (caja: Caja) => caja.CajaTipoId === 1,
         );
         setCajas(cajasFiltradas);
         if (cajasFiltradas.length > 0) setCajaId(cajasFiltradas[0].CajaId);
@@ -71,42 +126,35 @@ export default function AperturaCierreCajaPage() {
   }, []);
 
   useEffect(() => {
-    // Lógica para detectar si el usuario tiene una caja aperturada
     const checkCajaAperturada = async () => {
       if (!user || todasLasCajas.length === 0) return;
       try {
         const data = await getEstadoAperturaPorUsuario(user.id);
-        // Si apertura > cierre, forzar cierre y deshabilitar el select de tipo y de caja
         if (data.aperturaId > data.cierreId) {
-          setTipo("1"); // Cierre
+          setTipo("1");
           setTipoDisabled(true);
-          setCajaDisabled(true); // Solo puede cerrar la caja que tiene abierta
+          setCajaDisabled(true);
           if (data.cajaId) {
             setCajaId(data.cajaId);
-            // Si la caja abierta no está en la lista filtrada, agregarla para poder cerrarla
             const cajaAbierta = todasLasCajas.find(
-              (c) => c.CajaId == data.cajaId
+              (c) => c.CajaId == data.cajaId,
             );
             if (cajaAbierta) {
               setCajas((prevCajas) => {
                 const existeEnLista = prevCajas.some(
-                  (c) => c.CajaId == data.cajaId
+                  (c) => c.CajaId == data.cajaId,
                 );
-                if (!existeEnLista) {
-                  return [cajaAbierta];
-                }
+                if (!existeEnLista) return [cajaAbierta];
                 return prevCajas;
               });
             }
           }
         } else {
-          // No tiene ninguna caja abierta, forzar apertura y deshabilitar solo el select de tipo
           setTipo("0");
           setTipoDisabled(true);
-          setCajaDisabled(false); // Puede elegir la caja que desee
-          // Asegurar que solo se muestren cajas tipo 1 para apertura
+          setCajaDisabled(false);
           const cajasFiltradas = todasLasCajas.filter(
-            (caja: Caja) => caja.CajaTipoId === 1
+            (caja: Caja) => caja.CajaTipoId === 1,
           );
           setCajas(cajasFiltradas);
           if (cajasFiltradas.length > 0) setCajaId(cajasFiltradas[0].CajaId);
@@ -130,32 +178,24 @@ export default function AperturaCierreCajaPage() {
     }
   }, [error]);
 
-  // Obtener registros de la caja al cerrar
   const fetchRegistrosCaja = async () => {
     try {
-      // Traer todos los registros sin filtrar primero
       const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
-
-      // Filtrar por caja y usuario
       const registrosFiltrados = data.data.filter(
         (r: RegistroDiarioCaja) =>
-          r.CajaId == cajaId && r.UsuarioId === user?.id
+          r.CajaId == cajaId && r.UsuarioId === user?.id,
       );
-
       setRegistrosCaja(registrosFiltrados);
-    } catch (error) {
-      console.error("Error al cargar registros:", error);
+    } catch {
       setRegistrosCaja([]);
     }
   };
 
-  // Función para generar el PDF
-  async function generarResumenCierrePDF(
-    registrosPasados?: RegistroDiarioCaja[]
-  ) {
+  const generarResumenCierrePDF = async (
+    registrosPasados?: RegistroDiarioCaja[],
+  ) => {
     if (!user || !cajaId) return;
 
-    // Usar registros pasados como parámetro o cargar nuevos si no se proporcionan
     let registrosParaUsar = registrosPasados || registrosCaja;
 
     if (registrosParaUsar.length === 0) {
@@ -163,7 +203,7 @@ export default function AperturaCierreCajaPage() {
         const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
         const registrosFiltrados = data.data.filter(
           (r: RegistroDiarioCaja) =>
-            r.CajaId == cajaId && r.UsuarioId === user?.id
+            r.CajaId == cajaId && r.UsuarioId === user?.id,
         );
         registrosParaUsar = registrosFiltrados;
 
@@ -176,8 +216,7 @@ export default function AperturaCierreCajaPage() {
           });
           return;
         }
-      } catch (error) {
-        console.error("Error al cargar registros para PDF:", error);
+      } catch {
         Swal.fire({
           icon: "warning",
           title: "Error al cargar registros",
@@ -193,30 +232,24 @@ export default function AperturaCierreCajaPage() {
     const fecha = new Date().toLocaleDateString();
     const hora = new Date().toLocaleTimeString();
 
-    // --- Nueva lógica: buscar última apertura y cierre del usuario ---
     const registros = registrosParaUsar.filter((r) => r.UsuarioId == user.id);
-
-    // Buscar la última apertura del usuario (ordenar por ID descendente y tomar el primero)
     const aperturas = registros
       .filter((reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2)
       .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
-
     const aperturaReg = aperturas[0];
     if (!aperturaReg) {
       Swal.fire({
         icon: "warning",
         title: "No se encontró apertura",
-        text: "No se encontró una apertura de caja para este usuario. Los registros pueden estar en proceso de carga.",
+        text: "No se encontró una apertura de caja para este usuario.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
 
-    // Buscar el último cierre del usuario (ordenar por ID descendente y tomar el primero)
     const cierres = registros
       .filter((reg) => reg.TipoGastoId === 1 && reg.TipoGastoGrupoId === 2)
       .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
-
     const cierreReg = cierres[0];
     if (!cierreReg) {
       Swal.fire({
@@ -228,56 +261,46 @@ export default function AperturaCierreCajaPage() {
       return;
     }
 
-    // Verificar que el cierre sea posterior a la apertura
     if (cierreReg.RegistroDiarioCajaId <= aperturaReg.RegistroDiarioCajaId) {
       Swal.fire({
         icon: "warning",
         title: "Error en registros",
-        text: "El cierre debe ser posterior a la apertura. Verifique los registros.",
+        text: "El cierre debe ser posterior a la apertura.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
 
-    // Filtrar los registros entre apertura y cierre (inclusive)
     const registrosFiltrados = registrosParaUsar.filter(
       (reg) =>
         reg.UsuarioId == user.id &&
         reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
-        reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
+        reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId,
     );
-    // Calcular totales (todos en efectivo)
     const apertura = Number(aperturaReg.RegistroDiarioCajaMonto);
     const cierre = Number(cierreReg.RegistroDiarioCajaMonto);
     let egresos = 0;
     let ingresos = 0;
     for (const reg of registrosFiltrados) {
       const monto = Number(reg.RegistroDiarioCajaMonto);
-      // Todos los ingresos son efectivo (excepto apertura que es TipoGastoGrupoId === 2)
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId !== 2) {
+      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId !== 2)
         ingresos += monto;
-      }
-      // Todos los egresos son efectivo (excepto cierre que es TipoGastoGrupoId === 2)
-      if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
-        egresos += monto;
-      }
+      if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) egresos += monto;
     }
     const sobranteFaltante = ingresos + apertura - (cierre + egresos);
     let txtSobranteFaltante = "";
     if (sobranteFaltante > 0) {
       txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(sobranteFaltante)}`;
     } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(
-        Math.abs(sobranteFaltante)
-      )}`;
+      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(Math.abs(sobranteFaltante))}`;
     } else {
       txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
     }
-    // --- Generar PDF ---
+
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: [80, 200], // 80mm de ancho, 200mm de alto
+      format: [80, 200],
     });
     doc.setFontSize(16);
     doc.text("RESUMEN CIERRE CAJA", 40, 15, { align: "center" });
@@ -301,7 +324,6 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;
-    // Línea nueva para Diferencia
     const diferencia = ingresos - egresos;
     doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
     y += 8;
@@ -311,19 +333,14 @@ export default function AperturaCierreCajaPage() {
     y += 12;
     doc.text("--GRACIAS POR SU PREFERENCIA--", 10, y);
 
-    // Generar el PDF y abrirlo automáticamente
     const pdfBlob = doc.output("blob");
     const pdfUrl = URL.createObjectURL(pdfBlob);
-
-    // Crear un enlace temporal para descargar el PDF
     const link = document.createElement("a");
     link.href = pdfUrl;
     link.download = `ResumenCierreCaja_${fecha.replace(/\//g, "-")}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Abrir el PDF automáticamente en una nueva pestaña
     setTimeout(() => {
       const openLink = document.createElement("a");
       openLink.href = pdfUrl;
@@ -332,25 +349,37 @@ export default function AperturaCierreCajaPage() {
       openLink.click();
       document.body.removeChild(openLink);
     }, 500);
-
-    // Limpiar la URL del objeto después de un tiempo
-    setTimeout(() => {
-      URL.revokeObjectURL(pdfUrl);
-    }, 2000);
-  }
+    setTimeout(() => URL.revokeObjectURL(pdfUrl), 2000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     setSubmitting(true);
-    setOperacionCompletada(true); // Deshabilitar el botón inmediatamente
+    setOperacionCompletada(true);
     try {
-      const result = await aperturaCierreCaja({
+      const montoEnviar = tipo === "0" ? montoApertura : montoTotal;
+      const payload: {
+        apertura: 0 | 1;
+        CajaId: string | number;
+        Monto: number;
+        RegistroDiarioCajaPendiente1?: number;
+        RegistroDiarioCajaPendiente2?: number;
+        RegistroDiarioCajaPendiente3?: number;
+        RegistroDiarioCajaPendiente4?: number;
+      } = {
         apertura: tipo === "0" ? 0 : 1,
         CajaId: cajaId,
-        Monto: monto,
-      });
+        Monto: montoEnviar,
+      };
+      if (tipo === "1") {
+        payload.RegistroDiarioCajaPendiente1 = pendientes[0]?.monto ?? 0;
+        payload.RegistroDiarioCajaPendiente2 = pendientes[1]?.monto ?? 0;
+        payload.RegistroDiarioCajaPendiente3 = pendientes[2]?.monto ?? 0;
+        payload.RegistroDiarioCajaPendiente4 = pendientes[3]?.monto ?? 0;
+      }
+      const result = await aperturaCierreCaja(payload);
       if (tipo === "0") {
         await Swal.fire({
           icon: "success",
@@ -364,19 +393,53 @@ export default function AperturaCierreCajaPage() {
         setSuccess(result.message || "Operación realizada correctamente");
         await fetchRegistrosCaja();
         setDescargarPDF(true);
-        // Descarga automática del PDF después de cargar registros
-        setTimeout(async () => {
-          await generarResumenCierrePDF();
-        }, 2000); // Reducir el delay inicial
+        setTimeout(() => generarResumenCierrePDF(), 2000);
       }
     } catch (err) {
       setError(
-        (err as { message?: string })?.message || "Error en la operación"
+        (err as { message?: string })?.message || "Error en la operación",
       );
-      setOperacionCompletada(false); // Rehabilitar el botón si hay error
+      setOperacionCompletada(false);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const setCantidadBillete = (denominacion: number, cantidad: number) => {
+    setCantidadesBilletes((prev) => ({
+      ...prev,
+      [denominacion]: Math.max(0, cantidad),
+    }));
+  };
+
+  const setCantidadMoneda = (denominacion: number, cantidad: number) => {
+    setCantidadesMonedas((prev) => ({
+      ...prev,
+      [denominacion]: Math.max(0, cantidad),
+    }));
+  };
+
+  const setPendiente = (
+    index: number,
+    field: "monto" | "detalle",
+    value: number | string,
+  ) => {
+    setPendientes((prev) => {
+      const next = [...prev];
+      if (!next[index]) next[index] = { monto: 0, detalle: "" };
+      if (field === "monto") next[index].monto = Math.max(0, value as number);
+      else next[index].detalle = String(value);
+      return next;
+    });
+  };
+
+  const parseMontoInput = (raw: string): number => {
+    const normalized = raw
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/\s/g, "");
+    const n = parseFloat(normalized);
+    return isNaN(n) ? 0 : n;
   };
 
   if (loading) return <div>Cargando cajas...</div>;
@@ -396,17 +459,18 @@ export default function AperturaCierreCajaPage() {
           )}
         </div>
       )}
+
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-lg shadow p-6 space-y-6"
       >
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-900">
               Tipo de operación
             </label>
             <select
-              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5 ${
                 tipoDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={tipo}
@@ -423,7 +487,7 @@ export default function AperturaCierreCajaPage() {
               Caja
             </label>
             <select
-              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5 ${
                 cajaDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={cajaId}
@@ -438,28 +502,175 @@ export default function AperturaCierreCajaPage() {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Apertura: solo monto de apertura */}
+        {tipo === "0" && (
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-900">
+            <label className="block mb-2 text-sm font-medium text-gray-700">
               Monto de apertura
             </label>
             <input
               type="text"
               inputMode="numeric"
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              value={monto ? formatMiles(monto) : ""}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-2.5"
+              value={montoApertura ? formatMiles(montoApertura) : ""}
               onChange={(e) => {
                 const raw = e.target.value
                   .replace(/\./g, "")
                   .replace(/\s/g, "");
                 const num = Number(raw);
-                if (!isNaN(num)) setMonto(num);
+                if (!isNaN(num)) setMontoApertura(num);
               }}
               min={0}
-              required
+              required={tipo === "0"}
             />
           </div>
-        </div>
-        <div className="flex justify-end">
+        )}
+
+        {/* Cierre: Billetes, Monedas, Pendientes y total */}
+        {tipo === "1" && (
+          <>
+            {/* Billetes */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                Billetes
+              </h3>
+              <div className="space-y-2">
+                {subtotalesBilletes.map(
+                  ({ denominacion, cantidad, subtotal }) => (
+                    <div
+                      key={denominacion}
+                      className="flex items-center gap-4 flex-wrap"
+                    >
+                      <span className="w-20 text-sm text-gray-700">
+                        {formatMiles(denominacion)}
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        tabIndex={-1}
+                        className="w-24 text-right bg-gray-100 border border-gray-200 text-sm rounded px-2 py-1.5 pointer-events-none"
+                        value={formatMiles(subtotal)}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-20 text-right border border-gray-300 text-sm rounded px-2 py-1.5 focus:ring-green-500 focus:border-green-500"
+                        value={cantidad || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCantidadBillete(
+                            denominacion,
+                            v === "" ? 0 : parseInt(v, 10) || 0,
+                          );
+                        }}
+                      />
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+
+            {/* Monedas */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                Monedas
+              </h3>
+              <div className="space-y-2">
+                {subtotalesMonedas.map(
+                  ({ denominacion, cantidad, subtotal }) => (
+                    <div
+                      key={denominacion}
+                      className="flex items-center gap-4 flex-wrap"
+                    >
+                      <span className="w-20 text-sm text-gray-700">
+                        {formatMiles(denominacion)}
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        tabIndex={-1}
+                        className="w-24 text-right bg-gray-100 border border-gray-200 text-sm rounded px-2 py-1.5 pointer-events-none"
+                        value={formatMiles(subtotal)}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-20 text-right border border-gray-300 text-sm rounded px-2 py-1.5 focus:ring-green-500 focus:border-green-500"
+                        value={cantidad || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCantidadMoneda(
+                            denominacion,
+                            v === "" ? 0 : parseInt(v, 10) || 0,
+                          );
+                        }}
+                      />
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+
+            {/* Pendientes: Monto - Detalle */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                Pendientes: Monto - Detalle
+              </h3>
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm text-gray-600 w-6">{i + 1}.</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      className="w-28 text-right border border-gray-300 text-sm rounded px-2 py-1.5 focus:ring-green-500 focus:border-green-500"
+                      value={
+                        pendientes[i]?.monto
+                          ? formatMiles(pendientes[i].monto)
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setPendiente(
+                          i,
+                          "monto",
+                          parseMontoInput(e.target.value),
+                        )
+                      }
+                    />
+                    <input
+                      type="text"
+                      placeholder="Detalle"
+                      className="flex-1 min-w-[120px] border border-gray-300 text-sm rounded px-2 py-1.5 focus:ring-green-500 focus:border-green-500"
+                      value={pendientes[i]?.detalle ?? ""}
+                      onChange={(e) =>
+                        setPendiente(i, "detalle", e.target.value)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Monto total Gs. */}
+            <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+              <span className="text-sm font-medium text-gray-800">
+                Monto Gs.:
+              </span>
+              <input
+                type="text"
+                readOnly
+                tabIndex={-1}
+                className="flex-1 text-right font-semibold bg-gray-100 border border-gray-200 text-gray-900 rounded-lg px-3 py-2 pointer-events-none"
+                value={formatMiles(montoTotal)}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="flex justify-end pt-2">
           <ActionButton
             onClick={handleSubmit}
             label="CONFIRMAR"
@@ -472,6 +683,7 @@ export default function AperturaCierreCajaPage() {
           </div>
         )}
       </form>
+
       {success && tipo === "1" && descargarPDF && (
         <div className="flex justify-center mt-4">
           <ActionButton

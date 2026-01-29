@@ -6,11 +6,15 @@ export const aperturaCierreCaja = async (data: {
   CajaId: string | number;
   Monto: number;
   UsuarioId?: string | number;
+  RegistroDiarioCajaPendiente1?: number;
+  RegistroDiarioCajaPendiente2?: number;
+  RegistroDiarioCajaPendiente3?: number;
+  RegistroDiarioCajaPendiente4?: number;
 }) => {
   try {
     const response = await api.post(
       "/registrodiariocaja/apertura-cierre",
-      data
+      data,
     );
     return response.data;
   } catch (error) {
@@ -24,7 +28,7 @@ export const aperturaCierreCaja = async (data: {
 };
 
 export const getEstadoAperturaPorUsuario = async (
-  usuarioId: string | number
+  usuarioId: string | number,
 ) => {
   try {
     const response = await api.get(`/registrodiariocaja/estado-apertura`, {

@@ -344,6 +344,94 @@ const Alquiler = {
     });
   },
 
+  // Obtener reporte de todos los alquileres en rango de fechas (sin filtrar por cliente)
+  getReporteAlquileresTodos: (fechaDesde, fechaHasta) => {
+    return new Promise((resolve, reject) => {
+      const alquileresQuery = `
+        SELECT 
+          a.*,
+          c.ClienteNombre,
+          c.ClienteApellido,
+          c.ClienteRUC
+        FROM alquiler a
+        LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+        WHERE DATE(a.AlquilerFechaAlquiler) BETWEEN ? AND ?
+        ORDER BY a.AlquilerFechaAlquiler ASC, a.AlquilerId ASC
+      `;
+
+      db.query(
+        alquileresQuery,
+        [fechaDesde, fechaHasta],
+        async (err, alquileresResults) => {
+          if (err) return reject(err);
+
+          const alquileresConDetalle = await Promise.all(
+            alquileresResults.map(async (alquiler) => {
+              const total = Number(alquiler.AlquilerTotal) || 0;
+              const entrega = Number(alquiler.AlquilerEntrega) || 0;
+              const saldoPendiente = total - entrega;
+
+              const pagosQuery = `
+                SELECT 
+                  r.RegistroDiarioCajaId,
+                  r.RegistroDiarioCajaFecha,
+                  r.RegistroDiarioCajaMonto,
+                  r.RegistroDiarioCajaDetalle
+                FROM registrodiariocaja r
+                WHERE (
+                  r.RegistroDiarioCajaDetalle LIKE ?
+                  OR r.RegistroDiarioCajaDetalle LIKE ?
+                )
+                ORDER BY r.RegistroDiarioCajaFecha ASC, r.RegistroDiarioCajaId ASC
+              `;
+
+              const pagos = await new Promise((resolvePagos, rejectPagos) => {
+                db.query(
+                  pagosQuery,
+                  [
+                    `%Alquiler #${alquiler.AlquilerId}%`,
+                    `%#${alquiler.AlquilerId}%`,
+                  ],
+                  (err, pagosResults) => {
+                    if (err) return rejectPagos(err);
+                    resolvePagos(
+                      pagosResults.map((pago) => ({
+                        RegistroDiarioCajaId: pago.RegistroDiarioCajaId,
+                        RegistroDiarioCajaFecha: pago.RegistroDiarioCajaFecha,
+                        RegistroDiarioCajaMonto: Number(
+                          pago.RegistroDiarioCajaMonto
+                        ),
+                        RegistroDiarioCajaDetalle:
+                          pago.RegistroDiarioCajaDetalle,
+                      }))
+                    );
+                  }
+                );
+              });
+
+              return {
+                ...alquiler,
+                AlquilerId: alquiler.AlquilerId,
+                AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
+                AlquilerTotal: total,
+                AlquilerEntrega: entrega,
+                SaldoPendiente: saldoPendiente,
+                Pagos: pagos || [],
+              };
+            })
+          );
+
+          resolve({
+            cliente: null,
+            fechaDesde,
+            fechaHasta,
+            alquileres: alquileresConDetalle,
+          });
+        }
+      );
+    });
+  },
+
   // Obtener reporte de alquileres por cliente y rango de fechas
   getReporteAlquileresPorCliente: (clienteId, fechaDesde, fechaHasta) => {
     return new Promise((resolve, reject) => {

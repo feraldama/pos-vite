@@ -35,6 +35,8 @@ interface Alquiler {
   AlquilerEntrega: number;
   SaldoPendiente: number;
   Pagos: Pago[];
+  ClienteNombre?: string;
+  ClienteApellido?: string;
 }
 
 interface ReporteData {
@@ -43,10 +45,31 @@ interface ReporteData {
     ClienteNombre: string;
     ClienteApellido: string;
     ClienteRUC: string;
-  };
+  } | null;
   fechaDesde: string;
   fechaHasta: string;
   alquileres: Alquiler[];
+}
+
+interface PrendaAlquilada {
+  AlquilerId: number;
+  AlquilerPrendasId: number;
+  ProductoId: number;
+  AlquilerPrendasPrecio: number;
+  ProductoNombre: string;
+  ProductoCodigo: string;
+  ProductoImagen?: string | null;
+  TipoPrendaNombre: string;
+  AlquilerFechaAlquiler: string;
+  AlquilerFechaEntrega: string;
+  AlquilerFechaDevolucion: string;
+  AlquilerEstado: string;
+  AlquilerTotal: number;
+  AlquilerEntrega: number;
+  ClienteId: number;
+  ClienteNombre: string;
+  ClienteApellido: string;
+  ClienteTelefono?: string;
 }
 
 const ReportesPage: React.FC = () => {
@@ -134,11 +157,6 @@ const ReportesPage: React.FC = () => {
   };
 
   const handleGenerarReporteVentas = async () => {
-    if (!clienteSeleccionado) {
-      setError("Debes seleccionar un cliente");
-      return;
-    }
-
     if (!fechaDesde || !fechaHasta) {
       setError("Debes seleccionar ambas fechas");
       return;
@@ -152,36 +170,51 @@ const ReportesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/alquiler/reporte", {
-        params: {
-          clienteId: clienteSeleccionado,
-          fechaDesde,
-          fechaHasta,
-        },
-      });
+      const params: {
+        fechaDesde: string;
+        fechaHasta: string;
+        clienteId?: string;
+      } = { fechaDesde, fechaHasta };
+      if (clienteSeleccionado) {
+        params.clienteId = clienteSeleccionado;
+      }
+
+      const res = await api.get("/alquiler/reporte", { params });
 
       const reporte: ReporteData = res.data.data;
+      const esTodos = !reporte.cliente;
 
       const doc = new jsPDF();
       let y = 20;
 
       // Título
       doc.setFontSize(18);
-      doc.text("Reporte de Alquileres por Cliente", 14, y);
-      y += 10;
-
-      // Información del cliente
-      doc.setFontSize(12);
       doc.text(
-        `Cliente: ${reporte.cliente.ClienteNombre} ${reporte.cliente.ClienteApellido}`,
+        esTodos
+          ? "Reporte de Alquileres (Todos los clientes)"
+          : "Reporte de Alquileres por Cliente",
         14,
         y
       );
-      y += 6;
-      if (reporte.cliente.ClienteRUC) {
-        doc.text(`RUC: ${reporte.cliente.ClienteRUC}`, 14, y);
+      y += 10;
+
+      // Información del cliente o "Todos"
+      doc.setFontSize(12);
+      if (esTodos) {
+        doc.text("Cliente: TODOS", 14, y);
+      } else if (reporte.cliente) {
+        doc.text(
+          `Cliente: ${reporte.cliente.ClienteNombre} ${reporte.cliente.ClienteApellido}`,
+          14,
+          y
+        );
         y += 6;
+        if (reporte.cliente.ClienteRUC) {
+          doc.text(`RUC: ${reporte.cliente.ClienteRUC}`, 14, y);
+          y += 6;
+        }
       }
+      y += 6;
       doc.text(
         `Período: ${formatearFecha(fechaDesde)} al ${formatearFecha(
           fechaHasta
@@ -191,7 +224,7 @@ const ReportesPage: React.FC = () => {
       );
       y += 10;
 
-      // Tabla de alquileres
+      // Tabla de alquileres (con columna Cliente cuando es "Todos")
       const alquileresRows: string[][] = [];
       let totalAlquileres = 0;
       let totalSaldoPendiente = 0;
@@ -202,13 +235,29 @@ const ReportesPage: React.FC = () => {
           .split("/")
           .join("/");
 
-        alquileresRows.push([
-          alquiler.AlquilerId.toString(),
-          fechaAlquiler,
-          formatMiles(alquiler.AlquilerTotal),
-          formatMiles(alquiler.AlquilerEntrega),
-          formatMiles(alquiler.SaldoPendiente),
-        ]);
+        const nombreCliente =
+          alquiler.ClienteNombre && alquiler.ClienteApellido
+            ? `${alquiler.ClienteNombre} ${alquiler.ClienteApellido}`
+            : "";
+
+        if (esTodos) {
+          alquileresRows.push([
+            alquiler.AlquilerId.toString(),
+            nombreCliente,
+            fechaAlquiler,
+            formatMiles(alquiler.AlquilerTotal),
+            formatMiles(alquiler.AlquilerEntrega),
+            formatMiles(alquiler.SaldoPendiente),
+          ]);
+        } else {
+          alquileresRows.push([
+            alquiler.AlquilerId.toString(),
+            fechaAlquiler,
+            formatMiles(alquiler.AlquilerTotal),
+            formatMiles(alquiler.AlquilerEntrega),
+            formatMiles(alquiler.SaldoPendiente),
+          ]);
+        }
 
         totalAlquileres += Number(alquiler.AlquilerTotal);
         totalSaldoPendiente += Number(alquiler.SaldoPendiente);
@@ -220,33 +269,64 @@ const ReportesPage: React.FC = () => {
               .toLocaleDateString("es-PY")
               .split("/")
               .join("/");
-            alquileresRows.push([
-              "",
-              `  Pago ${pago.RegistroDiarioCajaId}`,
-              fechaPago,
-              formatMiles(pago.RegistroDiarioCajaMonto),
-              "",
-            ]);
+            if (esTodos) {
+              alquileresRows.push([
+                "",
+                "",
+                `  Pago ${pago.RegistroDiarioCajaId}`,
+                fechaPago,
+                formatMiles(pago.RegistroDiarioCajaMonto),
+                "",
+              ]);
+            } else {
+              alquileresRows.push([
+                "",
+                `  Pago ${pago.RegistroDiarioCajaId}`,
+                fechaPago,
+                formatMiles(pago.RegistroDiarioCajaMonto),
+                "",
+              ]);
+            }
           });
         }
       });
 
-      autoTable(doc, {
-        head: [["ID", "FECHA", "TOTAL", "ENTREGA", "SALDO PEND."]],
-        body: alquileresRows,
-        startY: y,
-        theme: "grid",
-        headStyles: { fillColor: [22, 163, 74] },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 40 },
-          4: { cellWidth: 40 },
-        },
-      });
+      if (esTodos) {
+        autoTable(doc, {
+          head: [["ID", "CLIENTE", "FECHA", "TOTAL", "ENTREGA", "SALDO PEND."]],
+          body: alquileresRows,
+          startY: y,
+          theme: "grid",
+          headStyles: { fillColor: [22, 163, 74] },
+          styles: { fontSize: 9 },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 18 },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 32 },
+            4: { cellWidth: 32 },
+            5: { cellWidth: 32 },
+          },
+        });
+      } else {
+        autoTable(doc, {
+          head: [["ID", "FECHA", "TOTAL", "ENTREGA", "SALDO PEND."]],
+          body: alquileresRows,
+          startY: y,
+          theme: "grid",
+          headStyles: { fillColor: [22, 163, 74] },
+          styles: { fontSize: 10 },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 40 },
+            4: { cellWidth: 40 },
+          },
+        });
+      }
 
       y =
         (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
@@ -264,7 +344,11 @@ const ReportesPage: React.FC = () => {
         );
       }
 
-      const nombreArchivo = `reporte_alquileres_${reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
+      const nombreArchivo = esTodos
+        ? `reporte_alquileres_todos_${fechaDesde}_${fechaHasta}.pdf`
+        : `reporte_alquileres_${
+            reporte.cliente?.ClienteId ?? "cliente"
+          }_${fechaDesde}_${fechaHasta}.pdf`;
       doc.save(nombreArchivo);
       // Abrir el PDF automáticamente después de descargarlo
       doc.output("dataurlnewwindow");
@@ -273,6 +357,156 @@ const ReportesPage: React.FC = () => {
       setError(
         error.response?.data?.message ||
           "Error al generar el reporte de alquileres"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerarReportePrendasAlquiladas = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get("/alquilerprendas/prendas-alquiladas-actuales");
+      const prendas: PrendaAlquilada[] = res.data.data || [];
+
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
+      let y = 18;
+
+      doc.setFontSize(18);
+      doc.text("Prendas actualmente alquiladas", 14, y);
+      y += 8;
+      doc.setFontSize(11);
+      doc.text(
+        `Fecha del reporte: ${formatearFecha(
+          new Date().toISOString().split("T")[0]
+        )} - Total: ${prendas.length} prenda(s)`,
+        14,
+        y
+      );
+      y += 12;
+
+      if (prendas.length === 0) {
+        doc.setFontSize(12);
+        doc.text("No hay prendas alquiladas en este momento.", 14, y);
+        doc.save("reporte_prendas_alquiladas_actuales.pdf");
+        doc.output("dataurlnewwindow");
+        return;
+      }
+
+      const formatearFechaReporte = (fechaStr: string) => {
+        if (!fechaStr) return "";
+        const d = fechaStr.split("T")[0];
+        const [año, mes, dia] = d.split("-");
+        return `${dia}/${mes}/${año}`;
+      };
+
+      const body = prendas.map((p) => [
+        "",
+        p.ProductoCodigo || "-",
+        (p.ProductoNombre || "-").substring(0, 25),
+        (p.TipoPrendaNombre || "-").substring(0, 12),
+        `${p.ClienteNombre || ""} ${p.ClienteApellido || ""}`
+          .trim()
+          .substring(0, 18) || "-",
+        p.AlquilerId.toString(),
+        formatearFechaReporte(p.AlquilerFechaEntrega),
+        formatearFechaReporte(p.AlquilerFechaDevolucion),
+        p.AlquilerEstado || "-",
+        formatMiles(p.AlquilerPrendasPrecio),
+      ]);
+
+      autoTable(doc, {
+        head: [
+          [
+            "Imagen",
+            "Código",
+            "Producto",
+            "Tipo",
+            "Cliente",
+            "Alq. Id",
+            "F. Entrega",
+            "F. Devol.",
+            "Estado",
+            "Precio",
+          ],
+        ],
+        body,
+        startY: y,
+        theme: "grid",
+        headStyles: {
+          fillColor: [22, 163, 74],
+          fontSize: 8,
+          minCellHeight: 6,
+          cellPadding: 1,
+        },
+        styles: { fontSize: 7, cellPadding: 1.5, minCellHeight: 26 },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 35 },
+          5: { cellWidth: 18 },
+          6: { cellWidth: 22 },
+          7: { cellWidth: 22 },
+          8: { cellWidth: 22 },
+          9: { cellWidth: 28 },
+        },
+        didDrawCell: (data) => {
+          if (
+            data.column.index === 0 &&
+            data.section === "body" &&
+            typeof data.row.index === "number" &&
+            data.row.index < prendas.length
+          ) {
+            const p = prendas[data.row.index];
+            if (p?.ProductoImagen) {
+              try {
+                const imgW = 18;
+                const imgH = 22;
+                const x = data.cell.x + (data.cell.width - imgW) / 2;
+                const yImg = data.cell.y + 2;
+                doc.addImage(
+                  `data:image/jpeg;base64,${p.ProductoImagen}`,
+                  "JPEG",
+                  x,
+                  yImg,
+                  imgW,
+                  imgH
+                );
+              } catch {
+                doc.setFontSize(6);
+                doc.text("Sin imagen", data.cell.x + 2, data.cell.y + 10);
+              }
+            } else if (data.column.index === 0 && data.section === "body") {
+              doc.setFontSize(6);
+              doc.text("Sin imagen", data.cell.x + 2, data.cell.y + 10);
+            }
+          }
+        },
+      });
+
+      const finalY =
+        (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+          .finalY + 10;
+      if (finalY > 270) {
+        doc.addPage();
+        doc.setFontSize(10);
+        doc.text(`Total de prendas alquiladas: ${prendas.length}`, 14, 20);
+      } else {
+        doc.setFontSize(10);
+        doc.text(`Total de prendas alquiladas: ${prendas.length}`, 14, finalY);
+      }
+
+      doc.save("reporte_prendas_alquiladas_actuales.pdf");
+      doc.output("dataurlnewwindow");
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(
+        error.response?.data?.message ||
+          "Error al generar el reporte de prendas alquiladas"
       );
     } finally {
       setLoading(false);
@@ -313,7 +547,7 @@ const ReportesPage: React.FC = () => {
                 onChange={(e) => setClienteSeleccionado(e.target.value)}
                 disabled={loading}
               >
-                <option value="">Seleccione un cliente</option>
+                <option value="">TODOS</option>
                 {clientes.map((cliente) => (
                   <option key={cliente.ClienteId} value={cliente.ClienteId}>
                     {cliente.ClienteNombre} {cliente.ClienteApellido}
@@ -359,6 +593,25 @@ const ReportesPage: React.FC = () => {
               GENERAR REPORTE
             </button>
           </div>
+        </div>
+
+        {/* Reporte de Prendas actualmente alquiladas */}
+        <div className="w-full bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">
+            Prendas actualmente alquiladas
+          </h2>
+          <p className="text-gray-600 text-sm mb-4">
+            Lista de todas las prendas que están alquiladas en este momento
+            (entre fecha de entrega y fecha de devolución). Incluye imagen,
+            producto, cliente, alquiler y fechas.
+          </p>
+          <button
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
+            onClick={handleGenerarReportePrendasAlquiladas}
+            disabled={loading}
+          >
+            GENERAR REPORTE
+          </button>
         </div>
 
         {loading && (

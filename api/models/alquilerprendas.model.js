@@ -360,6 +360,59 @@ const AlquilerPrendas = {
     });
   },
 
+  // Obtener todas las prendas actualmente alquiladas (hoy dentro del rango de entrega-devolución, estado no Devuelto/Cancelado)
+  getPrendasAlquiladasActuales: () => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          ap.AlquilerId,
+          ap.AlquilerPrendasId,
+          ap.ProductoId,
+          ap.AlquilerPrendasPrecio,
+          p.ProductoNombre,
+          p.ProductoCodigo,
+          p.ProductoImagen,
+          tp.TipoPrendaNombre,
+          a.AlquilerFechaAlquiler,
+          a.AlquilerFechaEntrega,
+          a.AlquilerFechaDevolucion,
+          a.AlquilerEstado,
+          a.AlquilerTotal,
+          a.AlquilerEntrega,
+          c.ClienteId,
+          c.ClienteNombre,
+          c.ClienteApellido,
+          c.ClienteTelefono
+        FROM alquilerprendas ap
+        INNER JOIN alquiler a ON ap.AlquilerId = a.AlquilerId
+        LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+        LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
+        LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId
+        WHERE a.AlquilerEstado NOT IN ('Devuelto', 'Cancelado')
+        AND a.AlquilerFechaEntrega IS NOT NULL
+        AND a.AlquilerFechaDevolucion IS NOT NULL
+        AND CURDATE() >= DATE(a.AlquilerFechaEntrega)
+        AND CURDATE() <= DATE(a.AlquilerFechaDevolucion)
+        ORDER BY a.AlquilerFechaDevolucion ASC, ap.AlquilerId ASC, ap.AlquilerPrendasId ASC
+      `;
+
+      db.query(query, [], (err, results) => {
+        if (err) {
+          console.error("Error en getPrendasAlquiladasActuales:", err);
+          return reject(err);
+        }
+        const processedResults = results.map((row) => {
+          const r = { ...row };
+          if (r.ProductoImagen && Buffer.isBuffer(r.ProductoImagen)) {
+            r.ProductoImagen = r.ProductoImagen.toString("base64");
+          }
+          return r;
+        });
+        resolve(processedResults);
+      });
+    });
+  },
+
   // Contar cuántas prendas del mismo producto están alquiladas en un rango de fechas
   // Retorna el número total de prendas alquiladas (COUNT)
   contarPrendasAlquiladas: (productoId, fechaEntrega, fechaDevolucion) => {

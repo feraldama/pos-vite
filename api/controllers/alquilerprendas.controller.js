@@ -63,6 +63,21 @@ exports.searchAlquilerPrendas = async (req, res) => {
   }
 };
 
+// getPrendasAlquiladasActuales - prendas que están alquiladas ahora (hoy dentro del rango entrega-devolución)
+exports.getPrendasAlquiladasActuales = async (req, res) => {
+  try {
+    const prendas = await AlquilerPrendas.getPrendasAlquiladasActuales();
+    res.json({ success: true, data: prendas });
+  } catch (error) {
+    console.error("Error al obtener prendas alquiladas actuales:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener prendas alquiladas actuales",
+      error: error.message,
+    });
+  }
+};
+
 // getAlquilerPrendasByAlquilerId
 exports.getAlquilerPrendasByAlquilerId = async (req, res) => {
   try {

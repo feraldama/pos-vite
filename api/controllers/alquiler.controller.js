@@ -518,17 +518,10 @@ exports.getAlquileresProximosDevolucion = async (req, res) => {
   }
 };
 
-// Obtener reporte de alquileres por cliente y rango de fechas
+// Obtener reporte de alquileres por cliente (o todos) y rango de fechas
 exports.getReporteAlquileresPorCliente = async (req, res) => {
   try {
     const { clienteId, fechaDesde, fechaHasta } = req.query;
-
-    if (!clienteId) {
-      return res.status(400).json({
-        success: false,
-        message: "El ID del cliente es requerido",
-      });
-    }
 
     if (!fechaDesde || !fechaHasta) {
       return res.status(400).json({
@@ -537,11 +530,18 @@ exports.getReporteAlquileresPorCliente = async (req, res) => {
       });
     }
 
-    const reporte = await Alquiler.getReporteAlquileresPorCliente(
-      clienteId,
-      fechaDesde,
-      fechaHasta
-    );
+    const esTodos =
+      !clienteId ||
+      clienteId === "" ||
+      String(clienteId).toLowerCase() === "todos";
+
+    const reporte = esTodos
+      ? await Alquiler.getReporteAlquileresTodos(fechaDesde, fechaHasta)
+      : await Alquiler.getReporteAlquileresPorCliente(
+          clienteId,
+          fechaDesde,
+          fechaHasta
+        );
 
     res.json({
       success: true,
@@ -621,10 +621,10 @@ exports.procesarPagoAlquileres = async (req, res) => {
       );
       const nuevoSaldo = totalAlquiler - nuevaEntrega;
 
-      // Si el saldo queda en cero, cambiar el estado a "Devuelto"
+      // Si el saldo queda en cero, cambiar el estado a "Entregado"
       const nuevoEstado =
         nuevoSaldo <= 0
-          ? "Devuelto"
+          ? "Entregado"
           : alquilerCompleto.AlquilerEstado || alquiler.AlquilerEstado;
 
       // Actualizar el alquiler

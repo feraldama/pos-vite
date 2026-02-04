@@ -87,12 +87,12 @@ export default function Sales() {
   >([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [pagination, setPagination] = useState({
     totalItems: 0,
     totalPages: 1,
     currentPage: 1,
-    itemsPerPage: 24,
+    itemsPerPage: 10,
   });
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
@@ -254,11 +254,15 @@ export default function Sales() {
         data = await getProductosPaginated(currentPage, itemsPerPage);
       }
 
-      // Filtrar productos por LocalId después de recibirlos
+      // Filtrar productos por LocalId: mostrar si es 0 (todos) o si coincide con el local del usuario
+      const localUsuario = Number(user?.LocalId);
       const productosFiltrados = (data.data || []).filter(
-        (p: { LocalId: string | number }) =>
-          Number(p.LocalId) === 0 ||
-          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
+        (p: { LocalId: string | number }) => {
+          const localProd = Number(p.LocalId);
+          return (
+            localProd === 0 || (localUsuario && localProd === localUsuario)
+          );
+        }
       );
 
       setProductos(productosFiltrados);
@@ -274,7 +278,13 @@ export default function Sales() {
     } finally {
       setLoading(false);
     }
-  }, [cajaAperturada, busquedaDebounced, currentPage, itemsPerPage]);
+  }, [
+    cajaAperturada,
+    busquedaDebounced,
+    currentPage,
+    itemsPerPage,
+    user?.LocalId,
+  ]);
 
   // Cargar combos solo una vez al montar
   useEffect(() => {
@@ -794,10 +804,14 @@ export default function Sales() {
     try {
       // Buscar productos usando el servicio de búsqueda
       const data = await searchProductos(busqueda.trim(), 1, 10);
+      const localUsuario = Number(user?.LocalId);
       const productosFiltrados = (data.data || []).filter(
-        (p: { LocalId: string | number }) =>
-          Number(p.LocalId) === 0 ||
-          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
+        (p: { LocalId: string | number }) => {
+          const localProd = Number(p.LocalId);
+          return (
+            localProd === 0 || (localUsuario && localProd === localUsuario)
+          );
+        }
       );
 
       // Agregar el primer producto encontrado

@@ -7,12 +7,13 @@ export const getProductos = async (params = {}) => {
   return res.data;
 };
 
-// Traer productos paginados
+// Traer productos paginados (localId opcional: si se pasa, el stock es solo del almacén con ese LocalId)
 export const getProductosPaginated = async (
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  localId?: string | number | null
 ) => {
   const params: { [key: string]: string | number | undefined } = {
     page,
@@ -20,6 +21,7 @@ export const getProductosPaginated = async (
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (localId != null && localId !== "") params.localId = localId;
   try {
     const response = await api.get("/productos", { params });
     return response.data;
@@ -83,12 +85,14 @@ export const deleteProducto = async (id: string | number) => {
   }
 };
 
+// localId opcional: si se pasa, el stock devuelto es solo del almacén con ese LocalId
 export const searchProductos = async (
   searchTerm: string,
   page = 1,
   limit = 10,
   sortBy?: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder?: "asc" | "desc",
+  localId?: string | number | null
 ) => {
   const params: { [key: string]: string | number | undefined } = {
     q: searchTerm,
@@ -97,6 +101,7 @@ export const searchProductos = async (
   };
   if (sortBy) params.sortBy = sortBy;
   if (sortOrder) params.sortOrder = sortOrder;
+  if (localId != null && localId !== "") params.localId = localId;
   try {
     const response = await api.get("/productos/search", { params });
     return response.data;

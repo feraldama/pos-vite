@@ -241,17 +241,27 @@ export default function Sales() {
 
     setLoading(true);
     try {
+      const localIdUsuario = user?.LocalId ?? null;
       let data;
       if (busquedaDebounced.trim()) {
-        // Si hay búsqueda, usar el endpoint de búsqueda paginado
+        // Si hay búsqueda, usar el endpoint de búsqueda paginado (stock del almacén del local del usuario)
         data = await searchProductos(
           busquedaDebounced.trim(),
           currentPage,
-          itemsPerPage
+          itemsPerPage,
+          undefined,
+          undefined,
+          localIdUsuario
         );
       } else {
-        // Si no hay búsqueda, cargar productos paginados
-        data = await getProductosPaginated(currentPage, itemsPerPage);
+        // Si no hay búsqueda, cargar productos paginados (stock del almacén del local del usuario)
+        data = await getProductosPaginated(
+          currentPage,
+          itemsPerPage,
+          undefined,
+          undefined,
+          localIdUsuario
+        );
       }
 
       // Filtrar productos por LocalId: mostrar si es 0 (todos) o si coincide con el local del usuario
@@ -802,8 +812,15 @@ export default function Sales() {
     setBusquedaDebounced(busqueda);
 
     try {
-      // Buscar productos usando el servicio de búsqueda
-      const data = await searchProductos(busqueda.trim(), 1, 10);
+      // Buscar productos usando el servicio de búsqueda (stock del almacén del local del usuario)
+      const data = await searchProductos(
+        busqueda.trim(),
+        1,
+        10,
+        undefined,
+        undefined,
+        user?.LocalId ?? null
+      );
       const localUsuario = Number(user?.LocalId);
       const productosFiltrados = (data.data || []).filter(
         (p: { LocalId: string | number }) => {

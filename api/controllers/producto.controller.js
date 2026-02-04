@@ -1,6 +1,6 @@
 const Producto = require("../models/producto.model");
 
-// getAllProductos
+// getAllProductos (localId opcional: si viene, el stock devuelto es solo de almacenes con ese LocalId)
 exports.getAllProductos = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -8,11 +8,16 @@ exports.getAllProductos = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "ProductoId";
     const sortOrder = req.query.sortOrder || "ASC";
+    const localId =
+      req.query.localId !== undefined && req.query.localId !== ""
+        ? parseInt(req.query.localId, 10)
+        : null;
     const { productos, total } = await Producto.getAllPaginated(
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
+      isNaN(localId) ? null : localId
     );
     convertirImagenes(productos);
     res.json({
@@ -29,7 +34,7 @@ exports.getAllProductos = async (req, res) => {
   }
 };
 
-// searchProductos
+// searchProductos (localId opcional: si viene, el stock devuelto es solo de almacenes con ese LocalId)
 exports.searchProductos = async (req, res) => {
   try {
     const { q: searchTerm } = req.query;
@@ -38,6 +43,10 @@ exports.searchProductos = async (req, res) => {
     const offset = (page - 1) * limit;
     const sortBy = req.query.sortBy || "ProductoId";
     const sortOrder = req.query.sortOrder || "ASC";
+    const localId =
+      req.query.localId !== undefined && req.query.localId !== ""
+        ? parseInt(req.query.localId, 10)
+        : null;
     if (!searchTerm || searchTerm.trim() === "") {
       return res
         .status(400)
@@ -48,7 +57,8 @@ exports.searchProductos = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
+      isNaN(localId) ? null : localId
     );
     convertirImagenes(productos);
     res.json({
@@ -170,6 +180,16 @@ exports.deleteProducto = async (req, res) => {
       message: "Error al eliminar producto",
       error: error.message,
     });
+  }
+};
+
+// Reporte de stock total y por almacén de todos los productos
+exports.getReporteStock = async (req, res) => {
+  try {
+    const { productos } = await Producto.getReporteStock();
+    res.json({ data: { productos } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 

@@ -51,6 +51,21 @@ interface ReporteData {
   ventas: Venta[];
 }
 
+interface ProductoAlmacenStock {
+  AlmacenNombre: string;
+  ProductoAlmacenStock: number;
+  ProductoAlmacenStockUnitario: number;
+}
+
+interface ProductoStockReporte {
+  ProductoId: number;
+  ProductoCodigo: string;
+  ProductoNombre: string;
+  ProductoStock: number;
+  ProductoStockUnitario: number;
+  productoAlmacen: ProductoAlmacenStock[];
+}
+
 const ReportesPage: React.FC = () => {
   const puedeLeer = usePermiso("REPORTES", "leer");
   const [loading, setLoading] = useState(false);
@@ -293,10 +308,112 @@ const ReportesPage: React.FC = () => {
     }
   };
 
+  const handleGenerarReporteStock = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get("/productos/reporte-stock");
+      const data = res.data?.data;
+      const productos: ProductoStockReporte[] = Array.isArray(data?.productos)
+        ? data.productos
+        : [];
+
+      const doc = new jsPDF({ orientation: "landscape" });
+      let y = 20;
+
+      doc.setFontSize(18);
+      doc.text("Reporte de stock total y por almacén", 14, y);
+      y += 10;
+
+      const tableRows: string[][] = [];
+      productos.forEach((p: ProductoStockReporte) => {
+        tableRows.push([
+          String(p.ProductoCodigo ?? ""),
+          String(p.ProductoNombre ?? ""),
+          String(p.ProductoStock ?? 0),
+          String(p.ProductoStockUnitario ?? 0),
+        ]);
+        (p.productoAlmacen || []).forEach((pa: ProductoAlmacenStock) => {
+          tableRows.push([
+            "",
+            `  └ ${pa.AlmacenNombre ?? ""}`,
+            String(pa.ProductoAlmacenStock ?? 0),
+            String(pa.ProductoAlmacenStockUnitario ?? 0),
+          ]);
+        });
+      });
+
+      autoTable(doc, {
+        head: [["Código", "Producto", "Stock (cajas)", "Stock unitario"]],
+        body: tableRows.length > 0 ? tableRows : [["Sin datos", "", "", ""]],
+        startY: y,
+        theme: "grid",
+        headStyles: { fillColor: [22, 163, 74] },
+        styles: { fontSize: 9 },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: "auto" },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 35 },
+        },
+      });
+
+      y =
+        (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+          .finalY + 10;
+
+      doc.setFontSize(10);
+      doc.text(
+        `Total productos: ${
+          productos.length
+        } — Generado: ${new Date().toLocaleString("es-PY")}`,
+        14,
+        y
+      );
+
+      const nombreArchivo = `reporte_stock_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      doc.save(nombreArchivo);
+
+      // Abrir en nueva pestaña con blob URL (evita límite de data URL y muestra el PDF correctamente)
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(
+        error.response?.data?.message || "Error al generar el reporte de stock"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
       <div className="flex flex-col items-center gap-8 max-w-2xl mx-auto">
+        {/* Reporte de Stock total y por almacén */}
+        <div className="w-full bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">
+            Stock total y por almacén
+          </h2>
+          <p className="text-gray-600 mb-4 text-sm">
+            Lista todos los productos con su stock total (cajas y unitario) y el
+            desglose por cada almacén.
+          </p>
+          <button
+            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
+            onClick={handleGenerarReporteStock}
+            disabled={loading}
+          >
+            GENERAR REPORTE DE STOCK
+          </button>
+        </div>
+
         {/* Reporte de Créditos Pendientes */}
         <div className="w-full bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-4">

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   getProductosPaginated,
+  getProductoById,
   deleteProducto,
   searchProductos,
   createProducto,
@@ -10,6 +11,14 @@ import ProductsList from "../../components/products/ProductsList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
+
+// Stock por almacén (tabla productoalmacen)
+export interface ProductoAlmacenItem {
+  AlmacenId: number;
+  AlmacenNombre?: string;
+  ProductoAlmacenStock: number;
+  ProductoAlmacenStockUnitario: number;
+}
 
 // Tipos auxiliares
 interface Producto {
@@ -29,6 +38,7 @@ interface Producto {
   ProductoImagen_GXI?: string;
   LocalId: number;
   LocalNombre: string;
+  productoAlmacen?: ProductoAlmacenItem[];
   [key: string]: unknown;
 }
 
@@ -157,9 +167,18 @@ export default function ProductsPage() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (product: Producto) => {
-    setCurrentProduct({ ...product, ProductoId: Number(product.ProductoId) });
-    setIsModalOpen(true);
+  const handleEdit = async (product: Producto) => {
+    try {
+      const fullProduct = await getProductoById(product.ProductoId);
+      setCurrentProduct({
+        ...fullProduct,
+        ProductoId: Number(fullProduct.ProductoId),
+        productoAlmacen: fullProduct.productoAlmacen ?? [],
+      });
+      setIsModalOpen(true);
+    } catch {
+      setError("No se pudo cargar el producto para editar");
+    }
   };
 
   const handleSubmit = async (productData: ProductoForm) => {

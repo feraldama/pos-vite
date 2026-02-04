@@ -2,9 +2,17 @@ import { useEffect, useState, useRef } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
+import { getAlmacenes } from "../../services/almacenes.service";
 import { formatMiles, formatMilesWithDecimals } from "../../utils/utils";
+
+export interface ProductoAlmacenRow {
+  AlmacenId: number;
+  AlmacenNombre?: string;
+  ProductoAlmacenStock: number;
+  ProductoAlmacenStockUnitario: number;
+}
 
 interface Producto {
   ProductoId?: number;
@@ -22,6 +30,7 @@ interface Producto {
   ProductoImagen?: string;
   ProductoImagen_GXI?: string;
   LocalId: number;
+  productoAlmacen?: ProductoAlmacenRow[];
   [key: string]: unknown;
 }
 
@@ -42,7 +51,9 @@ interface ProductsListProps {
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentProduct?: Producto | null;
-  onSubmit: (formData: Producto) => void;
+  onSubmit: (
+    formData: Producto & { productoAlmacen?: ProductoAlmacenRow[] }
+  ) => void;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
@@ -85,11 +96,31 @@ export default function ProductsList({
   const [locales, setLocales] = useState<
     { LocalId: number; LocalNombre: string }[]
   >([]);
+  const [almacenes, setAlmacenes] = useState<
+    { AlmacenId: number; AlmacenNombre: string }[]
+  >([]);
+  const [stockAlmacenes, setStockAlmacenes] = useState<ProductoAlmacenRow[]>(
+    []
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [precioCostoFocused, setPrecioCostoFocused] = useState(false);
 
   useEffect(() => {
+    getAlmacenes(1, 500).then((res) => {
+      setAlmacenes(res.data ?? []);
+    });
+  }, []);
+
+  useEffect(() => {
     if (currentProduct) {
+      setStockAlmacenes(
+        (currentProduct.productoAlmacen ?? []).map((pa) => ({
+          AlmacenId: pa.AlmacenId,
+          AlmacenNombre: pa.AlmacenNombre,
+          ProductoAlmacenStock: pa.ProductoAlmacenStock ?? 0,
+          ProductoAlmacenStockUnitario: pa.ProductoAlmacenStockUnitario ?? 0,
+        }))
+      );
       setFormData({
         ...currentProduct,
         ProductoPrecioVenta: currentProduct.ProductoPrecioVenta || 0,
@@ -110,6 +141,7 @@ export default function ProductsList({
         LocalId: currentProduct.LocalId,
       });
     } else {
+      setStockAlmacenes([]);
       setFormData({
         ProductoCodigo: "0",
         ProductoNombre: "",
@@ -172,12 +204,76 @@ export default function ProductsList({
     setFormData((prev) => ({ ...prev, ProductoImagen: "" }));
   };
 
+  const addStockAlmacen = () => {
+    const usedIds = new Set(stockAlmacenes.map((s) => s.AlmacenId));
+    const firstAvailable = almacenes.find((a) => !usedIds.has(a.AlmacenId));
+    if (firstAvailable) {
+      setStockAlmacenes((prev) => [
+        ...prev,
+        {
+          AlmacenId: firstAvailable.AlmacenId,
+          AlmacenNombre: firstAvailable.AlmacenNombre,
+          ProductoAlmacenStock: 0,
+          ProductoAlmacenStockUnitario: 0,
+        },
+      ]);
+    }
+  };
+
+  const removeStockAlmacen = (index: number) => {
+    setStockAlmacenes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateStockAlmacen = (
+    index: number,
+    field: keyof ProductoAlmacenRow,
+    value: number | string
+  ) => {
+    setStockAlmacenes((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const setStockAlmacenAlmacenId = (index: number, AlmacenId: number) => {
+    const almacen = almacenes.find((a) => a.AlmacenId === AlmacenId);
+    setStockAlmacenes((prev) =>
+      prev.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              AlmacenId,
+              AlmacenNombre: almacen?.AlmacenNombre ?? row.AlmacenNombre,
+            }
+          : row
+      )
+    );
+  };
+
   // Enviar formulario
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { ProductoImagen_GXI, ...cleanFormData } = formData; // Limpiamos ProductoImagen_GXI antes de enviar
-    onSubmit(cleanFormData);
+    const totalStock = stockAlmacenes.reduce(
+      (s, row) => s + (Number(row.ProductoAlmacenStock) || 0),
+      0
+    );
+    const totalStockUnitario = stockAlmacenes.reduce(
+      (s, row) => s + (Number(row.ProductoAlmacenStockUnitario) || 0),
+      0
+    );
+    const payload = {
+      ...cleanFormData,
+      ProductoStock: totalStock,
+      ProductoStockUnitario: totalStockUnitario,
+      productoAlmacen: stockAlmacenes.map((pa) => ({
+        AlmacenId: pa.AlmacenId,
+        ProductoAlmacenStock: Number(pa.ProductoAlmacenStock) || 0,
+        ProductoAlmacenStockUnitario:
+          Number(pa.ProductoAlmacenStockUnitario) || 0,
+      })),
+    };
+    onSubmit(payload);
   };
 
   // Configuración de columnas para la tabla
@@ -447,16 +543,20 @@ export default function ProductsList({
                       htmlFor="ProductoStock"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Stock
+                      Stock total (todos los almacenes)
                     </label>
                     <input
                       type="number"
                       name="ProductoStock"
                       id="ProductoStock"
-                      value={formData.ProductoStock}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
+                      min={0}
+                      value={stockAlmacenes.reduce(
+                        (s, row) => s + (Number(row.ProductoAlmacenStock) || 0),
+                        0
+                      )}
+                      readOnly
+                      className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
+                      title="Se calcula desde el stock por almacén"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -464,16 +564,142 @@ export default function ProductsList({
                       htmlFor="ProductoStockUnitario"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Stock Unitario
+                      Stock unitario total (todos los almacenes)
                     </label>
                     <input
                       type="number"
                       name="ProductoStockUnitario"
                       id="ProductoStockUnitario"
-                      value={formData.ProductoStockUnitario}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      min={0}
+                      value={stockAlmacenes.reduce(
+                        (s, row) =>
+                          s + (Number(row.ProductoAlmacenStockUnitario) || 0),
+                        0
+                      )}
+                      readOnly
+                      className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
+                      title="Se calcula desde el stock por almacén"
                     />
+                  </div>
+                  {/* Stock por almacén */}
+                  <div className="col-span-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-900">
+                        Stock por almacén (editar cantidades aquí)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addStockAlmacen}
+                        className="text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-1 text-sm font-medium cursor-pointer flex items-center gap-1"
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        Agregar almacén
+                      </button>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full text-sm text-left text-gray-900">
+                        <thead className="bg-gray-100 text-gray-700">
+                          <tr>
+                            <th className="px-3 py-2">Almacén</th>
+                            <th className="px-3 py-2">Stock (cajas)</th>
+                            <th className="px-3 py-2">Stock unitario</th>
+                            <th className="px-3 py-2 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stockAlmacenes.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={4}
+                                className="px-3 py-4 text-gray-500"
+                              >
+                                Sin almacenes. Agregue al menos uno para cargar
+                                stock.
+                              </td>
+                            </tr>
+                          ) : (
+                            stockAlmacenes.map((row, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-gray-200 bg-white"
+                              >
+                                <td className="px-3 py-2">
+                                  <select
+                                    value={row.AlmacenId}
+                                    onChange={(e) =>
+                                      setStockAlmacenAlmacenId(
+                                        index,
+                                        Number(e.target.value)
+                                      )
+                                    }
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                  >
+                                    {almacenes.map((a) => {
+                                      const used =
+                                        stockAlmacenes.some(
+                                          (s, i) =>
+                                            i !== index &&
+                                            s.AlmacenId === a.AlmacenId
+                                        ) ?? false;
+                                      return (
+                                        <option
+                                          key={a.AlmacenId}
+                                          value={a.AlmacenId}
+                                          disabled={used}
+                                        >
+                                          {a.AlmacenNombre}
+                                          {used ? " (ya agregado)" : ""}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={row.ProductoAlmacenStock}
+                                    onChange={(e) =>
+                                      updateStockAlmacen(
+                                        index,
+                                        "ProductoAlmacenStock",
+                                        Number(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={row.ProductoAlmacenStockUnitario}
+                                    onChange={(e) =>
+                                      updateStockAlmacen(
+                                        index,
+                                        "ProductoAlmacenStockUnitario",
+                                        Number(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeStockAlmacen(index)}
+                                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                                    title="Eliminar"
+                                  >
+                                    <TrashIcon className="w-5 h-5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label

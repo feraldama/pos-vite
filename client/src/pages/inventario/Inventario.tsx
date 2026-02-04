@@ -1,29 +1,42 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import SearchButton from "../../components/common/Input/SearchButton";
 import "../../App.css";
-import { getProductosAll } from "../../services/productos.service";
+import {
+  getProductosAll,
+  getProductoById,
+  updateProducto,
+} from "../../services/productos.service";
+import { getAlmacenes } from "../../services/almacenes.service";
 import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
 import logo from "../../assets/img/logo.jpg";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import { getLocalById } from "../../services/locales.service";
 import { usePermiso } from "../../hooks/usePermiso";
 
+interface AlmacenStockRow {
+  AlmacenId: number;
+  AlmacenNombre: string;
+  ProductoAlmacenStock: number;
+  ProductoAlmacenStockUnitario: number;
+}
+
+interface CarritoItem {
+  id: number;
+  nombre: string;
+  imagen: string;
+  stock: number;
+  cartItemId: number;
+  ProductoCantidadCaja: number;
+  almacenesStock: AlmacenStockRow[];
+}
+
 export default function Inventario() {
-  const [carrito, setCarrito] = useState<
-    {
-      id: number;
-      nombre: string;
-      imagen: string;
-      stock: number;
-      caja: number; // Cantidad en cajas
-      unidad: number; // Cantidad en unidades
-      cartItemId: number;
-    }[]
+  const [carrito, setCarrito] = useState<CarritoItem[]>([]);
+  const [almacenes, setAlmacenes] = useState<
+    { AlmacenId: number; AlmacenNombre: string }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
   const [productos, setProductos] = useState<
@@ -39,6 +52,7 @@ export default function Inventario() {
       LocalId: string | number;
       ProductoPrecioUnitario: number;
       ProductoStockUnitario?: number;
+      ProductoCantidadCaja?: number;
     }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -47,29 +61,21 @@ export default function Inventario() {
   const puedeEditar = usePermiso("INVENTARIO", "editar");
   const puedeEliminar = usePermiso("INVENTARIO", "eliminar");
   const puedeLeer = usePermiso("INVENTARIO", "leer");
-  const [tipoInventario, setTipoInventario] = useState("F"); // F = Fijar, S = Sumar
   const [localNombre, setLocalNombre] = useState("");
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
-  const cantidadCajaRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {}
-  );
-  const cantidadUnidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {}
-  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selectedProductId !== null) {
-      if (cantidadCajaRefs.current[selectedProductId]) {
-        cantidadCajaRefs.current[selectedProductId]?.focus();
-      } else if (cantidadUnidadRefs.current[selectedProductId]) {
-        cantidadUnidadRefs.current[selectedProductId]?.focus();
-      }
-    }
-  }, [selectedProductId, carrito.length]);
+    getAlmacenes(1, 500).then((res) => {
+      const list = (res.data ?? []).filter(
+        (a: { AlmacenId: number }) => a.AlmacenId !== 0
+      );
+      setAlmacenes(list);
+    });
+  }, []);
 
   // Focus automático en el campo de búsqueda al cargar la página
   useEffect(() => {
@@ -78,7 +84,7 @@ export default function Inventario() {
     }
   }, []);
 
-  const agregarProducto = (producto: {
+  const agregarProducto = async (producto: {
     id: number;
     nombre: string;
     imagen: string;
@@ -92,18 +98,64 @@ export default function Inventario() {
       });
       return;
     }
-    const nuevoCartItemId = Date.now() + Math.random();
-
-    setCarrito([
-      ...carrito,
-      {
-        ...producto,
-        caja: 0,
-        unidad: 0,
-        cartItemId: nuevoCartItemId,
-      },
-    ]);
-    setSelectedProductId(nuevoCartItemId);
+    if (carrito.some((p) => p.id === producto.id)) {
+      Swal.fire({
+        icon: "info",
+        title: "Ya agregado",
+        text: "Este producto ya está en la lista.",
+      });
+      return;
+    }
+    try {
+      const fullProduct = await getProductoById(producto.id);
+      const cantidadCajaLoad = Math.max(
+        1,
+        Number(fullProduct.ProductoCantidadCaja) || 1
+      );
+      const paMap = new Map<number, AlmacenStockRow>();
+      (fullProduct.productoAlmacen ?? []).forEach((pa: AlmacenStockRow) => {
+        const rawU = Number(pa.ProductoAlmacenStockUnitario) || 0;
+        const rawC = Number(pa.ProductoAlmacenStock) || 0;
+        const cajasFromU = Math.floor(rawU / cantidadCajaLoad);
+        paMap.set(pa.AlmacenId, {
+          AlmacenId: pa.AlmacenId,
+          AlmacenNombre: pa.AlmacenNombre ?? "",
+          ProductoAlmacenStock: rawC + cajasFromU,
+          ProductoAlmacenStockUnitario: rawU % cantidadCajaLoad,
+        });
+      });
+      const almacenesStock: AlmacenStockRow[] = almacenes.map((a) => {
+        const existing = paMap.get(a.AlmacenId);
+        return (
+          existing ?? {
+            AlmacenId: a.AlmacenId,
+            AlmacenNombre: a.AlmacenNombre,
+            ProductoAlmacenStock: 0,
+            ProductoAlmacenStockUnitario: 0,
+          }
+        );
+      });
+      const nuevoCartItemId = Date.now() + Math.random();
+      setCarrito((prev) => [
+        ...prev,
+        {
+          id: producto.id,
+          nombre: producto.nombre,
+          imagen: producto.imagen,
+          stock: producto.stock,
+          cartItemId: nuevoCartItemId,
+          ProductoCantidadCaja: cantidadCajaLoad,
+          almacenesStock,
+        },
+      ]);
+      setSelectedProductId(nuevoCartItemId);
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo cargar el producto para agregar al inventario.",
+      });
+    }
   };
 
   const quitarProducto = (cartItemId: number) => {
@@ -118,48 +170,49 @@ export default function Inventario() {
     setCarrito(carrito.filter((p) => p.cartItemId !== cartItemId));
   };
 
-  const cambiarCantidadCaja = (cartItemId: number, cantidad: number) => {
-    if (!puedeEditar) {
-      Swal.fire({
-        icon: "warning",
-        title: "Sin permisos",
-        text: "No tienes permiso para editar cantidades en el inventario.",
-      });
-      return;
-    }
-    setCarrito(
-      carrito.map((p) => {
-        if (p.cartItemId === cartItemId) {
-          return {
-            ...p,
-            caja: Math.max(0, cantidad),
+  const updateStockAlmacen = (
+    cartItemId: number,
+    almacenIndex: number,
+    field: "ProductoAlmacenStock" | "ProductoAlmacenStockUnitario",
+    value: number
+  ) => {
+    if (!puedeEditar) return;
+    setCarrito((prev) =>
+      prev.map((p) => {
+        if (p.cartItemId !== cartItemId) return p;
+        const cantidadCaja = Math.max(1, p.ProductoCantidadCaja || 1);
+        const maxUnitario = Math.max(0, cantidadCaja - 1);
+        const newStock = [...p.almacenesStock];
+        if (field === "ProductoAlmacenStockUnitario") {
+          newStock[almacenIndex] = {
+            ...newStock[almacenIndex],
+            [field]: Math.min(maxUnitario, Math.max(0, value)),
+          };
+        } else {
+          newStock[almacenIndex] = {
+            ...newStock[almacenIndex],
+            [field]: Math.max(0, value),
           };
         }
-        return p;
+        return { ...p, almacenesStock: newStock };
       })
     );
   };
 
-  const cambiarCantidadUnidad = (cartItemId: number, cantidad: number) => {
-    if (!puedeEditar) {
-      Swal.fire({
-        icon: "warning",
-        title: "Sin permisos",
-        text: "No tienes permiso para editar cantidades en el inventario.",
-      });
-      return;
-    }
-    setCarrito(
-      carrito.map((p) => {
-        if (p.cartItemId === cartItemId) {
-          return {
-            ...p,
-            unidad: Math.max(0, cantidad),
-          };
-        }
-        return p;
-      })
+  const computeTotals = (item: CarritoItem) => {
+    const cantidadCaja = Math.max(1, item.ProductoCantidadCaja || 1);
+    const totalCajasRaw = item.almacenesStock.reduce(
+      (s, r) => s + (Number(r.ProductoAlmacenStock) || 0),
+      0
     );
+    const totalUnitarioRaw = item.almacenesStock.reduce(
+      (s, r) => s + (Number(r.ProductoAlmacenStockUnitario) || 0),
+      0
+    );
+    return {
+      totalCajas: totalCajasRaw + Math.floor(totalUnitarioRaw / cantidadCaja),
+      totalUnitario: totalUnitarioRaw % cantidadCaja,
+    };
   };
 
   useEffect(() => {
@@ -202,143 +255,43 @@ export default function Inventario() {
       return;
     }
 
-    if (!user?.LocalId) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Usuario no válido. Por favor, inicia sesión nuevamente",
-      });
-      return;
-    }
-
-    // Validar que al menos un producto tenga cantidad mayor a 0
-    const productosValidos = carrito.filter((p) => p.caja > 0 || p.unidad > 0);
-
-    if (productosValidos.length === 0) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Debes ingresar al menos una cantidad (caja o unidad) para algún producto",
-      });
-      return;
-    }
-
-    // Enviar cada producto por separado
     try {
-      for (const producto of productosValidos) {
-        const json = {
-          Envelope: {
-            _attributes: {
-              xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
-            },
-            Body: {
-              "PInventarioWS.VENTACONFIRMAR": {
-                _attributes: { xmlns: "Tech" },
-                Productoid: producto.id,
-                Caja: producto.caja,
-                Unidad: producto.unidad,
-                Almacenid: Number(user.LocalId),
-                Tipo: tipoInventario,
-              },
-            },
-          },
+      for (const item of carrito) {
+        const { totalCajas, totalUnitario } = computeTotals(item);
+        const fullProduct = await getProductoById(item.id);
+        const payload = {
+          ...fullProduct,
+          productoAlmacen: item.almacenesStock.map((pa) => ({
+            AlmacenId: pa.AlmacenId,
+            ProductoAlmacenStock: Number(pa.ProductoAlmacenStock) || 0,
+            ProductoAlmacenStockUnitario:
+              Number(pa.ProductoAlmacenStockUnitario) || 0,
+          })),
+          ProductoStock: totalCajas,
+          ProductoStockUnitario: totalUnitario,
         };
-
-        const xml = js2xml(json, {
-          compact: true,
-          ignoreComment: true,
-          spaces: 4,
-        });
-
-        const config = {
-          headers: {
-            "Content-Type": "text/xml",
-          },
-        };
-
-        await axios.post(
-          `${import.meta.env.VITE_APP_URL}${
-            import.meta.env.VITE_APP_URL_GENEXUS
-          }apinventariows`,
-          xml,
-          config
-        );
+        await updateProducto(item.id, payload);
       }
 
       Swal.fire({
-        title: "Inventario actualizado con éxito!",
-        html: `Inventario actualizado en <b></b> segundos.`,
-        timer: 3000,
-        timerProgressBar: true,
-        width: "90%",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-          const popup = Swal.getPopup();
-          if (popup) {
-            const timer = popup.querySelector("b");
-            if (timer) {
-              const timerInterval = setInterval(() => {
-                const timerLeft = Swal.getTimerLeft();
-                const secondsLeft = timerLeft ? Math.ceil(timerLeft / 1000) : 0;
-                timer.textContent = `${secondsLeft}`;
-              }, 100);
-
-              // Limpiar el intervalo cuando el popup se cierre
-              const originalClose = Swal.close;
-              Swal.close = () => {
-                clearInterval(timerInterval);
-                originalClose.call(Swal);
-              };
-            }
-          }
-        },
-      }).then((result) => {
-        if (result.dismiss === Swal.DismissReason.timer) {
-          window.location.reload();
-        }
+        icon: "success",
+        title: "Inventario actualizado",
+        text: "El stock por almacén se actualizó correctamente.",
+      }).then(() => {
+        setCarrito([]);
+        getProductosAll().then((data) => setProductos(data.data || []));
       });
     } catch (error: unknown) {
       console.error("Error al actualizar inventario:", error);
-      const err = error as { message?: string };
-      const msg = err?.message || "Error al actualizar inventario";
+      const err = error as { response?: { data?: { message?: string } } };
+      const msg =
+        err?.response?.data?.message || "Error al actualizar inventario";
       Swal.fire({
         icon: "error",
         title: "Error",
         text: msg,
       });
     }
-
-    // Limpiar estados
-    setCarrito([]);
-  };
-
-  const handleTecladoNumerico = (
-    valor: string | number,
-    tipo: "caja" | "unidad"
-  ) => {
-    if (selectedProductId === null) return;
-    setCarrito((prev) =>
-      prev.map((item) => {
-        if (item.cartItemId !== selectedProductId) return item;
-        let nuevaCantidad = String(tipo === "caja" ? item.caja : item.unidad);
-        if (valor === "C" || valor === "c") {
-          nuevaCantidad = "0";
-        } else if (valor === "←") {
-          nuevaCantidad =
-            nuevaCantidad.length > 1 ? nuevaCantidad.slice(0, -1) : "0";
-        } else {
-          if (/^\d+$/.test(String(valor))) {
-            nuevaCantidad = nuevaCantidad + valor;
-          }
-        }
-        const cantidad = Math.max(0, Number(nuevaCantidad));
-        return tipo === "caja"
-          ? { ...item, caja: cantidad }
-          : { ...item, unidad: cantidad };
-      })
-    );
   };
 
   const handleSearchSubmit = () => {
@@ -384,219 +337,147 @@ export default function Inventario() {
       {/* Lado Izquierdo */}
       <div className="flex-1 bg-[#f5f8ff] p-4 flex flex-col justify-between">
         <div className="bg-white rounded-xl shadow-lg p-0 mb-4 flex flex-col max-h-[80vh] overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <table className="w-full border-separate border-spacing-0">
+          <div className="flex-1 overflow-x-auto overflow-y-auto">
+            <table className="w-full border-separate border-spacing-0 min-w-[600px]">
               <thead>
                 <tr className="text-left bg-[#f5f8ff]">
-                  <th className="py-4 pl-6 font-semibold text-[15px]">
-                    Nombre
+                  <th
+                    rowSpan={2}
+                    className="py-3 pl-4 font-semibold text-[14px] sticky left-0 bg-[#f5f8ff] z-10 align-middle min-w-[180px]"
+                  >
+                    Producto
                   </th>
-                  <th className="py-4 font-semibold text-[15px]">Caja</th>
-                  <th className="py-4 font-semibold text-[15px]">Unidad</th>
+                  {almacenes.map((a) => (
+                    <th
+                      key={a.AlmacenId}
+                      colSpan={2}
+                      className="py-2 px-1 font-semibold text-[13px] text-center border-l border-gray-200"
+                    >
+                      {a.AlmacenNombre}
+                    </th>
+                  ))}
+                  <th
+                    rowSpan={2}
+                    className="py-3 px-2 font-semibold text-[13px] text-center border-l-2 border-gray-300 bg-[#e8eef7] align-middle w-[70px]"
+                  >
+                    Total Caja
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="py-3 px-2 font-semibold text-[13px] text-center bg-[#e8eef7] align-middle w-[70px]"
+                  >
+                    Total Unit.
+                  </th>
+                </tr>
+                <tr className="bg-[#f0f4ff] text-[12px] text-gray-600">
+                  {almacenes.map((a) => (
+                    <React.Fragment key={a.AlmacenId}>
+                      <th className="py-1 px-1 text-center border-l border-gray-200 w-[52px]">
+                        Caja
+                      </th>
+                      <th className="py-1 px-1 text-center border-l border-gray-200 w-[52px]">
+                        Unit.
+                      </th>
+                    </React.Fragment>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {carrito.map((p, idx) => (
-                  <tr
-                    key={p.cartItemId}
-                    className={`${
-                      p.cartItemId === selectedProductId
-                        ? "bg-gray-50 border-gray-300"
-                        : idx !== carrito.length - 1
-                        ? "border-b border-gray-200"
-                        : ""
-                    } transition-colors`}
-                  >
-                    <td className="py-3 pl-6 align-middle">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={p.imagen}
-                          alt={p.nombre}
-                          className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
-                        />
-                        <div>
-                          <div className="font-bold text-[17px] text-[#222] leading-tight">
-                            {p.nombre}
-                          </div>
-                          {puedeEliminar && (
-                            <div
-                              className="text-red-600 text-sm mt-1 cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                quitarProducto(p.cartItemId);
-                              }}
-                            >
-                              Eliminar
+                {carrito.map((p, idx) => {
+                  const { totalCajas, totalUnitario } = computeTotals(p);
+                  return (
+                    <tr
+                      key={p.cartItemId}
+                      className={`${
+                        p.cartItemId === selectedProductId
+                          ? "bg-gray-50"
+                          : idx !== carrito.length - 1
+                          ? "border-b border-gray-200"
+                          : ""
+                      } transition-colors`}
+                    >
+                      <td className="py-2 pl-4 align-middle sticky left-0 bg-inherit z-10">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={p.imagen}
+                            alt={p.nombre}
+                            className="w-10 h-10 object-contain rounded bg-[#f5f8ff]"
+                          />
+                          <div>
+                            <div className="font-semibold text-[14px] leading-tight">
+                              {p.nombre}
                             </div>
-                          )}
+                            {puedeEliminar && (
+                              <button
+                                type="button"
+                                className="text-red-600 text-xs mt-0.5"
+                                onClick={() => quitarProducto(p.cartItemId)}
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td
-                      className="py-3 align-middle"
-                      onClick={() => {
-                        setSelectedProductId(p.cartItemId);
-                        setTimeout(() => {
-                          cantidadCajaRefs.current[p.cartItemId]?.focus();
-                        }, 0);
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadCaja(p.cartItemId, p.caja - 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={p.caja}
-                          min={0}
-                          disabled={!puedeEditar}
-                          className={`w-16 h-8 text-center border border-gray-300 rounded text-base font-semibold mx-1 ${
-                            puedeEditar
-                              ? "bg-gray-50 text-[#222]"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                          readOnly
-                          ref={(el) => {
-                            cantidadCajaRefs.current[p.cartItemId] = el || null;
-                          }}
-                          tabIndex={0}
-                          onFocus={() => setSelectedProductId(p.cartItemId)}
-                          onKeyDown={(e) => {
-                            if (selectedProductId !== p.cartItemId) return;
-                            if (e.key >= "0" && e.key <= "9") {
-                              e.preventDefault();
-                              handleTecladoNumerico(e.key, "caja");
-                            } else if (e.key === "Backspace") {
-                              e.preventDefault();
-                              handleTecladoNumerico("←", "caja");
-                            } else if (e.key.toLowerCase() === "c") {
-                              e.preventDefault();
-                              handleTecladoNumerico("C", "caja");
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              cambiarCantidadCaja(p.cartItemId, p.caja + 1);
-                            } else if (e.key === "ArrowDown") {
-                              e.preventDefault();
-                              cambiarCantidadCaja(p.cartItemId, p.caja - 1);
-                            } else if (e.key === "Tab" && !e.shiftKey) {
-                              e.preventDefault();
-                              cantidadUnidadRefs.current[p.cartItemId]?.focus();
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadCaja(p.cartItemId, p.caja + 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td
-                      className="py-3 pr-6 align-middle"
-                      onClick={() => {
-                        setSelectedProductId(p.cartItemId);
-                        setTimeout(() => {
-                          cantidadUnidadRefs.current[p.cartItemId]?.focus();
-                        }, 0);
-                      }}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadUnidad(p.cartItemId, p.unidad - 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={p.unidad}
-                          min={0}
-                          disabled={!puedeEditar}
-                          className={`w-16 h-8 text-center border border-gray-300 rounded text-base font-semibold mx-1 ${
-                            puedeEditar
-                              ? "bg-gray-50 text-[#222]"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                          readOnly
-                          ref={(el) => {
-                            cantidadUnidadRefs.current[p.cartItemId] =
-                              el || null;
-                          }}
-                          tabIndex={0}
-                          onFocus={() => setSelectedProductId(p.cartItemId)}
-                          onKeyDown={(e) => {
-                            if (selectedProductId !== p.cartItemId) return;
-                            if (e.key >= "0" && e.key <= "9") {
-                              e.preventDefault();
-                              handleTecladoNumerico(e.key, "unidad");
-                            } else if (e.key === "Backspace") {
-                              e.preventDefault();
-                              handleTecladoNumerico("←", "unidad");
-                            } else if (e.key.toLowerCase() === "c") {
-                              e.preventDefault();
-                              handleTecladoNumerico("C", "unidad");
-                            } else if (e.key === "ArrowUp") {
-                              e.preventDefault();
-                              cambiarCantidadUnidad(p.cartItemId, p.unidad + 1);
-                            } else if (e.key === "ArrowDown") {
-                              e.preventDefault();
-                              cambiarCantidadUnidad(p.cartItemId, p.unidad - 1);
-                            } else if (e.key === "Tab" && e.shiftKey) {
-                              e.preventDefault();
-                              cantidadCajaRefs.current[p.cartItemId]?.focus();
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cambiarCantidadUnidad(p.cartItemId, p.unidad + 1);
-                            setSelectedProductId(p.cartItemId);
-                          }}
-                          disabled={!puedeEditar}
-                          className={`w-8 h-8 border border-gray-300 rounded text-lg font-bold flex items-center justify-center ${
-                            puedeEditar
-                              ? "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      {p.almacenesStock.map((pa, ai) => (
+                        <React.Fragment key={pa.AlmacenId}>
+                          <td className="border-l border-gray-200 px-1 py-2 align-middle text-center">
+                            <input
+                              type="number"
+                              min={0}
+                              value={pa.ProductoAlmacenStock}
+                              onChange={(e) =>
+                                updateStockAlmacen(
+                                  p.cartItemId,
+                                  ai,
+                                  "ProductoAlmacenStock",
+                                  Number(e.target.value) || 0
+                                )
+                              }
+                              disabled={!puedeEditar}
+                              className="w-12 h-8 text-center border border-gray-300 rounded text-sm block mx-auto"
+                            />
+                          </td>
+                          <td className="border-l border-gray-200 px-1 py-2 align-middle text-center">
+                            <input
+                              type="number"
+                              min={0}
+                              max={Math.max(
+                                0,
+                                (p.ProductoCantidadCaja || 1) - 1
+                              )}
+                              value={pa.ProductoAlmacenStockUnitario}
+                              onChange={(e) => {
+                                const raw = Number(e.target.value) || 0;
+                                const maxU = Math.max(
+                                  0,
+                                  (p.ProductoCantidadCaja || 1) - 1
+                                );
+                                updateStockAlmacen(
+                                  p.cartItemId,
+                                  ai,
+                                  "ProductoAlmacenStockUnitario",
+                                  Math.min(maxU, Math.max(0, raw))
+                                );
+                              }}
+                              disabled={!puedeEditar}
+                              className="w-12 h-8 text-center border border-gray-300 rounded text-sm block mx-auto"
+                              title={`Máx. ${
+                                (p.ProductoCantidadCaja || 1) - 1
+                              }`}
+                            />
+                          </td>
+                        </React.Fragment>
+                      ))}
+                      <td className="px-2 py-2 text-center font-semibold border-l-2 border-gray-300 bg-[#e8eef7] text-gray-900 align-middle">
+                        {totalCajas}
+                      </td>
+                      <td className="px-2 py-2 text-center font-semibold bg-[#e8eef7] text-gray-900 align-middle">
+                        {totalUnitario}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -604,22 +485,6 @@ export default function Inventario() {
 
         {/* Panel de control inferior */}
         <div className="bg-white rounded-xl shadow p-4">
-          {/* Tipo de Inventario */}
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Modificación
-            </label>
-            <select
-              value={tipoInventario}
-              onChange={(e) => setTipoInventario(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            >
-              <option value="F">Fijar</option>
-              <option value="S">Sumar</option>
-            </select>
-          </div>
-
-          {/* Botón Actualizar Inventario */}
           <div className="mb-3">
             <button
               className={`w-full border rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center transition ${
@@ -630,14 +495,15 @@ export default function Inventario() {
               onClick={sendRequest}
               disabled={!puedeCrear && !puedeEditar}
             >
-              Actualizar Inventario
+              Fijar stock por almacén
             </button>
           </div>
-
-          {/* Información del almacén */}
+          <p className="text-xs text-gray-500 text-center">
+            Los totales se calculan según Cantidad en Caja de cada producto.
+          </p>
           {localNombre && (
             <div className="mt-2 text-center text-sm text-gray-600">
-              Almacén: <span className="font-semibold">{localNombre}</span>
+              Local: <span className="font-semibold">{localNombre}</span>
             </div>
           )}
         </div>

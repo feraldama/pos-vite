@@ -17,6 +17,7 @@ import {
   createCliente,
 } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
+import type { Cliente } from "../../components/common/ClienteFormModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
@@ -33,17 +34,6 @@ import {
   generatePresupuestoPDF,
   type CarritoItem,
 } from "../../utils/utils";
-
-interface Cliente {
-  ClienteId: number;
-  ClienteRUC: string;
-  ClienteNombre: string;
-  ClienteApellido: string;
-  ClienteDireccion: string;
-  ClienteTelefono: string;
-  ClienteTipo: string;
-  UsuarioId: string;
-}
 
 interface Caja {
   id: string | number;

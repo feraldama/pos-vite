@@ -57,6 +57,46 @@ exports.search = async (req, res) => {
   }
 };
 
+// Obtener registros por rango de fechas (para reportes de cierre)
+// Usa solo la parte DATE para evitar desfases por zona horaria; incluye un día antes y después del rango
+exports.getByDateRange = async (req, res) => {
+  try {
+    const fechaDesde = req.query.fechaDesde;
+    const fechaHasta = req.query.fechaHasta;
+    const limit = parseInt(req.query.limit) || 10000;
+    if (!fechaDesde || !fechaHasta) {
+      return res.status(400).json({
+        message: "Se requieren los parámetros fechaDesde y fechaHasta (YYYY-MM-DD)",
+      });
+    }
+    const desde = new Date(fechaDesde + "T00:00:00");
+    desde.setDate(desde.getDate() - 1);
+    const hasta = new Date(fechaHasta + "T00:00:00");
+    hasta.setDate(hasta.getDate() + 1);
+    const fechaDesdeStr =
+      desde.getFullYear() +
+      "-" +
+      String(desde.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(desde.getDate()).padStart(2, "0");
+    const fechaHastaStr =
+      hasta.getFullYear() +
+      "-" +
+      String(hasta.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(hasta.getDate()).padStart(2, "0");
+    const data = await RegistroDiarioCaja.getByDateRange(
+      fechaDesdeStr,
+      fechaHastaStr,
+      limit
+    );
+    res.json({ data });
+  } catch (error) {
+    console.error("Error al obtener registros por rango:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Obtener un registro por ID
 exports.getById = async (req, res) => {
   try {

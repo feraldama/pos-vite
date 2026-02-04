@@ -325,6 +325,28 @@ const RegistroDiarioCaja = {
     });
   },
 
+  getByDateRange: (fechaDesdeStr, fechaHastaStr, limit = 10000) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT r.*,
+          c.CajaDescripcion,
+          t.TipoGastoDescripcion,
+          tg.TipoGastoGrupoDescripcion
+        FROM registrodiariocaja r
+        LEFT JOIN Caja c ON r.CajaId = c.CajaId
+        LEFT JOIN TipoGasto t ON r.TipoGastoId = t.TipoGastoId
+        LEFT JOIN tipogastogrupo tg ON r.TipoGastoId = tg.TipoGastoId AND r.TipoGastoGrupoId = tg.TipoGastoGrupoId
+        WHERE DATE(r.RegistroDiarioCajaFecha) >= DATE(?) AND DATE(r.RegistroDiarioCajaFecha) <= DATE(?)
+        ORDER BY r.RegistroDiarioCajaId ASC
+        LIMIT ?
+      `;
+      db.query(query, [fechaDesdeStr, fechaHastaStr, limit], (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
+
   getEstadoAperturaPorUsuario: (usuarioId) => {
     return new Promise((resolve, reject) => {
       // Buscar la última apertura del usuario

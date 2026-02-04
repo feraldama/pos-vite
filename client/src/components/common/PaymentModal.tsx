@@ -458,6 +458,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </label>
               <input
                 type="text"
+                readOnly
                 value={formatMiles(bancoDebito)}
                 onFocus={(e) => {
                   setPagoTipoLocal("D");
@@ -466,19 +467,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     setTotalRest(0);
                   }
                   e.target.select();
-                }}
-                onChange={(e) => {
-                  const newValue = Number(e.target.value.replace(/\D/g, ""));
-                  setBancoDebito(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoCredito -
-                    cuentaCliente -
-                    newValue * 1.03 -
-                    voucher;
-                  setTotalRest(totalResto);
                 }}
                 style={{
                   width: 120,
@@ -516,6 +504,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </label>
               <input
                 type="text"
+                readOnly
                 value={formatMiles(bancoCredito)}
                 onFocus={(e) => {
                   setPagoTipoLocal("CR");
@@ -524,19 +513,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     setTotalRest(0);
                   }
                   e.target.select();
-                }}
-                onChange={(e) => {
-                  const newValue = Number(e.target.value.replace(/\D/g, ""));
-                  setBancoCredito(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoDebito -
-                    cuentaCliente -
-                    newValue * 1.05 -
-                    voucher;
-                  setTotalRest(totalResto);
                 }}
                 style={{
                   width: 120,

@@ -113,13 +113,23 @@ export default function ProductsList({
 
   useEffect(() => {
     if (currentProduct) {
+      const cantidadCajaLoad = Math.max(
+        1,
+        Number(currentProduct.ProductoCantidadCaja) || 1
+      );
       setStockAlmacenes(
-        (currentProduct.productoAlmacen ?? []).map((pa) => ({
-          AlmacenId: pa.AlmacenId,
-          AlmacenNombre: pa.AlmacenNombre,
-          ProductoAlmacenStock: pa.ProductoAlmacenStock ?? 0,
-          ProductoAlmacenStockUnitario: pa.ProductoAlmacenStockUnitario ?? 0,
-        }))
+        (currentProduct.productoAlmacen ?? []).map((pa) => {
+          const rawUnitario = Number(pa.ProductoAlmacenStockUnitario) || 0;
+          const rawCajas = Number(pa.ProductoAlmacenStock) || 0;
+          const cajasFromUnitario = Math.floor(rawUnitario / cantidadCajaLoad);
+          const unitarioNorm = rawUnitario % cantidadCajaLoad;
+          return {
+            AlmacenId: pa.AlmacenId,
+            AlmacenNombre: pa.AlmacenNombre,
+            ProductoAlmacenStock: rawCajas + cajasFromUnitario,
+            ProductoAlmacenStockUnitario: unitarioNorm,
+          };
+        })
       );
       setFormData({
         ...currentProduct,
@@ -249,23 +259,29 @@ export default function ProductsList({
     );
   };
 
+  // Calcular stock total (cajas) y stock unitario total teniendo en cuenta Cantidad en Caja
+  const cantidadCaja = Math.max(1, Number(formData.ProductoCantidadCaja) || 1);
+  const totalCajasRaw = stockAlmacenes.reduce(
+    (s, row) => s + (Number(row.ProductoAlmacenStock) || 0),
+    0
+  );
+  const totalUnitarioRaw = stockAlmacenes.reduce(
+    (s, row) => s + (Number(row.ProductoAlmacenStockUnitario) || 0),
+    0
+  );
+  const stockTotalCajas =
+    totalCajasRaw + Math.floor(totalUnitarioRaw / cantidadCaja);
+  const stockUnitarioTotal = totalUnitarioRaw % cantidadCaja;
+
   // Enviar formulario
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { ProductoImagen_GXI, ...cleanFormData } = formData; // Limpiamos ProductoImagen_GXI antes de enviar
-    const totalStock = stockAlmacenes.reduce(
-      (s, row) => s + (Number(row.ProductoAlmacenStock) || 0),
-      0
-    );
-    const totalStockUnitario = stockAlmacenes.reduce(
-      (s, row) => s + (Number(row.ProductoAlmacenStockUnitario) || 0),
-      0
-    );
     const payload = {
       ...cleanFormData,
-      ProductoStock: totalStock,
-      ProductoStockUnitario: totalStockUnitario,
+      ProductoStock: stockTotalCajas,
+      ProductoStockUnitario: stockUnitarioTotal,
       productoAlmacen: stockAlmacenes.map((pa) => ({
         AlmacenId: pa.AlmacenId,
         ProductoAlmacenStock: Number(pa.ProductoAlmacenStock) || 0,
@@ -550,13 +566,10 @@ export default function ProductsList({
                       name="ProductoStock"
                       id="ProductoStock"
                       min={0}
-                      value={stockAlmacenes.reduce(
-                        (s, row) => s + (Number(row.ProductoAlmacenStock) || 0),
-                        0
-                      )}
+                      value={stockTotalCajas}
                       readOnly
                       className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
-                      title="Se calcula desde el stock por almacén"
+                      title="Cajas + unidades convertidas a cajas (según Cantidad por Caja)"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -571,14 +584,10 @@ export default function ProductsList({
                       name="ProductoStockUnitario"
                       id="ProductoStockUnitario"
                       min={0}
-                      value={stockAlmacenes.reduce(
-                        (s, row) =>
-                          s + (Number(row.ProductoAlmacenStockUnitario) || 0),
-                        0
-                      )}
+                      value={stockUnitarioTotal}
                       readOnly
                       className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed"
-                      title="Se calcula desde el stock por almacén"
+                      title="Resto de unidades después de formar cajas (según Cantidad por Caja)"
                     />
                   </div>
                   {/* Stock por almacén */}
@@ -673,15 +682,24 @@ export default function ProductsList({
                                   <input
                                     type="number"
                                     min={0}
+                                    max={Math.max(0, cantidadCaja - 1)}
                                     value={row.ProductoAlmacenStockUnitario}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                      const raw = Number(e.target.value) || 0;
+                                      const clamped = Math.min(
+                                        Math.max(0, raw),
+                                        Math.max(0, cantidadCaja - 1)
+                                      );
                                       updateStockAlmacen(
                                         index,
                                         "ProductoAlmacenStockUnitario",
-                                        Number(e.target.value) || 0
-                                      )
-                                    }
+                                        clamped
+                                      );
+                                    }}
                                     className="bg-gray-50 border border-gray-300 text-gray-900 rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                    title={`Máximo ${
+                                      cantidadCaja - 1
+                                    } (Cantidad en Caja - 1)`}
                                   />
                                 </td>
                                 <td className="px-3 py-2">

@@ -74,37 +74,17 @@ const Producto = {
         sortField === "ProductoStock" || sortField === "ProductoStockUnitario"
           ? sortField
           : `p.${sortField}`;
-      // Si localId viene, el stock es solo del almacén con AlmacenId = localId (mismo id que el local)
-      const stockSubquery =
-        localId != null && localId !== ""
-          ? `SELECT ProductoId,
-            SUM(ProductoAlmacenStock) AS TotalStock,
-            SUM(ProductoAlmacenStockUnitario) AS TotalStockUnitario
-          FROM productoalmacen
-          WHERE AlmacenId = ?
-          GROUP BY ProductoId`
-          : `SELECT ProductoId,
-            SUM(ProductoAlmacenStock) AS TotalStock,
-            SUM(ProductoAlmacenStockUnitario) AS TotalStockUnitario
-          FROM productoalmacen
-          GROUP BY ProductoId`;
+
+      // Ahora el stock total viene directamente de la tabla producto
       const queryPaginated = `
-        SELECT p.*, l.LocalNombre,
-          COALESCE(pa.TotalStock, 0) AS ProductoStock,
-          COALESCE(pa.TotalStockUnitario, 0) AS ProductoStockUnitario
+        SELECT p.*, l.LocalNombre
         FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
-        LEFT JOIN (
-          ${stockSubquery}
-        ) pa ON p.ProductoId = pa.ProductoId
         ORDER BY ${orderByField} ${order}
         LIMIT ? OFFSET ?
       `;
-      const queryParams =
-        localId != null && localId !== ""
-          ? [localId, limit, offset]
-          : [limit, offset];
-      db.query(queryPaginated, queryParams, (err, results) => {
+
+      db.query(queryPaginated, [limit, offset], (err, results) => {
         if (err) return reject(err);
 
         db.query(
@@ -161,29 +141,12 @@ const Producto = {
         sortField === "ProductoStock" || sortField === "ProductoStockUnitario"
           ? sortField
           : `p.${sortField}`;
-      // Si localId viene, el stock es solo del almacén con AlmacenId = localId
-      const stockSubquerySearch =
-        localId != null && localId !== ""
-          ? `SELECT ProductoId,
-            SUM(ProductoAlmacenStock) AS TotalStock,
-            SUM(ProductoAlmacenStockUnitario) AS TotalStockUnitario
-          FROM productoalmacen
-          WHERE AlmacenId = ?
-          GROUP BY ProductoId`
-          : `SELECT ProductoId,
-            SUM(ProductoAlmacenStock) AS TotalStock,
-            SUM(ProductoAlmacenStockUnitario) AS TotalStockUnitario
-          FROM productoalmacen
-          GROUP BY ProductoId`;
+
+      // En búsqueda también usamos el stock directo de producto
       const searchQuery = `
-        SELECT p.*, l.LocalNombre,
-          COALESCE(pa.TotalStock, 0) AS ProductoStock,
-          COALESCE(pa.TotalStockUnitario, 0) AS ProductoStockUnitario
+        SELECT p.*, l.LocalNombre
         FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
-        LEFT JOIN (
-          ${stockSubquerySearch}
-        ) pa ON p.ProductoId = pa.ProductoId
         WHERE p.ProductoNombre LIKE ? 
         OR p.ProductoCodigo LIKE ? 
         OR l.LocalNombre LIKE ?
@@ -191,10 +154,13 @@ const Producto = {
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;
-      const searchParams =
-        localId != null && localId !== ""
-          ? [localId, searchValue, searchValue, searchValue, limit, offset]
-          : [searchValue, searchValue, searchValue, limit, offset];
+      const searchParams = [
+        searchValue,
+        searchValue,
+        searchValue,
+        limit,
+        offset,
+      ];
 
       db.query(searchQuery, searchParams, (err, results) => {
         if (err) return reject(err);
@@ -343,33 +309,40 @@ const Producto = {
           : undefined;
 
       const syncProductoAlmacen = (callback) => {
+        // Si no se envía productoAlmacen desde el front, no tocamos el detalle.
         if (productoAlmacen === undefined) return callback();
-        db.query(
-          "DELETE FROM productoalmacen WHERE ProductoId = ?",
-          [id],
-          (errDel) => {
-            if (errDel) return reject(errDel);
-            if (productoAlmacen.length > 0) {
-              const placeholders = productoAlmacen
-                .map(() => "(?, ?, ?, ?)")
-                .join(", ");
-              const insertValues = productoAlmacen.flatMap((pa) => [
-                id,
-                pa.AlmacenId,
-                pa.ProductoAlmacenStock ?? 0,
-                pa.ProductoAlmacenStockUnitario ?? 0,
-              ]);
-              db.query(
-                `INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario) VALUES ${placeholders}`,
-                insertValues,
-                (errPa) => {
-                  if (errPa) return reject(errPa);
-                  callback();
-                }
-              );
-            } else callback();
-          }
-        );
+
+        // Si se envía un array vacío, tampoco borramos filas para no violar FKs.
+        if (productoAlmacen.length === 0) return callback();
+
+        const placeholders = productoAlmacen
+          .map(() => "(?, ?, ?, ?)")
+          .join(", ");
+
+        const insertValues = productoAlmacen.flatMap((pa) => [
+          id,
+          pa.AlmacenId,
+          pa.ProductoAlmacenStock ?? 0,
+          pa.ProductoAlmacenStockUnitario ?? 0,
+        ]);
+
+        // Usamos UPSERT para solo actualizar stock, sin borrar ni cambiar claves.
+        const upsertQuery = `
+          INSERT INTO productoalmacen (
+            ProductoId,
+            AlmacenId,
+            ProductoAlmacenStock,
+            ProductoAlmacenStockUnitario
+          ) VALUES ${placeholders}
+          ON DUPLICATE KEY UPDATE
+            ProductoAlmacenStock = VALUES(ProductoAlmacenStock),
+            ProductoAlmacenStockUnitario = VALUES(ProductoAlmacenStockUnitario)
+        `;
+
+        db.query(upsertQuery, insertValues, (errPa) => {
+          if (errPa) return reject(errPa);
+          callback();
+        });
       };
 
       if (updateFields.length === 0) {
@@ -413,8 +386,14 @@ const Producto = {
   getReporteStock: () => {
     return new Promise((resolve, reject) => {
       const query = `
-        SELECT p.ProductoId, p.ProductoCodigo, p.ProductoNombre,
-          pa.AlmacenId, a.AlmacenNombre,
+        SELECT 
+          p.ProductoId,
+          p.ProductoCodigo,
+          p.ProductoNombre,
+          COALESCE(p.ProductoStock, 0) AS ProductoStock,
+          COALESCE(p.ProductoStockUnitario, 0) AS ProductoStockUnitario,
+          pa.AlmacenId,
+          a.AlmacenNombre,
           COALESCE(pa.ProductoAlmacenStock, 0) AS ProductoAlmacenStock,
           COALESCE(pa.ProductoAlmacenStockUnitario, 0) AS ProductoAlmacenStockUnitario
         FROM producto p
@@ -432,15 +411,14 @@ const Producto = {
               ProductoId: row.ProductoId,
               ProductoCodigo: row.ProductoCodigo,
               ProductoNombre: row.ProductoNombre,
-              ProductoStock: 0,
-              ProductoStockUnitario: 0,
+              // Usar directamente los valores de la tabla producto
+              ProductoStock: Number(row.ProductoStock) || 0,
+              ProductoStockUnitario: Number(row.ProductoStockUnitario) || 0,
               productoAlmacen: [],
             };
           }
           const totalStock = Number(row.ProductoAlmacenStock) || 0;
           const totalUnit = Number(row.ProductoAlmacenStockUnitario) || 0;
-          byProduct[id].ProductoStock += totalStock;
-          byProduct[id].ProductoStockUnitario += totalUnit;
           if (row.AlmacenId != null) {
             byProduct[id].productoAlmacen.push({
               AlmacenNombre: row.AlmacenNombre || "",

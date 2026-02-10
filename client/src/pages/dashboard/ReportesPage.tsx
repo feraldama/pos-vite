@@ -318,6 +318,13 @@ const ReportesPage: React.FC = () => {
         ? data.productos
         : [];
 
+      const productosOrdenados = [...productos].sort(
+        (a, b) =>
+          String(a.ProductoNombre ?? "").localeCompare(
+            String(b.ProductoNombre ?? "")
+          )
+      );
+
       const doc = new jsPDF({ orientation: "landscape" });
       let y = 20;
 
@@ -326,7 +333,7 @@ const ReportesPage: React.FC = () => {
       y += 10;
 
       const tableRows: string[][] = [];
-      productos.forEach((p: ProductoStockReporte) => {
+      productosOrdenados.forEach((p: ProductoStockReporte) => {
         tableRows.push([
           String(p.ProductoCodigo ?? ""),
           String(p.ProductoNombre ?? ""),
@@ -336,7 +343,7 @@ const ReportesPage: React.FC = () => {
         (p.productoAlmacen || []).forEach((pa: ProductoAlmacenStock) => {
           tableRows.push([
             "",
-            `  └ ${pa.AlmacenNombre ?? ""}`,
+            `  - ${pa.AlmacenNombre ?? ""}`,
             String(pa.ProductoAlmacenStock ?? 0),
             String(pa.ProductoAlmacenStockUnitario ?? 0),
           ]);
@@ -366,7 +373,7 @@ const ReportesPage: React.FC = () => {
       doc.setFontSize(10);
       doc.text(
         `Total productos: ${
-          productos.length
+          productosOrdenados.length
         } — Generado: ${new Date().toLocaleString("es-PY")}`,
         14,
         y

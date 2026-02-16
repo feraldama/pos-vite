@@ -31,10 +31,12 @@ import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
+import DocumentTitle from "./components/common/DocumentTitle";
 
 function App() {
   return (
     <Router>
+      <DocumentTitle />
       <AuthProvider>
         <Routes>
           {/* Redirige la raíz / a /login */}

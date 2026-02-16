@@ -22,6 +22,8 @@ interface PaymentModalProps {
   printTicket: boolean;
   voucher: number;
   setVoucher: (v: number) => void;
+  ventaNroPOS: string;
+  setVentaNroPOS: (v: string) => void;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -45,11 +47,18 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   printTicket,
   voucher,
   setVoucher,
+  ventaNroPOS,
+  setVentaNroPOS,
 }) => {
   const [pagoTipo, setPagoTipoLocal] = useState<
     "E" | "B" | "D" | "CR" | "C" | "V"
   >("E");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const pagoConTarjeta = bancoDebito > 0 || bancoCredito > 0;
+  const ventaNroPOSValido =
+    !pagoConTarjeta ||
+    (ventaNroPOS.trim().length >= 4 && /^\d+$/.test(ventaNroPOS.trim()));
 
   useEffect(() => {
     if (show) {
@@ -58,6 +67,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       setBancoDebito(0);
       setBancoCredito(0);
       setCuentaCliente(0);
+      setVentaNroPOS("");
       setTotalRest(totalCost);
       setTimeout(() => {
         const efectivoInput = document.getElementById("efectivo-input");
@@ -216,7 +226,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !isSubmitting && totalRest <= 0) {
+    if (
+      e.key === "Enter" &&
+      !isSubmitting &&
+      totalRest <= 0 &&
+      ventaNroPOSValido
+    ) {
       handleSendRequest();
     }
   };
@@ -467,6 +482,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     setTotalRest(0);
                   }
                   e.target.select();
+                  setTimeout(() => {
+                    document.getElementById("venta-nro-pos-input")?.focus();
+                  }, 100);
                 }}
                 style={{
                   width: 120,
@@ -513,6 +531,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     setTotalRest(0);
                   }
                   e.target.select();
+                  setTimeout(() => {
+                    document.getElementById("venta-nro-pos-input")?.focus();
+                  }, 100);
                 }}
                 style={{
                   width: 120,
@@ -529,6 +550,54 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
+            {/* Nro. POS - solo cuando hay pago con tarjeta débito o crédito */}
+            {pagoConTarjeta && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <label
+                  style={{
+                    flex: 1,
+                    fontSize: 16,
+                    color: "#444",
+                    textAlign: "right",
+                    marginRight: 8,
+                  }}
+                >
+                  Nro. POS (mín. 4 dígitos):
+                </label>
+                <input
+                  id="venta-nro-pos-input"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={ventaNroPOS}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setVentaNroPOS(val);
+                  }}
+                  placeholder="Ej: 1234"
+                  style={{
+                    width: 120,
+                    padding: "6px 10px",
+                    border:
+                      ventaNroPOS.trim().length > 0 &&
+                      ventaNroPOS.trim().length < 4
+                        ? "2px solid #ef4444"
+                        : "1px solid #cbd5e1",
+                    borderRadius: 6,
+                    fontSize: 16,
+                    textAlign: "right",
+                    background: "#f9fafb",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            )}
             {/* Cuenta Cliente */}
             <div
               style={{
@@ -759,13 +828,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           <button
             className={`px-8 py-2.5 rounded-lg font-bold text-lg border-none transition-colors duration-200
               ${
-                isSubmitting || totalRest > 0
+                isSubmitting || totalRest > 0 || !ventaNroPOSValido
                   ? "bg-blue-200 text-white cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               }
             `}
             onClick={handleSendRequest}
-            disabled={isSubmitting || totalRest > 0}
+            disabled={isSubmitting || totalRest > 0 || !ventaNroPOSValido}
           >
             Facturar
           </button>

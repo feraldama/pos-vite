@@ -105,6 +105,7 @@ export default function Sales() {
   const [bancoCredito, setBancoCredito] = useState(0);
   const [cuentaCliente, setCuentaCliente] = useState(0);
   const [voucher, setVoucher] = useState(0);
+  const [ventaNroPOS, setVentaNroPOS] = useState("");
   const [printTicket, setPrintTicket] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -537,6 +538,10 @@ export default function Sales() {
                   Transferreact: Number(banco),
                   Ventanrofactura: 0,
                   Ventatimbrado: 0,
+                  Ventanropos:
+                    bancoDebito > 0 || bancoCredito > 0
+                      ? ventaNroPOS.trim() || "0"
+                      : "0",
                 }),
           },
         },
@@ -592,6 +597,7 @@ export default function Sales() {
     setBancoCredito(0);
     setCuentaCliente(0);
     setVoucher(0);
+    setVentaNroPOS("");
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
@@ -1253,6 +1259,8 @@ export default function Sales() {
         sendRequest={sendRequest}
         voucher={voucher}
         setVoucher={setVoucher}
+        ventaNroPOS={ventaNroPOS}
+        setVentaNroPOS={setVentaNroPOS}
       />
     </div>
   );

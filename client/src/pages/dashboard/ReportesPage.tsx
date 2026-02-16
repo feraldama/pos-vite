@@ -89,7 +89,7 @@ const ReportesPage: React.FC = () => {
         const todosLosClientes = response.data || [];
         const clientesOrdenados = todosLosClientes.sort(
           (a: Cliente, b: Cliente) =>
-            a.ClienteNombre.localeCompare(b.ClienteNombre)
+            a.ClienteNombre.localeCompare(b.ClienteNombre),
         );
         setClientes(clientesOrdenados);
       } catch (error) {
@@ -105,6 +105,13 @@ const ReportesPage: React.FC = () => {
   const formatearFecha = (fecha: string): string => {
     const [año, mes, dia] = fecha.split("-");
     return `${dia}/${mes}/${año}`;
+  };
+
+  // Extrae solo la fecha (sin hora) de un datetime para reportes
+  const formatearSoloFecha = (fechaStr: string): string => {
+    const parteFecha = fechaStr.split("T")[0]?.split(" ")[0] || fechaStr;
+    const [año, mes, dia] = parteFecha.split("-");
+    return año && mes && dia ? `${dia}/${mes}/${año}` : fechaStr;
   };
 
   const handleGenerarPDF = async () => {
@@ -141,8 +148,10 @@ const ReportesPage: React.FC = () => {
       doc.setFontSize(14);
       doc.text(`TOTAL GENERAL: Gs. ${formatMiles(totalGeneral)}`, 14, y);
       doc.save("creditos_pendientes.pdf");
-      // Abrir el PDF automáticamente después de descargarlo
-      doc.output("dataurlnewwindow");
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch {
       setError("Error al generar el PDF de deudas pendientes");
     } finally {
@@ -192,7 +201,7 @@ const ReportesPage: React.FC = () => {
       doc.text(
         `Cliente: ${reporte.cliente.ClienteNombre} ${reporte.cliente.ClienteApellido}`,
         14,
-        y
+        y,
       );
       y += 6;
       if (reporte.cliente.ClienteRUC) {
@@ -201,10 +210,10 @@ const ReportesPage: React.FC = () => {
       }
       doc.text(
         `Período: ${formatearFecha(fechaDesde)} al ${formatearFecha(
-          fechaHasta
+          fechaHasta,
         )}`,
         14,
-        y
+        y,
       );
       y += 10;
 
@@ -218,17 +227,14 @@ const ReportesPage: React.FC = () => {
           venta.VentaTipo === "CO"
             ? "Contado"
             : venta.VentaTipo === "CR"
-            ? "Crédito"
-            : venta.VentaTipo === "PO"
-            ? "POS"
-            : venta.VentaTipo === "TR"
-            ? "Transfer"
-            : venta.VentaTipo;
+              ? "Crédito"
+              : venta.VentaTipo === "PO"
+                ? "POS"
+                : venta.VentaTipo === "TR"
+                  ? "Transfer"
+                  : venta.VentaTipo;
 
-        const fechaVenta = new Date(venta.VentaFecha)
-          .toLocaleDateString("es-PY")
-          .split("/")
-          .join("/");
+        const fechaVenta = formatearSoloFecha(venta.VentaFecha);
 
         ventasRows.push([
           venta.VentaId.toString(),
@@ -246,10 +252,7 @@ const ReportesPage: React.FC = () => {
         // Si es crédito y tiene pagos, agregar información de pagos
         if (venta.VentaTipo === "CR" && venta.Pagos && venta.Pagos.length > 0) {
           venta.Pagos.forEach((pago) => {
-            const fechaPago = new Date(pago.VentaCreditoPagoFecha)
-              .toLocaleDateString("es-PY")
-              .split("/")
-              .join("/");
+            const fechaPago = formatearSoloFecha(pago.VentaCreditoPagoFecha);
             ventasRows.push([
               "",
               `  Pago ${pago.VentaCreditoPagoId}`,
@@ -290,18 +293,21 @@ const ReportesPage: React.FC = () => {
         doc.text(
           `Total Saldo Pendiente: Gs. ${formatMiles(totalSaldoPendiente)}`,
           14,
-          y
+          y,
         );
       }
 
       const nombreArchivo = `reporte_ventas_${reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
       doc.save(nombreArchivo);
-      // Abrir el PDF automáticamente después de descargarlo
-      doc.output("dataurlnewwindow");
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(
-        error.response?.data?.message || "Error al generar el reporte de ventas"
+        error.response?.data?.message ||
+          "Error al generar el reporte de ventas",
       );
     } finally {
       setLoading(false);
@@ -318,11 +324,10 @@ const ReportesPage: React.FC = () => {
         ? data.productos
         : [];
 
-      const productosOrdenados = [...productos].sort(
-        (a, b) =>
-          String(a.ProductoNombre ?? "").localeCompare(
-            String(b.ProductoNombre ?? "")
-          )
+      const productosOrdenados = [...productos].sort((a, b) =>
+        String(a.ProductoNombre ?? "").localeCompare(
+          String(b.ProductoNombre ?? ""),
+        ),
       );
 
       const doc = new jsPDF({ orientation: "landscape" });
@@ -374,9 +379,9 @@ const ReportesPage: React.FC = () => {
       doc.text(
         `Total productos: ${
           productosOrdenados.length
-        } — Generado: ${new Date().toLocaleString("es-PY")}`,
+        } — Generado: ${new Date().toLocaleDateString("es-PY")}`,
         14,
-        y
+        y,
       );
 
       const nombreArchivo = `reporte_stock_${new Date()
@@ -392,7 +397,7 @@ const ReportesPage: React.FC = () => {
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(
-        error.response?.data?.message || "Error al generar el reporte de stock"
+        error.response?.data?.message || "Error al generar el reporte de stock",
       );
     } finally {
       setLoading(false);

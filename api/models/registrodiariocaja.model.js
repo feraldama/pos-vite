@@ -1,5 +1,31 @@
 const db = require("../config/db");
 
+/**
+ * Normaliza RegistroDiarioCajaFecha para que siempre incluya fecha y hora.
+ * - Si no se proporciona valor: usa fecha/hora actual
+ * - Si es solo fecha (YYYY-MM-DD): usa esa fecha con la hora actual del momento del registro
+ * - Si es datetime completo: lo usa tal cual
+ */
+function normalizeRegistroFecha(value) {
+  if (!value) return new Date();
+  const str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const now = new Date();
+    const [y, m, d] = str.split("-").map(Number);
+    return new Date(
+      y,
+      m - 1,
+      d,
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+      now.getMilliseconds()
+    );
+  }
+  const d = value instanceof Date ? value : new Date(value);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
 const RegistroDiarioCaja = {
   getAll: () => {
     return new Promise((resolve, reject) => {
@@ -217,7 +243,7 @@ const RegistroDiarioCaja = {
 
       const values = [
         registroData.CajaId,
-        registroData.RegistroDiarioCajaFecha || new Date(),
+        normalizeRegistroFecha(registroData.RegistroDiarioCajaFecha),
         registroData.TipoGastoId,
         registroData.TipoGastoGrupoId,
         registroData.RegistroDiarioCajaDetalle,
@@ -255,7 +281,11 @@ const RegistroDiarioCaja = {
       camposActualizables.forEach((campo) => {
         if (registroData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
-          values.push(registroData[campo]);
+          const valor =
+            campo === "RegistroDiarioCajaFecha"
+              ? normalizeRegistroFecha(registroData[campo])
+              : registroData[campo];
+          values.push(valor);
         }
       });
 

@@ -1,5 +1,31 @@
 const db = require("../config/db");
 
+/**
+ * Normaliza VentaFecha para que siempre incluya fecha y hora.
+ * - Si no se proporciona valor: usa fecha/hora actual
+ * - Si es solo fecha (YYYY-MM-DD): usa esa fecha con la hora actual del momento del registro
+ * - Si es datetime completo: lo usa tal cual
+ */
+function normalizeVentaFecha(value) {
+  if (!value) return new Date();
+  const str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const now = new Date();
+    const [y, m, d] = str.split("-").map(Number);
+    return new Date(
+      y,
+      m - 1,
+      d,
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+      now.getMilliseconds()
+    );
+  }
+  const d = value instanceof Date ? value : new Date(value);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
 const Venta = {
   getAll: () => {
     return new Promise((resolve, reject) => {
@@ -46,7 +72,7 @@ const Venta = {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       const values = [
-        data.VentaFecha,
+        normalizeVentaFecha(data.VentaFecha),
         data.ClienteId,
         data.AlmacenId,
         data.VentaTipo,
@@ -81,7 +107,7 @@ const Venta = {
         WHERE VentaId = ?`;
 
       const values = [
-        data.VentaFecha,
+        normalizeVentaFecha(data.VentaFecha),
         data.ClienteId,
         data.AlmacenId,
         data.VentaTipo,

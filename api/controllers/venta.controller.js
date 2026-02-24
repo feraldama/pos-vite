@@ -183,14 +183,17 @@ exports.getDeudasPendientesPorCliente = async (req, res) => {
 };
 
 // Obtener reporte de ventas por cliente y rango de fechas
+// clienteId puede ser un ID numérico o "TODOS" para todas las ventas
 exports.getReporteVentasPorCliente = async (req, res) => {
   try {
     const { clienteId, fechaDesde, fechaHasta } = req.query;
 
-    if (!clienteId) {
+    const esTodos = String(clienteId).toUpperCase() === "TODOS";
+    const esClienteValido = !isNaN(Number(clienteId)) && Number(clienteId) > 0;
+    if (!clienteId || (!esTodos && !esClienteValido)) {
       return res.status(400).json({
         success: false,
-        message: "El ID del cliente es requerido",
+        message: "Seleccione un cliente o TODOS",
       });
     }
 

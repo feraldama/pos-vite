@@ -41,6 +41,8 @@ interface Venta {
   Pagos: Pago[];
   AlmacenNombre: string;
   UsuarioNombre: string;
+  ClienteNombre?: string;
+  ClienteApellido?: string;
 }
 
 interface ReporteData {
@@ -246,7 +248,7 @@ const ReportesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<string>("");
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<string>("TODOS");
   const [fechaDesde, setFechaDesde] = useState(() => {
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -376,11 +378,6 @@ const ReportesPage: React.FC = () => {
   };
 
   const handleGenerarReporteVentas = async () => {
-    if (!clienteSeleccionado) {
-      setError("Debes seleccionar un cliente");
-      return;
-    }
-
     if (!fechaDesde || !fechaHasta) {
       setError("Debes seleccionar ambas fechas");
       return;
@@ -403,8 +400,9 @@ const ReportesPage: React.FC = () => {
       });
 
       const reporte: ReporteData = res.data.data;
+      const esTodos = clienteSeleccionado.toUpperCase() === "TODOS";
 
-      const doc = new jsPDF();
+      const doc = new jsPDF({ orientation: esTodos ? "landscape" : "portrait" });
       let y = 20;
 
       // Título
@@ -412,10 +410,10 @@ const ReportesPage: React.FC = () => {
       doc.text("Reporte de Ventas por Cliente", 14, y);
       y += 10;
 
-      // Información del cliente
+      // Información del cliente o TODOS
       doc.setFontSize(12);
       doc.text(
-        `Cliente: ${reporte.cliente.ClienteNombre} ${reporte.cliente.ClienteApellido}`,
+        `Cliente: ${reporte.cliente.ClienteNombre} ${reporte.cliente.ClienteApellido}`.trim() || "TODOS",
         14,
         y,
       );
@@ -433,10 +431,15 @@ const ReportesPage: React.FC = () => {
       );
       y += 10;
 
-      // Tabla de ventas
-      const ventasRows: string[][] = [];
+      // Totales por tipo de venta
       let totalVentas = 0;
       let totalSaldoPendiente = 0;
+      let totalEfectivo = 0;
+      let totalPOS = 0;
+      let totalTransfer = 0;
+      let totalCredito = 0;
+
+      const ventasRows: string[][] = [];
 
       reporte.ventas.forEach((venta) => {
         const tipoVenta =
@@ -451,59 +454,100 @@ const ReportesPage: React.FC = () => {
                   : venta.VentaTipo;
 
         const fechaVenta = formatearSoloFecha(venta.VentaFecha);
-
-        ventasRows.push([
-          venta.VentaId.toString(),
-          fechaVenta,
-          tipoVenta,
-          formatMiles(venta.Total),
-          venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
-        ]);
+        const clienteNombre = [venta.ClienteNombre, venta.ClienteApellido]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || "-";
 
         totalVentas += Number(venta.Total);
-        if (venta.VentaTipo === "CR") {
+        if (venta.VentaTipo === "CO") totalEfectivo += Number(venta.Total);
+        else if (venta.VentaTipo === "PO") totalPOS += Number(venta.Total);
+        else if (venta.VentaTipo === "TR") totalTransfer += Number(venta.Total);
+        else if (venta.VentaTipo === "CR") {
+          totalCredito += Number(venta.Total);
           totalSaldoPendiente += Number(venta.SaldoPendiente);
+        }
+
+        if (esTodos) {
+          ventasRows.push([
+            venta.VentaId.toString(),
+            clienteNombre,
+            fechaVenta,
+            tipoVenta,
+            formatMiles(venta.Total),
+            venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
+          ]);
+        } else {
+          ventasRows.push([
+            venta.VentaId.toString(),
+            fechaVenta,
+            tipoVenta,
+            formatMiles(venta.Total),
+            venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
+          ]);
         }
 
         // Si es crédito y tiene pagos, agregar información de pagos
         if (venta.VentaTipo === "CR" && venta.Pagos && venta.Pagos.length > 0) {
           venta.Pagos.forEach((pago) => {
             const fechaPago = formatearSoloFecha(pago.VentaCreditoPagoFecha);
-            ventasRows.push([
-              "",
-              `  Pago ${pago.VentaCreditoPagoId}`,
-              fechaPago,
-              formatMiles(pago.VentaCreditoPagoMonto),
-              "",
-            ]);
+            if (esTodos) {
+              ventasRows.push(["", "", `  Pago ${pago.VentaCreditoPagoId}`, fechaPago, formatMiles(pago.VentaCreditoPagoMonto), ""]);
+            } else {
+              ventasRows.push(["", `  Pago ${pago.VentaCreditoPagoId}`, fechaPago, formatMiles(pago.VentaCreditoPagoMonto), ""]);
+            }
           });
         }
       });
 
+      const tableHead = esTodos
+        ? [["ID", "CLIENTE", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]]
+        : [["ID", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]];
+
+      const columnStyles: Record<number, { cellWidth: number }> = esTodos
+        ? {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 28 },
+            4: { cellWidth: 35 },
+            5: { cellWidth: 40 },
+          }
+        : {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 40 },
+            4: { cellWidth: 40 },
+          };
+
       autoTable(doc, {
-        head: [["ID", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]],
+        head: tableHead,
         body: ventasRows,
         startY: y,
         theme: "grid",
         headStyles: { fillColor: [22, 163, 74] },
-        styles: { fontSize: 10 },
+        styles: { fontSize: esTodos ? 9 : 10 },
         margin: { left: 14, right: 14 },
-        columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 40 },
-          4: { cellWidth: 40 },
-        },
+        columnStyles,
       });
 
       y =
         (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
           .finalY + 10;
 
-      // Totales
+      // Totales generales y por tipo (como Reporte de cierre de caja)
       doc.setFontSize(12);
+      doc.text("TOTALES", 14, y);
+      y += 6;
+      doc.setFontSize(10);
       doc.text(`Total Ventas: Gs. ${formatMiles(totalVentas)}`, 14, y);
+      y += 6;
+      doc.text(
+        `Efectivo: ${formatMiles(totalEfectivo)} | POS: ${formatMiles(totalPOS)} | Transfer: ${formatMiles(totalTransfer)} | Crédito: ${formatMiles(totalCredito)}`,
+        14,
+        y,
+      );
       y += 6;
       if (totalSaldoPendiente > 0) {
         doc.text(
@@ -513,7 +557,7 @@ const ReportesPage: React.FC = () => {
         );
       }
 
-      const nombreArchivo = `reporte_ventas_${reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
+      const nombreArchivo = `reporte_ventas_${esTodos ? "todos" : reporte.cliente.ClienteId}_${fechaDesde}_${fechaHasta}.pdf`;
       doc.save(nombreArchivo);
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
@@ -804,7 +848,7 @@ const ReportesPage: React.FC = () => {
                 onChange={(e) => setClienteSeleccionado(e.target.value)}
                 disabled={loading}
               >
-                <option value="">Seleccione un cliente</option>
+                <option value="TODOS">TODOS</option>
                 {clientes.map((cliente) => (
                   <option key={cliente.ClienteId} value={cliente.ClienteId}>
                     {cliente.ClienteNombre} {cliente.ClienteApellido}

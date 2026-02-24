@@ -443,21 +443,12 @@ const Venta = {
   },
 
   // Obtener reporte de ventas por cliente y rango de fechas
+  // Si clienteId es "TODOS", devuelve ventas de todos los clientes
   getReporteVentasPorCliente: (clienteId, fechaDesde, fechaHasta) => {
     return new Promise((resolve, reject) => {
-      // Primero obtener información del cliente
-      const clienteQuery = "SELECT * FROM clientes WHERE ClienteId = ?";
+      const esTodos = String(clienteId).toUpperCase() === "TODOS";
 
-      db.query(clienteQuery, [clienteId], (err, clienteResults) => {
-        if (err) return reject(err);
-
-        if (clienteResults.length === 0) {
-          return reject(new Error("Cliente no encontrado"));
-        }
-
-        const cliente = clienteResults[0];
-
-        // Obtener ventas en el rango de fechas
+      const ejecutarVentas = (cliente) => {
         const ventasQuery = `
           SELECT 
             v.*,
@@ -470,14 +461,16 @@ const Venta = {
           LEFT JOIN clientes c ON v.ClienteId = c.ClienteId
           LEFT JOIN almacen a ON v.AlmacenId = a.AlmacenId
           LEFT JOIN usuario u ON v.VentaUsuario = u.UsuarioId
-          WHERE v.ClienteId = ? 
-          AND DATE(v.VentaFecha) BETWEEN ? AND ?
+          WHERE DATE(v.VentaFecha) BETWEEN ? AND ?
+          ${esTodos ? "" : "AND v.ClienteId = ?"}
           ORDER BY v.VentaFecha ASC, v.VentaId ASC
         `;
 
+        const ventasParams = esTodos ? [fechaDesde, fechaHasta] : [fechaDesde, fechaHasta, clienteId];
+
         db.query(
           ventasQuery,
-          [clienteId, fechaDesde, fechaHasta],
+          ventasParams,
           async (err, ventasResults) => {
             if (err) return reject(err);
 
@@ -553,7 +546,25 @@ const Venta = {
             });
           }
         );
-      });
+      };
+
+      if (esTodos) {
+        ejecutarVentas({
+          ClienteId: 0,
+          ClienteNombre: "TODOS",
+          ClienteApellido: "",
+          ClienteRUC: "",
+        });
+      } else {
+        const clienteQuery = "SELECT * FROM clientes WHERE ClienteId = ?";
+        db.query(clienteQuery, [clienteId], (err, clienteResults) => {
+          if (err) return reject(err);
+          if (clienteResults.length === 0) {
+            return reject(new Error("Cliente no encontrado"));
+          }
+          ejecutarVentas(clienteResults[0]);
+        });
+      }
     });
   },
 };

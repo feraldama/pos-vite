@@ -327,11 +327,16 @@ const ReportesPage: React.FC = () => {
     return `${dia}/${mes}/${año}`;
   };
 
-  // Extrae solo la fecha (sin hora) de un datetime para reportes
-  const formatearSoloFecha = (fechaStr: string): string => {
-    const parteFecha = fechaStr.split("T")[0]?.split(" ")[0] || fechaStr;
-    const [año, mes, dia] = parteFecha.split("-");
-    return año && mes && dia ? `${dia}/${mes}/${año}` : fechaStr;
+  // Formatea fecha y hora de un datetime ISO para reportes (dd/mm/aaaa HH:mm)
+  const formatearFechaHora = (fechaStr: string): string => {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return fechaStr;
+    const dia = String(d.getDate()).padStart(2, "0");
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const año = d.getFullYear();
+    const h = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${dia}/${mes}/${año} ${h}:${min}`;
   };
 
   const handleGenerarPDF = async () => {
@@ -455,7 +460,7 @@ const ReportesPage: React.FC = () => {
                   ? "Transfer"
                   : venta.VentaTipo;
 
-        const fechaVenta = formatearSoloFecha(venta.VentaFecha);
+        const fechaVenta = formatearFechaHora(venta.VentaFecha);
         const clienteNombre = [venta.ClienteNombre, venta.ClienteApellido]
           .filter(Boolean)
           .join(" ")
@@ -495,7 +500,7 @@ const ReportesPage: React.FC = () => {
         // Si es crédito y tiene pagos, agregar información de pagos
         if (venta.VentaTipo === "CR" && venta.Pagos && venta.Pagos.length > 0) {
           venta.Pagos.forEach((pago) => {
-            const fechaPago = formatearSoloFecha(pago.VentaCreditoPagoFecha);
+            const fechaPago = formatearFechaHora(pago.VentaCreditoPagoFecha);
             if (esTodos) {
               ventasRows.push(["", "", fechaPago, `  Pago ${pago.VentaCreditoPagoId}`, formatMiles(pago.VentaCreditoPagoMonto), "", ""]);
             } else {

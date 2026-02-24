@@ -43,6 +43,8 @@ interface Venta {
   UsuarioNombre: string;
   ClienteNombre?: string;
   ClienteApellido?: string;
+  UsuarioId?: string;
+  VentaUsuario?: string;
 }
 
 interface ReporteData {
@@ -458,6 +460,7 @@ const ReportesPage: React.FC = () => {
           .filter(Boolean)
           .join(" ")
           .trim() || "-";
+        const usuarioId = String(venta.UsuarioId ?? venta.VentaUsuario ?? "").trim() || "-";
 
         totalVentas += Number(venta.Total);
         if (venta.VentaTipo === "CO") totalEfectivo += Number(venta.Total);
@@ -476,6 +479,7 @@ const ReportesPage: React.FC = () => {
             tipoVenta,
             formatMiles(venta.Total),
             venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
+            usuarioId,
           ]);
         } else {
           ventasRows.push([
@@ -484,6 +488,7 @@ const ReportesPage: React.FC = () => {
             tipoVenta,
             formatMiles(venta.Total),
             venta.VentaTipo === "CR" ? formatMiles(venta.SaldoPendiente) : "-",
+            usuarioId,
           ]);
         }
 
@@ -492,33 +497,35 @@ const ReportesPage: React.FC = () => {
           venta.Pagos.forEach((pago) => {
             const fechaPago = formatearSoloFecha(pago.VentaCreditoPagoFecha);
             if (esTodos) {
-              ventasRows.push(["", "", `  Pago ${pago.VentaCreditoPagoId}`, fechaPago, formatMiles(pago.VentaCreditoPagoMonto), ""]);
+              ventasRows.push(["", "", fechaPago, `  Pago ${pago.VentaCreditoPagoId}`, formatMiles(pago.VentaCreditoPagoMonto), "", ""]);
             } else {
-              ventasRows.push(["", `  Pago ${pago.VentaCreditoPagoId}`, fechaPago, formatMiles(pago.VentaCreditoPagoMonto), ""]);
+              ventasRows.push(["", fechaPago, `  Pago ${pago.VentaCreditoPagoId}`, formatMiles(pago.VentaCreditoPagoMonto), "", ""]);
             }
           });
         }
       });
 
       const tableHead = esTodos
-        ? [["ID", "CLIENTE", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]]
-        : [["ID", "FECHA", "TIPO", "TOTAL", "SALDO PEND."]];
+        ? [["ID", "CLIENTE", "FECHA", "TIPO", "TOTAL", "SALDO PEND.", "USUARIO"]]
+        : [["ID", "FECHA", "TIPO", "TOTAL", "SALDO PEND.", "USUARIO"]];
 
       const columnStyles: Record<number, { cellWidth: number }> = esTodos
         ? {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 50 },
-            2: { cellWidth: 30 },
+            0: { cellWidth: 18 },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 28 },
             3: { cellWidth: 28 },
-            4: { cellWidth: 35 },
-            5: { cellWidth: 40 },
+            4: { cellWidth: 32 },
+            5: { cellWidth: 35 },
+            6: { cellWidth: 25 },
           }
         : {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 30 },
-            3: { cellWidth: 40 },
-            4: { cellWidth: 40 },
+            0: { cellWidth: 18 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 32 },
+            4: { cellWidth: 35 },
+            5: { cellWidth: 25 },
           };
 
       autoTable(doc, {

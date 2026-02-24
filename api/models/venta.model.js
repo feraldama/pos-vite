@@ -456,7 +456,8 @@ const Venta = {
             c.ClienteApellido,
             c.ClienteRUC,
             a.AlmacenNombre,
-            u.UsuarioNombre
+            u.UsuarioNombre,
+            v.VentaUsuario AS UsuarioId
           FROM venta v
           LEFT JOIN clientes c ON v.ClienteId = c.ClienteId
           LEFT JOIN almacen a ON v.AlmacenId = a.AlmacenId

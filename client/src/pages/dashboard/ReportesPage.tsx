@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../services/api";
 import { formatMiles } from "../../utils/utils";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
+import {
+  getRegistrosDiariosCajaPorRango,
+  type RegistroDiarioCajaRow,
+} from "../../services/registros.service";
 
 interface DeudaCliente {
   ClienteId: number;
@@ -66,6 +70,177 @@ interface ProductoStockReporte {
   productoAlmacen: ProductoAlmacenStock[];
 }
 
+interface ResumenCierre {
+  fechaCierre: string;
+  fechaCierreDate: Date;
+  cajaId: number;
+  cajaDescripcion: string;
+  usuarioId: string;
+  apertura: number;
+  cierre: number;
+  egresos: number;
+  ingresos: number;
+  ingresosPOS: number;
+  ingresosVoucher: number;
+  ingresosTransfer: number;
+  totalIngresos: number;
+  diferencia: number;
+  sobranteFaltante: number;
+  parcial?: boolean;
+}
+
+function toLocalDateStr(fechaRegistro: string): string {
+  const d = new Date(fechaRegistro);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateDDMMYYYY(fecha: Date | string): string {
+  const d =
+    typeof fecha === "string"
+      ? new Date(fecha.includes("T") ? fecha : fecha + "T12:00:00")
+      : fecha;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function getHoyISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function calcularTotalesCiclo(
+  registrosCajaUsuario: RegistroDiarioCajaRow[],
+  idApertura: number,
+  idCierre: number,
+) {
+  const filtrados = registrosCajaUsuario.filter(
+    (r) =>
+      r.RegistroDiarioCajaId >= idApertura &&
+      r.RegistroDiarioCajaId <= idCierre,
+  );
+  const aperturaReg = filtrados.find(
+    (r) => r.TipoGastoId === 2 && r.TipoGastoGrupoId === 2,
+  );
+  const cierreReg = filtrados.find(
+    (r) => r.TipoGastoId === 1 && r.TipoGastoGrupoId === 2,
+  );
+  const apertura = aperturaReg?.RegistroDiarioCajaMonto ?? 0;
+  const cierre = cierreReg?.RegistroDiarioCajaMonto ?? 0;
+
+  let egresos = 0;
+  let ingresos = 0;
+  let ingresosPOS = 0;
+  let ingresosVoucher = 0;
+  let ingresosTransfer = 0;
+  for (const reg of filtrados) {
+    if (
+      reg.TipoGastoId === 2 &&
+      reg.TipoGastoGrupoId !== 2 &&
+      reg.TipoGastoGrupoId !== 4 &&
+      reg.TipoGastoGrupoId !== 5 &&
+      reg.TipoGastoGrupoId !== 6
+    ) {
+      ingresos += reg.RegistroDiarioCajaMonto;
+    }
+    if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
+      egresos += reg.RegistroDiarioCajaMonto;
+    }
+    if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
+      ingresosPOS += reg.RegistroDiarioCajaMonto;
+    }
+    if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
+      ingresosVoucher += reg.RegistroDiarioCajaMonto;
+    }
+    if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
+      ingresosTransfer += reg.RegistroDiarioCajaMonto;
+    }
+  }
+  const totalIngresos =
+    ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
+  const diferencia = totalIngresos - egresos;
+  const sobranteFaltante = ingresos + apertura - (cierre + egresos);
+
+  return {
+    apertura,
+    cierre,
+    egresos,
+    ingresos,
+    ingresosPOS,
+    ingresosVoucher,
+    ingresosTransfer,
+    totalIngresos,
+    diferencia,
+    sobranteFaltante,
+  };
+}
+
+function buildResumenesCierre(
+  registros: RegistroDiarioCajaRow[],
+  fechaDesde: string,
+  fechaHasta: string,
+): ResumenCierre[] {
+  if (registros.length === 0) return [];
+
+  const cierres = registros
+    .filter((r) => r.TipoGastoId === 1 && r.TipoGastoGrupoId === 2)
+    .sort((a, b) => a.RegistroDiarioCajaId - b.RegistroDiarioCajaId);
+
+  const resumenes: ResumenCierre[] = [];
+
+  for (const cierreReg of cierres) {
+    const fechaCierreLocal = toLocalDateStr(cierreReg.RegistroDiarioCajaFecha);
+    if (fechaCierreLocal < fechaDesde || fechaCierreLocal > fechaHasta)
+      continue;
+    const registrosCajaUsuario = registros.filter(
+      (r) =>
+        r.CajaId === cierreReg.CajaId && r.UsuarioId === cierreReg.UsuarioId,
+    );
+    const mismosCajaUsuarioHastaCierre = registrosCajaUsuario.filter(
+      (r) => r.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId,
+    );
+    const aperturas = mismosCajaUsuarioHastaCierre
+      .filter(
+        (r) =>
+          r.TipoGastoId === 2 &&
+          r.TipoGastoGrupoId === 2 &&
+          r.RegistroDiarioCajaId < cierreReg.RegistroDiarioCajaId,
+      )
+      .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
+    const aperturaReg = aperturas[0];
+    if (!aperturaReg) continue;
+    if (cierreReg.RegistroDiarioCajaId <= aperturaReg.RegistroDiarioCajaId)
+      continue;
+
+    const totals = calcularTotalesCiclo(
+      registrosCajaUsuario,
+      aperturaReg.RegistroDiarioCajaId,
+      cierreReg.RegistroDiarioCajaId,
+    );
+
+    const fechaCierreDate = new Date(cierreReg.RegistroDiarioCajaFecha);
+    resumenes.push({
+      fechaCierre: formatDateDDMMYYYY(fechaCierreDate),
+      fechaCierreDate,
+      cajaId: cierreReg.CajaId,
+      cajaDescripcion: cierreReg.CajaDescripcion ?? `Caja ${cierreReg.CajaId}`,
+      usuarioId: cierreReg.UsuarioId,
+      ...totals,
+    });
+  }
+
+  resumenes.sort(
+    (a, b) => a.fechaCierreDate.getTime() - b.fechaCierreDate.getTime(),
+  );
+  return resumenes;
+}
+
+const PAGE_SIZE = 25;
+
 const ReportesPage: React.FC = () => {
   const puedeLeer = usePermiso("REPORTES", "leer");
   const [loading, setLoading] = useState(false);
@@ -81,6 +256,47 @@ const ReportesPage: React.FC = () => {
     const hoy = new Date();
     return hoy.toISOString().split("T")[0];
   });
+
+  const [resumenesCierre, setResumenesCierre] = useState<ResumenCierre[]>([]);
+  const [paginaCierre, setPaginaCierre] = useState(1);
+  const [fechaDesdeCierre, setFechaDesdeCierre] = useState(() => getHoyISO());
+  const [fechaHastaCierre, setFechaHastaCierre] = useState(() => getHoyISO());
+
+  const totalPaginasCierre = Math.max(
+    1,
+    Math.ceil(resumenesCierre.length / PAGE_SIZE),
+  );
+  const resumenesPaginados = useMemo(() => {
+    const from = (paginaCierre - 1) * PAGE_SIZE;
+    return resumenesCierre.slice(from, from + PAGE_SIZE);
+  }, [resumenesCierre, paginaCierre]);
+
+  const totalesGeneralesCierre = useMemo(() => {
+    return resumenesCierre.reduce(
+      (acc, r) => ({
+        apertura: acc.apertura + r.apertura,
+        cierre: acc.cierre + r.cierre,
+        egresos: acc.egresos + r.egresos,
+        ingresos: acc.ingresos + r.ingresos,
+        ingresosPOS: acc.ingresosPOS + r.ingresosPOS,
+        ingresosVoucher: acc.ingresosVoucher + r.ingresosVoucher,
+        ingresosTransfer: acc.ingresosTransfer + r.ingresosTransfer,
+        totalIngresos: acc.totalIngresos + r.totalIngresos,
+        diferencia: acc.diferencia + r.diferencia,
+      }),
+      {
+        apertura: 0,
+        cierre: 0,
+        egresos: 0,
+        ingresos: 0,
+        ingresosPOS: 0,
+        ingresosVoucher: 0,
+        ingresosTransfer: 0,
+        totalIngresos: 0,
+        diferencia: 0,
+      },
+    );
+  }, [resumenesCierre]);
 
   useEffect(() => {
     const cargarClientes = async () => {
@@ -404,6 +620,138 @@ const ReportesPage: React.FC = () => {
     }
   };
 
+  const generarReporteCierre = async () => {
+    if (!fechaDesdeCierre || !fechaHastaCierre) {
+      setError("Seleccione fecha desde y hasta");
+      return;
+    }
+    if (new Date(fechaDesdeCierre) > new Date(fechaHastaCierre)) {
+      setError("La fecha desde no puede ser mayor que la fecha hasta");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResumenesCierre([]);
+    setPaginaCierre(1);
+    try {
+      const { data } = await getRegistrosDiariosCajaPorRango(
+        fechaDesdeCierre,
+        fechaHastaCierre,
+      );
+      const lista = Array.isArray(data) ? data : [];
+      const res = buildResumenesCierre(
+        lista,
+        fechaDesdeCierre,
+        fechaHastaCierre,
+      );
+      setResumenesCierre(res);
+    } catch (e) {
+      setError(
+        (e as { message?: string })?.message ??
+          "Error al cargar registros por rango de fechas",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportarCierrePDF = () => {
+    if (resumenesCierre.length === 0) return;
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    doc.setFontSize(14);
+    doc.text(
+      `Reporte de cierre de caja - ${formatDateDDMMYYYY(fechaDesdeCierre)} a ${formatDateDDMMYYYY(fechaHastaCierre)}`,
+      14,
+      14,
+    );
+    const rows = resumenesCierre.map((r) => [
+      r.fechaCierre,
+      r.cajaDescripcion,
+      r.usuarioId,
+      formatMiles(r.apertura),
+      formatMiles(r.cierre),
+      formatMiles(r.egresos),
+      formatMiles(r.ingresos),
+      formatMiles(r.ingresosPOS),
+      formatMiles(r.ingresosVoucher),
+      formatMiles(r.ingresosTransfer),
+      formatMiles(r.totalIngresos),
+      formatMiles(r.diferencia),
+      formatMiles(r.sobranteFaltante),
+    ]);
+    autoTable(doc, {
+      head: [
+        [
+          "Fecha cierre",
+          "Caja",
+          "Usuario",
+          "Apertura",
+          "Cierre",
+          "Egresos",
+          "Ing.Efect.",
+          "POS",
+          "Voucher",
+          "Transfer",
+          "Total ing.",
+          "Diferencia",
+          "S/F",
+        ],
+      ],
+      body: rows,
+      startY: 22,
+      theme: "grid",
+      headStyles: { fillColor: [37, 99, 235], fontSize: 8 },
+      styles: { fontSize: 7 },
+      margin: { left: 14, right: 14 },
+    });
+    let y =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + 10;
+    doc.setFontSize(11);
+    doc.text("TOTALES", 14, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.text("Suma de todos los registros del período", 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.text(
+      `Total registros: ${resumenesCierre.length} | Total ingresos: ${formatMiles(
+        totalesGeneralesCierre.totalIngresos,
+      )} | Total egresos: ${formatMiles(totalesGeneralesCierre.egresos)}`,
+      14,
+      y,
+    );
+    y += 6;
+    doc.setFontSize(9);
+    doc.text(
+      `Ing. efectivo: ${formatMiles(
+        totalesGeneralesCierre.ingresos,
+      )} | POS: ${formatMiles(
+        totalesGeneralesCierre.ingresosPOS,
+      )} | Voucher: ${formatMiles(
+        totalesGeneralesCierre.ingresosVoucher,
+      )} | Transfer: ${formatMiles(totalesGeneralesCierre.ingresosTransfer)}`,
+      14,
+      y,
+    );
+
+    const pdfBlob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = pdfUrl;
+    link.download = `reporte_cierre_caja_${fechaDesdeCierre}_${fechaHastaCierre}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    const openLink = document.createElement("a");
+    openLink.href = pdfUrl;
+    openLink.target = "_blank";
+    document.body.appendChild(openLink);
+    openLink.click();
+    document.body.removeChild(openLink);
+    setTimeout(() => URL.revokeObjectURL(pdfUrl), 2000);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
@@ -502,6 +850,241 @@ const ReportesPage: React.FC = () => {
               GENERAR REPORTE
             </button>
           </div>
+        </div>
+
+        {/* Reporte de cierre de caja por rango de fechas */}
+        <div className="w-full bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">
+            Reporte de cierre de caja por rango de fechas
+          </h2>
+          <p className="text-gray-600 mb-4 text-sm">
+            Obtenga la misma información del cierre diario para un período (ej.
+            julio a octubre 2025). Seleccione el rango y genere el reporte.
+          </p>
+          <div className="flex flex-wrap items-end gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Desde
+              </label>
+              <input
+                type="date"
+                value={fechaDesdeCierre}
+                onChange={(e) => setFechaDesdeCierre(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hasta
+              </label>
+              <input
+                type="date"
+                value={fechaHastaCierre}
+                onChange={(e) => setFechaHastaCierre(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={loading}
+              />
+            </div>
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition disabled:opacity-50"
+              onClick={generarReporteCierre}
+              disabled={loading}
+            >
+              {loading ? "Cargando…" : "Generar reporte"}
+            </button>
+            {resumenesCierre.length > 0 && (
+              <button
+                className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2 px-6 rounded-lg shadow transition"
+                onClick={exportarCierrePDF}
+              >
+                Exportar a PDF
+              </button>
+            )}
+          </div>
+
+          {resumenesCierre.length > 0 && (
+            <>
+              <p className="text-sm text-gray-500 mb-2">
+                {resumenesCierre.length} cierre(s) en el período. Página{" "}
+                {paginaCierre} de {totalPaginasCierre}.
+              </p>
+              <div className="overflow-x-auto -mx-2 mb-4">
+                <table className="w-full border-collapse text-sm min-w-[900px]">
+                  <thead className="sticky top-0 bg-slate-100 z-10">
+                    <tr className="border-b border-slate-300">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Fecha cierre
+                      </th>
+                      <th className="text-left py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Caja
+                      </th>
+                      <th className="text-left py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Usuario
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Apertura
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Cierre
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Egresos
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Ing. Efectivo
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        POS
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Voucher
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Transfer
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Total ing.
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Diferencia
+                      </th>
+                      <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
+                        Sobrante/Faltante
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumenesPaginados.map((r, idx) => (
+                      <tr
+                        key={`${r.fechaCierre}-${r.cajaId}-${r.usuarioId}-${idx}`}
+                        className="border-b border-slate-200 hover:bg-slate-50"
+                      >
+                        <td className="py-1.5 px-2 whitespace-nowrap text-slate-700">
+                          {r.fechaCierre}
+                        </td>
+                        <td className="py-1.5 px-2 whitespace-nowrap text-slate-700">
+                          {r.cajaDescripcion}
+                        </td>
+                        <td className="py-1.5 px-2 whitespace-nowrap text-slate-700">
+                          {r.usuarioId}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.apertura)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.cierre)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.egresos)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.ingresos)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.ingresosPOS)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.ingresosVoucher)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.ingresosTransfer)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.totalIngresos)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {formatMiles(r.diferencia)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono text-slate-700">
+                          {r.sobranteFaltante > 0
+                            ? `Falt. ${formatMiles(r.sobranteFaltante)}`
+                            : r.sobranteFaltante < 0
+                              ? `Sobr. ${formatMiles(-r.sobranteFaltante)}`
+                              : "0"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {totalPaginasCierre > 1 && (
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium disabled:opacity-50"
+                    onClick={() => setPaginaCierre((p) => Math.max(1, p - 1))}
+                    disabled={paginaCierre <= 1}
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-sm text-slate-600">
+                    Página {paginaCierre} de {totalPaginasCierre}
+                  </span>
+                  <button
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium disabled:opacity-50"
+                    onClick={() =>
+                      setPaginaCierre((p) =>
+                        Math.min(totalPaginasCierre, p + 1),
+                      )
+                    }
+                    disabled={paginaCierre >= totalPaginasCierre}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
+              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <h3 className="font-semibold text-slate-800 mb-1">TOTALES</h3>
+                <p className="text-slate-500 text-xs mb-3">
+                  Suma de todos los registros del período
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <span className="text-slate-500">Ingresos efectivo:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.ingresos)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">POS:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.ingresosPOS)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Voucher:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.ingresosVoucher)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Transfer:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.ingresosTransfer)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Total ingresos:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.totalIngresos)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Total egresos:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.egresos)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Diferencia:</span>{" "}
+                    <span className="font-mono font-medium">
+                      {formatMiles(totalesGeneralesCierre.diferencia)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {loading && (

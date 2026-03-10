@@ -439,7 +439,7 @@ export default function AperturaCierreCajaPage() {
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-900">
-              Monto de apertura
+              {tipo === "1" ? "Monto de cierre" : "Monto de apertura"}
             </label>
             <input
               type="text"

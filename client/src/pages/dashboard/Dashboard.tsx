@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../contexts/useAuth";
 import { getSuscripcionesProximasAVencer } from "../../services/suscripciones.service";
+import { createPago } from "../../services/pagos.service";
+import CrearPagoModal from "../../components/pagos/CrearPagoModal";
+import Swal from "sweetalert2";
 
 interface Suscripcion {
   SuscripcionId: string | number;
+  ClienteId?: string | number;
+  PlanId?: string | number;
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;
+  PlanPrecio?: number;
   SuscripcionFechaInicio?: string;
   SuscripcionFechaFin: string;
   EstadoPago?: string;
@@ -19,24 +25,57 @@ function Dashboard() {
     Suscripcion[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [suscripcionParaPago, setSuscripcionParaPago] =
+    useState<Suscripcion | null>(null);
+
+  const cargarSuscripcionesProximas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getSuscripcionesProximasAVencer(9);
+      setSuscripcionesProximas(response.data || []);
+    } catch (error) {
+      console.error("Error al cargar suscripciones próximas:", error);
+      setSuscripcionesProximas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const cargarSuscripcionesProximas = async () => {
-      try {
-        setLoading(true);
-        // Obtener suscripciones próximas a vencer (30 días, sin límite)
-        const response = await getSuscripcionesProximasAVencer(30);
-        setSuscripcionesProximas(response.data || []);
-      } catch (error) {
-        console.error("Error al cargar suscripciones próximas:", error);
-        setSuscripcionesProximas([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     cargarSuscripcionesProximas();
-  }, []);
+  }, [cargarSuscripcionesProximas]);
+
+  const handleClickSuscripcion = (suscripcion: Suscripcion) => {
+    setSuscripcionParaPago(suscripcion);
+    setShowPagoModal(true);
+  };
+
+  const esPendiente = (s: Suscripcion) =>
+    (s.EstadoPago || "PENDIENTE") === "PENDIENTE";
+
+  const handleSubmitPago = async (pagoData: Record<string, unknown>) => {
+    try {
+      await createPago(pagoData);
+      setShowPagoModal(false);
+      setSuscripcionParaPago(null);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Pago creado exitosamente",
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      cargarSuscripcionesProximas();
+    } catch (error) {
+      const err = error as { message?: string };
+      Swal.fire({
+        icon: "error",
+        title: "Error al crear pago",
+        text: err?.message || "No se pudo crear el pago",
+      });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -66,6 +105,29 @@ function Dashboard() {
     return "text-yellow-600";
   };
 
+  // Mostrar solo la suscripción más reciente por cliente (la que tiene la fecha de vencimiento más lejana)
+  // Ordenar por fecha de vencimiento: primero las más próximas a vencer
+  const suscripcionesUnicasPorCliente = useMemo(() => {
+    const porCliente = new Map<string, Suscripcion>();
+    for (const s of suscripcionesProximas) {
+      const clienteKey = String(
+        s.ClienteId ?? `${s.ClienteNombre || ""}-${s.ClienteApellido || ""}`,
+      );
+      const actual = porCliente.get(clienteKey);
+      if (
+        !actual ||
+        new Date(s.SuscripcionFechaFin) > new Date(actual.SuscripcionFechaFin)
+      ) {
+        porCliente.set(clienteKey, s);
+      }
+    }
+    return Array.from(porCliente.values()).sort(
+      (a, b) =>
+        new Date(a.SuscripcionFechaFin).getTime() -
+        new Date(b.SuscripcionFechaFin).getTime(),
+    );
+  }, [suscripcionesProximas]);
+
   return (
     <main className="py-6 px-6 space-y-12 bg-gray-100 w-full">
       {/* Sección de Bienvenida */}
@@ -92,11 +154,11 @@ function Dashboard() {
           <div className="text-center py-8">
             <p className="text-gray-600">Cargando suscripciones...</p>
           </div>
-        ) : suscripcionesProximas.length === 0 ? (
+        ) : suscripcionesUnicasPorCliente.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600">
-              No hay suscripciones próximas a vencer (30 días) ni vencidas en los
-              últimos 7 días
+              No hay suscripciones próximas a vencer (10 días) ni vencidas en
+              los últimos 7 días
             </p>
           </div>
         ) : (
@@ -125,7 +187,7 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {suscripcionesProximas.map((suscripcion) => {
+                {suscripcionesUnicasPorCliente.map((suscripcion) => {
                   const diasRestantes = calcularDiasRestantes(
                     suscripcion.SuscripcionFechaFin,
                   );
@@ -136,7 +198,8 @@ function Dashboard() {
                   return (
                     <tr
                       key={suscripcion.SuscripcionId}
-                      className="bg-white border-b hover:bg-gray-50"
+                      onClick={() => handleClickSuscripcion(suscripcion)}
+                      className="bg-white border-b hover:bg-gray-50 cursor-pointer"
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {nombreCompleto || "N/A"}
@@ -182,6 +245,20 @@ function Dashboard() {
           </div>
         )}
       </section>
+      <CrearPagoModal
+        show={showPagoModal}
+        onClose={() => {
+          setShowPagoModal(false);
+          setSuscripcionParaPago(null);
+        }}
+        onSubmit={handleSubmitPago}
+        initialSuscripcion={suscripcionParaPago}
+        modoInicial={
+          suscripcionParaPago && esPendiente(suscripcionParaPago)
+            ? "existente"
+            : "nueva"
+        }
+      />
     </main>
   );
 }

@@ -120,12 +120,12 @@ export const getAllSuscripcionesSinPaginacion = async () => {
 
 export const getSuscripcionesProximasAVencer = async (
   dias = 30,
-  limit = 10
+  limit?: number
 ) => {
-  const params: { [key: string]: number } = {
-    dias,
-    limit,
-  };
+  const params: { [key: string]: number } = { dias };
+  if (limit != null && limit > 0) {
+    params.limit = limit;
+  }
   try {
     const response = await api.get("/suscripciones/proximas-a-vencer", {
       params,

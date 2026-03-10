@@ -143,13 +143,15 @@ export default function SuscripcionesList({
     } else if (currentSuscripcion === null && !clienteSeleccionadoRef.current) {
       // Solo resetear cuando currentSuscripcion cambia a null Y no hay cliente seleccionado
       // Esto evita que se resetee cuando se crea un nuevo cliente
+      const hoy = new Date();
+      const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
       setClienteSeleccionado(null);
       setFormData({
         id: "",
         SuscripcionId: "",
         ClienteId: "",
         PlanId: "",
-        SuscripcionFechaInicio: "",
+        SuscripcionFechaInicio: fechaHoy,
         SuscripcionFechaFin: "",
       });
     }

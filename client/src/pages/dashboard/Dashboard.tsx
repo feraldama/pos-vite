@@ -7,7 +7,9 @@ interface Suscripcion {
   ClienteNombre?: string;
   ClienteApellido?: string;
   PlanNombre?: string;
+  SuscripcionFechaInicio?: string;
   SuscripcionFechaFin: string;
+  EstadoPago?: string;
   [key: string]: unknown;
 }
 
@@ -22,8 +24,8 @@ function Dashboard() {
     const cargarSuscripcionesProximas = async () => {
       try {
         setLoading(true);
-        // Obtener suscripciones próximas a vencer (30 días, máximo 10)
-        const response = await getSuscripcionesProximasAVencer(30, 10);
+        // Obtener suscripciones próximas a vencer (30 días, sin límite)
+        const response = await getSuscripcionesProximasAVencer(30);
         setSuscripcionesProximas(response.data || []);
       } catch (error) {
         console.error("Error al cargar suscripciones próximas:", error);
@@ -58,6 +60,7 @@ function Dashboard() {
   };
 
   const getEstadoColor = (diasRestantes: number) => {
+    if (diasRestantes < 0) return "text-red-600 font-semibold";
     if (diasRestantes <= 7) return "text-red-600 font-semibold";
     if (diasRestantes <= 15) return "text-orange-600 font-semibold";
     return "text-yellow-600";
@@ -92,7 +95,8 @@ function Dashboard() {
         ) : suscripcionesProximas.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600">
-              No hay suscripciones próximas a vencer en los próximos 30 días
+              No hay suscripciones próximas a vencer (30 días) ni vencidas en los
+              últimos 7 días
             </p>
           </div>
         ) : (
@@ -107,17 +111,23 @@ function Dashboard() {
                     Plan
                   </th>
                   <th scope="col" className="px-4 py-3">
+                    Fecha Inicio
+                  </th>
+                  <th scope="col" className="px-4 py-3">
                     Fecha de Vencimiento
                   </th>
                   <th scope="col" className="px-4 py-3">
                     Días Restantes
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    Estado Pago
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {suscripcionesProximas.map((suscripcion) => {
                   const diasRestantes = calcularDiasRestantes(
-                    suscripcion.SuscripcionFechaFin
+                    suscripcion.SuscripcionFechaFin,
                   );
                   const nombreCompleto = `${suscripcion.ClienteNombre || ""} ${
                     suscripcion.ClienteApellido || ""
@@ -135,16 +145,34 @@ function Dashboard() {
                         {suscripcion.PlanNombre || "N/A"}
                       </td>
                       <td className="px-4 py-3 text-gray-700">
+                        {formatDate(suscripcion.SuscripcionFechaInicio || "")}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
                         {formatDate(suscripcion.SuscripcionFechaFin)}
                       </td>
                       <td
                         className={`px-4 py-3 ${getEstadoColor(diasRestantes)}`}
                       >
-                        {diasRestantes === 0
-                          ? "Vence hoy"
-                          : diasRestantes === 1
-                          ? "1 día"
-                          : `${diasRestantes} días`}
+                        {diasRestantes < 0
+                          ? diasRestantes === -1
+                            ? "Vencida hace 1 día"
+                            : `Vencida hace ${Math.abs(diasRestantes)} días`
+                          : diasRestantes === 0
+                            ? "Vence hoy"
+                            : diasRestantes === 1
+                              ? "1 día"
+                              : `${diasRestantes} días`}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                            (suscripcion.EstadoPago || "PENDIENTE") === "PAGADA"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {suscripcion.EstadoPago || "PENDIENTE"}
+                        </span>
                       </td>
                     </tr>
                   );

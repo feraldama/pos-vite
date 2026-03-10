@@ -136,7 +136,11 @@ exports.getAllSinPaginacion = async (req, res) => {
 exports.getProximasAVencer = async (req, res) => {
   try {
     const dias = parseInt(req.query.dias) || 30;
-    const limit = parseInt(req.query.limit) || 10;
+    const limitParam = req.query.limit;
+    const limit =
+      limitParam !== undefined && limitParam !== ""
+        ? parseInt(limitParam)
+        : null;
     const suscripciones = await Suscripcion.getProximasAVencer(dias, limit);
     res.json({ data: suscripciones });
   } catch (error) {

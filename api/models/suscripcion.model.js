@@ -88,7 +88,7 @@ const Suscripcion = {
         (err, result) => {
           if (err) return reject(err);
           resolve(result.affectedRows > 0);
-        }
+        },
       );
     });
   },
@@ -97,7 +97,7 @@ const Suscripcion = {
     limit,
     offset,
     sortBy = "SuscripcionId",
-    sortOrder = "ASC"
+    sortOrder = "ASC",
   ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
@@ -155,7 +155,7 @@ const Suscripcion = {
               suscripciones: results,
               total: countResult[0].total,
             });
-          }
+          },
         );
       });
     });
@@ -166,7 +166,7 @@ const Suscripcion = {
     limit,
     offset,
     sortBy = "SuscripcionId",
-    sortOrder = "ASC"
+    sortOrder = "ASC",
   ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
@@ -241,48 +241,70 @@ const Suscripcion = {
                 suscripciones: results,
                 total: countResult[0]?.total || 0,
               });
-            }
+            },
           );
-        }
+        },
       );
     });
   },
 
-  getProximasAVencer: (dias = 30, limit = 10) => {
+  getProximasAVencer: (dias = 30, limit = null) => {
     return new Promise((resolve, reject) => {
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
+
+      const fechaDesde = new Date();
+      fechaDesde.setDate(fechaDesde.getDate() - 7);
+      fechaDesde.setHours(0, 0, 0, 0);
 
       const fechaLimite = new Date();
       fechaLimite.setDate(fechaLimite.getDate() + dias);
       fechaLimite.setHours(23, 59, 59, 999);
 
       // Formatear fechas para MySQL (YYYY-MM-DD)
-      const hoyFormateado = hoy.toISOString().split("T")[0];
+      const fechaDesdeFormateada = fechaDesde.toISOString().split("T")[0];
       const fechaLimiteFormateada = fechaLimite.toISOString().split("T")[0];
 
-      const query = `
+      const hasLimit = limit != null && limit > 0;
+      const query = hasLimit
+        ? `
         SELECT s.*, 
           c.ClienteNombre, c.ClienteApellido,
-          p.PlanNombre, p.PlanPrecio
+          p.PlanNombre, p.PlanPrecio,
+          CASE WHEN pag.SuscripcionId IS NOT NULL THEN 'PAGADA' ELSE 'PENDIENTE' END as EstadoPago
         FROM suscripcion s
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
+        LEFT JOIN (SELECT DISTINCT SuscripcionId FROM pago) pag ON pag.SuscripcionId = s.SuscripcionId
         WHERE s.SuscripcionFechaFin IS NOT NULL
           AND DATE(s.SuscripcionFechaFin) >= DATE(?)
           AND DATE(s.SuscripcionFechaFin) <= DATE(?)
         ORDER BY s.SuscripcionFechaFin ASC
         LIMIT ?
+      `
+        : `
+        SELECT s.*, 
+          c.ClienteNombre, c.ClienteApellido,
+          p.PlanNombre, p.PlanPrecio,
+          CASE WHEN pag.SuscripcionId IS NOT NULL THEN 'PAGADA' ELSE 'PENDIENTE' END as EstadoPago
+        FROM suscripcion s
+        LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
+        LEFT JOIN plan p ON s.PlanId = p.PlanId
+        LEFT JOIN (SELECT DISTINCT SuscripcionId FROM pago) pag ON pag.SuscripcionId = s.SuscripcionId
+        WHERE s.SuscripcionFechaFin IS NOT NULL
+          AND DATE(s.SuscripcionFechaFin) >= DATE(?)
+          AND DATE(s.SuscripcionFechaFin) <= DATE(?)
+        ORDER BY s.SuscripcionFechaFin ASC
       `;
 
-      db.query(
-        query,
-        [hoyFormateado, fechaLimiteFormateada, limit],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
+      const params = hasLimit
+        ? [fechaDesdeFormateada, fechaLimiteFormateada, limit]
+        : [fechaDesdeFormateada, fechaLimiteFormateada];
+
+      db.query(query, params, (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
     });
   },
 };

@@ -54,15 +54,35 @@ function Dashboard() {
   const esPendiente = (s: Suscripcion) =>
     (s.EstadoPago || "PENDIENTE") === "PENDIENTE";
 
-  const handleSubmitPago = async (pagoData: Record<string, unknown>) => {
+  const handleSubmitPago = async (
+    pagoData: Record<string, unknown> | Record<string, unknown>[]
+  ) => {
     try {
-      await createPago(pagoData);
+      const pagos = Array.isArray(pagoData) ? pagoData : [pagoData];
+      let suscripcionId: string | number | undefined;
+
+      for (let i = 0; i < pagos.length; i++) {
+        const pago = pagos[i];
+        const payload =
+          i > 0 && suscripcionId
+            ? { ...pago, SuscripcionId: suscripcionId }
+            : pago;
+        const response = await createPago(payload);
+        const created = response?.data;
+        if (created?.SuscripcionId) {
+          suscripcionId = created.SuscripcionId;
+        }
+      }
+
       setShowPagoModal(false);
       setSuscripcionParaPago(null);
       Swal.fire({
         position: "top-end",
         icon: "success",
-        title: "Pago creado exitosamente",
+        title:
+          pagos.length > 1
+            ? `${pagos.length} pagos creados exitosamente`
+            : "Pago creado exitosamente",
         showConfirmButton: false,
         timer: 2000,
       });

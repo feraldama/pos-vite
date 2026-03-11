@@ -145,15 +145,32 @@ export default function PagosPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (pagoData: Pago) => {
+  const handleSubmit = async (pagoData: Pago | Pago[]) => {
     let mensaje = "";
     try {
       if (currentPago) {
-        await updatePago(currentPago.PagoId, pagoData);
+        await updatePago(currentPago.PagoId, pagoData as Pago);
         mensaje = "Pago actualizado exitosamente";
       } else {
-        const response = await createPago(pagoData);
-        mensaje = response.message || "Pago creado exitosamente";
+        const pagos = Array.isArray(pagoData) ? pagoData : [pagoData];
+        let suscripcionId: string | number | undefined;
+
+        for (let i = 0; i < pagos.length; i++) {
+          const pago = pagos[i];
+          const payload =
+            i > 0 && suscripcionId
+              ? { ...pago, SuscripcionId: suscripcionId }
+              : pago;
+          const response = await createPago(payload);
+          const created = response?.data;
+          if (created?.SuscripcionId) {
+            suscripcionId = created.SuscripcionId;
+          }
+        }
+        mensaje =
+          pagos.length > 1
+            ? `${pagos.length} pagos creados exitosamente`
+            : "Pago creado exitosamente";
       }
       setIsModalOpen(false);
       Swal.fire({

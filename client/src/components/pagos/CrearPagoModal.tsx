@@ -57,10 +57,13 @@ interface Plan {
   [key: string]: unknown;
 }
 
+/** Un pago individual o array de pagos (cuando se divide en varios métodos) */
+export type PagoSubmitData = Pago | Pago[];
+
 interface CrearPagoModalProps {
   show: boolean;
   onClose: () => void;
-  onSubmit: (formData: Pago) => void;
+  onSubmit: (formData: PagoSubmitData) => void;
   currentPago?: Pago | null;
   initialSuscripcion?: Suscripcion | null;
   /** "existente" = pago de suscripción existente, "nueva" = crear nueva suscripción con cliente/plan pre-seleccionados */
@@ -103,6 +106,14 @@ export default function CrearPagoModal({
   const clienteSeleccionadoRef = useRef<Cliente | null>(null);
   const { user } = useAuth();
 
+  // Montos por método de pago (solo para creación, cuando no hay currentPago)
+  const [contado, setContado] = useState(0);
+  const [pos, setPos] = useState(0);
+  const [transferencia, setTransferencia] = useState(0);
+  const [pagoTipoActivo, setPagoTipoActivo] = useState<"CO" | "PO" | "TR">(
+    "CO",
+  );
+
   useEffect(() => {
     if (!show) return;
 
@@ -110,13 +121,13 @@ export default function CrearPagoModal({
       .then((data) => {
         const todasSuscripciones = data.data || [];
         let suscripcionesPendientes = todasSuscripciones.filter(
-          (s: Suscripcion) => s.EstadoPago !== "PAGADA"
+          (s: Suscripcion) => s.EstadoPago !== "PAGADA",
         );
         if (initialSuscripcion) {
           const yaIncluida = suscripcionesPendientes.some(
             (s: Suscripcion) =>
               String(s.SuscripcionId) ===
-              String(initialSuscripcion.SuscripcionId)
+              String(initialSuscripcion.SuscripcionId),
           );
           if (!yaIncluida) {
             suscripcionesPendientes = [
@@ -128,7 +139,7 @@ export default function CrearPagoModal({
         setSuscripciones(suscripcionesPendientes);
       })
       .catch(() =>
-        setSuscripciones(initialSuscripcion ? [initialSuscripcion] : [])
+        setSuscripciones(initialSuscripcion ? [initialSuscripcion] : []),
       );
 
     getAllClientesSinPaginacion()
@@ -149,7 +160,7 @@ export default function CrearPagoModal({
           const todasSuscripciones = data.data || [];
           const suscripcion = todasSuscripciones.find(
             (s: Suscripcion) =>
-              String(s.SuscripcionId) === String(currentPago.SuscripcionId)
+              String(s.SuscripcionId) === String(currentPago.SuscripcionId),
           );
           setSuscripcionSeleccionada(suscripcion || null);
         })
@@ -179,6 +190,9 @@ export default function CrearPagoModal({
         PagoFecha: new Date().toISOString().split("T")[0],
         PagoUsuarioId: String(user?.id || ""),
       });
+      setContado(0);
+      setPos(0);
+      setTransferencia(0);
     } else if (initialSuscripcion && modoInicial === "nueva") {
       const hoy = new Date().toISOString().split("T")[0];
       setTipoPago("nueva");
@@ -198,6 +212,9 @@ export default function CrearPagoModal({
         SuscripcionFechaInicio: hoy,
         SuscripcionFechaFin: "",
       });
+      setContado(0);
+      setPos(0);
+      setTransferencia(0);
     } else {
       setFormData({
         id: "",
@@ -218,6 +235,9 @@ export default function CrearPagoModal({
         SuscripcionFechaFin: "",
       });
       setFechaError("");
+      setContado(0);
+      setPos(0);
+      setTransferencia(0);
     }
   }, [show, currentPago, initialSuscripcion, modoInicial, user]);
 
@@ -233,7 +253,7 @@ export default function CrearPagoModal({
       return;
 
     const cliente = clientes.find(
-      (c) => Number(c.ClienteId) === Number(initialSuscripcion.ClienteId)
+      (c) => Number(c.ClienteId) === Number(initialSuscripcion.ClienteId),
     );
     if (cliente) {
       setClienteSeleccionado(cliente);
@@ -243,7 +263,7 @@ export default function CrearPagoModal({
     const fechaInicio = new Date().toISOString().split("T")[0];
     const fechaFin = (() => {
       const plan = planes.find(
-        (p) => Number(p.PlanId) === Number(initialSuscripcion.PlanId)
+        (p) => Number(p.PlanId) === Number(initialSuscripcion.PlanId),
       );
       if (!plan?.PlanDuracion) return "";
       const fecha = new Date(fechaInicio);
@@ -257,13 +277,7 @@ export default function CrearPagoModal({
         SuscripcionFechaFin: fechaFin,
       }));
     }
-  }, [
-    show,
-    initialSuscripcion,
-    modoInicial,
-    clientes,
-    planes,
-  ]);
+  }, [show, initialSuscripcion, modoInicial, clientes, planes]);
 
   const calculateFechaFin = (fechaInicio: string, planId: string | number) => {
     if (!fechaInicio || !planId) return "";
@@ -278,7 +292,7 @@ export default function CrearPagoModal({
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -287,7 +301,7 @@ export default function CrearPagoModal({
     }));
     if (name === "SuscripcionId" && value) {
       const suscripcion = suscripciones.find(
-        (s) => String(s.SuscripcionId) === String(value)
+        (s) => String(s.SuscripcionId) === String(value),
       );
       if (suscripcion) {
         setSuscripcionSeleccionada(suscripcion);
@@ -305,7 +319,7 @@ export default function CrearPagoModal({
   };
 
   const handleSuscripcionInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setSuscripcionFormData((prev) => {
@@ -320,7 +334,10 @@ export default function CrearPagoModal({
         if (fechaFin) newData.SuscripcionFechaFin = fechaFin;
         const plan = planes.find((p) => Number(p.PlanId) === Number(value));
         if (plan?.PlanPrecio) {
-          setFormData((prev) => ({ ...prev, PagoMonto: Number(plan.PlanPrecio) }));
+          setFormData((prev) => ({
+            ...prev,
+            PagoMonto: Number(plan.PlanPrecio),
+          }));
         }
         setFechaError("");
       }
@@ -332,7 +349,7 @@ export default function CrearPagoModal({
           setFechaError(
             fechaFinDate < fechaInicioDate
               ? "La fecha fin no puede ser anterior a la fecha inicio"
-              : ""
+              : "",
           );
         } else setFechaError("");
       }
@@ -342,7 +359,7 @@ export default function CrearPagoModal({
         setFechaError(
           fechaFinDate < fechaInicioDate
             ? "La fecha fin no puede ser anterior a la fecha inicio"
-            : ""
+            : "",
         );
       }
       return newData;
@@ -386,7 +403,7 @@ export default function CrearPagoModal({
       setClientes(clientesOrdenados);
       const clienteCompleto =
         clientesOrdenados.find(
-          (c) => Number(c.ClienteId) === Number(nuevoCliente.data.ClienteId)
+          (c) => Number(c.ClienteId) === Number(nuevoCliente.data.ClienteId),
         ) || nuevoCliente.data;
       handleSelectCliente(clienteCompleto);
       Swal.fire({
@@ -440,7 +457,7 @@ export default function CrearPagoModal({
         return;
       }
       const fechaInicioDate = new Date(
-        suscripcionFormData.SuscripcionFechaInicio
+        suscripcionFormData.SuscripcionFechaInicio,
       );
       const fechaFinDate = new Date(suscripcionFormData.SuscripcionFechaFin);
       if (fechaFinDate < fechaInicioDate) {
@@ -470,47 +487,84 @@ export default function CrearPagoModal({
       });
       return;
     }
-    if (!formData.PagoTipo) {
-      Swal.fire({
-        icon: "warning",
-        title: "Tipo requerido",
-        text: "Debe seleccionar un tipo de pago",
-      });
-      return;
-    }
-    let formDataToSubmit: Pago & {
-      ClienteId?: string;
-      PlanId?: string;
-      SuscripcionFechaInicio?: string;
-      SuscripcionFechaFin?: string;
-      SuscripcionId?: string | number;
-    };
-    if (tipoPago === "nueva") {
-      formDataToSubmit = {
-        id: formData.id,
-        PagoId: formData.PagoId,
-        PagoMonto: formData.PagoMonto,
-        PagoTipo: formData.PagoTipo,
-        PagoFecha: formData.PagoFecha,
-        PagoUsuarioId: user?.id || formData.PagoUsuarioId,
-        ClienteId: suscripcionFormData.ClienteId,
-        PlanId: suscripcionFormData.PlanId,
-        SuscripcionFechaInicio: suscripcionFormData.SuscripcionFechaInicio,
-        SuscripcionFechaFin: suscripcionFormData.SuscripcionFechaFin,
-      } as Pago & {
-        ClienteId?: string;
-        PlanId?: string;
-        SuscripcionFechaInicio?: string;
-        SuscripcionFechaFin?: string;
-      };
-    } else {
-      formDataToSubmit = {
+
+    const totalDistribuido = contado + pos + transferencia;
+
+    if (currentPago) {
+      // Modo edición: un solo pago
+      if (!formData.PagoTipo) {
+        Swal.fire({
+          icon: "warning",
+          title: "Tipo requerido",
+          text: "Debe seleccionar un tipo de pago",
+        });
+        return;
+      }
+      const formDataToSubmit = {
         ...formData,
         SuscripcionId: formData.SuscripcionId,
         PagoUsuarioId: user?.id || formData.PagoUsuarioId,
       } as Pago;
+      onSubmit(formDataToSubmit);
+      return;
     }
-    onSubmit(formDataToSubmit as Pago);
+
+    // Modo creación: validar distribución
+    if (totalDistribuido <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Distribución requerida",
+        text: "Debe ingresar al menos un monto en Contado, POS o Transferencia",
+      });
+      return;
+    }
+    if (totalDistribuido !== formData.PagoMonto) {
+      Swal.fire({
+        icon: "warning",
+        title: "La suma no coincide",
+        text: `La suma de los métodos (${formatMiles(totalDistribuido)}) debe ser igual al total (${formatMiles(formData.PagoMonto)})`,
+      });
+      return;
+    }
+
+    const baseData: Record<string, unknown> = {
+      PagoFecha: formData.PagoFecha,
+      PagoUsuarioId: user?.id || formData.PagoUsuarioId,
+    };
+    if (tipoPago === "nueva") {
+      baseData.ClienteId = suscripcionFormData.ClienteId;
+      baseData.PlanId = suscripcionFormData.PlanId;
+      baseData.SuscripcionFechaInicio =
+        suscripcionFormData.SuscripcionFechaInicio;
+      baseData.SuscripcionFechaFin = suscripcionFormData.SuscripcionFechaFin;
+    } else {
+      baseData.SuscripcionId = formData.SuscripcionId;
+    }
+
+    const pagosToCreate: Pago[] = [];
+    if (contado > 0) {
+      pagosToCreate.push({
+        ...baseData,
+        PagoMonto: contado,
+        PagoTipo: "CO",
+      } as Pago);
+    }
+    if (pos > 0) {
+      pagosToCreate.push({
+        ...baseData,
+        PagoMonto: pos,
+        PagoTipo: "PO",
+      } as Pago);
+    }
+    if (transferencia > 0) {
+      pagosToCreate.push({
+        ...baseData,
+        PagoMonto: transferencia,
+        PagoTipo: "TR",
+      } as Pago);
+    }
+
+    onSubmit(pagosToCreate);
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -707,7 +761,8 @@ export default function CrearPagoModal({
                         value={suscripcionFormData.SuscripcionFechaFin}
                         onChange={handleSuscripcionInputChange}
                         min={
-                          suscripcionFormData.SuscripcionFechaInicio || undefined
+                          suscripcionFormData.SuscripcionFechaInicio ||
+                          undefined
                         }
                         className={`bg-gray-50 border ${
                           fechaError ? "border-red-500" : "border-gray-300"
@@ -777,7 +832,7 @@ export default function CrearPagoModal({
               )}
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-900">
-                  Monto * (Editable)
+                  Monto total * (Editable)
                 </label>
                 <input
                   type="text"
@@ -811,26 +866,128 @@ export default function CrearPagoModal({
                   </p>
                 )}
               </div>
+
+              {/* Distribución del pago por método (solo creación, sin edición) */}
+              {!currentPago && (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <label className="block mb-3 text-sm font-medium text-gray-900">
+                    Distribuir el pago por método
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Ingrese el monto en cada método. La suma debe coincidir con
+                    el total.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <label className="w-28 text-sm text-gray-700">
+                        Contado:
+                      </label>
+                      <input
+                        type="text"
+                        value={contado ? formatMiles(contado) : ""}
+                        onFocus={() => setPagoTipoActivo("CO")}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          const num = Number(raw) || 0;
+                          setContado(num);
+                        }}
+                        className={`flex-1 max-w-[140px] p-2 rounded border text-right ${
+                          pagoTipoActivo === "CO"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-300 bg-white"
+                        }`}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="w-28 text-sm text-gray-700">POS:</label>
+                      <input
+                        type="text"
+                        value={pos ? formatMiles(pos) : ""}
+                        onFocus={() => setPagoTipoActivo("PO")}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          const num = Number(raw) || 0;
+                          setPos(num);
+                        }}
+                        className={`flex-1 max-w-[140px] p-2 rounded border text-right ${
+                          pagoTipoActivo === "PO"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-300 bg-white"
+                        }`}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="w-28 text-sm text-gray-700">
+                        Transferencia:
+                      </label>
+                      <input
+                        type="text"
+                        value={transferencia ? formatMiles(transferencia) : ""}
+                        onFocus={() => setPagoTipoActivo("TR")}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          const num = Number(raw) || 0;
+                          setTransferencia(num);
+                        }}
+                        className={`flex-1 max-w-[140px] p-2 rounded border text-right ${
+                          pagoTipoActivo === "TR"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-300 bg-white"
+                        }`}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-4">
+                    <span className="text-sm text-gray-600">
+                      Suma: Gs. {formatMiles(contado + pos + transferencia)}
+                    </span>
+                    <span
+                      className={`text-sm font-medium ${
+                        contado + pos + transferencia === formData.PagoMonto &&
+                        formData.PagoMonto > 0
+                          ? "text-green-600"
+                          : contado + pos + transferencia > 0
+                            ? "text-amber-600"
+                            : "text-gray-500"
+                      }`}
+                    >
+                      {contado + pos + transferencia === formData.PagoMonto &&
+                      formData.PagoMonto > 0
+                        ? "✓ Coincide"
+                        : formData.PagoMonto > 0
+                          ? `Restante: Gs. ${formatMiles(Math.max(0, formData.PagoMonto - contado - pos - transferencia))}`
+                          : "Ingrese montos"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Tipo único (solo en modo edición) */}
+              {currentPago && (
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-900">
+                    Tipo *
+                  </label>
+                  <select
+                    name="PagoTipo"
+                    value={formData.PagoTipo}
+                    onChange={handleInputChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    required
+                  >
+                    <option value="">Seleccione un tipo</option>
+                    <option value="CO">Contado</option>
+                    <option value="PO">POS</option>
+                    <option value="TR">Transfer</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-900">
-                  Tipo *
-                </label>
-                <select
-                  name="PagoTipo"
-                  value={formData.PagoTipo}
-                  onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                  required
-                >
-                  <option value="">Seleccione un tipo</option>
-                  <option value="CO">Contado</option>
-                  <option value="PO">POS</option>
-                  <option value="TR">Transfer</option>
-                </select>
-              </div>
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-900">
-                  Fecha *
+                  Fecha Pago *
                 </label>
                 <input
                   type="date"

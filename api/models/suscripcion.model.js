@@ -265,6 +265,9 @@ const Suscripcion = {
       const fechaDesdeFormateada = fechaDesde.toISOString().split("T")[0];
       const fechaLimiteFormateada = fechaLimite.toISOString().split("T")[0];
 
+      // Solo mostrar la suscripción más reciente por cliente (la de fecha fin más lejana).
+      // Así, si RONY tiene Suscripcion 8 (vencida 2026-03-05) y Suscripcion 12 (activa 2026-04-08),
+      // solo se considera la 12. Si la 12 no está en el rango (ej. dias=9), RONY no aparece.
       const hasLimit = limit != null && limit > 0;
       const query = hasLimit
         ? `
@@ -273,6 +276,12 @@ const Suscripcion = {
           p.PlanNombre, p.PlanPrecio,
           CASE WHEN pag.SuscripcionId IS NOT NULL THEN 'PAGADA' ELSE 'PENDIENTE' END as EstadoPago
         FROM suscripcion s
+        INNER JOIN (
+          SELECT ClienteId, MAX(SuscripcionFechaFin) as MaxFechaFin
+          FROM suscripcion
+          WHERE SuscripcionFechaFin IS NOT NULL
+          GROUP BY ClienteId
+        ) latest ON s.ClienteId = latest.ClienteId AND s.SuscripcionFechaFin = latest.MaxFechaFin
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
         LEFT JOIN (SELECT DISTINCT SuscripcionId FROM pago) pag ON pag.SuscripcionId = s.SuscripcionId
@@ -288,6 +297,12 @@ const Suscripcion = {
           p.PlanNombre, p.PlanPrecio,
           CASE WHEN pag.SuscripcionId IS NOT NULL THEN 'PAGADA' ELSE 'PENDIENTE' END as EstadoPago
         FROM suscripcion s
+        INNER JOIN (
+          SELECT ClienteId, MAX(SuscripcionFechaFin) as MaxFechaFin
+          FROM suscripcion
+          WHERE SuscripcionFechaFin IS NOT NULL
+          GROUP BY ClienteId
+        ) latest ON s.ClienteId = latest.ClienteId AND s.SuscripcionFechaFin = latest.MaxFechaFin
         LEFT JOIN clientes c ON s.ClienteId = c.ClienteId
         LEFT JOIN plan p ON s.PlanId = p.PlanId
         LEFT JOIN (SELECT DISTINCT SuscripcionId FROM pago) pag ON pag.SuscripcionId = s.SuscripcionId

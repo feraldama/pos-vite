@@ -35,7 +35,7 @@ interface PagosListProps {
   isModalOpen: boolean;
   onCloseModal: () => void;
   currentPago?: Pago | null;
-  onSubmit: (formData: Pago) => void;
+  onSubmit: (formData: Pago | Pago[]) => void;
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;

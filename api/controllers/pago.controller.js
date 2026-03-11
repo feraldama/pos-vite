@@ -1,6 +1,8 @@
 const Pago = require("../models/pago.model");
 const Suscripcion = require("../models/suscripcion.model");
 const Plan = require("../models/plan.model");
+const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
+const Caja = require("../models/caja.model");
 
 exports.getAll = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
@@ -96,6 +98,48 @@ exports.create = async (req, res) => {
     };
 
     const pago = await Pago.create(pagoData);
+
+    // Registrar en registrodiariocaja si el usuario tiene caja aperturada
+    try {
+      const estado = await RegistroDiarioCaja.getEstadoAperturaPorUsuario(
+        req.user?.id || pagoData.PagoUsuarioId
+      );
+      const cajaAbierta =
+        estado?.cajaId &&
+        estado.aperturaId > estado.cierreId;
+
+      if (cajaAbierta) {
+        // TipoGastoId 2 = ingreso. TipoGastoGrupoId: CO->1, PO->4, TR->6
+        const tipoGrupoMap = { CO: 1, PO: 4, TR: 6 };
+        const tipoGastoGrupoId =
+          tipoGrupoMap[pagoData.PagoTipo] || 1;
+
+        const detalle = `Pago suscripción #${pago.SuscripcionId || suscripcionId} - ${pagoData.PagoTipo === "CO" ? "Contado" : pagoData.PagoTipo === "PO" ? "POS" : "Transferencia"}`;
+
+        await RegistroDiarioCaja.create({
+          CajaId: estado.cajaId,
+          RegistroDiarioCajaFecha: pagoData.PagoFecha || new Date(),
+          TipoGastoId: 2,
+          TipoGastoGrupoId: tipoGastoGrupoId,
+          RegistroDiarioCajaDetalle: detalle,
+          RegistroDiarioCajaMonto: pagoData.PagoMonto,
+          UsuarioId: req.user?.id || pagoData.PagoUsuarioId,
+        });
+
+        const cajaActual = await Caja.getById(estado.cajaId);
+        if (cajaActual) {
+          const nuevoMonto =
+            Number(cajaActual.CajaMonto || 0) + Number(pagoData.PagoMonto);
+          await Caja.update(estado.cajaId, {
+            CajaDescripcion: cajaActual.CajaDescripcion,
+            CajaMonto: nuevoMonto,
+          });
+        }
+      }
+    } catch (regErr) {
+      console.warn("No se pudo registrar en caja (pago creado correctamente):", regErr.message);
+    }
+
     res.status(201).json({
       message: "Pago creado exitosamente",
       data: pago,

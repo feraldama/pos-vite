@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getPagos,
   deletePago,
@@ -10,6 +11,8 @@ import PagosList from "../../components/pagos/PagosList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
+import { useAuth } from "../../contexts/useAuth";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 
 interface Pago {
   id: string | number;
@@ -31,6 +34,9 @@ interface Pagination {
 }
 
 export default function PagosPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [cajaVerificada, setCajaVerificada] = useState<boolean | null>(null);
   const [pagosData, setPagosData] = useState<{
     pagos: Pago[];
     pagination: Pagination;
@@ -82,8 +88,35 @@ export default function PagosPage() {
   }, [currentPage, appliedSearchTerm, itemsPerPage, sortKey, sortOrder]);
 
   useEffect(() => {
-    fetchPagos();
-  }, [fetchPagos]);
+    const verificarCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        if (estado.cajaId && estado.aperturaId > estado.cierreId) {
+          setCajaVerificada(true);
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "Caja no aperturada",
+            text: "Debes aperturar una caja antes de acceder a la gestión de pagos.",
+            confirmButtonColor: "#2563eb",
+          }).then(() => {
+            navigate("/apertura-cierre-caja");
+          });
+          setCajaVerificada(false);
+        }
+      } catch {
+        setCajaVerificada(false);
+      }
+    };
+    verificarCaja();
+  }, [user?.id, navigate]);
+
+  useEffect(() => {
+    if (cajaVerificada === true) {
+      fetchPagos();
+    }
+  }, [cajaVerificada, fetchPagos]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -199,7 +232,12 @@ export default function PagosPage() {
     setCurrentPage(1);
   };
 
+  if (cajaVerificada === false) return null;
+
   if (!puedeLeer) return <div>No tienes permiso para ver los pagos</div>;
+
+  if (cajaVerificada !== true)
+    return <div>Cargando...</div>;
 
   if (loading) return <div>Cargando pagos...</div>;
   if (error) return <div>Error: {error}</div>;

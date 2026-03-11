@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/useAuth";
 import { getSuscripcionesProximasAVencer } from "../../services/suscripciones.service";
 import { createPago } from "../../services/pagos.service";
 import CrearPagoModal from "../../components/pagos/CrearPagoModal";
+import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import Swal from "sweetalert2";
 
 interface Suscripcion {
@@ -21,6 +23,8 @@ interface Suscripcion {
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [cajaAperturada, setCajaAperturada] = useState<boolean | null>(null);
   const [suscripcionesProximas, setSuscripcionesProximas] = useState<
     Suscripcion[]
   >([]);
@@ -46,7 +50,33 @@ function Dashboard() {
     cargarSuscripcionesProximas();
   }, [cargarSuscripcionesProximas]);
 
+  useEffect(() => {
+    const verificarCaja = async () => {
+      if (!user?.id) return;
+      try {
+        const estado = await getEstadoAperturaPorUsuario(user.id);
+        setCajaAperturada(
+          !!(estado.cajaId && estado.aperturaId > estado.cierreId)
+        );
+      } catch {
+        setCajaAperturada(false);
+      }
+    };
+    verificarCaja();
+  }, [user?.id]);
+
   const handleClickSuscripcion = (suscripcion: Suscripcion) => {
+    if (!cajaAperturada) {
+      Swal.fire({
+        icon: "warning",
+        title: "Caja no aperturada",
+        text: "Debes aperturar una caja antes de crear un pago.",
+        confirmButtonColor: "#2563eb",
+      }).then(() => {
+        navigate("/apertura-cierre-caja");
+      });
+      return;
+    }
     setSuscripcionParaPago(suscripcion);
     setShowPagoModal(true);
   };

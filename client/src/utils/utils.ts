@@ -61,7 +61,7 @@ import Swal from "sweetalert2";
 // Función para generar PDF de presupuesto
 export const generatePresupuestoPDF = async (
   carrito: CarritoItem[],
-  cliente?: ClientePresupuesto
+  cliente?: ClientePresupuesto,
 ) => {
   // Mostrar modal para ingresar observación
   const { value: observacion } = await Swal.fire({
@@ -139,7 +139,7 @@ export const generatePresupuestoPDF = async (
   // Calcular total
   const subtotal = carrito.reduce(
     (acc, item) => acc + item.precio * item.cantidad,
-    0
+    0,
   );
   const finalY =
     (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable
@@ -161,7 +161,7 @@ export const generatePresupuestoPDF = async (
     doc.text(
       `Total: Gs. ${subtotal.toLocaleString()}`,
       14,
-      finalY + 12 + observacionHeight + 8
+      finalY + 12 + observacionHeight + 8,
     );
   } else {
     // Si no hay observación, mostrar el total directamente

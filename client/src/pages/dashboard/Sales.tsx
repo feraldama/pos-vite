@@ -17,6 +17,7 @@ import {
   createCliente,
 } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
+import type { Cliente } from "../../components/common/ClienteFormModal";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
@@ -33,18 +34,6 @@ import {
   generatePresupuestoPDF,
   type CarritoItem,
 } from "../../utils/utils";
-
-interface Cliente {
-  ClienteId: number;
-  ClienteRUC: string;
-  ClienteNombre: string;
-  ClienteApellido: string;
-  ClienteDireccion: string;
-  ClienteTelefono: string;
-  ClienteTipo: string;
-  ClienteFechaNacimiento?: string;
-  UsuarioId: string;
-}
 
 interface Caja {
   id: string | number;
@@ -98,12 +87,12 @@ export default function Sales() {
   >([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [pagination, setPagination] = useState({
     totalItems: 0,
     totalPages: 1,
     currentPage: 1,
-    itemsPerPage: 24,
+    itemsPerPage: 10,
   });
   // const [modalPago, setModalPago] = useState(false);
   const { user } = useAuth();
@@ -116,6 +105,7 @@ export default function Sales() {
   const [bancoCredito, setBancoCredito] = useState(0);
   const [cuentaCliente, setCuentaCliente] = useState(0);
   const [voucher, setVoucher] = useState(0);
+  const [ventaNroPOS, setVentaNroPOS] = useState("");
   const [printTicket, setPrintTicket] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -137,7 +127,7 @@ export default function Sales() {
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
-    null
+    null,
   );
   const [isDevolucion, setIsDevolucion] = useState(false);
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
@@ -201,8 +191,8 @@ export default function Sales() {
       carrito.map((p) =>
         p.cartItemId === cartItemId
           ? { ...p, cantidad: Math.max(1, cantidad) }
-          : p
-      )
+          : p,
+      ),
     );
   };
 
@@ -252,24 +242,38 @@ export default function Sales() {
 
     setLoading(true);
     try {
+      const localIdUsuario = user?.LocalId ?? null;
       let data;
       if (busquedaDebounced.trim()) {
-        // Si hay búsqueda, usar el endpoint de búsqueda paginado
+        // Si hay búsqueda, usar el endpoint de búsqueda paginado (stock del almacén del local del usuario)
         data = await searchProductos(
           busquedaDebounced.trim(),
           currentPage,
-          itemsPerPage
+          itemsPerPage,
+          undefined,
+          undefined,
+          localIdUsuario,
         );
       } else {
-        // Si no hay búsqueda, cargar productos paginados
-        data = await getProductosPaginated(currentPage, itemsPerPage);
+        // Si no hay búsqueda, cargar productos paginados (stock del almacén del local del usuario)
+        data = await getProductosPaginated(
+          currentPage,
+          itemsPerPage,
+          undefined,
+          undefined,
+          localIdUsuario,
+        );
       }
 
-      // Filtrar productos por LocalId después de recibirlos
+      // Filtrar productos por LocalId: mostrar si es 0 (todos) o si coincide con el local del usuario
+      const localUsuario = Number(user?.LocalId);
       const productosFiltrados = (data.data || []).filter(
-        (p: { LocalId: string | number }) =>
-          Number(p.LocalId) === 0 ||
-          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
+        (p: { LocalId: string | number }) => {
+          const localProd = Number(p.LocalId);
+          return (
+            localProd === 0 || (localUsuario && localProd === localUsuario)
+          );
+        },
       );
 
       setProductos(productosFiltrados);
@@ -285,7 +289,13 @@ export default function Sales() {
     } finally {
       setLoading(false);
     }
-  }, [cajaAperturada, busquedaDebounced, currentPage, itemsPerPage]);
+  }, [
+    cajaAperturada,
+    busquedaDebounced,
+    currentPage,
+    itemsPerPage,
+    user?.LocalId,
+  ]);
 
   // Cargar combos solo una vez al montar
   useEffect(() => {
@@ -345,7 +355,7 @@ export default function Sales() {
               ClienteTipo: "MI",
               UsuarioId: "",
             },
-          ])
+          ]),
         );
     }
   }, [showClienteModal]);
@@ -397,7 +407,7 @@ export default function Sales() {
         const nuevoPrecio =
           tipo === "MA" ? item.precioVentaMayorista : item.precioVenta;
         return { ...item, precio: nuevoPrecio ?? 0 };
-      })
+      }),
     );
   }, [clienteSeleccionado]);
 
@@ -415,17 +425,17 @@ export default function Sales() {
   function getSubtotal(items: Array<{ totalPrice: number }>): number {
     return items.reduce(
       (acc: number, item: { totalPrice: number }) => acc + item.totalPrice,
-      0
+      0,
     );
   }
 
   function calcularPrecioConCombo(
     productoId: number,
     cantidad: number,
-    precioUnitario: number
+    precioUnitario: number,
   ) {
     const combo = combos.find(
-      (c) => Number(c.ProductoId) === Number(productoId)
+      (c) => Number(c.ProductoId) === Number(productoId),
     );
     if (!combo) return cantidad * precioUnitario;
     const comboCantidad = Number(combo.ComboCantidad);
@@ -440,13 +450,18 @@ export default function Sales() {
 
   const sendRequest = async () => {
     const fecha = new Date();
-    const dia = fecha.getDate();
-    const mes = fecha.getMonth() + 1;
-    const año = fecha.getFullYear() % 100;
+    // Restar 3h (Paraguay UTC-3): Genexus/MySQL suman 3 al guardar, así queda la hora local correcta
+    const fechaAjustada = new Date(fecha.getTime() - 3 * 60 * 60 * 1000);
+    const dia = fechaAjustada.getDate();
+    const mes = fechaAjustada.getMonth() + 1;
+    const año = fechaAjustada.getFullYear() % 100;
     const diaStr = dia < 10 ? `0${dia}` : dia.toString();
     const mesStr = mes < 10 ? `0${mes}` : mes.toString();
     const añoStr = año < 10 ? `0${año}` : año.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+    const horas = String(fechaAjustada.getHours()).padStart(2, "0");
+    const minutos = String(fechaAjustada.getMinutes()).padStart(2, "0");
+    const segundos = String(fechaAjustada.getSeconds()).padStart(2, "0");
+    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr} ${horas}:${minutos}:${segundos}`;
 
     const SDTProductoItem = carrito.map((p) => {
       const combo = combos.find((c) => Number(c.ProductoId) === Number(p.id));
@@ -456,7 +471,7 @@ export default function Sales() {
       const totalCombo = calcularPrecioConCombo(
         p.id,
         p.cantidad,
-        precioUnitario
+        precioUnitario,
       );
       const esCombo = combo && p.cantidad >= comboCantidad;
       return {
@@ -524,6 +539,10 @@ export default function Sales() {
                   Transferreact: Number(banco),
                   Ventanrofactura: 0,
                   Ventatimbrado: 0,
+                  Ventanropos:
+                    bancoDebito > 0 || bancoCredito > 0
+                      ? ventaNroPOS.trim() || "0"
+                      : "0",
                 }),
           },
         },
@@ -542,7 +561,7 @@ export default function Sales() {
           import.meta.env.VITE_APP_URL_GENEXUS +
           endpoint,
         xml,
-        config
+        config,
       );
       if (printTicket) {
         generateTicketPDF();
@@ -579,6 +598,7 @@ export default function Sales() {
     setBancoCredito(0);
     setCuentaCliente(0);
     setVoucher(0);
+    setVentaNroPOS("");
     setTotalRest(0);
     setPrintTicket(false);
     setShowModal(false);
@@ -619,7 +639,7 @@ export default function Sales() {
         ? "RUC: " + clienteSeleccionado.ClienteRUC
         : "RUC: SIN RUC",
       0,
-      40
+      40,
     );
     doc.text(
       "Cliente: " +
@@ -627,7 +647,7 @@ export default function Sales() {
           " " +
           clienteSeleccionado?.ClienteApellido || ""),
       0,
-      45
+      45,
     );
 
     // Línea separadora
@@ -700,7 +720,7 @@ export default function Sales() {
     // Total de la compra
     const totalCost = carrito.reduce(
       (sum, item) => sum + obtenerTotal(item),
-      0
+      0,
     );
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
@@ -708,7 +728,7 @@ export default function Sales() {
     doc.text(
       `Total a Pagar Gs. ${totalCost.toLocaleString("es-ES")}`,
       0,
-      lastAutoTable.finalY + 5
+      lastAutoTable.finalY + 5,
     );
 
     // Pie de página
@@ -774,7 +794,7 @@ export default function Sales() {
           }
         }
         return { ...item, cantidad: Math.max(0, Number(nuevaCantidad)) };
-      })
+      }),
     );
   };
 
@@ -787,7 +807,14 @@ export default function Sales() {
       precio: item.precio,
     }));
 
-    generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
+    const clientePresupuesto = clienteSeleccionado
+      ? {
+          ClienteNombre: clienteSeleccionado.ClienteNombre ?? "",
+          ClienteApellido: clienteSeleccionado.ClienteApellido ?? "",
+        }
+      : undefined;
+
+    generatePresupuestoPDF(carritoItems, clientePresupuesto);
   };
 
   // --- Función para manejar ENTER en la búsqueda ---
@@ -804,12 +831,23 @@ export default function Sales() {
     setBusquedaDebounced(busqueda);
 
     try {
-      // Buscar productos usando el servicio de búsqueda
-      const data = await searchProductos(busqueda.trim(), 1, 10);
+      // Buscar productos usando el servicio de búsqueda (stock del almacén del local del usuario)
+      const data = await searchProductos(
+        busqueda.trim(),
+        1,
+        10,
+        undefined,
+        undefined,
+        user?.LocalId ?? null,
+      );
+      const localUsuario = Number(user?.LocalId);
       const productosFiltrados = (data.data || []).filter(
-        (p: { LocalId: string | number }) =>
-          Number(p.LocalId) === 0 ||
-          Number(p.LocalId) === Number(cajaAperturada?.CajaId)
+        (p: { LocalId: string | number }) => {
+          const localProd = Number(p.LocalId);
+          return (
+            localProd === 0 || (localUsuario && localProd === localUsuario)
+          );
+        },
       );
 
       // Agregar el primer producto encontrado
@@ -865,8 +903,8 @@ export default function Sales() {
                       p.cartItemId === selectedProductId
                         ? "bg-gray-50 border-gray-300"
                         : idx !== carrito.length - 1
-                        ? "border-b border-gray-200"
-                        : ""
+                          ? "border-b border-gray-200"
+                          : ""
                     } transition-colors`}
                     onClick={() => {
                       setSelectedProductId(p.cartItemId);
@@ -963,8 +1001,8 @@ export default function Sales() {
                                 carrito.map((item) =>
                                   item.cartItemId === p.cartItemId
                                     ? { ...item, caja: !item.caja }
-                                    : item
-                                )
+                                    : item,
+                                ),
                               )
                             }
                             className="cursor-pointer"
@@ -1058,10 +1096,10 @@ export default function Sales() {
                     clienteSeleccionado.ClienteApellido || ""
                   }`
                 : clientes[0]
-                ? `${clientes[0].ClienteNombre} ${
-                    clientes[0].ClienteApellido || ""
-                  }`
-                : "SIN NOMBRE MINORISTA"}
+                  ? `${clientes[0].ClienteNombre} ${
+                      clientes[0].ClienteApellido || ""
+                    }`
+                  : "SIN NOMBRE MINORISTA"}
             </button>
             <ClienteModal
               show={showClienteModal}
@@ -1229,6 +1267,8 @@ export default function Sales() {
         sendRequest={sendRequest}
         voucher={voucher}
         setVoucher={setVoucher}
+        ventaNroPOS={ventaNroPOS}
+        setVentaNroPOS={setVentaNroPOS}
       />
     </div>
   );

@@ -1,19 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import ClienteFormModal from "./ClienteFormModal";
-
-// Definir la interfaz Cliente localmente para evitar error de importación
-interface Cliente {
-  ClienteId: number;
-  ClienteRUC: string;
-  ClienteNombre: string;
-  ClienteApellido: string;
-  ClienteDireccion: string;
-  ClienteTelefono: string;
-  ClienteTipo: string;
-  ClienteFechaNacimiento?: string;
-  UsuarioId: string;
-}
+import type { Cliente } from "./ClienteFormModal";
 
 interface ClienteModalProps {
   show: boolean;
@@ -22,7 +10,6 @@ interface ClienteModalProps {
   onSelect: (cliente: Cliente) => void;
   onCreateCliente?: (cliente: Cliente) => void;
   currentUserId?: string;
-  hideTipo?: boolean;
 }
 
 const ClienteModal: React.FC<ClienteModalProps> = ({
@@ -31,13 +18,14 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   clientes,
   onSelect,
   onCreateCliente,
-  hideTipo = false,
+  currentUserId,
 }) => {
   const [filtros, setFiltros] = useState({
     ruc: "",
     nombre: "",
     apellido: "",
     telefono: "",
+    fechaNacimiento: "",
   });
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -46,49 +34,26 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   const clientesFiltrados = useMemo(() => {
     return clientes.filter(
       (c) =>
-        c.ClienteRUC.toLowerCase().includes(filtros.ruc.toLowerCase()) &&
-        c.ClienteNombre.toLowerCase().includes(filtros.nombre.toLowerCase()) &&
+        c.ClienteRUC?.toLowerCase().includes(filtros.ruc.toLowerCase()) &&
+        c.ClienteNombre?.toLowerCase().includes(filtros.nombre.toLowerCase()) &&
         (c.ClienteApellido || "")
-          .toLowerCase()
+          ?.toLowerCase()
           .includes(filtros.apellido.toLowerCase()) &&
         (c.ClienteTelefono || "")
-          .toLowerCase()
-          .includes(filtros.telefono.toLowerCase())
+          ?.toLowerCase()
+          .includes(filtros.telefono.toLowerCase()),
     );
   }, [clientes, filtros]);
 
   const totalPages = Math.ceil(clientesFiltrados.length / rowsPerPage);
   const paginatedClientes = clientesFiltrados.slice(
     (page - 1) * rowsPerPage,
-    page * rowsPerPage
+    page * rowsPerPage,
   );
 
-  const handleCreateCliente = (clienteData: {
-    ClienteId?: number | string;
-    ClienteRUC?: string;
-    ClienteNombre?: string;
-    ClienteApellido?: string;
-    ClienteDireccion?: string;
-    ClienteTelefono?: string;
-    ClienteTipo?: string;
-    ClienteFechaNacimiento?: string;
-    UsuarioId?: string;
-    [key: string]: unknown;
-  }) => {
+  const handleCreateSubmit = (cliente: Cliente) => {
     if (onCreateCliente) {
-      const clienteId = clienteData.ClienteId ?? 0;
-      onCreateCliente({
-        ClienteId:
-          typeof clienteId === "string" ? Number(clienteId) || 0 : clienteId,
-        ClienteRUC: clienteData.ClienteRUC ?? "",
-        ClienteNombre: clienteData.ClienteNombre ?? "",
-        ClienteApellido: clienteData.ClienteApellido ?? "",
-        ClienteDireccion: clienteData.ClienteDireccion ?? "",
-        ClienteTelefono: clienteData.ClienteTelefono ?? "",
-        ClienteTipo: clienteData.ClienteTipo ?? "MI",
-        ClienteFechaNacimiento: clienteData.ClienteFechaNacimiento,
-        UsuarioId: clienteData.UsuarioId ?? "",
-      });
+      onCreateCliente(cliente);
       setShowCreateModal(false);
     }
   };
@@ -208,8 +173,8 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                     {c.ClienteTipo === "MI"
                       ? "Minorista"
                       : c.ClienteTipo === "MA"
-                      ? "Mayorista"
-                      : c.ClienteTipo}
+                        ? "Mayorista"
+                        : c.ClienteTipo}
                   </td>
                 </tr>
               ))}
@@ -223,7 +188,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               ? "0"
               : `${(page - 1) * rowsPerPage + 1} to ${Math.min(
                   page * rowsPerPage,
-                  clientesFiltrados.length
+                  clientesFiltrados.length,
                 )} of ${clientesFiltrados.length}`}
           </div>
           <div className="flex items-center gap-2">
@@ -263,11 +228,10 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
 
         {/* Modal para crear cliente */}
         <ClienteFormModal
-          show={showCreateModal}
+          isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateCliente}
-          hideTipo={hideTipo}
-          title="Crear nuevo cliente"
+          onSubmit={handleCreateSubmit}
+          currentUserId={currentUserId}
         />
       </div>
     </div>

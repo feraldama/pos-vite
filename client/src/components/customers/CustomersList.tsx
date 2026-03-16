@@ -3,20 +3,7 @@ import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import ClienteFormModal from "../common/ClienteFormModal";
-
-interface Cliente {
-  id: string | number;
-  ClienteId: string;
-  ClienteRUC: string;
-  ClienteNombre: string;
-  ClienteApellido: string;
-  ClienteDireccion: string;
-  ClienteTelefono: string;
-  ClienteTipo: string;
-  ClienteFechaNacimiento?: string;
-  UsuarioId: string;
-  [key: string]: unknown;
-}
+import type { Cliente } from "../common/ClienteFormModal";
 
 interface Pagination {
   totalItems: number;
@@ -64,7 +51,6 @@ export default function CustomersList({
     { key: "ClienteRUC", label: "RUC" },
     { key: "ClienteNombre", label: "Nombre" },
     { key: "ClienteApellido", label: "Apellido" },
-    { key: "ClienteFechaNacimiento", label: "Fecha Nacimiento" },
     { key: "ClienteDireccion", label: "Dirección" },
     { key: "ClienteTelefono", label: "Teléfono" },
     { key: "ClienteTipo", label: "Tipo" },
@@ -98,13 +84,11 @@ export default function CustomersList({
           Mostrando {clientes.length} de {pagination?.totalItems} clientes
         </div>
       </div>
-      <DataTable<Cliente>
+      <DataTable<Cliente & { id: string | number }>
         columns={columns}
         data={clientes.map((c) => ({
           ...c,
-          ClienteFechaNacimiento: c.ClienteFechaNacimiento
-            ? new Date(c.ClienteFechaNacimiento).toLocaleDateString()
-            : "",
+          id: c.id || c.ClienteId || "",
         }))}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -114,17 +98,10 @@ export default function CustomersList({
         onSort={onSort}
       />
       <ClienteFormModal
-        show={isModalOpen}
+        isOpen={isModalOpen}
         onClose={onCloseModal}
-        onSubmit={(clienteData) => {
-          onSubmit({
-            ...clienteData,
-            id: currentCliente?.id || clienteData.ClienteId || "",
-            ClienteId: currentCliente?.ClienteId || clienteData.ClienteId || "",
-          } as Cliente);
-        }}
-        currentCliente={currentCliente || null}
-        hideTipo={true}
+        currentCliente={currentCliente}
+        onSubmit={onSubmit}
       />
     </>
   );

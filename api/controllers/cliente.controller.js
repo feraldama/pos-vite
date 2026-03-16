@@ -13,7 +13,7 @@ exports.getAllClientes = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
     );
 
     res.json({
@@ -50,7 +50,7 @@ exports.searchClientes = async (req, res) => {
       limit,
       offset,
       sortBy,
-      sortOrder
+      sortOrder,
     );
 
     res.json({
@@ -89,6 +89,11 @@ exports.createCliente = async (req, res) => {
         message: `El campo ClienteNombre es requerido`,
       });
     }
+    // Normalizar ClienteFechaNacimiento: vacío/undefined -> null (DATE acepta null si la columna lo permite)
+    const fechaNac = req.body.ClienteFechaNacimiento;
+    const ClienteFechaNacimiento =
+      fechaNac && String(fechaNac).trim() !== "" ? String(fechaNac).trim() : null;
+
     // Crear el nuevo cliente
     const nuevoCliente = await Cliente.create({
       ClienteRUC: req.body.ClienteRUC || "",
@@ -97,7 +102,7 @@ exports.createCliente = async (req, res) => {
       ClienteDireccion: req.body.ClienteDireccion || null,
       ClienteTelefono: req.body.ClienteTelefono || null,
       ClienteTipo: req.body.ClienteTipo,
-      ClienteFechaNacimiento: req.body.ClienteFechaNacimiento || null,
+      ClienteFechaNacimiento,
       UsuarioId: req.body.UsuarioId ? String(req.body.UsuarioId).trim() : "",
     });
     res.status(201).json({

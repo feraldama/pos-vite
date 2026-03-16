@@ -13,6 +13,7 @@ router.get(
   "/estado-apertura",
   registroDiarioCajaController.estadoAperturaPorUsuario
 );
+router.get("/rango", authMiddleware, registroDiarioCajaController.getByDateRange);
 router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
 router.post("/", authMiddleware, registroDiarioCajaController.create);
 router.post(

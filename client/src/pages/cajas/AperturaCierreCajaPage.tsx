@@ -354,10 +354,10 @@ export default function AperturaCierreCajaPage() {
           icon: "success",
           title: "Apertura exitosa",
           text: result.message || "La caja se aperturó correctamente",
-          confirmButtonText: "Ir a pagos",
+          confirmButtonText: "Ir a ventas",
           confirmButtonColor: "#2563eb",
         });
-        navigate("/pagos");
+        navigate("/ventas");
       } else {
         setSuccess(result.message || "Operación realizada correctamente");
         await fetchRegistrosCaja();

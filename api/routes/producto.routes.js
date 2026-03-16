@@ -13,6 +13,11 @@ router.get(
   authMiddleware,
   productoController.getAllProductosSinPaginacion
 );
+router.get(
+  "/reporte-stock",
+  authMiddleware,
+  productoController.getReporteStock
+);
 router.get("/search", authMiddleware, productoController.searchProductos);
 router.get("/:id", authMiddleware, productoController.getProductoById);
 router.post("/", authMiddleware, productoController.createProducto);

@@ -31,6 +31,7 @@ import FacturasPage from "./pages/facturas/FacturasPage";
 import Compras from "./pages/compras/Compras";
 import ComprasPage from "./pages/compras/ComprasPage";
 import Inventario from "./pages/inventario/Inventario";
+import DocumentTitle from "./components/common/DocumentTitle";
 import SuscripcionesPage from "./pages/suscripciones/SuscripcionesPage";
 import PlanesPage from "./pages/planes/PlanesPage";
 import PagosPage from "./pages/pagos/PagosPage";
@@ -38,6 +39,7 @@ import PagosPage from "./pages/pagos/PagosPage";
 function App() {
   return (
     <Router>
+      <DocumentTitle />
       <AuthProvider>
         <Routes>
           {/* Redirige la raíz / a /login */}

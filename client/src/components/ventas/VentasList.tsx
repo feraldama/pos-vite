@@ -236,6 +236,14 @@ const VentasList = ({
       render: (venta: VentaWithId) => getTipoVentaText(venta.VentaTipo),
     },
     {
+      key: "VentaNroPOS",
+      label: "Nro. POS",
+      render: (venta: VentaWithId) =>
+        venta.VentaNroPOS != null && String(venta.VentaNroPOS).trim() !== ""
+          ? venta.VentaNroPOS
+          : "-",
+    },
+    {
       key: "Total",
       label: "Total",
       render: (venta: VentaWithId) => formatCurrency(venta.Total),

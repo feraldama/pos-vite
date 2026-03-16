@@ -8,6 +8,7 @@ export interface Venta {
   AlmacenId: number;
   VentaTipo: "CO" | "CR" | "PO" | "TR";
   VentaPagoTipo: string;
+  VentaNroPOS?: string | number;
   VentaCantidadProductos: number;
   VentaUsuario: string;
   Total: number;

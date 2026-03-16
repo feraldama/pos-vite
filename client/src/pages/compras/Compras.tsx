@@ -49,7 +49,8 @@ export default function Compras() {
       id: number;
       nombre: string;
       precioTotal: number; // Precio total pagado por el producto
-      precioUnitario: number; // Precio unitario calculado
+      precioUnitario: number; // Precio unitario (costo) calculado
+      precioVentaActual: number; // Precio al que se vende actualmente
       imagen: string;
       stock: number;
       cantidad: number;
@@ -118,9 +119,10 @@ export default function Compras() {
     precio: number;
     imagen: string;
     stock: number;
+    precioVentaActual?: number;
   }) => {
     const nuevoCartItemId = Date.now() + Math.random();
-    const precioTotal = producto.precio; // El precio que viene es el precio total
+    const precioTotal = producto.precio; // El precio que viene es el precio total (costo)
     const precioUnitario = producto.precio; // Inicialmente es igual al total (cantidad 1)
 
     setCarrito([
@@ -129,6 +131,7 @@ export default function Compras() {
         ...producto,
         precioTotal: precioTotal,
         precioUnitario: precioUnitario,
+        precioVentaActual: producto.precioVentaActual ?? 0,
         cantidad: 1,
         caja: true, // Por defecto es unidad
         cartItemId: nuevoCartItemId,
@@ -466,6 +469,7 @@ export default function Compras() {
           ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
           : logo,
         stock: primerProducto.ProductoStock,
+        precioVentaActual: primerProducto.ProductoPrecioVenta,
       });
       setBusqueda("");
     }
@@ -486,6 +490,9 @@ export default function Compras() {
                   <th className="py-4 font-semibold text-[15px]">Cantidad</th>
                   <th className="py-4 font-semibold text-[15px]">
                     Precio Uni.
+                  </th>
+                  <th className="py-4 font-semibold text-[15px]">
+                    Venta / % Gan.
                   </th>
                   <th className="py-4 pr-6 font-semibold text-[15px]">Total</th>
                 </tr>
@@ -615,6 +622,37 @@ export default function Compras() {
                     </td>
                     <td className="py-3 align-middle text-right font-medium text-[17px] text-gray-700">
                       Gs. {formatMiles(p.precioUnitario)}
+                    </td>
+                    <td className="py-3 align-middle text-right text-sm text-gray-600">
+                      <div className="flex flex-col gap-0.5">
+                        <span>
+                          Venta:{" "}
+                          {p.precioVentaActual > 0
+                            ? `Gs. ${formatMiles(p.precioVentaActual)}`
+                            : "—"}
+                        </span>
+                        <span
+                          className={
+                            p.precioUnitario > 0 &&
+                            p.precioVentaActual > 0 &&
+                            ((p.precioVentaActual - p.precioUnitario) /
+                              p.precioUnitario) *
+                              100 <
+                              2
+                              ? "text-red-600 font-medium"
+                              : ""
+                          }
+                        >
+                          % Gan:{" "}
+                          {p.precioUnitario > 0 && p.precioVentaActual > 0
+                            ? `${(
+                                ((p.precioVentaActual - p.precioUnitario) /
+                                  p.precioUnitario) *
+                                100
+                              ).toFixed(1)}%`
+                            : "—"}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-3 pr-6 align-middle">
                       <input
@@ -836,6 +874,7 @@ export default function Compras() {
                           ? `data:image/jpeg;base64,${p.ProductoImagen}`
                           : logo,
                         stock: p.ProductoStock,
+                        precioVentaActual: p.ProductoPrecioVenta,
                       })
                     }
                     precioUnitario={0}

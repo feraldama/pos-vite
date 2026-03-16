@@ -53,6 +53,38 @@ export const searchRegistrosDiariosCaja = async (
   }
 };
 
+/** Obtener registros diarios de caja por rango de fechas (para reportes). */
+export const getRegistrosDiariosCajaPorRango = async (
+  fechaDesde: string,
+  fechaHasta: string
+) => {
+  try {
+    const response = await api.get("/registrodiariocaja/rango", {
+      params: { fechaDesde, fechaHasta, limit: 10000 },
+    });
+    return response.data as { data: RegistroDiarioCajaRow[] };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener registros por rango de fechas",
+      }
+    );
+  }
+};
+
+export interface RegistroDiarioCajaRow {
+  RegistroDiarioCajaId: number;
+  CajaId: number;
+  UsuarioId: string;
+  /** Fecha en formato ISO datetime (ej. "2026-02-16T14:01:56.000Z") */
+  RegistroDiarioCajaFecha: string;
+  RegistroDiarioCajaMonto: number;
+  TipoGastoId: number;
+  TipoGastoGrupoId: number;
+  CajaDescripcion?: string;
+}
+
 export const getRegistroDiarioCajaById = async (id: string | number) => {
   try {
     const response = await api.get(`/registrodiariocaja/${id}`);

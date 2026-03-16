@@ -17,7 +17,20 @@ const Producto = {
         [id],
         (err, results) => {
           if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
+          const producto = results.length > 0 ? results[0] : null;
+          if (!producto) return resolve(null);
+          db.query(
+            `SELECT pa.ProductoId, pa.AlmacenId, pa.ProductoAlmacenStock, pa.ProductoAlmacenStockUnitario, a.AlmacenNombre
+             FROM productoalmacen pa
+             LEFT JOIN Almacen a ON pa.AlmacenId = a.AlmacenId
+             WHERE pa.ProductoId = ?`,
+            [id],
+            (errAlmacen, rowsAlmacen) => {
+              if (errAlmacen) return reject(errAlmacen);
+              producto.productoAlmacen = rowsAlmacen || [];
+              resolve(producto);
+            }
+          );
         }
       );
     });
@@ -27,7 +40,8 @@ const Producto = {
     limit,
     offset,
     sortBy = "ProductoId",
-    sortOrder = "ASC"
+    sortOrder = "ASC",
+    localId = null
   ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
@@ -56,29 +70,46 @@ const Producto = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
-      db.query(
-        `SELECT p.*, l.LocalNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+      const orderByField =
+        sortField === "ProductoStock" || sortField === "ProductoStockUnitario"
+          ? sortField
+          : `p.${sortField}`;
 
-          db.query(
-            "SELECT COUNT(*) as total FROM producto",
-            (err, countResult) => {
-              if (err) return reject(err);
+      // Ahora el stock total viene directamente de la tabla producto
+      const queryPaginated = `
+        SELECT p.*, l.LocalNombre
+        FROM producto p
+        LEFT JOIN local l ON p.LocalId = l.LocalId
+        ORDER BY ${orderByField} ${order}
+        LIMIT ? OFFSET ?
+      `;
 
-              resolve({
-                productos: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
+      db.query(queryPaginated, [limit, offset], (err, results) => {
+        if (err) return reject(err);
+
+        db.query(
+          "SELECT COUNT(*) as total FROM producto",
+          (err, countResult) => {
+            if (err) return reject(err);
+
+            resolve({
+              productos: results,
+              total: countResult[0].total,
+            });
+          }
+        );
+      });
     });
   },
 
-  search: (term, limit, offset, sortBy = "ProductoId", sortOrder = "ASC") => {
+  search: (
+    term,
+    limit,
+    offset,
+    sortBy = "ProductoId",
+    sortOrder = "ASC",
+    localId = null
+  ) => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [
         "ProductoId",
@@ -106,24 +137,35 @@ const Producto = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
+      const orderByField =
+        sortField === "ProductoStock" || sortField === "ProductoStockUnitario"
+          ? sortField
+          : `p.${sortField}`;
+
+      // En búsqueda también usamos el stock directo de producto
       const searchQuery = `
-        SELECT p.*, l.LocalNombre FROM producto p
+        SELECT p.*, l.LocalNombre
+        FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
         WHERE p.ProductoNombre LIKE ? 
         OR p.ProductoCodigo LIKE ? 
         OR l.LocalNombre LIKE ?
-        ORDER BY p.${sortField} ${order}
+        ORDER BY ${orderByField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;
+      const searchParams = [
+        searchValue,
+        searchValue,
+        searchValue,
+        limit,
+        offset,
+      ];
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+      db.query(searchQuery, searchParams, (err, results) => {
+        if (err) return reject(err);
 
-          const countQuery = `
+        const countQuery = `
             SELECT COUNT(*) as total FROM producto p
             LEFT JOIN local l ON p.LocalId = l.LocalId
             WHERE p.ProductoNombre LIKE ? 
@@ -131,20 +173,19 @@ const Producto = {
             OR l.LocalNombre LIKE ?
           `;
 
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
+        db.query(
+          countQuery,
+          [searchValue, searchValue, searchValue],
+          (err, countResult) => {
+            if (err) return reject(err);
 
-              resolve({
-                productos: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
+            resolve({
+              productos: results,
+              total: countResult[0]?.total || 0,
+            });
+          }
+        );
+      });
     });
   },
 
@@ -189,10 +230,39 @@ const Producto = {
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
-        resolve({
-          ProductoId: result.insertId,
-          ...productoData,
-        });
+        const productoId = result.insertId;
+        const productoAlmacen =
+          productoData.productoAlmacen &&
+          Array.isArray(productoData.productoAlmacen)
+            ? productoData.productoAlmacen
+            : [];
+        if (productoAlmacen.length > 0) {
+          const placeholders = productoAlmacen
+            .map(() => "(?, ?, ?, ?)")
+            .join(", ");
+          const insertValues = productoAlmacen.flatMap((pa) => [
+            productoId,
+            pa.AlmacenId,
+            pa.ProductoAlmacenStock ?? 0,
+            pa.ProductoAlmacenStockUnitario ?? 0,
+          ]);
+          db.query(
+            `INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario) VALUES ${placeholders}`,
+            insertValues,
+            (errPa) => {
+              if (errPa) return reject(errPa);
+              resolve({
+                ProductoId: productoId,
+                ...productoData,
+              });
+            }
+          );
+        } else {
+          resolve({
+            ProductoId: productoId,
+            ...productoData,
+          });
+        }
       });
     });
   },
@@ -232,8 +302,55 @@ const Producto = {
           values.push(productoData[campo]);
         }
       });
+      const productoAlmacen =
+        productoData.productoAlmacen &&
+        Array.isArray(productoData.productoAlmacen)
+          ? productoData.productoAlmacen
+          : undefined;
+
+      const syncProductoAlmacen = (callback) => {
+        // Si no se envía productoAlmacen desde el front, no tocamos el detalle.
+        if (productoAlmacen === undefined) return callback();
+
+        // Si se envía un array vacío, tampoco borramos filas para no violar FKs.
+        if (productoAlmacen.length === 0) return callback();
+
+        const placeholders = productoAlmacen
+          .map(() => "(?, ?, ?, ?)")
+          .join(", ");
+
+        const insertValues = productoAlmacen.flatMap((pa) => [
+          id,
+          pa.AlmacenId,
+          pa.ProductoAlmacenStock ?? 0,
+          pa.ProductoAlmacenStockUnitario ?? 0,
+        ]);
+
+        // Usamos UPSERT para solo actualizar stock, sin borrar ni cambiar claves.
+        const upsertQuery = `
+          INSERT INTO productoalmacen (
+            ProductoId,
+            AlmacenId,
+            ProductoAlmacenStock,
+            ProductoAlmacenStockUnitario
+          ) VALUES ${placeholders}
+          ON DUPLICATE KEY UPDATE
+            ProductoAlmacenStock = VALUES(ProductoAlmacenStock),
+            ProductoAlmacenStockUnitario = VALUES(ProductoAlmacenStockUnitario)
+        `;
+
+        db.query(upsertQuery, insertValues, (errPa) => {
+          if (errPa) return reject(errPa);
+          callback();
+        });
+      };
+
       if (updateFields.length === 0) {
-        return resolve(null);
+        if (productoAlmacen === undefined) return resolve(null);
+        syncProductoAlmacen(() =>
+          Producto.getById(id).then(resolve).catch(reject)
+        );
+        return;
       }
       values.push(id);
       const query = `
@@ -246,8 +363,9 @@ const Producto = {
         if (result.affectedRows === 0) {
           return resolve(null);
         }
-        // Obtener el producto actualizado
-        Producto.getById(id).then(resolve).catch(reject);
+        syncProductoAlmacen(() =>
+          Producto.getById(id).then(resolve).catch(reject)
+        );
       });
     });
   },
@@ -262,6 +380,56 @@ const Producto = {
           resolve(result.affectedRows > 0);
         }
       );
+    });
+  },
+
+  getReporteStock: () => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          p.ProductoId,
+          p.ProductoCodigo,
+          p.ProductoNombre,
+          COALESCE(p.ProductoStock, 0) AS ProductoStock,
+          COALESCE(p.ProductoStockUnitario, 0) AS ProductoStockUnitario,
+          pa.AlmacenId,
+          a.AlmacenNombre,
+          COALESCE(pa.ProductoAlmacenStock, 0) AS ProductoAlmacenStock,
+          COALESCE(pa.ProductoAlmacenStockUnitario, 0) AS ProductoAlmacenStockUnitario
+        FROM producto p
+        LEFT JOIN productoalmacen pa ON p.ProductoId = pa.ProductoId
+        LEFT JOIN Almacen a ON pa.AlmacenId = a.AlmacenId
+        ORDER BY p.ProductoCodigo, a.AlmacenNombre
+      `;
+      db.query(query, [], (err, rows) => {
+        if (err) return reject(err);
+        const byProduct = {};
+        rows.forEach((row) => {
+          const id = row.ProductoId;
+          if (!byProduct[id]) {
+            byProduct[id] = {
+              ProductoId: row.ProductoId,
+              ProductoCodigo: row.ProductoCodigo,
+              ProductoNombre: row.ProductoNombre,
+              // Usar directamente los valores de la tabla producto
+              ProductoStock: Number(row.ProductoStock) || 0,
+              ProductoStockUnitario: Number(row.ProductoStockUnitario) || 0,
+              productoAlmacen: [],
+            };
+          }
+          const totalStock = Number(row.ProductoAlmacenStock) || 0;
+          const totalUnit = Number(row.ProductoAlmacenStockUnitario) || 0;
+          if (row.AlmacenId != null) {
+            byProduct[id].productoAlmacen.push({
+              AlmacenNombre: row.AlmacenNombre || "",
+              ProductoAlmacenStock: totalStock,
+              ProductoAlmacenStockUnitario: totalUnit,
+            });
+          }
+        });
+        const productos = Object.values(byProduct);
+        resolve({ productos });
+      });
     });
   },
 };

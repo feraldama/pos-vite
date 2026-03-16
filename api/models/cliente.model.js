@@ -141,6 +141,13 @@ const Cliente = {
           UsuarioId
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
+      // ClienteFechaNacimiento: si vacío/null -> '1000-01-01' (sentinel para "sin fecha"); si viene valor -> usarlo
+      const fechaNac = clienteData.ClienteFechaNacimiento;
+      const ClienteFechaNacimiento =
+        fechaNac != null && String(fechaNac).trim() !== ""
+          ? String(fechaNac).trim()
+          : "1000-01-01";
+
       const values = [
         clienteData.ClienteRUC || "",
         clienteData.ClienteNombre,
@@ -148,7 +155,7 @@ const Cliente = {
         clienteData.ClienteDireccion || "",
         clienteData.ClienteTelefono || "",
         clienteData.ClienteTipo || "",
-        clienteData.ClienteFechaNacimiento || null,
+        ClienteFechaNacimiento,
         clienteData.UsuarioId ? String(clienteData.UsuarioId).trim() : "",
       ];
       db.query(query, values, (err, result) => {
@@ -175,9 +182,15 @@ const Cliente = {
       camposActualizables.forEach((campo) => {
         if (clienteData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
-          // Aplicar trim solo al UsuarioId si es string
           if (campo === "UsuarioId" && typeof clienteData[campo] === "string") {
             values.push(clienteData[campo].trim());
+          } else if (campo === "ClienteFechaNacimiento") {
+            const v = clienteData[campo];
+            values.push(
+              v != null && String(v).trim() !== ""
+                ? String(v).trim()
+                : "1000-01-01"
+            );
           } else {
             values.push(clienteData[campo]);
           }

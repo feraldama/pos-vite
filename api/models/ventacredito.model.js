@@ -1,187 +1,138 @@
 const db = require("../config/db");
 
 const VentaCredito = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM ventacredito", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "ventacredito"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventacredito WHERE VentaCreditoId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "ventacredito" WHERE "VentaCreditoId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByVentaId: (ventaId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventacredito WHERE VentaId = ?",
-        [ventaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getByVentaId: async (ventaId) => {
+    const result = await db.query(
+      'SELECT * FROM "ventacredito" WHERE "VentaId" = $1',
+      [ventaId]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO ventacredito (
-        VentaId,
-        VentaCreditoPagoCant
-      ) VALUES (?, ?)`;
-
-      const values = [data.VentaId, data.VentaCreditoPagoCant];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        VentaCredito.getById(result.insertId)
-          .then((ventaCredito) => resolve(ventaCredito))
-          .catch((error) => reject(error));
-      });
-    });
+  create: async (data) => {
+    const result = await db.query(
+      `INSERT INTO "ventacredito" (
+        "VentaId",
+        "VentaCreditoPagoCant"
+      ) VALUES ($1, $2) RETURNING "VentaCreditoId"`,
+      [data.VentaId, data.VentaCreditoPagoCant]
+    );
+    return VentaCredito.getById(result.rows[0].VentaCreditoId);
   },
 
-  update: (id, data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE ventacredito SET 
-        VentaId = ?,
-        VentaCreditoPagoCant = ?
-        WHERE VentaCreditoId = ?`;
-
-      const values = [data.VentaId, data.VentaCreditoPagoCant, id];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        VentaCredito.getById(id)
-          .then((ventaCredito) => resolve(ventaCredito))
-          .catch((error) => reject(error));
-      });
-    });
+  update: async (id, data) => {
+    const result = await db.query(
+      `UPDATE "ventacredito" SET
+        "VentaId" = $1,
+        "VentaCreditoPagoCant" = $2
+        WHERE "VentaCreditoId" = $3`,
+      [data.VentaId, data.VentaCreditoPagoCant, id]
+    );
+    if (result.rowCount === 0) return null;
+    return VentaCredito.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM ventacredito WHERE VentaCreditoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "ventacredito" WHERE "VentaCreditoId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "VentaCreditoId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaCreditoId",
-        "VentaId",
-        "VentaCreditoPagoCant",
-      ];
+    const allowedSortFields = [
+      "VentaCreditoId",
+      "VentaId",
+      "VentaCreditoPagoCant",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "VentaCreditoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "VentaCreditoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM ventacredito ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "ventacredito" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM ventacredito",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "ventacredito"'
+    );
 
-              resolve({
-                ventaCreditos: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      ventaCreditos: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchVentaCreditos: (
+  searchVentaCreditos: async (
     term,
     limit,
     offset,
     sortBy = "VentaCreditoId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaCreditoId",
-        "VentaId",
-        "VentaCreditoPagoCant",
-      ];
+    const allowedSortFields = [
+      "VentaCreditoId",
+      "VentaId",
+      "VentaCreditoPagoCant",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "VentaCreditoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "VentaCreditoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM ventacredito
-        WHERE VentaCreditoId LIKE ?
-        OR VentaId LIKE ?
-        OR CAST(VentaCreditoPagoCant AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const searchValue = `%${term}%`;
 
-      const searchValue = `%${term}%`;
-      const values = Array(3).fill(searchValue).concat([limit, offset]);
+    const result = await db.query(
+      `SELECT * FROM "ventacredito"
+        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
+        OR CAST("VentaId" AS TEXT) LIKE $2
+        OR CAST("VentaCreditoPagoCant" AS TEXT) LIKE $3
+        ORDER BY "${sortField}" ${order}
+        LIMIT $4 OFFSET $5`,
+      [searchValue, searchValue, searchValue, limit, offset]
+    );
 
-      db.query(searchQuery, values, (err, results) => {
-        if (err) return reject(err);
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "ventacredito"
+        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
+        OR CAST("VentaId" AS TEXT) LIKE $2
+        OR CAST("VentaCreditoPagoCant" AS TEXT) LIKE $3`,
+      [searchValue, searchValue, searchValue]
+    );
 
-        const countQuery = `
-          SELECT COUNT(*) as total FROM ventacredito
-          WHERE VentaCreditoId LIKE ?
-          OR VentaId LIKE ?
-          OR CAST(VentaCreditoPagoCant AS CHAR) LIKE ?
-        `;
-
-        db.query(countQuery, Array(3).fill(searchValue), (err, countResult) => {
-          if (err) return reject(err);
-          resolve({
-            ventaCreditos: results,
-            total: countResult[0]?.total || 0,
-          });
-        });
-      });
-    });
+    return {
+      ventaCreditos: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

@@ -1,164 +1,122 @@
 const db = require("../config/db");
 
 const Combo = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM combo", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "combo"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM combo WHERE ComboId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "combo" WHERE "ComboId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  create: (comboData) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO combo (ComboDescripcion, ProductoId, ComboCantidad, ComboPrecio) VALUES (?, ?, ?, ?)`;
-      const values = [
+  create: async (comboData) => {
+    const result = await db.query(
+      'INSERT INTO "combo" ("ComboDescripcion", "ProductoId", "ComboCantidad", "ComboPrecio") VALUES ($1, $2, $3, $4) RETURNING "ComboId"',
+      [
         comboData.ComboDescripcion || "",
         comboData.ProductoId,
         comboData.ComboCantidad,
         comboData.ComboPrecio,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        Combo.getById(result.insertId)
-          .then((combo) => resolve(combo))
-          .catch((error) => reject(error));
-      });
-    });
+      ]
+    );
+    return Combo.getById(result.rows[0].ComboId);
   },
 
-  update: (id, comboData) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE combo SET ComboDescripcion = ?, ProductoId = ?, ComboCantidad = ?, ComboPrecio = ? WHERE ComboId = ?`;
-      const values = [
+  update: async (id, comboData) => {
+    const result = await db.query(
+      'UPDATE "combo" SET "ComboDescripcion" = $1, "ProductoId" = $2, "ComboCantidad" = $3, "ComboPrecio" = $4 WHERE "ComboId" = $5',
+      [
         comboData.ComboDescripcion || "",
         comboData.ProductoId,
         comboData.ComboCantidad,
         comboData.ComboPrecio,
         id,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        Combo.getById(id)
-          .then((combo) => resolve(combo))
-          .catch((error) => reject(error));
-      });
-    });
+      ]
+    );
+    if (result.rowCount === 0) return null;
+    return Combo.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM combo WHERE ComboId = ?", [id], (err, result) => {
-        if (err) return reject(err);
-        resolve(result.affectedRows > 0);
-      });
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "combo" WHERE "ComboId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "ComboId",
-        "ComboDescripcion",
-        "ProductoId",
-        "ComboCantidad",
-        "ComboPrecio",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  getAllPaginated: async (limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "ComboId",
+      "ComboDescripcion",
+      "ProductoId",
+      "ComboCantidad",
+      "ComboPrecio",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM combo ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "combo" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM combo",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "combo"'
+    );
 
-              resolve({
-                combos: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      combos: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  search: (term, limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "ComboId",
-        "ComboDescripcion",
-        "ProductoId",
-        "ComboCantidad",
-        "ComboPrecio",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  search: async (term, limit, offset, sortBy = "ComboId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "ComboId",
+      "ComboDescripcion",
+      "ProductoId",
+      "ComboCantidad",
+      "ComboPrecio",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "ComboId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT c.ComboId, c.ComboDescripcion, c.ProductoId, c.ComboCantidad, c.ComboPrecio, p.ProductoNombre
-        FROM combo c
-        LEFT JOIN producto p ON c.ProductoId = p.ProductoId
-        WHERE c.ComboDescripcion LIKE ? OR p.ProductoNombre LIKE ?
-        ORDER BY c.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT c."ComboId", c."ComboDescripcion", c."ProductoId", c."ComboCantidad", c."ComboPrecio", p."ProductoNombre"
+        FROM "combo" c
+        LEFT JOIN "producto" p ON c."ProductoId" = p."ProductoId"
+        WHERE c."ComboDescripcion" LIKE $1 OR p."ProductoNombre" LIKE $2
+        ORDER BY c."${sortField}" ${order}
+        LIMIT $3 OFFSET $4`,
+      [searchValue, searchValue, limit, offset]
+    );
 
-          const countQuery = `
-            SELECT COUNT(*) as total
-            FROM combo c
-            LEFT JOIN producto p ON c.ProductoId = p.ProductoId
-            WHERE c.ComboDescripcion LIKE ? OR p.ProductoNombre LIKE ?
-          `;
-          db.query(
-            countQuery,
-            [searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total
+        FROM "combo" c
+        LEFT JOIN "producto" p ON c."ProductoId" = p."ProductoId"
+        WHERE c."ComboDescripcion" LIKE $1 OR p."ProductoNombre" LIKE $2`,
+      [searchValue, searchValue]
+    );
 
-              resolve({
-                combos: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      combos: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

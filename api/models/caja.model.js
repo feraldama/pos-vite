@@ -1,169 +1,97 @@
 const db = require("../config/db");
 
 const Caja = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Caja", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "caja"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Caja WHERE CajaId = ?", [id], (err, results) => {
-        if (err) return reject(err);
-        resolve(results.length > 0 ? results[0] : null);
-      });
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  create: (cajaData) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO Caja (CajaDescripcion, CajaMonto, CajaGastoCantidad, CajaTipoId) VALUES (?, ?, ?, ?)`;
-      const values = [
-        cajaData.CajaDescripcion,
-        cajaData.CajaMonto,
-        cajaData.CajaGastoCantidad,
-        cajaData.CajaTipoId || null,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        // Obtener la caja recién creada
-        Caja.getById(result.insertId)
-          .then((caja) => resolve(caja))
-          .catch((error) => reject(error));
-      });
-    });
+  create: async (cajaData) => {
+    const result = await db.query(
+      'INSERT INTO "caja" ("CajaDescripcion", "CajaMonto") VALUES ($1, $2) RETURNING "CajaId"',
+      [cajaData.CajaDescripcion, cajaData.CajaMonto]
+    );
+    return Caja.getById(result.rows[0].CajaId);
   },
 
-  update: (id, cajaData) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE Caja SET CajaDescripcion = ?, CajaMonto = ?, CajaGastoCantidad = ?, CajaTipoId = ? WHERE CajaId = ?`;
-      const values = [
-        cajaData.CajaDescripcion,
-        cajaData.CajaMonto,
-        cajaData.CajaGastoCantidad,
-        cajaData.CajaTipoId || null,
-        id,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        Caja.getById(id)
-          .then((caja) => resolve(caja))
-          .catch((error) => reject(error));
-      });
-    });
+  update: async (id, cajaData) => {
+    const result = await db.query(
+      'UPDATE "caja" SET "CajaDescripcion" = $1, "CajaMonto" = $2 WHERE "CajaId" = $3',
+      [cajaData.CajaDescripcion, cajaData.CajaMonto, id]
+    );
+    if (result.rowCount === 0) return null;
+    return Caja.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM Caja WHERE CajaId = ?", [id], (err, result) => {
-        if (err) return reject(err);
-        resolve(result.affectedRows > 0);
-      });
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "caja" WHERE "CajaId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "CajaId",
-        "CajaDescripcion",
-        "CajaMonto",
-        "CajaGastoCantidad",
-        "CajaTipoId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  getAllPaginated: async (limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+    const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      let query = `SELECT * FROM Caja`;
-      let countQuery = `SELECT COUNT(*) as total FROM Caja`;
-      const queryParams = [];
-      const countParams = [];
+    const result = await db.query(
+      `SELECT * FROM "caja" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-      if (cajaTipoId !== null && cajaTipoId !== undefined && cajaTipoId !== "") {
-        query += ` WHERE CajaTipoId = ?`;
-        countQuery += ` WHERE CajaTipoId = ?`;
-        queryParams.push(cajaTipoId);
-        countParams.push(cajaTipoId);
-      }
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "caja"'
+    );
 
-      query += ` ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`;
-      queryParams.push(limit, offset);
-
-      db.query(query, queryParams, (err, results) => {
-        if (err) return reject(err);
-
-        db.query(countQuery, countParams, (err, countResult) => {
-          if (err) return reject(err);
-
-          resolve({
-            cajas: results,
-            total: countResult[0].total,
-          });
-        });
-      });
-    });
+    return {
+      cajas: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchCajas: (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "CajaId",
-        "CajaDescripcion",
-        "CajaMonto",
-        "CajaGastoCantidad",
-        "CajaTipoId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  searchCajas: async (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+    const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchValue = `%${term}%`;
-      let searchQuery = `
-        SELECT * FROM Caja
-        WHERE (CajaDescripcion LIKE ?
-        OR CAST(CajaMonto AS CHAR) LIKE ?
-        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?)`;
-      let countQuery = `
-        SELECT COUNT(*) as total FROM Caja
-        WHERE (CajaDescripcion LIKE ?
-        OR CAST(CajaMonto AS CHAR) LIKE ?
-        OR CAST(CajaGastoCantidad AS CHAR) LIKE ?)`;
-      
-      const searchParams = [searchValue, searchValue, searchValue];
-      const countParams = [searchValue, searchValue, searchValue];
+    const searchValue = `%${term}%`;
 
-      if (cajaTipoId !== null && cajaTipoId !== undefined && cajaTipoId !== "") {
-        searchQuery += ` AND CajaTipoId = ?`;
-        countQuery += ` AND CajaTipoId = ?`;
-        searchParams.push(cajaTipoId);
-        countParams.push(cajaTipoId);
-      }
+    const result = await db.query(
+      `SELECT * FROM "caja"
+        WHERE "CajaDescripcion" LIKE $1
+        OR CAST("CajaMonto" AS TEXT) LIKE $2
+        ORDER BY "${sortField}" ${order}
+        LIMIT $3 OFFSET $4`,
+      [searchValue, searchValue, limit, offset]
+    );
 
-      searchQuery += ` ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`;
-      searchParams.push(limit, offset);
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "caja"
+        WHERE "CajaDescripcion" LIKE $1
+        OR CAST("CajaMonto" AS TEXT) LIKE $2`,
+      [searchValue, searchValue]
+    );
 
-      db.query(searchQuery, searchParams, (err, results) => {
-        if (err) return reject(err);
-
-        db.query(countQuery, countParams, (err, countResult) => {
-          if (err) return reject(err);
-          resolve({
-            cajas: results,
-            total: countResult[0]?.total || 0,
-          });
-        });
-      });
-    });
+    return {
+      cajas: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

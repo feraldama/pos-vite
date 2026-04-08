@@ -1,208 +1,162 @@
 const db = require("../config/db");
 
 const Proveedor = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM proveedor ORDER BY ProveedorNombre ASC",
-        (err, results) => {
-          if (err) reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getAll: async () => {
+    const result = await db.query(
+      'SELECT * FROM "proveedor" ORDER BY "ProveedorNombre" ASC'
+    );
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM proveedor WHERE ProveedorId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "proveedor" WHERE "ProveedorId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "ProveedorId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "ProveedorId",
-        "ProveedorRUC",
-        "ProveedorNombre",
-        "ProveedorDireccion",
-        "ProveedorTelefono",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "ProveedorId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortFields = [
+      "ProveedorId",
+      "ProveedorRUC",
+      "ProveedorNombre",
+      "ProveedorDireccion",
+      "ProveedorTelefono",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "ProveedorId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM proveedor ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "proveedor" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM proveedor",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "proveedor"'
+    );
 
-              resolve({
-                proveedores: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      proveedores: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  search: (term, limit, offset, sortBy = "ProveedorId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "ProveedorId",
-        "ProveedorRUC",
-        "ProveedorNombre",
-        "ProveedorDireccion",
-        "ProveedorTelefono",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "ProveedorId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  search: async (term, limit, offset, sortBy = "ProveedorId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "ProveedorId",
+      "ProveedorRUC",
+      "ProveedorNombre",
+      "ProveedorDireccion",
+      "ProveedorTelefono",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "ProveedorId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM proveedor
-        WHERE ProveedorNombre LIKE ? 
-        OR ProveedorRUC LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "proveedor"
+        WHERE "ProveedorNombre" LIKE $1
+        OR "ProveedorRUC" LIKE $2
+        ORDER BY "${sortField}" ${order}
+        LIMIT $3 OFFSET $4`,
+      [searchValue, searchValue, limit, offset]
+    );
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM proveedor
-            WHERE ProveedorNombre LIKE ? 
-            OR ProveedorRUC LIKE ?
-          `;
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "proveedor"
+        WHERE "ProveedorNombre" LIKE $1
+        OR "ProveedorRUC" LIKE $2`,
+      [searchValue, searchValue]
+    );
 
-          db.query(
-            countQuery,
-            [searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
-
-              resolve({
-                proveedores: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      proveedores: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 
-  create: (proveedorData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO proveedor (
-          ProveedorRUC,
-          ProveedorNombre,
-          ProveedorDireccion,
-          ProveedorTelefono
-        ) VALUES (?, ?, ?, ?)
-      `;
-      const values = [
+  create: async (proveedorData) => {
+    const result = await db.query(
+      `INSERT INTO "proveedor" (
+          "ProveedorRUC",
+          "ProveedorNombre",
+          "ProveedorDireccion",
+          "ProveedorTelefono"
+        ) VALUES ($1, $2, $3, $4) RETURNING "ProveedorId"`,
+      [
         proveedorData.ProveedorRUC || null,
         proveedorData.ProveedorNombre,
         proveedorData.ProveedorDireccion || null,
         proveedorData.ProveedorTelefono || null,
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        resolve({
-          ProveedorId: result.insertId,
-          ...proveedorData,
-        });
-      });
-    });
+      ]
+    );
+    return {
+      ProveedorId: result.rows[0].ProveedorId,
+      ...proveedorData,
+    };
   },
 
-  update: (id, proveedorData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-      const camposActualizables = [
-        "ProveedorRUC",
-        "ProveedorNombre",
-        "ProveedorDireccion",
-        "ProveedorTelefono",
-      ];
+  update: async (id, proveedorData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
+    const camposActualizables = [
+      "ProveedorRUC",
+      "ProveedorNombre",
+      "ProveedorDireccion",
+      "ProveedorTelefono",
+    ];
 
-      camposActualizables.forEach((campo) => {
-        if (proveedorData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(proveedorData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null);
+    camposActualizables.forEach((campo) => {
+      if (proveedorData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(proveedorData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-      const query = `
-        UPDATE proveedor 
-        SET ${updateFields.join(", ")}
-        WHERE ProveedorId = ?
-      `;
-
-      db.query(query, values, async (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-        // Obtener el proveedor actualizado
-        Proveedor.getById(id).then(resolve).catch(reject);
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE "proveedor"
+      SET ${updateFields.join(", ")}
+      WHERE "ProveedorId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+    if (result.rowCount === 0) {
+      return null;
+    }
+    // Obtener el proveedor actualizado
+    return Proveedor.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM proveedor WHERE ProveedorId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "proveedor" WHERE "ProveedorId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

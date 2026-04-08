@@ -1,201 +1,156 @@
 const db = require("../config/db");
 
 const Local = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM local", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "local"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM local WHERE LocalId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "local" WHERE "LocalId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "LocalId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "LocalId",
+  getAllPaginated: async (limit, offset, sortBy = "LocalId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "LocalId",
+      "LocalNombre",
+      "LocalTelefono",
+      "LocalCelular",
+      "LocalDireccion",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "LocalId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
+
+    const result = await db.query(
+      `SELECT * FROM "local" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "local"'
+    );
+
+    return {
+      locales: result.rows,
+      total: countResult.rows[0].total,
+    };
+  },
+
+  search: async (term, limit, offset, sortBy = "LocalId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "LocalId",
+      "LocalNombre",
+      "LocalTelefono",
+      "LocalCelular",
+      "LocalDireccion",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "LocalId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
+
+    const searchValue = `%${term}%`;
+
+    const result = await db.query(
+      `SELECT * FROM "local"
+        WHERE "LocalNombre" LIKE $1
+        OR "LocalTelefono" LIKE $2
+        OR "LocalCelular" LIKE $3
+        OR "LocalDireccion" LIKE $4
+        OR CAST("LocalId" AS TEXT) LIKE $5
+        ORDER BY "${sortField}" ${order}
+        LIMIT $6 OFFSET $7`,
+      [searchValue, searchValue, searchValue, searchValue, searchValue, limit, offset]
+    );
+
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "local"
+        WHERE "LocalNombre" LIKE $1
+        OR "LocalTelefono" LIKE $2
+        OR "LocalCelular" LIKE $3
+        OR "LocalDireccion" LIKE $4
+        OR CAST("LocalId" AS TEXT) LIKE $5`,
+      [searchValue, searchValue, searchValue, searchValue, searchValue]
+    );
+
+    return {
+      locales: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
+  },
+
+  create: async (localData) => {
+    const result = await db.query(
+      `INSERT INTO "local" (
         "LocalNombre",
         "LocalTelefono",
         "LocalCelular",
-        "LocalDireccion",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "LocalId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
-
-      db.query(
-        `SELECT * FROM local ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
-
-          db.query(
-            "SELECT COUNT(*) as total FROM local",
-            (err, countResult) => {
-              if (err) return reject(err);
-
-              resolve({
-                locales: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
-  },
-
-  search: (term, limit, offset, sortBy = "LocalId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "LocalId",
-        "LocalNombre",
-        "LocalTelefono",
-        "LocalCelular",
-        "LocalDireccion",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "LocalId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
-
-      const searchQuery = `
-      SELECT * FROM local 
-      WHERE LocalNombre LIKE ? 
-      OR LocalTelefono LIKE ? 
-      OR LocalCelular LIKE ? 
-      OR LocalDireccion LIKE ?
-      OR LocalId LIKE ?
-      ORDER BY ${sortField} ${order}
-      LIMIT ? OFFSET ?
-    `;
-      const searchValue = `%${term}%`;
-
-      db.query(
-        searchQuery,
-        [
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) return reject(err);
-
-          const countQuery = `
-          SELECT COUNT(*) as total FROM local 
-          WHERE LocalNombre LIKE ? 
-          OR LocalTelefono LIKE ? 
-          OR LocalCelular LIKE ? 
-          OR LocalDireccion LIKE ?
-          OR LocalId LIKE ?
-        `;
-
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
-
-              resolve({
-                locales: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
-    });
-  },
-
-  create: (localData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-      INSERT INTO local (
-        LocalNombre,
-        LocalTelefono,
-        LocalCelular,
-        LocalDireccion
-      ) VALUES (?, ?, ?, ?)
-    `;
-      const values = [
+        "LocalDireccion"
+      ) VALUES ($1, $2, $3, $4) RETURNING "LocalId"`,
+      [
         localData.LocalNombre,
         localData.LocalTelefono,
         localData.LocalCelular,
         localData.LocalDireccion,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        resolve({
-          LocalId: result.insertId,
-          ...localData,
-        });
-      });
-    });
+      ]
+    );
+    return {
+      LocalId: result.rows[0].LocalId,
+      ...localData,
+    };
   },
 
-  update: (id, localData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-      const camposActualizables = [
-        "LocalNombre",
-        "LocalTelefono",
-        "LocalCelular",
-        "LocalDireccion",
-      ];
-      camposActualizables.forEach((campo) => {
-        if (localData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(localData[campo]);
-        }
-      });
-      if (updateFields.length === 0) {
-        return resolve(null);
+  update: async (id, localData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
+    const camposActualizables = [
+      "LocalNombre",
+      "LocalTelefono",
+      "LocalCelular",
+      "LocalDireccion",
+    ];
+
+    camposActualizables.forEach((campo) => {
+      if (localData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(localData[campo]);
+        paramIndex++;
       }
-      values.push(id);
-      const query = `
-        UPDATE local 
-        SET ${updateFields.join(", ")}
-        WHERE LocalId = ?
-      `;
-      db.query(query, values, async (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-        const updatedLocal = await Local.getById(id);
-        resolve(updatedLocal);
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE "local"
+      SET ${updateFields.join(", ")}
+      WHERE "LocalId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+    if (result.rowCount === 0) {
+      return null;
+    }
+    return Local.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM local WHERE LocalId = ?", [id], (err, result) => {
-        if (err) return reject(err);
-        resolve(result.affectedRows > 0);
-      });
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "local" WHERE "LocalId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

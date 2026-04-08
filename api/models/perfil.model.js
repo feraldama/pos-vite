@@ -1,81 +1,62 @@
 const db = require("../config/db");
 
 const Perfil = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM perfil", (err, results) => {
-        if (err) return reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "perfil"');
+    return result.rows;
   },
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM perfil WHERE PerfilId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results && results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "perfil" WHERE "PerfilId" = $1',
+      [id]
+    );
+    return result.rows[0];
   },
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO perfil (PerfilDescripcion) VALUES (?)",
-        [data.PerfilDescripcion],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve({ PerfilId: result.insertId, ...data });
-        }
-      );
-    });
+
+  create: async (data) => {
+    const result = await db.query(
+      'INSERT INTO "perfil" ("PerfilDescripcion") VALUES ($1) RETURNING "PerfilId"',
+      [data.PerfilDescripcion]
+    );
+    return { PerfilId: result.rows[0].PerfilId, ...data };
   },
-  update: (id, data) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "UPDATE perfil SET PerfilDescripcion = ? WHERE PerfilId = ?",
-        [data.PerfilDescripcion, id],
-        (err) => {
-          if (err) return reject(err);
-          resolve({ PerfilId: id, ...data });
-        }
-      );
-    });
+
+  update: async (id, data) => {
+    await db.query(
+      'UPDATE "perfil" SET "PerfilDescripcion" = $1 WHERE "PerfilId" = $2',
+      [data.PerfilDescripcion, id]
+    );
+    return { PerfilId: id, ...data };
   },
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM perfil WHERE PerfilId = ?", [id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
+
+  delete: async (id) => {
+    await db.query('DELETE FROM "perfil" WHERE "PerfilId" = $1', [id]);
   },
-  getAllPaginated: (page = 1, itemsPerPage = 10) => {
-    return new Promise((resolve, reject) => {
-      const offset = (page - 1) * itemsPerPage;
-      db.query(
-        "SELECT SQL_CALC_FOUND_ROWS * FROM perfil LIMIT ? OFFSET ?",
-        [parseInt(itemsPerPage), parseInt(offset)],
-        (err, results) => {
-          if (err) return reject(err);
-          db.query("SELECT FOUND_ROWS() as total", (err2, totalResult) => {
-            if (err2) return reject(err2);
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: totalResult[0].total,
-                totalPages: Math.ceil(totalResult[0].total / itemsPerPage),
-                currentPage: page,
-                itemsPerPage: itemsPerPage,
-              },
-            });
-          });
-        }
-      );
-    });
+
+  getAllPaginated: async (page = 1, itemsPerPage = 10) => {
+    const offset = (page - 1) * itemsPerPage;
+
+    const result = await db.query(
+      'SELECT * FROM "perfil" LIMIT $1 OFFSET $2',
+      [parseInt(itemsPerPage), parseInt(offset)]
+    );
+
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "perfil"'
+    );
+
+    const total = countResult.rows[0].total;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / itemsPerPage),
+        currentPage: page,
+        itemsPerPage: itemsPerPage,
+      },
+    };
   },
 };
 

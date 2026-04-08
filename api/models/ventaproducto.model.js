@@ -1,234 +1,193 @@
 const db = require("../config/db");
 
 const VentaProducto = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM ventaproducto", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "ventaproducto"');
+    return result.rows;
   },
 
-  getById: (ventaId, productoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventaproducto WHERE VentaId = ? AND VentaProductoId = ?",
-        [ventaId, productoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (ventaId, productoId) => {
+    const result = await db.query(
+      'SELECT * FROM "ventaproducto" WHERE "VentaId" = $1 AND "VentaProductoId" = $2',
+      [ventaId, productoId]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByVentaId: (ventaId) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        SELECT 
-          vp.*,
-          p.ProductoNombre,
-          p.ProductoCodigo,
-          p.ProductoPrecioVenta,
-          p.ProductoIVA
-        FROM ventaproducto vp
-        LEFT JOIN producto p ON vp.ProductoId = p.ProductoId
-        WHERE vp.VentaId = ?
-      `;
+  getByVentaId: async (ventaId) => {
+    const query = `
+      SELECT
+        vp.*,
+        p."ProductoNombre",
+        p."ProductoCodigo",
+        p."ProductoPrecioVenta",
+        p."ProductoIVA"
+      FROM "ventaproducto" vp
+      LEFT JOIN "producto" p ON vp."ProductoId" = p."ProductoId"
+      WHERE vp."VentaId" = $1
+    `;
 
-      db.query(query, [ventaId], (err, results) => {
-        if (err) return reject(err);
-        resolve(results);
-      });
-    });
+    const result = await db.query(query, [ventaId]);
+    return result.rows;
   },
 
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO ventaproducto (
-        VentaId,
-        VentaProductoId,
-        ProductoId,
-        VentaProductoPrecioPromedio,
-        VentaProductoCantidad,
-        VentaProductoPrecio,
-        VentaProductoPrecioTotal,
-        VentaProductoUnitario
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  create: async (data) => {
+    const query = `INSERT INTO "ventaproducto" (
+      "VentaId",
+      "VentaProductoId",
+      "ProductoId",
+      "VentaProductoPrecioPromedio",
+      "VentaProductoCantidad",
+      "VentaProductoPrecio",
+      "VentaProductoPrecioTotal",
+      "VentaProductoUnitario"
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
 
-      const values = [
-        data.VentaId,
-        data.VentaProductoId,
-        data.ProductoId,
-        data.VentaProductoPrecioPromedio,
-        data.VentaProductoCantidad,
-        data.VentaProductoPrecio,
-        data.VentaProductoPrecioTotal,
-        data.VentaProductoUnitario,
-      ];
+    const values = [
+      data.VentaId,
+      data.VentaProductoId,
+      data.ProductoId,
+      data.VentaProductoPrecioPromedio,
+      data.VentaProductoCantidad,
+      data.VentaProductoPrecio,
+      data.VentaProductoPrecioTotal,
+      data.VentaProductoUnitario,
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        VentaProducto.getById(data.VentaId, data.VentaProductoId)
-          .then((ventaProducto) => resolve(ventaProducto))
-          .catch((error) => reject(error));
-      });
-    });
+    await db.query(query, values);
+    const ventaProducto = await VentaProducto.getById(data.VentaId, data.VentaProductoId);
+    return ventaProducto;
   },
 
-  update: (ventaId, productoId, data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE ventaproducto SET 
-        ProductoId = ?,
-        VentaProductoPrecioPromedio = ?,
-        VentaProductoCantidad = ?,
-        VentaProductoPrecio = ?,
-        VentaProductoPrecioTotal = ?,
-        VentaProductoUnitario = ?
-        WHERE VentaId = ? AND VentaProductoId = ?`;
+  update: async (ventaId, productoId, data) => {
+    const query = `UPDATE "ventaproducto" SET
+      "ProductoId" = $1,
+      "VentaProductoPrecioPromedio" = $2,
+      "VentaProductoCantidad" = $3,
+      "VentaProductoPrecio" = $4,
+      "VentaProductoPrecioTotal" = $5,
+      "VentaProductoUnitario" = $6
+      WHERE "VentaId" = $7 AND "VentaProductoId" = $8`;
 
-      const values = [
-        data.ProductoId,
-        data.VentaProductoPrecioPromedio,
-        data.VentaProductoCantidad,
-        data.VentaProductoPrecio,
-        data.VentaProductoPrecioTotal,
-        data.VentaProductoUnitario,
-        ventaId,
-        productoId,
-      ];
+    const values = [
+      data.ProductoId,
+      data.VentaProductoPrecioPromedio,
+      data.VentaProductoCantidad,
+      data.VentaProductoPrecio,
+      data.VentaProductoPrecioTotal,
+      data.VentaProductoUnitario,
+      ventaId,
+      productoId,
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        VentaProducto.getById(ventaId, productoId)
-          .then((ventaProducto) => resolve(ventaProducto))
-          .catch((error) => reject(error));
-      });
-    });
+    const result = await db.query(query, values);
+    if (result.rowCount === 0) return null;
+    const ventaProducto = await VentaProducto.getById(ventaId, productoId);
+    return ventaProducto;
   },
 
-  delete: (ventaId, productoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM ventaproducto WHERE VentaId = ? AND VentaProductoId = ?",
-        [ventaId, productoId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (ventaId, productoId) => {
+    const result = await db.query(
+      'DELETE FROM "ventaproducto" WHERE "VentaId" = $1 AND "VentaProductoId" = $2',
+      [ventaId, productoId]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "VentaId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaId",
-        "VentaProductoId",
-        "ProductoId",
-        "VentaProductoPrecioPromedio",
-        "VentaProductoCantidad",
-        "VentaProductoPrecio",
-        "VentaProductoPrecioTotal",
-        "VentaProductoUnitario",
-      ];
+  getAllPaginated: async (limit, offset, sortBy = "VentaId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "VentaId",
+      "VentaProductoId",
+      "ProductoId",
+      "VentaProductoPrecioPromedio",
+      "VentaProductoCantidad",
+      "VentaProductoPrecio",
+      "VentaProductoPrecioTotal",
+      "VentaProductoUnitario",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "VentaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "VentaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM ventaproducto ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "ventaproducto" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM ventaproducto",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "ventaproducto"'
+    );
 
-              resolve({
-                ventaProductos: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      ventaProductos: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchVentaProductos: (
+  searchVentaProductos: async (
     term,
     limit,
     offset,
     sortBy = "VentaId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaId",
-        "VentaProductoId",
-        "ProductoId",
-        "VentaProductoPrecioPromedio",
-        "VentaProductoCantidad",
-        "VentaProductoPrecio",
-        "VentaProductoPrecioTotal",
-        "VentaProductoUnitario",
-      ];
+    const allowedSortFields = [
+      "VentaId",
+      "VentaProductoId",
+      "ProductoId",
+      "VentaProductoPrecioPromedio",
+      "VentaProductoCantidad",
+      "VentaProductoPrecio",
+      "VentaProductoPrecioTotal",
+      "VentaProductoUnitario",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "VentaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "VentaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM ventaproducto
-        WHERE VentaId LIKE ?
-        OR VentaProductoId LIKE ?
-        OR ProductoId LIKE ?
-        OR CAST(VentaProductoPrecioPromedio AS CHAR) LIKE ?
-        OR CAST(VentaProductoCantidad AS CHAR) LIKE ?
-        OR CAST(VentaProductoPrecio AS CHAR) LIKE ?
-        OR CAST(VentaProductoPrecioTotal AS CHAR) LIKE ?
-        OR CAST(VentaProductoUnitario AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const searchQuery = `
+      SELECT * FROM "ventaproducto"
+      WHERE CAST("VentaId" AS TEXT) LIKE $1
+      OR CAST("VentaProductoId" AS TEXT) LIKE $2
+      OR CAST("ProductoId" AS TEXT) LIKE $3
+      OR CAST("VentaProductoPrecioPromedio" AS TEXT) LIKE $4
+      OR CAST("VentaProductoCantidad" AS TEXT) LIKE $5
+      OR CAST("VentaProductoPrecio" AS TEXT) LIKE $6
+      OR CAST("VentaProductoPrecioTotal" AS TEXT) LIKE $7
+      OR CAST("VentaProductoUnitario" AS TEXT) LIKE $8
+      ORDER BY "${sortField}" ${order}
+      LIMIT $9 OFFSET $10
+    `;
 
-      const searchValue = `%${term}%`;
-      const values = Array(8).fill(searchValue).concat([limit, offset]);
+    const searchValue = `%${term}%`;
+    const values = Array(8).fill(searchValue).concat([limit, offset]);
 
-      db.query(searchQuery, values, (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(searchQuery, values);
 
-        const countQuery = `
-          SELECT COUNT(*) as total FROM ventaproducto
-          WHERE VentaId LIKE ?
-          OR VentaProductoId LIKE ?
-          OR ProductoId LIKE ?
-          OR CAST(VentaProductoPrecioPromedio AS CHAR) LIKE ?
-          OR CAST(VentaProductoCantidad AS CHAR) LIKE ?
-          OR CAST(VentaProductoPrecio AS CHAR) LIKE ?
-          OR CAST(VentaProductoPrecioTotal AS CHAR) LIKE ?
-          OR CAST(VentaProductoUnitario AS CHAR) LIKE ?
-        `;
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "ventaproducto"
+      WHERE CAST("VentaId" AS TEXT) LIKE $1
+      OR CAST("VentaProductoId" AS TEXT) LIKE $2
+      OR CAST("ProductoId" AS TEXT) LIKE $3
+      OR CAST("VentaProductoPrecioPromedio" AS TEXT) LIKE $4
+      OR CAST("VentaProductoCantidad" AS TEXT) LIKE $5
+      OR CAST("VentaProductoPrecio" AS TEXT) LIKE $6
+      OR CAST("VentaProductoPrecioTotal" AS TEXT) LIKE $7
+      OR CAST("VentaProductoUnitario" AS TEXT) LIKE $8
+    `;
 
-        db.query(countQuery, Array(8).fill(searchValue), (err, countResult) => {
-          if (err) return reject(err);
-          resolve({
-            ventaProductos: results,
-            total: countResult[0]?.total || 0,
-          });
-        });
-      });
-    });
+    const countResult = await db.query(countQuery, Array(8).fill(searchValue));
+
+    return {
+      ventaProductos: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

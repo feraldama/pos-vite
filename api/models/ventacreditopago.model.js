@@ -1,203 +1,154 @@
 const db = require("../config/db");
 
 const VentaCreditoPago = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM ventacreditopago", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "ventacreditopago"');
+    return result.rows;
   },
 
-  getById: (ventaCreditoId, pagoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventacreditopago WHERE VentaCreditoId = ? AND VentaCreditoPagoId = ?",
-        [ventaCreditoId, pagoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (ventaCreditoId, pagoId) => {
+    const result = await db.query(
+      'SELECT * FROM "ventacreditopago" WHERE "VentaCreditoId" = $1 AND "VentaCreditoPagoId" = $2',
+      [ventaCreditoId, pagoId]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByVentaCreditoId: (ventaCreditoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM ventacreditopago WHERE VentaCreditoId = ?",
-        [ventaCreditoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByVentaCreditoId: async (ventaCreditoId) => {
+    const result = await db.query(
+      'SELECT * FROM "ventacreditopago" WHERE "VentaCreditoId" = $1',
+      [ventaCreditoId]
+    );
+    return result.rows;
   },
 
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO ventacreditopago (
-        VentaCreditoId,
-        VentaCreditoPagoId,
-        VentaCreditoPagoFecha,
-        VentaCreditoPagoMonto
-      ) VALUES (?, ?, ?, ?)`;
-
-      const values = [
+  create: async (data) => {
+    await db.query(
+      `INSERT INTO "ventacreditopago" (
+        "VentaCreditoId",
+        "VentaCreditoPagoId",
+        "VentaCreditoPagoFecha",
+        "VentaCreditoPagoMonto"
+      ) VALUES ($1, $2, $3, $4)`,
+      [
         data.VentaCreditoId,
         data.VentaCreditoPagoId,
         data.VentaCreditoPagoFecha,
         data.VentaCreditoPagoMonto,
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        VentaCreditoPago.getById(data.VentaCreditoId, data.VentaCreditoPagoId)
-          .then((pago) => resolve(pago))
-          .catch((error) => reject(error));
-      });
-    });
+      ]
+    );
+    return VentaCreditoPago.getById(data.VentaCreditoId, data.VentaCreditoPagoId);
   },
 
-  update: (ventaCreditoId, pagoId, data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE ventacreditopago SET 
-        VentaCreditoPagoFecha = ?,
-        VentaCreditoPagoMonto = ?
-        WHERE VentaCreditoId = ? AND VentaCreditoPagoId = ?`;
-
-      const values = [
+  update: async (ventaCreditoId, pagoId, data) => {
+    const result = await db.query(
+      `UPDATE "ventacreditopago" SET
+        "VentaCreditoPagoFecha" = $1,
+        "VentaCreditoPagoMonto" = $2
+        WHERE "VentaCreditoId" = $3 AND "VentaCreditoPagoId" = $4`,
+      [
         data.VentaCreditoPagoFecha,
         data.VentaCreditoPagoMonto,
         ventaCreditoId,
         pagoId,
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        VentaCreditoPago.getById(ventaCreditoId, pagoId)
-          .then((pago) => resolve(pago))
-          .catch((error) => reject(error));
-      });
-    });
+      ]
+    );
+    if (result.rowCount === 0) return null;
+    return VentaCreditoPago.getById(ventaCreditoId, pagoId);
   },
 
-  delete: (ventaCreditoId, pagoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM ventacreditopago WHERE VentaCreditoId = ? AND VentaCreditoPagoId = ?",
-        [ventaCreditoId, pagoId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (ventaCreditoId, pagoId) => {
+    const result = await db.query(
+      'DELETE FROM "ventacreditopago" WHERE "VentaCreditoId" = $1 AND "VentaCreditoPagoId" = $2',
+      [ventaCreditoId, pagoId]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "VentaCreditoId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaCreditoId",
-        "VentaCreditoPagoId",
-        "VentaCreditoPagoFecha",
-        "VentaCreditoPagoMonto",
-      ];
+    const allowedSortFields = [
+      "VentaCreditoId",
+      "VentaCreditoPagoId",
+      "VentaCreditoPagoFecha",
+      "VentaCreditoPagoMonto",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "VentaCreditoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "VentaCreditoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM ventacreditopago ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "ventacreditopago" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM ventacreditopago",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "ventacreditopago"'
+    );
 
-              resolve({
-                pagos: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      pagos: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchPagos: (
+  searchPagos: async (
     term,
     limit,
     offset,
     sortBy = "VentaCreditoId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "VentaCreditoId",
-        "VentaCreditoPagoId",
-        "VentaCreditoPagoFecha",
-        "VentaCreditoPagoMonto",
-      ];
+    const allowedSortFields = [
+      "VentaCreditoId",
+      "VentaCreditoPagoId",
+      "VentaCreditoPagoFecha",
+      "VentaCreditoPagoMonto",
+    ];
 
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "VentaCreditoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "VentaCreditoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM ventacreditopago
-        WHERE VentaCreditoId LIKE ?
-        OR VentaCreditoPagoId LIKE ?
-        OR VentaCreditoPagoFecha LIKE ?
-        OR CAST(VentaCreditoPagoMonto AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const searchValue = `%${term}%`;
 
-      const searchValue = `%${term}%`;
-      const values = Array(4).fill(searchValue).concat([limit, offset]);
+    const result = await db.query(
+      `SELECT * FROM "ventacreditopago"
+        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
+        OR CAST("VentaCreditoPagoId" AS TEXT) LIKE $2
+        OR CAST("VentaCreditoPagoFecha" AS TEXT) LIKE $3
+        OR CAST("VentaCreditoPagoMonto" AS TEXT) LIKE $4
+        ORDER BY "${sortField}" ${order}
+        LIMIT $5 OFFSET $6`,
+      [searchValue, searchValue, searchValue, searchValue, limit, offset]
+    );
 
-      db.query(searchQuery, values, (err, results) => {
-        if (err) return reject(err);
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "ventacreditopago"
+        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
+        OR CAST("VentaCreditoPagoId" AS TEXT) LIKE $2
+        OR CAST("VentaCreditoPagoFecha" AS TEXT) LIKE $3
+        OR CAST("VentaCreditoPagoMonto" AS TEXT) LIKE $4`,
+      [searchValue, searchValue, searchValue, searchValue]
+    );
 
-        const countQuery = `
-          SELECT COUNT(*) as total FROM ventacreditopago
-          WHERE VentaCreditoId LIKE ?
-          OR VentaCreditoPagoId LIKE ?
-          OR VentaCreditoPagoFecha LIKE ?
-          OR CAST(VentaCreditoPagoMonto AS CHAR) LIKE ?
-        `;
-
-        db.query(countQuery, Array(4).fill(searchValue), (err, countResult) => {
-          if (err) return reject(err);
-          resolve({
-            pagos: results,
-            total: countResult[0]?.total || 0,
-          });
-        });
-      });
-    });
+    return {
+      pagos: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

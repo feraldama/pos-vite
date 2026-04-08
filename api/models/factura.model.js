@@ -1,337 +1,246 @@
 const db = require("../config/db");
 
 const Factura = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM factura ORDER BY FacturaId DESC",
-        (err, results) => {
-          if (err) reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getAll: async () => {
+    const result = await db.query(
+      'SELECT * FROM "factura" ORDER BY "FacturaId" DESC'
+    );
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM factura WHERE FacturaId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "factura" WHERE "FacturaId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "FacturaId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "FacturaId",
-        "FacturaTimbrado",
-        "FacturaDesde",
-        "FacturaHasta",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "FacturaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const allowedSortFields = [
+      "FacturaId",
+      "FacturaTimbrado",
+      "FacturaDesde",
+      "FacturaHasta",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "FacturaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      db.query(
-        `SELECT * FROM factura ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "factura" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM factura",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "factura"'
+    );
 
-              resolve({
-                facturas: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      facturas: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  search: (term, limit, offset, sortBy = "FacturaId", sortOrder = "DESC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "FacturaId",
-        "FacturaTimbrado",
-        "FacturaDesde",
-        "FacturaHasta",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "FacturaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+  search: async (term, limit, offset, sortBy = "FacturaId", sortOrder = "DESC") => {
+    const allowedSortFields = [
+      "FacturaId",
+      "FacturaTimbrado",
+      "FacturaDesde",
+      "FacturaHasta",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "FacturaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const searchQuery = `
-        SELECT * FROM factura 
-        WHERE FacturaId LIKE ? 
-        OR FacturaTimbrado LIKE ? 
-        OR FacturaDesde LIKE ? 
-        OR FacturaHasta LIKE ?
-        ORDER BY ${sortField} ${order} 
-        LIMIT ? OFFSET ?
-      `;
-      const searchTerm = `%${term}%`;
+    const searchTerm = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [searchTerm, searchTerm, searchTerm, searchTerm, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "factura"
+        WHERE CAST("FacturaId" AS TEXT) LIKE $1
+        OR CAST("FacturaTimbrado" AS TEXT) LIKE $2
+        OR CAST("FacturaDesde" AS TEXT) LIKE $3
+        OR CAST("FacturaHasta" AS TEXT) LIKE $4
+        ORDER BY "${sortField}" ${order}
+        LIMIT $5 OFFSET $6`,
+      [searchTerm, searchTerm, searchTerm, searchTerm, limit, offset]
+    );
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM factura 
-            WHERE FacturaId LIKE ? 
-            OR FacturaTimbrado LIKE ? 
-            OR FacturaDesde LIKE ? 
-            OR FacturaHasta LIKE ?
-          `;
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "factura"
+        WHERE CAST("FacturaId" AS TEXT) LIKE $1
+        OR CAST("FacturaTimbrado" AS TEXT) LIKE $2
+        OR CAST("FacturaDesde" AS TEXT) LIKE $3
+        OR CAST("FacturaHasta" AS TEXT) LIKE $4`,
+      [searchTerm, searchTerm, searchTerm, searchTerm]
+    );
 
-          db.query(
-            countQuery,
-            [searchTerm, searchTerm, searchTerm, searchTerm],
-            (err, countResult) => {
-              if (err) return reject(err);
-
-              resolve({
-                facturas: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      facturas: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  create: (facturaData) => {
-    return new Promise((resolve, reject) => {
-      const { FacturaTimbrado, FacturaDesde, FacturaHasta } = facturaData;
+  create: async (facturaData) => {
+    const { FacturaTimbrado, FacturaDesde, FacturaHasta } = facturaData;
 
-      // Validaciones
-      if (!FacturaTimbrado || FacturaTimbrado.toString().length > 8) {
-        return reject(
-          new Error("FacturaTimbrado no puede tener más de 8 dígitos")
-        );
-      }
+    // Validaciones
+    if (!FacturaTimbrado || FacturaTimbrado.toString().length > 8) {
+      throw new Error("FacturaTimbrado no puede tener más de 8 dígitos");
+    }
 
-      if (!FacturaDesde || FacturaDesde.toString().length > 7) {
-        return reject(
-          new Error("FacturaDesde no puede tener más de 7 dígitos")
-        );
-      }
+    if (!FacturaDesde || FacturaDesde.toString().length > 7) {
+      throw new Error("FacturaDesde no puede tener más de 7 dígitos");
+    }
 
-      if (!FacturaHasta || FacturaHasta.toString().length > 7) {
-        return reject(
-          new Error("FacturaHasta no puede tener más de 7 dígitos")
-        );
-      }
+    if (!FacturaHasta || FacturaHasta.toString().length > 7) {
+      throw new Error("FacturaHasta no puede tener más de 7 dígitos");
+    }
 
-      if (parseInt(FacturaDesde) >= parseInt(FacturaHasta)) {
-        return reject(
-          new Error("FacturaDesde debe ser menor que FacturaHasta")
-        );
-      }
+    if (parseInt(FacturaDesde) >= parseInt(FacturaHasta)) {
+      throw new Error("FacturaDesde debe ser menor que FacturaHasta");
+    }
 
-      // Verificar si ya existe una factura con el mismo timbrado
-      db.query(
-        "SELECT COUNT(*) as count FROM factura WHERE FacturaTimbrado = ?",
-        [FacturaTimbrado],
-        (err, results) => {
-          if (err) return reject(err);
-          if (results[0].count > 0) {
-            return reject(new Error("Ya existe una factura con este timbrado"));
-          }
+    // Verificar si ya existe una factura con el mismo timbrado
+    const dupCheck = await db.query(
+      'SELECT COUNT(*) as count FROM "factura" WHERE "FacturaTimbrado" = $1',
+      [FacturaTimbrado]
+    );
+    if (dupCheck.rows[0].count > 0) {
+      throw new Error("Ya existe una factura con este timbrado");
+    }
 
-          // Verificar si hay superposición de rangos
-          db.query(
-            `SELECT COUNT(*) as count FROM factura 
-             WHERE (FacturaDesde <= ? AND FacturaHasta >= ?) 
-             OR (FacturaDesde <= ? AND FacturaHasta >= ?) 
-             OR (FacturaDesde >= ? AND FacturaHasta <= ?)`,
-            [
-              FacturaDesde,
-              FacturaDesde,
-              FacturaHasta,
-              FacturaHasta,
-              FacturaDesde,
-              FacturaHasta,
-            ],
-            (err, results) => {
-              if (err) return reject(err);
-              if (results[0].count > 0) {
-                return reject(
-                  new Error("Existe superposición con el rango de facturas")
-                );
-              }
+    // Verificar si hay superposición de rangos
+    const overlapCheck = await db.query(
+      `SELECT COUNT(*) as count FROM "factura"
+         WHERE ("FacturaDesde" <= $1 AND "FacturaHasta" >= $2)
+         OR ("FacturaDesde" <= $3 AND "FacturaHasta" >= $4)
+         OR ("FacturaDesde" >= $5 AND "FacturaHasta" <= $6)`,
+      [
+        FacturaDesde,
+        FacturaDesde,
+        FacturaHasta,
+        FacturaHasta,
+        FacturaDesde,
+        FacturaHasta,
+      ]
+    );
+    if (overlapCheck.rows[0].count > 0) {
+      throw new Error("Existe superposición con el rango de facturas");
+    }
 
-              // Insertar la nueva factura
-              db.query(
-                "INSERT INTO factura (FacturaTimbrado, FacturaDesde, FacturaHasta) VALUES (?, ?, ?)",
-                [FacturaTimbrado, FacturaDesde, FacturaHasta],
-                (err, result) => {
-                  if (err) return reject(err);
-                  resolve(result.insertId);
-                }
-              );
-            }
-          );
-        }
-      );
-    });
+    // Insertar la nueva factura
+    const result = await db.query(
+      'INSERT INTO "factura" ("FacturaTimbrado", "FacturaDesde", "FacturaHasta") VALUES ($1, $2, $3) RETURNING "FacturaId"',
+      [FacturaTimbrado, FacturaDesde, FacturaHasta]
+    );
+    return result.rows[0].FacturaId;
   },
 
-  update: (id, facturaData) => {
-    return new Promise((resolve, reject) => {
-      const { FacturaTimbrado, FacturaDesde, FacturaHasta } = facturaData;
+  update: async (id, facturaData) => {
+    const { FacturaTimbrado, FacturaDesde, FacturaHasta } = facturaData;
 
-      // Validaciones
-      if (!FacturaTimbrado || FacturaTimbrado.toString().length > 8) {
-        return reject(
-          new Error("FacturaTimbrado no puede tener más de 8 dígitos")
-        );
-      }
+    // Validaciones
+    if (!FacturaTimbrado || FacturaTimbrado.toString().length > 8) {
+      throw new Error("FacturaTimbrado no puede tener más de 8 dígitos");
+    }
 
-      if (!FacturaDesde || FacturaDesde.toString().length > 7) {
-        return reject(
-          new Error("FacturaDesde no puede tener más de 7 dígitos")
-        );
-      }
+    if (!FacturaDesde || FacturaDesde.toString().length > 7) {
+      throw new Error("FacturaDesde no puede tener más de 7 dígitos");
+    }
 
-      if (!FacturaHasta || FacturaHasta.toString().length > 7) {
-        return reject(
-          new Error("FacturaHasta no puede tener más de 7 dígitos")
-        );
-      }
+    if (!FacturaHasta || FacturaHasta.toString().length > 7) {
+      throw new Error("FacturaHasta no puede tener más de 7 dígitos");
+    }
 
-      if (parseInt(FacturaDesde) >= parseInt(FacturaHasta)) {
-        return reject(
-          new Error("FacturaDesde debe ser menor que FacturaHasta")
-        );
-      }
+    if (parseInt(FacturaDesde) >= parseInt(FacturaHasta)) {
+      throw new Error("FacturaDesde debe ser menor que FacturaHasta");
+    }
 
-      // Verificar si ya existe una factura con el mismo timbrado (excluyendo la actual)
-      db.query(
-        "SELECT COUNT(*) as count FROM factura WHERE FacturaTimbrado = ? AND FacturaId != ?",
-        [FacturaTimbrado, id],
-        (err, results) => {
-          if (err) return reject(err);
-          if (results[0].count > 0) {
-            return reject(new Error("Ya existe una factura con este timbrado"));
-          }
+    // Verificar si ya existe una factura con el mismo timbrado (excluyendo la actual)
+    const dupCheck = await db.query(
+      'SELECT COUNT(*) as count FROM "factura" WHERE "FacturaTimbrado" = $1 AND "FacturaId" != $2',
+      [FacturaTimbrado, id]
+    );
+    if (dupCheck.rows[0].count > 0) {
+      throw new Error("Ya existe una factura con este timbrado");
+    }
 
-          // Verificar si hay superposición de rangos (excluyendo la actual)
-          db.query(
-            `SELECT COUNT(*) as count FROM factura 
-             WHERE FacturaId != ? 
-             AND ((FacturaDesde <= ? AND FacturaHasta >= ?) 
-             OR (FacturaDesde <= ? AND FacturaHasta >= ?) 
-             OR (FacturaDesde >= ? AND FacturaHasta <= ?))`,
-            [
-              id,
-              FacturaDesde,
-              FacturaDesde,
-              FacturaHasta,
-              FacturaHasta,
-              FacturaDesde,
-              FacturaHasta,
-            ],
-            (err, results) => {
-              if (err) return reject(err);
-              if (results[0].count > 0) {
-                return reject(
-                  new Error("Existe superposición con el rango de facturas")
-                );
-              }
+    // Verificar si hay superposición de rangos (excluyendo la actual)
+    const overlapCheck = await db.query(
+      `SELECT COUNT(*) as count FROM "factura"
+         WHERE "FacturaId" != $1
+         AND (("FacturaDesde" <= $2 AND "FacturaHasta" >= $3)
+         OR ("FacturaDesde" <= $4 AND "FacturaHasta" >= $5)
+         OR ("FacturaDesde" >= $6 AND "FacturaHasta" <= $7))`,
+      [
+        id,
+        FacturaDesde,
+        FacturaDesde,
+        FacturaHasta,
+        FacturaHasta,
+        FacturaDesde,
+        FacturaHasta,
+      ]
+    );
+    if (overlapCheck.rows[0].count > 0) {
+      throw new Error("Existe superposición con el rango de facturas");
+    }
 
-              // Actualizar la factura
-              db.query(
-                "UPDATE factura SET FacturaTimbrado = ?, FacturaDesde = ?, FacturaHasta = ? WHERE FacturaId = ?",
-                [FacturaTimbrado, FacturaDesde, FacturaHasta, id],
-                (err, result) => {
-                  if (err) return reject(err);
-                  if (result.affectedRows === 0) {
-                    return reject(new Error("Factura no encontrada"));
-                  }
-                  resolve(result);
-                }
-              );
-            }
-          );
-        }
-      );
-    });
+    // Actualizar la factura
+    const result = await db.query(
+      'UPDATE "factura" SET "FacturaTimbrado" = $1, "FacturaDesde" = $2, "FacturaHasta" = $3 WHERE "FacturaId" = $4',
+      [FacturaTimbrado, FacturaDesde, FacturaHasta, id]
+    );
+    if (result.rowCount === 0) {
+      throw new Error("Factura no encontrada");
+    }
+    return result;
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM factura WHERE FacturaId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          if (result.affectedRows === 0) {
-            return reject(new Error("Factura no encontrada"));
-          }
-          resolve(result);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "factura" WHERE "FacturaId" = $1',
+      [id]
+    );
+    if (result.rowCount === 0) {
+      throw new Error("Factura no encontrada");
+    }
+    return result;
   },
 
-  getNextAvailableNumber: () => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT FacturaHasta FROM factura ORDER BY FacturaHasta DESC LIMIT 1",
-        (err, results) => {
-          if (err) return reject(err);
-          if (results.length === 0) {
-            // Si no hay facturas, empezar desde 1
-            resolve(1);
-          } else {
-            // Tomar el último número usado y sumar 1
-            const lastNumber = parseInt(results[0].FacturaHasta);
-            resolve(lastNumber + 1);
-          }
-        }
-      );
-    });
+  getNextAvailableNumber: async () => {
+    const result = await db.query(
+      'SELECT "FacturaHasta" FROM "factura" ORDER BY "FacturaHasta" DESC LIMIT 1'
+    );
+    if (result.rows.length === 0) {
+      // Si no hay facturas, empezar desde 1
+      return 1;
+    }
+    // Tomar el último número usado y sumar 1
+    const lastNumber = parseInt(result.rows[0].FacturaHasta);
+    return lastNumber + 1;
   },
 
-  getCurrentFactura: (numeroFactura) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM factura WHERE FacturaDesde <= ? AND FacturaHasta >= ?",
-        [numeroFactura, numeroFactura],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getCurrentFactura: async (numeroFactura) => {
+    const result = await db.query(
+      'SELECT * FROM "factura" WHERE "FacturaDesde" <= $1 AND "FacturaHasta" >= $2',
+      [numeroFactura, numeroFactura]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 };
 

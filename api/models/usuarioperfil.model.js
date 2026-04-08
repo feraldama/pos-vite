@@ -1,41 +1,27 @@
 const db = require("../config/db");
 
 const UsuarioPerfil = {
-  getByUsuario: (usuarioId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM usuarioperfil WHERE UsuarioId = ?",
-        [usuarioId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByUsuario: async (usuarioId) => {
+    const result = await db.query(
+      'SELECT * FROM "usuarioperfil" WHERE "UsuarioId" = $1',
+      [usuarioId]
+    );
+    return result.rows;
   },
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO usuarioperfil (UsuarioId, PerfilId) VALUES (?, ?)",
-        [data.UsuarioId, data.PerfilId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve({ UsuarioPerfilId: result.insertId, ...data });
-        }
-      );
-    });
+
+  create: async (data) => {
+    const result = await db.query(
+      'INSERT INTO "usuarioperfil" ("UsuarioId", "PerfilId") VALUES ($1, $2) RETURNING "UsuarioPerfilId"',
+      [data.UsuarioId, data.PerfilId]
+    );
+    return { UsuarioPerfilId: result.rows[0].UsuarioPerfilId, ...data };
   },
-  delete: (usuarioId, perfilId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM usuarioperfil WHERE UsuarioId=? AND PerfilId=?",
-        [usuarioId, perfilId],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
+
+  delete: async (usuarioId, perfilId) => {
+    await db.query(
+      'DELETE FROM "usuarioperfil" WHERE "UsuarioId"=$1 AND "PerfilId"=$2',
+      [usuarioId, perfilId]
+    );
   },
 };
 

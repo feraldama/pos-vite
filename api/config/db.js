@@ -1,36 +1,29 @@
-const mysql = require("mysql2");
+const { Pool } = require("pg");
 require("dotenv").config();
 
-// Crear un pool de conexiones en lugar de una conexión única
-const db = mysql.createPool({
+const db = new Pool({
   host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "tu_base_de_datos",
-  waitForConnections: true,
-  connectionLimit: 15,
-  queueLimit: 0,
-  idleTimeout: 60000,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
+  user: process.env.DB_USER || "postgres",
+  password: process.env.DB_PASSWORD || "12345",
+  database: process.env.DB_NAME || "cobranza",
+  port: parseInt(process.env.DB_PORT || "5432"),
+  max: 15,
+  idleTimeoutMillis: 60000,
 });
 
 // Verificar la conexión
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error("Error conectando a MySQL:", err);
-    return;
-  }
-  console.log("Conectado a MySQL");
-  connection.release();
-});
+db.connect()
+  .then((client) => {
+    console.log("Conectado a PostgreSQL");
+    client.release();
+  })
+  .catch((err) => {
+    console.error("Error conectando a PostgreSQL:", err);
+  });
 
 // Manejar errores del pool
 db.on("error", (err) => {
-  console.error("Error en el pool de conexiones MySQL:", err);
-  if (err.code === "PROTOCOL_CONNECTION_LOST") {
-    console.log("Conexión perdida. Reintentando...");
-  }
+  console.error("Error en el pool de conexiones PostgreSQL:", err);
 });
 
 module.exports = db;

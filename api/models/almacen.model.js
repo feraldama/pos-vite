@@ -1,140 +1,105 @@
 const db = require("../config/db");
 
 const Almacen = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Almacen", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "almacen"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Almacen WHERE AlmacenId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "almacen" WHERE "AlmacenId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  create: (almacenData) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO Almacen (AlmacenNombre) VALUES (?)`;
-      db.query(query, [almacenData.AlmacenNombre], (err, result) => {
-        if (err) return reject(err);
-        Almacen.getById(result.insertId)
-          .then((almacen) => resolve(almacen))
-          .catch((error) => reject(error));
-      });
-    });
+  create: async (almacenData) => {
+    const result = await db.query(
+      'INSERT INTO "almacen" ("AlmacenNombre") VALUES ($1) RETURNING "AlmacenId"',
+      [almacenData.AlmacenNombre]
+    );
+    return Almacen.getById(result.rows[0].AlmacenId);
   },
 
-  update: (id, almacenData) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE Almacen SET AlmacenNombre = ? WHERE AlmacenId = ?`;
-      db.query(query, [almacenData.AlmacenNombre, id], (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        Almacen.getById(id)
-          .then((almacen) => resolve(almacen))
-          .catch((error) => reject(error));
-      });
-    });
+  update: async (id, almacenData) => {
+    const result = await db.query(
+      'UPDATE "almacen" SET "AlmacenNombre" = $1 WHERE "AlmacenId" = $2',
+      [almacenData.AlmacenNombre, id]
+    );
+    if (result.rowCount === 0) return null;
+    return Almacen.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM Almacen WHERE AlmacenId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "almacen" WHERE "AlmacenId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "AlmacenId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = ["AlmacenId", "AlmacenNombre"];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "AlmacenId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  getAllPaginated: async (limit, offset, sortBy = "AlmacenId", sortOrder = "ASC") => {
+    const allowedSortFields = ["AlmacenId", "AlmacenNombre"];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "AlmacenId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM Almacen ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "almacen" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM Almacen",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "almacen"'
+    );
 
-              resolve({
-                almacenes: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      almacenes: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchAlmacenes: (
+  searchAlmacenes: async (
     term,
     limit,
     offset,
     sortBy = "AlmacenId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = ["AlmacenId", "AlmacenNombre"];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "AlmacenId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortFields = ["AlmacenId", "AlmacenNombre"];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "AlmacenId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM Almacen
-        WHERE AlmacenNombre LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(searchQuery, [searchValue, limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "almacen"
+        WHERE "AlmacenNombre" LIKE $1
+        ORDER BY "${sortField}" ${order}
+        LIMIT $2 OFFSET $3`,
+      [searchValue, limit, offset]
+    );
 
-        const countQuery = `
-            SELECT COUNT(*) as total FROM Almacen
-            WHERE AlmacenNombre LIKE ?
-          `;
-        db.query(countQuery, [searchValue], (err, countResult) => {
-          if (err) return reject(err);
-          resolve({
-            almacenes: results,
-            total: countResult[0]?.total || 0,
-          });
-        });
-      });
-    });
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "almacen"
+        WHERE "AlmacenNombre" LIKE $1`,
+      [searchValue]
+    );
+
+    return {
+      almacenes: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

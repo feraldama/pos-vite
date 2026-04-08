@@ -1,155 +1,111 @@
 const db = require("../config/db");
 
 const TipoGastoGrupo = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM tipogastogrupo", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "tipogastogrupo"');
+    return result.rows;
   },
 
-  getById: (tipoGastoId, grupoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM tipogastogrupo WHERE TipoGastoId = ? AND TipoGastoGrupoId = ?",
-        [tipoGastoId, grupoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (tipoGastoId, grupoId) => {
+    const result = await db.query(
+      'SELECT * FROM "tipogastogrupo" WHERE "TipoGastoId" = $1 AND "TipoGastoGrupoId" = $2',
+      [tipoGastoId, grupoId]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByTipoGastoId: (tipoGastoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM tipogastogrupo WHERE TipoGastoId = ?",
-        [tipoGastoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByTipoGastoId: async (tipoGastoId) => {
+    const result = await db.query(
+      'SELECT * FROM "tipogastogrupo" WHERE "TipoGastoId" = $1',
+      [tipoGastoId]
+    );
+    return result.rows;
   },
 
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      // 1. Obtener el máximo TipoGastoGrupoId existente para este TipoGastoId
-      db.query(
-        "SELECT MAX(TipoGastoGrupoId) as maxId FROM tipogastogrupo WHERE TipoGastoId = ?",
-        [data.TipoGastoId],
-        (err, results) => {
-          if (err) return reject(err);
-          // Si no hay datos, empezar desde 1, sino usar el máximo + 1
-          const nextGrupoId = results[0]?.maxId ? results[0].maxId + 1 : 1;
-          // 2. Insertar con el nuevo ID
-          db.query(
-            "INSERT INTO tipogastogrupo (TipoGastoId, TipoGastoGrupoId, TipoGastoGrupoDescripcion) VALUES (?, ?, ?)",
-            [data.TipoGastoId, nextGrupoId, data.TipoGastoGrupoDescripcion],
-            (err, result) => {
-              if (err) return reject(err);
-              // 3. Actualizar el contador en TipoGasto
-              db.query(
-                "UPDATE TipoGasto SET TipoGastoCantGastos = ? WHERE TipoGastoId = ?",
-                [nextGrupoId, data.TipoGastoId],
-                (err2) => {
-                  if (err2) return reject(err2);
-                  TipoGastoGrupo.getById(data.TipoGastoId, nextGrupoId)
-                    .then((grupo) => resolve(grupo))
-                    .catch((error) => reject(error));
-                }
-              );
-            }
-          );
-        }
-      );
-    });
+  create: async (data) => {
+    // 1. Obtener el contador actual
+    const countResult = await db.query(
+      'SELECT "TipoGastoCantGastos" FROM "tipogasto" WHERE "TipoGastoId" = $1',
+      [data.TipoGastoId]
+    );
+    const nextGrupoId = (countResult.rows[0]?.TipoGastoCantGastos || 0) + 1;
+
+    // 2. Insertar con el nuevo ID
+    await db.query(
+      'INSERT INTO "tipogastogrupo" ("TipoGastoId", "TipoGastoGrupoId", "TipoGastoGrupoDescripcion") VALUES ($1, $2, $3)',
+      [data.TipoGastoId, nextGrupoId, data.TipoGastoGrupoDescripcion]
+    );
+
+    // 3. Actualizar el contador en TipoGasto
+    await db.query(
+      'UPDATE "tipogasto" SET "TipoGastoCantGastos" = $1 WHERE "TipoGastoId" = $2',
+      [nextGrupoId, data.TipoGastoId]
+    );
+
+    const grupo = await TipoGastoGrupo.getById(data.TipoGastoId, nextGrupoId);
+    return grupo;
   },
 
-  update: (id, data) => {
-    return new Promise((resolve, reject) => {
-      // Primero verificar si hay registros dependientes
-      db.query(
-        "SELECT COUNT(*) as count FROM cajagasto WHERE TipoGastoId = ? AND TipoGastoGrupoId = ?",
-        [data.TipoGastoId, id],
-        (err, results) => {
-          if (err) return reject(err);
+  update: async (id, data) => {
+    // Primero verificar si hay registros dependientes
+    const depResult = await db.query(
+      'SELECT COUNT(*) as count FROM "cajagasto" WHERE "TipoGastoId" = $1 AND "TipoGastoGrupoId" = $2',
+      [data.TipoGastoId, id]
+    );
 
-          if (results[0].count > 0) {
-            return reject({
-              message:
-                "No se puede actualizar este grupo porque tiene gastos asociados en caja",
-            });
-          }
+    if (depResult.rows[0].count > 0) {
+      throw {
+        message:
+          "No se puede actualizar este grupo porque tiene gastos asociados en caja",
+      };
+    }
 
-          // Si no hay dependencias, proceder con la actualización
-          db.query(
-            "UPDATE tipogastogrupo SET TipoGastoGrupoDescripcion = ? WHERE TipoGastoGrupoId = ? AND TipoGastoId = ?",
-            [data.TipoGastoGrupoDescripcion, id, data.TipoGastoId],
-            (err) => {
-              if (err) return reject(err);
-              TipoGastoGrupo.getById(data.TipoGastoId, id)
-                .then((grupo) => resolve(grupo))
-                .catch((error) => reject(error));
-            }
-          );
-        }
-      );
-    });
+    // Si no hay dependencias, proceder con la actualizacion
+    await db.query(
+      'UPDATE "tipogastogrupo" SET "TipoGastoGrupoDescripcion" = $1 WHERE "TipoGastoGrupoId" = $2 AND "TipoGastoId" = $3',
+      [data.TipoGastoGrupoDescripcion, id, data.TipoGastoId]
+    );
+
+    const grupo = await TipoGastoGrupo.getById(data.TipoGastoId, id);
+    return grupo;
   },
 
-  delete: (tipoGastoId, grupoId) => {
-    return new Promise((resolve, reject) => {
-      // Obtener el grupo antes de eliminarlo para saber el TipoGastoId
-      db.query(
-        "SELECT TipoGastoId FROM tipogastogrupo WHERE TipoGastoId = ? AND TipoGastoGrupoId = ?",
-        [tipoGastoId, grupoId],
-        (err, results) => {
-          if (err) return reject(err);
-          const tipoGastoIdFound = results[0]?.TipoGastoId;
-          // Verificar si hay registros dependientes
-          db.query(
-            "SELECT COUNT(*) as count FROM cajagasto WHERE TipoGastoId = ? AND TipoGastoGrupoId = ?",
-            [tipoGastoId, grupoId],
-            (err, results) => {
-              if (err) return reject(err);
-              if (results[0].count > 0) {
-                return reject({
-                  message:
-                    "No se puede eliminar este grupo porque tiene gastos asociados en caja",
-                });
-              }
-              // Si no hay dependencias, proceder con la eliminación
-              db.query(
-                "DELETE FROM tipogastogrupo WHERE TipoGastoId = ? AND TipoGastoGrupoId = ?",
-                [tipoGastoId, grupoId],
-                (err, result) => {
-                  if (err) return reject(err);
-                  if (tipoGastoIdFound) {
-                    db.query(
-                      "UPDATE TipoGasto SET TipoGastoCantGastos = TipoGastoCantGastos - 1 WHERE TipoGastoId = ? AND TipoGastoCantGastos > 0",
-                      [tipoGastoIdFound],
-                      (err2) => {
-                        if (err2) return reject(err2);
-                        resolve(
-                          result.affectedRows > 0 ? tipoGastoIdFound : false
-                        );
-                      }
-                    );
-                  } else {
-                    resolve(result.affectedRows > 0);
-                  }
-                }
-              );
-            }
-          );
-        }
+  delete: async (tipoGastoId, grupoId) => {
+    // Obtener el grupo antes de eliminarlo para saber el TipoGastoId
+    const grupoResult = await db.query(
+      'SELECT "TipoGastoId" FROM "tipogastogrupo" WHERE "TipoGastoId" = $1 AND "TipoGastoGrupoId" = $2',
+      [tipoGastoId, grupoId]
+    );
+    const tipoGastoIdFound = grupoResult.rows[0]?.TipoGastoId;
+
+    // Verificar si hay registros dependientes
+    const depResult = await db.query(
+      'SELECT COUNT(*) as count FROM "cajagasto" WHERE "TipoGastoId" = $1 AND "TipoGastoGrupoId" = $2',
+      [tipoGastoId, grupoId]
+    );
+
+    if (depResult.rows[0].count > 0) {
+      throw {
+        message:
+          "No se puede eliminar este grupo porque tiene gastos asociados en caja",
+      };
+    }
+
+    // Si no hay dependencias, proceder con la eliminacion
+    const deleteResult = await db.query(
+      'DELETE FROM "tipogastogrupo" WHERE "TipoGastoId" = $1 AND "TipoGastoGrupoId" = $2',
+      [tipoGastoId, grupoId]
+    );
+
+    if (tipoGastoIdFound) {
+      await db.query(
+        'UPDATE "tipogasto" SET "TipoGastoCantGastos" = "TipoGastoCantGastos" - 1 WHERE "TipoGastoId" = $1 AND "TipoGastoCantGastos" > 0',
+        [tipoGastoIdFound]
       );
-    });
+      return deleteResult.rowCount > 0 ? tipoGastoIdFound : false;
+    } else {
+      return deleteResult.rowCount > 0;
+    }
   },
 };
 

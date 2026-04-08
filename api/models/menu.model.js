@@ -1,100 +1,98 @@
 const db = require("../config/db");
 
 const Menu = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM menu", (err, results) => {
-        if (err) return reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "menu"');
+    return result.rows;
   },
-  getAllPaginated: (
+
+  getAllPaginated: async (
     page = 1,
     itemsPerPage = 10,
     sortBy = "MenuId",
     sortOrder = "ASC",
     search = ""
   ) => {
-    return new Promise((resolve, reject) => {
-      const offset = (page - 1) * itemsPerPage;
-      const allowedSortFields = ["MenuId", "MenuNombre"];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : "MenuId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const offset = (page - 1) * itemsPerPage;
+    const allowedSortFields = ["MenuId", "MenuNombre"];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "MenuId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      let where = "";
-      let params = [];
-      if (search) {
-        where = "WHERE MenuId LIKE ? OR MenuNombre LIKE ?";
-        params.push(`%${search}%`, `%${search}%`);
-      }
-      params.push(parseInt(itemsPerPage), parseInt(offset));
+    let where = "";
+    let params = [];
+    let paramIndex = 1;
 
-      const query = `
-        SELECT SQL_CALC_FOUND_ROWS * FROM menu
-        ${where}
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      db.query(query, params, (err, results) => {
-        if (err) return reject(err);
-        db.query("SELECT FOUND_ROWS() as total", (err2, totalResult) => {
-          if (err2) return reject(err2);
-          resolve({
-            data: results,
-            pagination: {
-              totalItems: totalResult[0].total,
-              totalPages: Math.ceil(totalResult[0].total / itemsPerPage),
-              currentPage: page,
-              itemsPerPage: itemsPerPage,
-            },
-          });
-        });
-      });
-    });
+    if (search) {
+      where = `WHERE "MenuId" LIKE $${paramIndex} OR "MenuNombre" LIKE $${paramIndex + 1}`;
+      params.push(`%${search}%`, `%${search}%`);
+      paramIndex += 2;
+    }
+
+    params.push(parseInt(itemsPerPage), parseInt(offset));
+
+    const query = `
+      SELECT * FROM "menu"
+      ${where}
+      ORDER BY "${sortField}" ${order}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const result = await db.query(query, params);
+
+    let countParams = [];
+    let countWhere = "";
+    if (search) {
+      countWhere = `WHERE "MenuId" LIKE $1 OR "MenuNombre" LIKE $2`;
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "menu" ${countWhere}`,
+      countParams
+    );
+
+    const total = countResult.rows[0].total;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / itemsPerPage),
+        currentPage: page,
+        itemsPerPage: itemsPerPage,
+      },
+    };
   },
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM menu WHERE MenuId = ?", [id], (err, results) => {
-        if (err) return reject(err);
-        resolve(results && results.length > 0 ? results[0] : null);
-      });
-    });
+
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "menu" WHERE "MenuId" = $1',
+      [id]
+    );
+    return result.rows[0];
   },
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO menu (MenuId, MenuNombre) VALUES (?, ?)",
-        [data.MenuId, data.MenuNombre],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve({ MenuId: data.MenuId, ...data });
-        }
-      );
-    });
+
+  create: async (data) => {
+    await db.query(
+      'INSERT INTO "menu" ("MenuId", "MenuNombre") VALUES ($1, $2)',
+      [data.MenuId, data.MenuNombre]
+    );
+    return { MenuId: data.MenuId, ...data };
   },
-  update: (id, data) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "UPDATE menu SET MenuNombre = ? WHERE MenuId = ?",
-        [data.MenuNombre, id],
-        (err) => {
-          if (err) return reject(err);
-          resolve({ MenuId: id, ...data });
-        }
-      );
-    });
+
+  update: async (id, data) => {
+    await db.query(
+      'UPDATE "menu" SET "MenuNombre" = $1 WHERE "MenuId" = $2',
+      [data.MenuNombre, id]
+    );
+    return { MenuId: id, ...data };
   },
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM menu WHERE MenuId = ?", [id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
+
+  delete: async (id) => {
+    await db.query('DELETE FROM "menu" WHERE "MenuId" = $1', [id]);
   },
 };
 

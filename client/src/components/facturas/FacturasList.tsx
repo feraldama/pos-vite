@@ -196,7 +196,7 @@ export default function FacturasList({
                       id="FacturaTimbrado"
                       value={formData.FacturaTimbrado}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       placeholder="12345678"
                       maxLength={8}
                       pattern="[0-9]{1,8}"
@@ -216,7 +216,7 @@ export default function FacturasList({
                       id="FacturaDesde"
                       value={formData.FacturaDesde}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       placeholder="1"
                       maxLength={7}
                       pattern="[0-9]{1,7}"
@@ -236,7 +236,7 @@ export default function FacturasList({
                       id="FacturaHasta"
                       value={formData.FacturaHasta}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       placeholder="1000"
                       maxLength={7}
                       pattern="[0-9]{1,7}"

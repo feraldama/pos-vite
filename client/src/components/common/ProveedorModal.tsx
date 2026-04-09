@@ -74,7 +74,7 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          className="flex items-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
           <Plus className="size-4" />
           Crear Nuevo Proveedor
@@ -191,7 +191,7 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
           <div className="flex gap-2">
             <button
               type="submit"
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+              className="bg-success-500 text-white px-4 py-2 rounded-lg hover:bg-success-600"
             >
               Crear
             </button>

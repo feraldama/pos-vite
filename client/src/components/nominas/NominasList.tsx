@@ -290,7 +290,7 @@ export default function NominasList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -315,7 +315,7 @@ export default function NominasList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -332,7 +332,7 @@ export default function NominasList({
                       value={formData.ColegioId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {colegios.map((c) => (
@@ -356,7 +356,7 @@ export default function NominasList({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.ColegioId}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 disabled:bg-gray-100"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5 disabled:bg-gray-100"
                     >
                       <option value="">Seleccione...</option>
                       {cursos.map((c) => (

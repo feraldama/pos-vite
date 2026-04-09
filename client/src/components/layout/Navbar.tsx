@@ -30,14 +30,14 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   };
 
   return (
-    <nav className="sticky top-0 z-30 bg-sidebar border-b border-gray-700/50">
+    <nav className="sticky top-0 z-30 bg-sidebar border-b border-white/10">
       <div className="px-4 sm:px-6">
         <div className="flex h-14 items-center justify-between">
           {/* Izquierda: hamburger + logo + links */}
           <div className="flex items-center gap-4">
             <button
               type="button"
-              className="rounded-md p-1 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors lg:hidden"
+              className="rounded-md p-1 text-slate-400 hover:text-white hover:bg-sidebar-hover transition-colors lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
               <MenuIcon className="size-6" />
@@ -56,8 +56,8 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
                     to={item.href}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
                       ${isActive
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        ? "bg-sidebar-active text-white"
+                        : "text-slate-400 hover:bg-sidebar-hover hover:text-white"
                       }`}
                   >
                     {item.name}
@@ -69,7 +69,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
 
           {/* Derecha: usuario */}
           <Menu as="div" className="relative">
-            <MenuButton className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 transition-colors cursor-pointer">
+            <MenuButton className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-300 hover:bg-sidebar-hover transition-colors cursor-pointer">
               <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold text-sm">
                 {user?.nombre?.charAt(0)?.toUpperCase() ?? "U"}
               </div>

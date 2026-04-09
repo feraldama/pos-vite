@@ -263,9 +263,9 @@ const VentasList = ({
       case "P":
         return "bg-yellow-500"; // Pendiente
       case "C":
-        return "bg-green-500"; // Completado
+        return "bg-success-500"; // Completado
       case "A":
-        return "bg-red-500"; // Anulado
+        return "bg-danger-500"; // Anulado
       default:
         return "bg-gray-500";
     }

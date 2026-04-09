@@ -223,7 +223,7 @@ export default function HorarioUsoList({
                       htmlFor="HorarioUsoDesde"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Desde <span className="text-red-500">*</span>
+                      Desde <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="time"
@@ -231,7 +231,7 @@ export default function HorarioUsoList({
                       id="HorarioUsoDesde"
                       value={formData.HorarioUsoDesde}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -240,7 +240,7 @@ export default function HorarioUsoList({
                       htmlFor="HorarioUsoHasta"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Hasta <span className="text-red-500">*</span>
+                      Hasta <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="time"
@@ -248,7 +248,7 @@ export default function HorarioUsoList({
                       id="HorarioUsoHasta"
                       value={formData.HorarioUsoHasta}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>

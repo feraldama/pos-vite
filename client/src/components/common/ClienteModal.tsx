@@ -76,7 +76,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               e.stopPropagation();
               setShowCreateModal(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus className="size-4" />
             Nuevo Cliente
@@ -161,7 +161,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             {paginatedClientes.map((c) => (
               <tr
                 key={c.ClienteId}
-                className="hover:bg-blue-50 cursor-pointer transition"
+                className="hover:bg-primary-50 cursor-pointer transition"
                 onClick={() => onSelect(c)}
               >
                 <td className="py-2 px-4">{c.ClienteRUC || ""}</td>

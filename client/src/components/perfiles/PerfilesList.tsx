@@ -274,7 +274,7 @@ export default function PerfilesList({
                       name="PerfilDescripcion"
                       value={formData.PerfilDescripcion}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                       style={{ textTransform: "uppercase" }}
                     />
@@ -297,7 +297,7 @@ export default function PerfilesList({
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => handleMenuChange(menu.MenuId)}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500"
+                                className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-sm focus:ring-ring"
                               />
                               <label
                                 htmlFor={checkboxId}

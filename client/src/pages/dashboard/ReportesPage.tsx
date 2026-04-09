@@ -450,7 +450,7 @@ const ReportesPage: React.FC = () => {
                 type="date"
                 value={fechaInicio}
                 onChange={(e) => setFechaInicio(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
             <div>
@@ -461,13 +461,13 @@ const ReportesPage: React.FC = () => {
                 type="date"
                 value={fechaFin}
                 onChange={(e) => setFechaFin(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
           </div>
           <div className="flex gap-4 mb-2">
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
+              className="bg-primary hover:bg-primary-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
               onClick={handleGenerarReportePaseCajas}
               disabled={loading || !fechaInicio || !fechaFin}
             >
@@ -476,7 +476,7 @@ const ReportesPage: React.FC = () => {
           </div>
 
           {loading && <div className="mt-2">Generando PDF...</div>}
-          {error && <div className="mt-2 text-red-600">{error}</div>}
+          {error && <div className="mt-2 text-danger-600">{error}</div>}
         </div>
 
         {/* Reporte de Movimientos de Cajas */}
@@ -497,7 +497,7 @@ const ReportesPage: React.FC = () => {
                 type="date"
                 value={fechaInicioMovimientos}
                 onChange={(e) => setFechaInicioMovimientos(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
             <div>
@@ -508,13 +508,13 @@ const ReportesPage: React.FC = () => {
                 type="date"
                 value={fechaFinMovimientos}
                 onChange={(e) => setFechaFinMovimientos(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               />
             </div>
           </div>
           <div className="flex gap-4 mb-2">
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
+              className="bg-primary hover:bg-primary-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
               onClick={handleGenerarReporteMovimientosCajas}
               disabled={
                 loading || !fechaInicioMovimientos || !fechaFinMovimientos
@@ -525,7 +525,7 @@ const ReportesPage: React.FC = () => {
           </div>
 
           {loading && <div className="mt-2">Generando PDF...</div>}
-          {error && <div className="mt-2 text-red-600">{error}</div>}
+          {error && <div className="mt-2 text-danger-600">{error}</div>}
         </div>
       </div>
     </div>

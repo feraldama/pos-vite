@@ -248,7 +248,7 @@ export default function ColegioCursosList({
         />
         <button
           type="button"
-          className="text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-xs"
+          className="text-white bg-primary hover:bg-primary-700 rounded px-3 py-1 text-xs"
           onClick={handleAddCurso}
         >
           Agregar
@@ -325,7 +325,7 @@ export default function ColegioCursosList({
         </div>
       )}
       {loading && <div>Cargando cursos...</div>}
-      {error && <div className="text-red-500">{error}</div>}
+      {error && <div className="text-destructive">{error}</div>}
     </div>
   );
 }

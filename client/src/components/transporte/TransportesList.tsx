@@ -290,7 +290,7 @@ export default function TransportesList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -307,7 +307,7 @@ export default function TransportesList({
                       id="TransporteTelefono"
                       value={formData.TransporteTelefono}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -323,7 +323,7 @@ export default function TransportesList({
                       id="TransporteDireccion"
                       value={formData.TransporteDireccion}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -339,7 +339,7 @@ export default function TransportesList({
                       value={formData.TipoGastoId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {tiposGasto.map((tg) => (
@@ -363,7 +363,7 @@ export default function TransportesList({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.TipoGastoId}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 disabled:bg-gray-100"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5 disabled:bg-gray-100"
                     >
                       <option value="">Seleccione...</option>
                       {gruposFiltrados.map((gg) => (
@@ -404,7 +404,7 @@ export default function TransportesList({
                           }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       inputMode="numeric"
                     />
                   </div>

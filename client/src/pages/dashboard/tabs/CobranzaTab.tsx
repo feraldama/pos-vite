@@ -313,7 +313,7 @@ export default function CobranzaTab() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-green-800 mb-6 border-b-2 border-green-500 pb-2">
+        <h2 className="text-2xl font-bold text-success-700 mb-6 border-b-2 border-green-500 pb-2">
           COBRANZA
         </h2>
 
@@ -489,7 +489,7 @@ export default function CobranzaTab() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium"
+              className="px-6 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition font-medium"
             >
               CONFIRMAR
             </button>

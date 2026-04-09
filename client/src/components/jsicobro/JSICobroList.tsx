@@ -318,7 +318,7 @@ export default function JSICobroList({
                       htmlFor="JSICobroFecha"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Fecha <span className="text-red-500">*</span>
+                      Fecha <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="datetime-local"
@@ -326,7 +326,7 @@ export default function JSICobroList({
                       id="JSICobroFecha"
                       value={formData.JSICobroFecha || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -343,7 +343,7 @@ export default function JSICobroList({
                       id="JSICobroCod"
                       value={formData.JSICobroCod || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -351,14 +351,14 @@ export default function JSICobroList({
                       htmlFor="CajaId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Caja <span className="text-red-500">*</span>
+                      Caja <span className="text-destructive">*</span>
                     </label>
                     <select
                       name="CajaId"
                       id="CajaId"
                       value={formData.CajaId || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     >
                       <option value="">Seleccione una caja</option>
@@ -387,7 +387,7 @@ export default function JSICobroList({
                       id="ClienteId"
                       value={formData.ClienteId || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione un cliente</option>
                       {clientes
@@ -415,7 +415,7 @@ export default function JSICobroList({
                       htmlFor="JSICobroMonto"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Monto <span className="text-red-500">*</span>
+                      Monto <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="text"
@@ -423,7 +423,7 @@ export default function JSICobroList({
                       id="JSICobroMonto"
                       value={formatMiles(formData.JSICobroMonto || 0)}
                       onChange={handleMontoChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>

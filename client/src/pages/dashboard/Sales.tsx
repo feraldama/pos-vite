@@ -150,12 +150,12 @@ export default function Sales() {
                 <span className="font-medium">{user.nombre}</span>
                 <span className="text-gray-500">({user.id})</span>
                 {localNombre && (
-                  <span className="text-red-600 font-medium">
+                  <span className="text-danger-600 font-medium">
                     | Local: {localNombre}
                   </span>
                 )}
                 {cajaAperturada && (
-                  <span className="text-blue-600 font-medium">
+                  <span className="text-primary font-medium">
                     | Caja: {cajaAperturada.CajaDescripcion}
                   </span>
                 )}
@@ -165,7 +165,7 @@ export default function Sales() {
               <ActionButton
                 label="Apertura/Cierre Caja"
                 onClick={() => navigate("/apertura-cierre-caja")}
-                className="bg-blue-500 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary-700 text-white"
               />
               <ActionButton
                 label="Configuración"
@@ -180,7 +180,7 @@ export default function Sales() {
       {/* Pestañas principales */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         {/* Navegación de pestañas */}
-        <div className="bg-green-600 px-6 py-4">
+        <div className="bg-success-600 px-6 py-4">
           <div className="flex space-x-1">
             {tabs.map((tab) => (
               <button
@@ -188,8 +188,8 @@ export default function Sales() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 rounded-t-lg font-semibold text-sm transition-all duration-200 ${
                   activeTab === tab.id
-                    ? "bg-white text-green-600 shadow-lg"
-                    : "text-white hover:bg-green-500 hover:text-white"
+                    ? "bg-white text-success-600 shadow-lg"
+                    : "text-white hover:bg-success-500 hover:text-white"
                 }`}
               >
                 {tab.label}

@@ -495,7 +495,7 @@ export default function Compras() {
                             {p.nombre}
                           </div>
                           <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                            className="text-danger-600 text-sm mt-1 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               quitarProducto(p.cartItemId);
@@ -625,7 +625,7 @@ export default function Compras() {
           {/* Total */}
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
-            <span className="font-semibold text-lg text-green-500">
+            <span className="font-semibold text-lg text-success-500">
               Gs. {formatMiles(total)}
             </span>
           </div>
@@ -678,7 +678,7 @@ export default function Compras() {
           {/* Botón Comprar */}
           <div className="mb-3">
             <button
-              className="w-full bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center hover:bg-green-600 transition"
+              className="w-full bg-success-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center hover:bg-success-600 transition"
               onClick={sendRequest}
             >
               Comprar
@@ -688,7 +688,7 @@ export default function Compras() {
           {/* Recuadro inferior para el nombre del proveedor */}
           <div className="mt-2">
             <button
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-green-100 transition cursor-pointer"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-success-100 transition cursor-pointer"
               onClick={() => setShowProveedorModal(true)}
             >
               {proveedorSeleccionado
@@ -731,12 +731,12 @@ export default function Compras() {
                 </span>
               </span>
               {localNombre && (
-                <span className="text-red-600 font-medium">
+                <span className="text-danger-600 font-medium">
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span className="text-blue-600 font-medium">
+                <span className="text-primary font-medium">
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}

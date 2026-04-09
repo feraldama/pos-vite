@@ -355,7 +355,7 @@ export default function PagoAdminList({
                       value={formData.CajaOrigenId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {cajas
@@ -397,7 +397,7 @@ export default function PagoAdminList({
                       value={formData.CajaId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {cajas
@@ -441,7 +441,7 @@ export default function PagoAdminList({
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -459,7 +459,7 @@ export default function PagoAdminList({
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -501,7 +501,7 @@ export default function PagoAdminList({
                         }
                       }}
                       disabled={(Number(formData.MontoDolar) || 0) !== 0}
-                      className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                      className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5 ${
                         (Number(formData.MontoDolar) || 0) !== 0 ? "opacity-60 cursor-not-allowed" : ""
                       }`}
                       required
@@ -520,7 +520,7 @@ export default function PagoAdminList({
                       id="PagoAdminFecha"
                       value={formData.PagoAdminFecha}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>  <div className="col-span-6">
@@ -536,7 +536,7 @@ export default function PagoAdminList({
                       value={formData.PagoAdminDetalle}
                       onChange={handleInputChange}
                       rows={3}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>

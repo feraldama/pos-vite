@@ -607,7 +607,7 @@ export default function AperturaCierreCajaPage() {
         icon={LockOpen}
       />
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 text-danger-600 rounded-lg">
           Error: {error}
         </div>
       )}
@@ -838,7 +838,7 @@ export default function AperturaCierreCajaPage() {
           />
         </div>
         {success && (
-          <div className="text-green-600 text-center font-medium mt-2">
+          <div className="text-success-600 text-center font-medium mt-2">
             {success}
           </div>
         )}

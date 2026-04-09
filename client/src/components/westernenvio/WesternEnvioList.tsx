@@ -377,7 +377,7 @@ export default function WesternEnvioList({
                       htmlFor="CajaId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Caja <span className="text-red-500">*</span>
+                      Caja <span className="text-destructive">*</span>
                     </label>
                     <select
                       name="CajaId"
@@ -385,7 +385,7 @@ export default function WesternEnvioList({
                       value={formData.CajaId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {cajas
@@ -404,7 +404,7 @@ export default function WesternEnvioList({
                       htmlFor="WesternEnvioFecha"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Fecha <span className="text-red-500">*</span>
+                      Fecha <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="datetime-local"
@@ -412,7 +412,7 @@ export default function WesternEnvioList({
                       id="WesternEnvioFecha"
                       value={formData.WesternEnvioFecha}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -440,7 +440,7 @@ export default function WesternEnvioList({
                       htmlFor="TipoGastoGrupoId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Grupo Gasto <span className="text-red-500">*</span>
+                      Grupo Gasto <span className="text-destructive">*</span>
                     </label>
                     <select
                       name="TipoGastoGrupoId"
@@ -448,7 +448,7 @@ export default function WesternEnvioList({
                       value={formData.TipoGastoGrupoId}
                       onChange={handleInputChange}
                       required
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="">Seleccione...</option>
                       {gruposFiltrados.map((gg) => (
@@ -463,7 +463,7 @@ export default function WesternEnvioList({
                       htmlFor="WesternEnvioMonto"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Monto <span className="text-red-500">*</span>
+                      Monto <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="text"
@@ -489,7 +489,7 @@ export default function WesternEnvioList({
                           setFormData((prev) => ({ ...prev, WesternEnvioMonto: 0 }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -525,7 +525,7 @@ export default function WesternEnvioList({
                           setFormData((prev) => ({ ...prev, WesternEnvioCambio: 0 }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -541,7 +541,7 @@ export default function WesternEnvioList({
                       id="WesternEnvioMTCN"
                       value={formData.WesternEnvioMTCN || 0}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -575,7 +575,7 @@ export default function WesternEnvioList({
                           setFormData((prev) => ({ ...prev, WesternEnvioCargoEnvio: 0 }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -591,7 +591,7 @@ export default function WesternEnvioList({
                       id="WesternEnvioFactura"
                       value={formData.WesternEnvioFactura || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -607,7 +607,7 @@ export default function WesternEnvioList({
                       id="WesternEnvioTimbrado"
                       value={formData.WesternEnvioTimbrado || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6">
@@ -615,7 +615,7 @@ export default function WesternEnvioList({
                       htmlFor="WesternEnvioDetalle"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Detalle <span className="text-red-500">*</span>
+                      Detalle <span className="text-destructive">*</span>
                     </label>
                     <textarea
                       name="WesternEnvioDetalle"
@@ -623,7 +623,7 @@ export default function WesternEnvioList({
                       value={formData.WesternEnvioDetalle}
                       onChange={handleInputChange}
                       rows={3}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -640,7 +640,7 @@ export default function WesternEnvioList({
                       id="ClienteId"
                       value={formData.ClienteId || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                 </div>

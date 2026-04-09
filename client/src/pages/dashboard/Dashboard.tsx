@@ -30,7 +30,7 @@ function QuickAction({ to, icon, title, description, color }: QuickActionProps) 
         {icon}
       </div>
       <div>
-        <p className="font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">
+        <p className="font-semibold text-gray-800 group-hover:text-primary transition-colors">
           {title}
         </p>
         <p className="text-sm text-gray-500">{description}</p>
@@ -72,18 +72,18 @@ function Dashboard() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Panel de Control</h1>
         <p className="text-gray-500 mt-1">
-          Bienvenido, <span className="text-primary-600 font-medium">{user?.nombre}</span>
+          Bienvenido, <span className="text-primary font-medium">{user?.nombre}</span>
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<Users className="size-6 text-primary-600" />}
+          icon={<Users className="size-6 text-primary" />}
           value={24}
           label="Usuarios totales"
-          color="text-primary-600"
-          bgColor="bg-primary-50"
+          color="text-primary"
+          bgColor="bg-primary-50/60"
         />
         <StatCard
           icon={<TrendingUp className="size-6 text-success-600" />}
@@ -121,10 +121,10 @@ function Dashboard() {
           />
           <QuickAction
             to="/apertura-cierre-caja"
-            icon={<Lock className="size-6 text-primary-600" />}
+            icon={<Lock className="size-6 text-primary" />}
             title="Apertura / Cierre de Caja"
             description="Gestionar cajas del dia"
-            color="bg-primary-50"
+            color="bg-primary-50/60"
           />
           <QuickAction
             to="/customers"
@@ -135,10 +135,10 @@ function Dashboard() {
           />
           <QuickAction
             to="/reportes"
-            icon={<FileBarChart className="size-6 text-primary-600" />}
+            icon={<FileBarChart className="size-6 text-primary" />}
             title="Reportes"
             description="Generar reportes PDF"
-            color="bg-primary-50"
+            color="bg-primary-50/60"
           />
           <QuickAction
             to="/users"

@@ -191,7 +191,7 @@ export default function CajasList({
                 const value = e.target.value;
                 onCajaTipoFilter(value === "" ? null : Number(value));
               }}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 h-[42px]"
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block p-2.5 h-[42px]"
             >
               <option value="">Todos los tipos</option>
               {cajaTipos
@@ -290,7 +290,7 @@ export default function CajasList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -334,7 +334,7 @@ export default function CajasList({
                           setFormData((prev) => ({ ...prev, CajaMonto: 0 }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -343,14 +343,14 @@ export default function CajasList({
                       htmlFor="CajaTipoId"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Tipo de Caja <span className="text-red-500">*</span>
+                      Tipo de Caja <span className="text-destructive">*</span>
                     </label>
                     <select
                       name="CajaTipoId"
                       id="CajaTipoId"
                       value={formData.CajaTipoId || ""}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     >
                       <option value="">Seleccione un tipo</option>

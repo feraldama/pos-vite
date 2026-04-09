@@ -437,7 +437,7 @@ export default function DivisasList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -469,7 +469,7 @@ export default function DivisasList({
                           }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       inputMode="numeric"
                       required
                     />
@@ -502,7 +502,7 @@ export default function DivisasList({
                           }));
                         }
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       inputMode="numeric"
                       required
                     />
@@ -571,7 +571,7 @@ export default function DivisasList({
                                   </select>
                                   <button
                                     type="button"
-                                    className="text-green-600 hover:underline text-xs cursor-pointer"
+                                    className="text-success-600 hover:underline text-xs cursor-pointer"
                                     onClick={() =>
                                       handleUpdateGasto(gasto.DivisaGastoId)
                                     }
@@ -598,7 +598,7 @@ export default function DivisasList({
                                   </span>
                                   <button
                                     type="button"
-                                    className="text-blue-600 hover:underline text-xs cursor-pointer"
+                                    className="text-primary hover:underline text-xs cursor-pointer"
                                     title="Editar"
                                     onClick={() => {
                                       setEditGastoId(gasto.DivisaGastoId);
@@ -614,7 +614,7 @@ export default function DivisasList({
                                   </button>
                                   <button
                                     type="button"
-                                    className="text-red-600 hover:underline text-xs ml-2 cursor-pointer"
+                                    className="text-danger-600 hover:underline text-xs ml-2 cursor-pointer"
                                     title="Eliminar"
                                     onClick={() =>
                                       handleDeleteGasto(gasto.DivisaGastoId)
@@ -675,7 +675,7 @@ export default function DivisasList({
                           </select>
                           <button
                             type="button"
-                            className="text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-xs"
+                            className="text-white bg-primary hover:bg-primary-700 rounded px-3 py-1 text-xs"
                             onClick={handleAddGasto}
                           >
                             Agregar

@@ -194,7 +194,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
         <div className="flex justify-end gap-2 mt-4">
           <button
             type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-700 transition"
           >
             Guardar
           </button>

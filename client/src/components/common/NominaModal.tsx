@@ -171,7 +171,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
               e.stopPropagation();
               setShowCreateModal(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-2 bg-primary hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus className="size-4" />
             Nueva Nómina
@@ -230,7 +230,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
             {paginatedNominas.map((n) => (
               <tr
                 key={n.NominaId}
-                className="hover:bg-blue-50 cursor-pointer transition"
+                className="hover:bg-primary-50 cursor-pointer transition"
                 onClick={() => onSelect(n)}
               >
                 <td className="py-2 px-4">{n.NominaId}</td>
@@ -322,7 +322,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
                   id="NominaNombre"
                   value={formData.NominaNombre}
                   onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                   required
                 />
               </div>
@@ -339,7 +339,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
                   id="NominaApellido"
                   value={formData.NominaApellido}
                   onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                 />
               </div>
               <div className="col-span-6 sm:col-span-3">
@@ -354,7 +354,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
                   id="ColegioId"
                   value={formData.ColegioId}
                   onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                   required
                 >
                   <option value="0">Seleccione un colegio</option>
@@ -383,7 +383,7 @@ const NominaModal: React.FC<NominaModalProps> = ({
                   disabled={
                     !formData.ColegioId || formData.ColegioId === 0
                   }
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 disabled:bg-gray-100"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5 disabled:bg-gray-100"
                   required
                 >
                   <option value="0">Seleccione un curso</option>

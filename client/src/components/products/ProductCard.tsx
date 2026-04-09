@@ -48,14 +48,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
           Gs. {formatMiles(mostrarPrecio)}
         </div>
         {precioUnitario !== undefined && (
-          <div className="text-sm text-blue-700">
+          <div className="text-sm text-primary-700">
             Gs. {formatMiles(precioUnitario)}
           </div>
         )}
         <div className="text-sm text-gray-500 mt-1 space-x-4">
-          Caja: <span className="text-green-600 font-semibold">{stock}</span>
+          Caja: <span className="text-success-600 font-semibold">{stock}</span>
           Unidad:{" "}
-          <span className="text-green-600 font-semibold">{stockUnitario}</span>
+          <span className="text-success-600 font-semibold">{stockUnitario}</span>
         </div>
       </div>
     </div>

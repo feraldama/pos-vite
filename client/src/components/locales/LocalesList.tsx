@@ -191,7 +191,7 @@ export default function LocalesList({
                       htmlFor="LocalNombre"
                       className="block mb-2 text-sm font-medium text-gray-900"
                     >
-                      Nombre <span className="text-red-500">*</span>
+                      Nombre <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="text"
@@ -207,7 +207,7 @@ export default function LocalesList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -224,7 +224,7 @@ export default function LocalesList({
                       id="LocalTelefono"
                       value={formData.LocalTelefono}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -240,7 +240,7 @@ export default function LocalesList({
                       id="LocalCelular"
                       value={formData.LocalCelular}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-6">
@@ -256,7 +256,7 @@ export default function LocalesList({
                       id="LocalDireccion"
                       value={formData.LocalDireccion}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                 </div>

@@ -681,11 +681,11 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <button
                 onClick={handleSearch}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition"
               >
                 Buscar
               </button>
@@ -707,7 +707,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                   key={venta.VentaId}
                   className={`p-3 border rounded-lg cursor-pointer transition ${
                     ventaSeleccionada?.VentaId === venta.VentaId
-                      ? "border-blue-500 bg-blue-50"
+                      ? "border-primary bg-primary-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   onClick={() => cargarProductosVenta(venta)}
@@ -723,7 +723,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">
+                      <p className="font-semibold text-success-600">
                         {formatearNumero(venta.Total || 0)}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -850,7 +850,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
         <button
           className={`px-6 py-2 rounded-lg transition ${
             ventaSeleccionada
-              ? "bg-blue-600 text-white hover:bg-blue-700"
+              ? "bg-primary text-white hover:bg-primary-700"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
           onClick={imprimirFactura}

@@ -335,17 +335,17 @@ export default function JuntaSaneamientoTab() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-green-800 mb-6 border-b-2 border-green-500 pb-2">
+        <h2 className="text-2xl font-bold text-success-700 mb-6 border-b-2 border-green-500 pb-2">
           COBROS DE JUNTA DE SANEAMIENTO ITAUGUÁ
         </h2>
 
         {cajaJSI && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="mb-4 p-3 bg-primary-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-primary-800">
               <strong>Caja:</strong> {cajaJSI.CajaDescripcion} (ID:{" "}
               {cajaJSI.CajaId})
             </p>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-primary-800">
               <strong>Monto actual:</strong>{" "}
               {formatMiles(Number(cajaJSI.CajaMonto))} Gs.
             </p>
@@ -357,7 +357,7 @@ export default function JuntaSaneamientoTab() {
             {/* Fecha */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha <span className="text-red-500">*</span>
+                Fecha <span className="text-destructive">*</span>
               </label>
               <input
                 type="datetime-local"
@@ -384,7 +384,7 @@ export default function JuntaSaneamientoTab() {
             {/* Monto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Monto <span className="text-red-500">*</span>
+                Monto <span className="text-destructive">*</span>
               </label>
               <input
                 type="text"
@@ -437,7 +437,7 @@ export default function JuntaSaneamientoTab() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
                 {mostrarMensajeBusqueda && clienteSeleccionado && codigoJSI && (
-                  <p className="mt-1 text-xs text-green-600">
+                  <p className="mt-1 text-xs text-success-600">
                     Cliente encontrado: {clienteSeleccionado.ClienteNombre}{" "}
                     {clienteSeleccionado.ClienteApellido || ""}
                   </p>
@@ -445,7 +445,7 @@ export default function JuntaSaneamientoTab() {
                 {mostrarMensajeBusqueda &&
                   !clienteSeleccionado &&
                   codigoJSI && (
-                    <p className="mt-1 text-xs text-red-600">
+                    <p className="mt-1 text-xs text-danger-600">
                       No se encontró un cliente con este código JSI
                     </p>
                   )}
@@ -464,7 +464,7 @@ export default function JuntaSaneamientoTab() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium"
+              className="px-6 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition font-medium"
             >
               CONFIRMAR
             </button>

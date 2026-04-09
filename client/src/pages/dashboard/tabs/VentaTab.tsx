@@ -765,7 +765,7 @@ export default function VentasTab() {
                             {p.nombre}
                           </div>
                           <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                            className="text-danger-600 text-sm mt-1 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               quitarProducto(p.cartItemId);
@@ -872,17 +872,17 @@ export default function VentasTab() {
         {/* Panel de control */}
         <div className="bg-white rounded-xl shadow p-4">
           {/* Checkbox de Devolución */}
-          <div className="flex items-center mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center mb-3 p-2 bg-danger-50 border border-danger-100 rounded-lg">
             <input
               type="checkbox"
               id="devolucion-checkbox"
               checked={isDevolucion}
               onChange={(e) => setIsDevolucion(e.target.checked)}
-              className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+              className="w-4 h-4 text-danger-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
             />
             <label
               htmlFor="devolucion-checkbox"
-              className="ml-2 text-sm font-medium text-red-700 cursor-pointer select-none"
+              className="ml-2 text-sm font-medium text-danger-600 cursor-pointer select-none"
             >
               {isDevolucion ? "🔴 MODO DEVOLUCIÓN" : "⚪ MODO VENTA"}
             </label>
@@ -893,7 +893,7 @@ export default function VentasTab() {
             <span className="font-bold text-lg">Total</span>
             <span
               className={`font-semibold text-lg ${
-                isDevolucion ? "text-red-500" : "text-blue-500"
+                isDevolucion ? "text-destructive" : "text-primary"
               }`}
             >
               Gs. {formatMiles(total)}
@@ -906,8 +906,8 @@ export default function VentasTab() {
             <button
               className={`text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[100px] border-2 transition cursor-pointer ${
                 isDevolucion
-                  ? "bg-red-500 border-red-500 hover:bg-red-600"
-                  : "bg-blue-500 border-blue-500 hover:bg-blue-600"
+                  ? "bg-danger-500 border-red-500 hover:bg-danger-600"
+                  : "bg-primary border-primary hover:bg-primary"
               }`}
               onClick={() => setShowModal(true)}
             >
@@ -924,7 +924,7 @@ export default function VentasTab() {
 
             {/* Botón Imprimir Factura */}
             <button
-              className="bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-green-600 transition"
+              className="bg-success-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-success-600 transition"
               onClick={() => {
                 console.log("Imprimir factura");
               }}
@@ -936,7 +936,7 @@ export default function VentasTab() {
           {/* Cliente seleccionado */}
           <div className="mt-2">
             <button
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-blue-100 transition cursor-pointer"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-primary-50 transition cursor-pointer"
               onClick={() => setShowClienteModal(true)}
             >
               {clienteSeleccionado
@@ -975,7 +975,7 @@ export default function VentasTab() {
               hideButton={true}
             />
             {isDevolucion && (
-              <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+              <div className="bg-danger-100 border border-danger-500 text-danger-600 px-3 py-1 rounded-full text-sm font-medium">
                 🔴 MODO DEVOLUCIÓN
               </div>
             )}
@@ -989,12 +989,12 @@ export default function VentasTab() {
                 </span>
               </span>
               {localNombre && (
-                <span className="text-red-600 font-medium">
+                <span className="text-danger-600 font-medium">
                   | Local: {localNombre}
                 </span>
               )}
               {cajaAperturada && (
-                <span className="text-blue-600 font-medium">
+                <span className="text-primary font-medium">
                   | Caja: {cajaAperturada.CajaDescripcion}
                 </span>
               )}

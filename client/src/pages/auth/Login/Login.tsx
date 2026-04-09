@@ -63,12 +63,12 @@ function Login() {
         <div className="bg-white rounded-xl shadow-card p-6 space-y-5">
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-3 p-3 bg-danger-50 border border-red-200 rounded-lg text-sm">
+            <div className="flex items-start gap-3 p-3 bg-danger-50 border border-danger-100 rounded-lg text-sm">
               <AlertTriangle className="size-5 text-danger-500 flex-shrink-0 mt-0.5" />
-              <span className="text-red-700 flex-1">{error}</span>
+              <span className="text-danger-600 flex-1">{error}</span>
               <button
                 onClick={() => setError("")}
-                className="text-red-400 hover:text-red-600 cursor-pointer"
+                className="text-danger-500 hover:text-danger-600 cursor-pointer"
               >
                 <X className="size-4" />
               </button>

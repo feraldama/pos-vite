@@ -134,8 +134,8 @@ function NavItem({ item, level = 0, onNavigate }: NavItemProps) {
             <DisclosureButton
               className={`flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors
                 ${hasActiveChild
-                  ? "text-white bg-gray-700/50"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                  ? "text-white bg-sidebar-hover"
+                  : "text-slate-400 hover:bg-sidebar-hover hover:text-slate-200"
                 }`}
               style={{ paddingLeft: `${level * 16 + 12}px` }}
             >
@@ -144,9 +144,9 @@ function NavItem({ item, level = 0, onNavigate }: NavItemProps) {
               )}
               <span className="flex-1 text-left">{item.name}</span>
               {open ? (
-                <ChevronDown className="size-4 text-gray-500" />
+                <ChevronDown className="size-4 text-slate-500" />
               ) : (
-                <ChevronRight className="size-4 text-gray-500" />
+                <ChevronRight className="size-4 text-slate-500" />
               )}
             </DisclosureButton>
             <DisclosurePanel as="ul" className="mt-0.5 space-y-0.5">
@@ -168,8 +168,8 @@ function NavItem({ item, level = 0, onNavigate }: NavItemProps) {
       onClick={onNavigate}
       className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
         ${isActive
-          ? "bg-primary-600 text-white"
-          : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+          ? "bg-sidebar-active text-white"
+          : "text-slate-400 hover:bg-sidebar-hover hover:text-slate-200"
         }`}
       style={{ paddingLeft: `${level * 16 + (level === 0 ? 12 : 28)}px` }}
     >
@@ -215,11 +215,11 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex h-full flex-col bg-sidebar">
-          <div className="flex h-14 items-center justify-between px-4 border-b border-gray-700/50">
+          <div className="flex h-14 items-center justify-between px-4 border-b border-white/10">
             <span className="text-white font-bold text-lg tracking-wide">AMIMAR</span>
             <button
               type="button"
-              className="rounded-md p-1 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+              className="rounded-md p-1 text-slate-400 hover:text-white hover:bg-sidebar-hover transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               <X className="size-5" />

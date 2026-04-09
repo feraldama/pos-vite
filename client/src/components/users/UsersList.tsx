@@ -163,7 +163,7 @@ export default function UsuariosList({
 
   // Determinar el color del estado
   const getEstadoColor = (estado: unknown) => {
-    return (estado as string) === "A" ? "bg-green-500" : "bg-red-500";
+    return (estado as string) === "A" ? "bg-success-500" : "bg-danger-500";
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -312,7 +312,7 @@ export default function UsuariosList({
                         id="UsuarioId"
                         value={formData.UsuarioId}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                         required
                       />
                     </div>
@@ -338,7 +338,7 @@ export default function UsuariosList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                       required
                     />
                   </div>
@@ -363,7 +363,7 @@ export default function UsuariosList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -379,7 +379,7 @@ export default function UsuariosList({
                       id="UsuarioCorreo"
                       value={formData.UsuarioCorreo}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -418,7 +418,7 @@ export default function UsuariosList({
                       id="UsuarioIsAdmin"
                       value={formData.UsuarioIsAdmin}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="N">No</option>
                       <option value="S">Sí</option>
@@ -437,7 +437,7 @@ export default function UsuariosList({
                       id="UsuarioEstado"
                       value={formData.UsuarioEstado}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-ring focus:border-primary block w-full p-2.5"
                     >
                       <option value="A">Activo</option>
                       <option value="I">Inactivo</option>
@@ -448,7 +448,7 @@ export default function UsuariosList({
                       <button
                         type="button"
                         onClick={() => setEditingPassword(true)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-primary hover:text-primary-700 text-sm font-medium"
                       >
                         Cambiar contraseña
                       </button>
@@ -516,7 +516,7 @@ export default function UsuariosList({
                               onChange={() =>
                                 handlePerfilChange(perfil.PerfilId)
                               }
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-sm focus:ring-ring dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                             />
                             <label
                               htmlFor={checkboxId}

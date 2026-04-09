@@ -129,14 +129,14 @@ exports.updateMonto = async (req, res) => {
     if (typeof CajaMonto !== "number") {
       return res.status(400).json({ message: "Monto inválido" });
     }
-    await db.query("UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?", [
+    await db.query('UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2', [
       CajaMonto,
       id,
     ]);
-    const updatedCaja = await db.query("SELECT * FROM Caja WHERE CajaId = ?", [
+    const updatedCajaResult = await db.query('SELECT * FROM "caja" WHERE "CajaId" = $1', [
       id,
     ]);
-    res.json(updatedCaja[0]);
+    res.json(updatedCajaResult.rows[0]);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -136,19 +136,14 @@ exports.delete = async (req, res) => {
     const colegioCobranzaId = cobranza.ColegioCobranzaId;
 
     // Buscar el registro relacionado en registrodiariocaja usando NominaId y ColegioCobranzaId
-    const registrosRelacionados = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT RegistroDiarioCajaId, RegistroDiarioCajaMonto 
-         FROM registrodiariocaja 
-         WHERE RegistroDiarioCajaDetalle LIKE ?
-         AND RegistroDiarioCajaDetalle LIKE ?`,
-        [`%NominaId:${NominaId}%`, `%ColegioCobranzaId:${colegioCobranzaId}%`],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const registrosRelacionadosResult = await db.query(
+      `SELECT "RegistroDiarioCajaId", "RegistroDiarioCajaMonto"
+       FROM "registrodiariocaja"
+       WHERE "RegistroDiarioCajaDetalle" LIKE $1
+       AND "RegistroDiarioCajaDetalle" LIKE $2`,
+      [`%NominaId:${NominaId}%`, `%ColegioCobranzaId:${colegioCobranzaId}%`]
+    );
+    const registrosRelacionados = registrosRelacionadosResult.rows;
 
     // Eliminar la cobranza primero
     const success = await ColegioCobranza.delete(req.params.id);
@@ -200,16 +195,11 @@ exports.delete = async (req, res) => {
             const actualizaciones = Array.from(cajasIdsParaActualizar).map(
               async (cajaIdParaActualizar) => {
                 // Obtener el monto actual de la caja
-                const cajaActual = await new Promise((resolve, reject) => {
-                  db.query(
-                    "SELECT CajaMonto FROM Caja WHERE CajaId = ?",
-                    [cajaIdParaActualizar],
-                    (err, results) => {
-                      if (err) return reject(err);
-                      resolve(results.length > 0 ? results[0] : null);
-                    }
-                  );
-                });
+                const cajaActualResult = await db.query(
+                  'SELECT "CajaMonto" FROM "caja" WHERE "CajaId" = $1',
+                  [cajaIdParaActualizar]
+                );
+                const cajaActual = cajaActualResult.rows.length > 0 ? cajaActualResult.rows[0] : null;
 
                 if (cajaActual) {
                   const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
@@ -224,16 +214,10 @@ exports.delete = async (req, res) => {
                   }
 
                   // Actualizar el monto de la caja
-                  await new Promise((resolve, reject) => {
-                    db.query(
-                      "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-                      [nuevoMonto, cajaIdParaActualizar],
-                      (err) => {
-                        if (err) return reject(err);
-                        resolve();
-                      }
-                    );
-                  });
+                  await db.query(
+                    'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+                    [nuevoMonto, cajaIdParaActualizar]
+                  );
                 }
               }
             );

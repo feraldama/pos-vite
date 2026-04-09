@@ -82,27 +82,17 @@ exports.create = async (req, res) => {
     }
 
     // Obtener descripciones de las cajas
-    const [cajaOrigen] = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Caja WHERE CajaId = ?",
-        [CajaOrigenId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const cajaOrigenResult = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [CajaOrigenId]
+    );
+    const cajaOrigen = cajaOrigenResult.rows[0];
 
-    const [cajaDestino] = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Caja WHERE CajaId = ?",
-        [CajaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const cajaDestinoResult = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [CajaId]
+    );
+    const cajaDestino = cajaDestinoResult.rows[0];
 
     if (!cajaOrigen || !cajaDestino) {
       return res.status(404).json({ 
@@ -171,29 +161,17 @@ exports.create = async (req, res) => {
       ? cajaOrigenMontoActual - monto  // Restar (comportamiento normal)
       : cajaOrigenMontoActual + monto; // Sumar (operación opuesta)
     
-    await new Promise((resolve, reject) => {
-      db.query(
-        "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-        [nuevoMontoOrigen, CajaOrigenId],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
+    await db.query(
+      'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+      [nuevoMontoOrigen, CajaOrigenId]
+    );
 
     // Actualizar monto de la caja destino (sumar - es ingreso)
     const cajaDestinoMontoActual = Number(cajaDestino.CajaMonto) || 0;
-    await new Promise((resolve, reject) => {
-      db.query(
-        "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-        [cajaDestinoMontoActual + monto, CajaId],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
+    await db.query(
+      'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+      [cajaDestinoMontoActual + monto, CajaId]
+    );
 
     res.status(201).json({
       message: "Pago admin creado exitosamente",
@@ -233,41 +211,26 @@ exports.delete = async (req, res) => {
     const { PagoAdminId } = pagoAdmin;
 
     // Buscar los registros relacionados en registrodiariocaja usando PagoAdminId
-    const registrosRelacionados = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT RegistroDiarioCajaId, RegistroDiarioCajaMonto 
-         FROM registrodiariocaja 
-         WHERE RegistroDiarioCajaDetalle LIKE ?`,
-        [`%PagoAdminId:${PagoAdminId}%`],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const registrosRelacionadosResult = await db.query(
+      `SELECT "RegistroDiarioCajaId", "RegistroDiarioCajaMonto"
+       FROM "registrodiariocaja"
+       WHERE "RegistroDiarioCajaDetalle" LIKE $1`,
+      [`%PagoAdminId:${PagoAdminId}%`]
+    );
+    const registrosRelacionados = registrosRelacionadosResult.rows;
 
     // Obtener las cajas para revertir los cambios directos
-    const [cajaOrigen] = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Caja WHERE CajaId = ?",
-        [pagoAdmin.CajaOrigenId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const cajaOrigenDelResult = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [pagoAdmin.CajaOrigenId]
+    );
+    const cajaOrigen = cajaOrigenDelResult.rows[0];
 
-    const [cajaDestino] = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Caja WHERE CajaId = ?",
-        [pagoAdmin.CajaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const cajaDestinoDelResult = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [pagoAdmin.CajaId]
+    );
+    const cajaDestino = cajaDestinoDelResult.rows[0];
 
     const monto = Number(pagoAdmin.PagoAdminMonto) || 0;
 
@@ -291,31 +254,19 @@ exports.delete = async (req, res) => {
         nuevoMontoOrigen = cajaOrigenMontoActual - monto;
       }
       
-      await new Promise((resolve, reject) => {
-        db.query(
-          "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-          [nuevoMontoOrigen, pagoAdmin.CajaOrigenId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
+      await db.query(
+        'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+        [nuevoMontoOrigen, pagoAdmin.CajaOrigenId]
+      );
     }
 
     // Revertir el cambio directo en la caja destino (siempre se había sumado, ahora restar)
     if (cajaDestino) {
       const cajaDestinoMontoActual = Number(cajaDestino.CajaMonto) || 0;
-      await new Promise((resolve, reject) => {
-        db.query(
-          "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-          [cajaDestinoMontoActual - monto, pagoAdmin.CajaId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
+      await db.query(
+        'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+        [cajaDestinoMontoActual - monto, pagoAdmin.CajaId]
+      );
     }
 
     // Si hay registros relacionados, eliminarlos directamente sin actualizar cajas

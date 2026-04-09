@@ -31,16 +31,10 @@ exports.create = async (req, res) => {
     const { menusAsignados } = req.body;
     if (Array.isArray(menusAsignados)) {
       // Elimina todos los permisos actuales de ese perfil (por si acaso)
-      await new Promise((resolve, reject) => {
-        db.query(
-          "DELETE FROM perfilmenu WHERE PerfilId = ?",
-          [perfilId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
+      await db.query(
+        'DELETE FROM "perfilmenu" WHERE "PerfilId" = $1',
+        [perfilId]
+      );
       // Inserta los nuevos permisos
       for (const menu of menusAsignados) {
         await PerfilMenu.create({
@@ -66,16 +60,10 @@ exports.update = async (req, res) => {
     const { menusAsignados } = req.body;
     if (Array.isArray(menusAsignados)) {
       // Elimina todos los permisos actuales de ese perfil
-      await new Promise((resolve, reject) => {
-        db.query(
-          "DELETE FROM perfilmenu WHERE PerfilId = ?",
-          [perfilId],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
+      await db.query(
+        'DELETE FROM "perfilmenu" WHERE "PerfilId" = $1',
+        [perfilId]
+      );
       // Inserta los nuevos permisos
       for (const menu of menusAsignados) {
         await PerfilMenu.create({

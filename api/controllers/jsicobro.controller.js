@@ -115,18 +115,13 @@ exports.delete = async (req, res) => {
     }
 
     // Buscar el registro relacionado en registrodiariocaja usando JSICobroId
-    const registrosRelacionados = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT RegistroDiarioCajaId 
-         FROM registrodiariocaja 
-         WHERE RegistroDiarioCajaDetalle LIKE ?`,
-        [`%JSICobroId:${jsicobroId}%`],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+    const registrosRelacionadosResult = await db.query(
+      `SELECT "RegistroDiarioCajaId"
+       FROM "registrodiariocaja"
+       WHERE "RegistroDiarioCajaDetalle" LIKE $1`,
+      [`%JSICobroId:${jsicobroId}%`]
+    );
+    const registrosRelacionados = registrosRelacionadosResult.rows;
 
     // Eliminar el cobro de JSI primero
     const success = await JSICobro.delete(jsicobroId);
@@ -178,16 +173,11 @@ exports.delete = async (req, res) => {
             const actualizaciones = Array.from(cajasIdsParaActualizar).map(
               async (cajaIdParaActualizar) => {
                 // Obtener el monto actual y CajaTipoId de la caja
-                const cajaActual = await new Promise((resolve, reject) => {
-                  db.query(
-                    "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
-                    [cajaIdParaActualizar],
-                    (err, results) => {
-                      if (err) return reject(err);
-                      resolve(results.length > 0 ? results[0] : null);
-                    }
-                  );
-                });
+                const cajaActualResult = await db.query(
+                  'SELECT "CajaMonto", "CajaTipoId" FROM "caja" WHERE "CajaId" = $1',
+                  [cajaIdParaActualizar]
+                );
+                const cajaActual = cajaActualResult.rows.length > 0 ? cajaActualResult.rows[0] : null;
 
                 if (cajaActual) {
                   const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
@@ -204,16 +194,10 @@ exports.delete = async (req, res) => {
                   }
 
                   // Actualizar el monto de la caja
-                  await new Promise((resolve, reject) => {
-                    db.query(
-                      "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-                      [nuevoMonto, cajaIdParaActualizar],
-                      (err) => {
-                        if (err) return reject(err);
-                        resolve();
-                      }
-                    );
-                  });
+                  await db.query(
+                    'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+                    [nuevoMonto, cajaIdParaActualizar]
+                  );
                 }
               }
             );

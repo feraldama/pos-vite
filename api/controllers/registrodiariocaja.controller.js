@@ -194,16 +194,11 @@ exports.delete = async (req, res) => {
       // Actualizar la caja del registro (caja aperturada)
       if (cajaIdRegistro && !esCasoEspecial13 && !esCasoEspecial13Envios) {
         // Casos especiales 13 (pagos y envíos): no tocar la caja aperturada al eliminar
-        const cajaActual = await new Promise((resolve, reject) => {
-          db.query(
-            "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
-            [cajaIdRegistro],
-            (err, results) => {
-              if (err) return reject(err);
-              resolve(results.length > 0 ? results[0] : null);
-            },
-          );
-        });
+        const cajaResult = await db.query(
+          'SELECT "CajaMonto", "CajaTipoId" FROM "caja" WHERE "CajaId" = $1',
+          [cajaIdRegistro]
+        );
+        const cajaActual = cajaResult.rows.length > 0 ? cajaResult.rows[0] : null;
 
         if (cajaActual) {
           const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
@@ -232,16 +227,10 @@ exports.delete = async (req, res) => {
 
           const nuevoMonto = cajaMontoActual + montoAplicar;
 
-          await new Promise((resolve, reject) => {
-            db.query(
-              "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-              [nuevoMonto, cajaIdRegistro],
-              (err) => {
-                if (err) return reject(err);
-                resolve();
-              },
-            );
-          });
+          await db.query(
+            'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+            [nuevoMonto, cajaIdRegistro]
+          );
         }
       }
 
@@ -253,16 +242,11 @@ exports.delete = async (req, res) => {
       if (cajasParaActualizar.length > 0) {
         const actualizaciones = cajasParaActualizar.map(
           async (cajaIdParaActualizar) => {
-            const cajaActual = await new Promise((resolve, reject) => {
-              db.query(
-                "SELECT CajaMonto, CajaTipoId FROM Caja WHERE CajaId = ?",
-                [cajaIdParaActualizar],
-                (err, results) => {
-                  if (err) return reject(err);
-                  resolve(results.length > 0 ? results[0] : null);
-                },
-              );
-            });
+            const cajaResult2 = await db.query(
+              'SELECT "CajaMonto", "CajaTipoId" FROM "caja" WHERE "CajaId" = $1',
+              [cajaIdParaActualizar]
+            );
+            const cajaActual = cajaResult2.rows.length > 0 ? cajaResult2.rows[0] : null;
 
             if (cajaActual) {
               const cajaMontoActual = Number(cajaActual.CajaMonto) || 0;
@@ -355,16 +339,10 @@ exports.delete = async (req, res) => {
                 nuevoMonto = cajaMontoActual + montoAplicar;
               }
 
-              await new Promise((resolve, reject) => {
-                db.query(
-                  "UPDATE Caja SET CajaMonto = ? WHERE CajaId = ?",
-                  [nuevoMonto, cajaIdParaActualizar],
-                  (err) => {
-                    if (err) return reject(err);
-                    resolve();
-                  },
-                );
-              });
+              await db.query(
+                'UPDATE "caja" SET "CajaMonto" = $1 WHERE "CajaId" = $2',
+                [nuevoMonto, cajaIdParaActualizar]
+              );
             }
           },
         );
@@ -450,16 +428,11 @@ exports.aperturaCierreCaja = async (req, res) => {
       return res.status(400).json({ success: false, message: error });
     }
     // Obtener descripción de caja
-    const [caja] = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM Caja WHERE CajaId = ?",
-        [CajaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        },
-      );
-    });
+    const cajaResult = await db.query(
+      'SELECT * FROM "caja" WHERE "CajaId" = $1',
+      [CajaId]
+    );
+    const caja = cajaResult.rows[0];
     const CajaDescripcion = caja ? caja.CajaDescripcion : "";
     // APERTURA: el monto de apertura es el CajaMonto de la caja (valor fijo)
     if (apertura == 0) {

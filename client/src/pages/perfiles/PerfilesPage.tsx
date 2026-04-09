@@ -72,6 +72,13 @@ export default function PerfilesPage() {
     fetchPerfiles();
   }, [fetchPerfiles]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleCreate = () => {
     setCurrentPerfil(null);
     setIsModalOpen(true);

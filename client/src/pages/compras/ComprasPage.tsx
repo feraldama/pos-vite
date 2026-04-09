@@ -112,6 +112,13 @@ export default function ComprasPage() {
     fetchCompras();
   }, [fetchCompras]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
   };

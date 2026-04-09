@@ -66,6 +66,13 @@ export default function TiposGastoPage() {
     fetchTiposGasto();
   }, [fetchTiposGasto]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const applySearch = () => {
     setAppliedSearchTerm(searchTerm);
     setCurrentPage(1);

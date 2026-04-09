@@ -71,6 +71,13 @@ export default function MenusPage() {
     fetchMenus();
   }, [fetchMenus]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleCreate = () => {
     setCurrentMenu(null);
     setIsModalOpen(true);

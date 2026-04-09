@@ -95,8 +95,8 @@ export default function CobranzaTab() {
                 // Solo agregar a grupos válidos si TipoGastoGrupoDescripcion está contenido en CajaDescripcion
                 // Comparación case-insensitive
                 if (grupo) {
-                  const cajaDescUpper = caja.CajaDescripcion.toUpperCase();
-                  const grupoDescUpper = grupo.TipoGastoGrupoDescripcion.toUpperCase();
+                  const cajaDescUpper = caja.CajaDescripcion.trim().toUpperCase();
+                  const grupoDescUpper = grupo.TipoGastoGrupoDescripcion.trim().toUpperCase();
                   if (cajaDescUpper.includes(grupoDescUpper)) {
                     gruposValidosSet.add(gastoKey);
                   }

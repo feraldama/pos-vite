@@ -4,24 +4,20 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import {
-  XMarkIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  HomeIcon,
-  KeyIcon,
-  UsersIcon,
-  PencilSquareIcon,
-  BanknotesIcon,
-  CurrencyDollarIcon,
-  // ArchiveBoxIcon,
-  // RectangleGroupIcon,
-  // CubeIcon,
-  // WrenchIcon,
-  LockClosedIcon,
-  ChartBarIcon,
-  TruckIcon,
-  AcademicCapIcon,
-} from "@heroicons/react/24/outline";
+  X,
+  ChevronDown,
+  ChevronRight,
+  Home,
+  KeyRound,
+  Users,
+  PenSquare,
+  Banknote,
+  DollarSign,
+  Lock,
+  BarChart3,
+  Truck,
+  GraduationCap,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -39,58 +35,37 @@ const navigation: NavigationItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
-    icon: <HomeIcon className="h-7 w-6" />,
+    icon: <Home className="size-5" />,
   },
   {
     name: "Apertura/Cierre de Caja",
     href: "/apertura-cierre-caja",
-    icon: <LockClosedIcon className="h-7 w-6" />,
+    icon: <Lock className="size-5" />,
   },
   {
     name: "Cobranzas",
     href: "/ventas",
-    icon: <CurrencyDollarIcon className="h-7 w-6" />,
+    icon: <DollarSign className="size-5" />,
   },
-  // {
-  //   name: "Cobro de Créditos",
-  //   href: "/credito-pagos",
-  //   icon: <BanknotesIcon className="h-7 w-6" />,
-  // },
-  // {
-  //   name: "Almacenes",
-  //   href: "/almacenes",
-  //   icon: <ArchiveBoxIcon className="h-7 w-6" />,
-  // },
-  // {
-  //   name: "Productos",
-  //   href: "/products",
-  //   icon: <CubeIcon className="h-7 w-6" />,
-  // },
-  // {
-  //   name: "Combos",
-  //   href: "/combos",
-  //   icon: <RectangleGroupIcon className="h-7 w-6" />,
-  // },
   {
     name: "Clientes",
     href: "/customers",
-    icon: <UsersIcon className="h-7 w-6" />,
+    icon: <Users className="size-5" />,
   },
   {
     name: "Reportes",
     href: "/reportes",
-    icon: <ChartBarIcon className="h-7 w-6" />,
+    icon: <BarChart3 className="size-5" />,
   },
   {
     name: "Registro Diario",
     href: "/movements",
-    icon: <PencilSquareIcon className="h-7 w-6" />,
+    icon: <PenSquare className="size-5" />,
     children: [
       { name: "Cobros JSI", href: "/movements/jsicobro" },
       { name: "Tipos de Caja", href: "/movements/cajatipo" },
       { name: "Cajas", href: "/movements/cajas" },
       { name: "Tipos de Gasto", href: "/movements/tiposgasto" },
-      // { name: "Compras", href: "/movements/purchases" },
       { name: "Registro Diario Caja", href: "/movements/summary" },
       { name: "Pagos Admin", href: "/movements/pagoadmin" },
       { name: "Western", href: "/movements/western" },
@@ -99,7 +74,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Transporte",
     href: "/transporte",
-    icon: <TruckIcon className="h-7 w-6" />,
+    icon: <Truck className="size-5" />,
     children: [
       { name: "Empresas de Transporte", href: "/movements/transporte" },
       { name: "Pagos Transporte", href: "/pagotrans" },
@@ -108,7 +83,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Divisas",
     href: "/divisa",
-    icon: <BanknotesIcon className="h-7 w-6" />,
+    icon: <Banknote className="size-5" />,
     children: [
       { name: "Divisas", href: "/movements/divisa" },
       { name: "Movimientos", href: "/movements/divisamovimiento" },
@@ -117,29 +92,23 @@ const navigation: NavigationItem[] = [
   {
     name: "Admin. Colegios",
     href: "/admincolegios",
-    icon: <AcademicCapIcon className="h-7 w-6" />,
+    icon: <GraduationCap className="size-5" />,
     children: [
       { name: "Colegios", href: "/colegios" },
       { name: "Nominas", href: "/nominas" },
       { name: "Cobranzas", href: "/colegiocobranzas" },
     ],
   },
-  // {
-  //   name: "Modificaciones",
-  //   href: "/modifications",
-  //   icon: <WrenchIcon className="h-7 w-6" />,
-  //   children: [{ name: "Ventas", href: "/modifications/ventas" }],
-  // },
   {
     name: "Control de Acceso",
     href: "/access-control",
-    icon: <KeyIcon className="h-7 w-6" />,
+    icon: <KeyRound className="size-5" />,
     children: [
       { name: "Horarios de Uso", href: "/horariouso" },
       { name: "Locales", href: "/locales" },
       { name: "Usuarios", href: "/users" },
       { name: "Perfiles", href: "/perfiles" },
-      { name: "Menús", href: "/menus" },
+      { name: "Menus", href: "/menus" },
     ],
   },
 ];
@@ -147,38 +116,45 @@ const navigation: NavigationItem[] = [
 interface NavItemProps {
   item: NavigationItem;
   level?: number;
+  onNavigate?: () => void;
 }
 
-function NavItem({ item, level = 0 }: NavItemProps) {
+function NavItem({ item, level = 0, onNavigate }: NavItemProps) {
   const location = useLocation();
   const isActive = location.pathname === item.href;
+  const hasActiveChild = item.children?.some(
+    (child) => location.pathname === child.href
+  );
 
   if (item.children) {
     return (
-      <Disclosure as="div" defaultOpen={isActive}>
+      <Disclosure as="div" defaultOpen={isActive || hasActiveChild}>
         {({ open }) => (
           <>
             <DisclosureButton
-              className={`flex items-center w-full px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md ${
-                isActive ? "bg-gray-700 text-white" : ""
-              }`}
-              style={{ paddingLeft: `${level * 12 + 12}px` }}
+              className={`flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors
+                ${hasActiveChild
+                  ? "text-white bg-gray-700/50"
+                  : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                }`}
+              style={{ paddingLeft: `${level * 16 + 12}px` }}
             >
-              {level === 0 && <span className="mr-3 text-lg">{item.icon}</span>}
+              {level === 0 && item.icon && (
+                <span className="mr-3 flex-shrink-0">{item.icon}</span>
+              )}
               <span className="flex-1 text-left">{item.name}</span>
               {open ? (
-                <ChevronDownIcon className="h-4 w-4" />
+                <ChevronDown className="size-4 text-gray-500" />
               ) : (
-                <ChevronRightIcon className="h-4 w-4" />
+                <ChevronRight className="size-4 text-gray-500" />
               )}
             </DisclosureButton>
-            <DisclosurePanel as="ul" className="space-y-1">
-              {item.children &&
-                item.children.map((child) => (
-                  <li key={child.name}>
-                    <NavItem item={child} level={level + 1} />
-                  </li>
-                ))}
+            <DisclosurePanel as="ul" className="mt-0.5 space-y-0.5">
+              {item.children!.map((child) => (
+                <li key={child.name}>
+                  <NavItem item={child} level={level + 1} onNavigate={onNavigate} />
+                </li>
+              ))}
             </DisclosurePanel>
           </>
         )}
@@ -189,12 +165,17 @@ function NavItem({ item, level = 0 }: NavItemProps) {
   return (
     <Link
       to={item.href}
-      className={`flex items-center px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-md ${
-        isActive ? "bg-gray-700 text-white" : ""
-      }`}
-      style={{ paddingLeft: `${level * 12 + (level === 0 ? 12 : 24)}px` }}
+      onClick={onNavigate}
+      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+        ${isActive
+          ? "bg-primary-600 text-white"
+          : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+        }`}
+      style={{ paddingLeft: `${level * 16 + (level === 0 ? 12 : 28)}px` }}
     >
-      {level === 0 && <span className="mr-3 text-lg">{item.icon}</span>}
+      {level === 0 && item.icon && (
+        <span className="mr-3 flex-shrink-0">{item.icon}</span>
+      )}
       {item.name}
     </Link>
   );
@@ -206,60 +187,53 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
+  const sidebarContent = (
+    <nav className="px-3 py-4 space-y-1">
+      {navigation.map((item) => (
+        <NavItem
+          key={item.name}
+          item={item}
+          onNavigate={() => setMobileOpen(false)}
+        />
+      ))}
+    </nav>
+  );
+
   return (
     <>
-      {/* Mobile sidebar */}
-      <div className="lg:hidden">
+      {/* Mobile overlay */}
+      {mobileOpen && (
         <div
-          className={`fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity ${
-            mobileOpen ? "block" : "hidden"
-          }`}
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
+      )}
 
-        <div
-          className={`fixed inset-y-0 left-0 z-50 w-64 transform ${
-            mobileOpen ? "translate-x-0" : "-translate-x-full"
-          } transition-transform lg:relative lg:translate-x-0`}
-        >
-          <div className="flex h-full flex-col bg-gray-800">
-            <div className="flex h-16 shrink-0 items-center justify-between px-4 bg-gray-900">
-              <span className="text-white font-bold">AMIMAR</span>
-              <button
-                type="button"
-                className="rounded-md text-gray-300 hover:text-white focus:outline-none"
-                onClick={() => setMobileOpen(false)}
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <nav className="px-2 py-4 space-y-1">
-                {navigation.map((item) => (
-                  <NavItem key={item.name} item={item} />
-                ))}
-              </nav>
-            </div>
+      {/* Mobile sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 ease-in-out lg:hidden
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex h-full flex-col bg-sidebar">
+          <div className="flex h-14 items-center justify-between px-4 border-b border-gray-700/50">
+            <span className="text-white font-bold text-lg tracking-wide">AMIMAR</span>
+            <button
+              type="button"
+              className="rounded-md p-1 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              <X className="size-5" />
+            </button>
           </div>
+          <div className="flex-1 overflow-y-auto">{sidebarContent}</div>
         </div>
       </div>
 
-      {/* Desktop sidebar (siempre visible) */}
-      <div
-        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-64 lg:flex lg:flex-col bg-sidebar"
-        style={{
-          top: "64px",
-          height: "calc(100vh - 64px)",
-          // background: "#0F172A",
-        }}
+      {/* Desktop sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-64 lg:flex lg:flex-col bg-sidebar"
+        style={{ top: "56px", height: "calc(100vh - 56px)" }}
       >
-        <div className="flex-1 overflow-y-auto">
-          <nav className="px-2 py-4 space-y-1">
-            {navigation.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
-          </nav>
-        </div>
+        <div className="flex-1 overflow-y-auto">{sidebarContent}</div>
       </div>
     </>
   );

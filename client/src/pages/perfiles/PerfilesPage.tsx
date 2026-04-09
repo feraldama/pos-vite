@@ -1,3 +1,4 @@
+import { ShieldCheck } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getPerfiles,
@@ -12,6 +13,7 @@ import {
 } from "../../services/perfilmenu.service";
 import PerfilesList from "../../components/perfiles/PerfilesList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -177,12 +179,20 @@ export default function PerfilesPage() {
   );
 
   if (!puedeLeer) return <div>No tienes permiso para ver los perfiles</div>;
-  if (loading) return <div>Cargando perfiles...</div>;
-  if (error) return <div>{error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Perfiles</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Perfiles"
+        subtitle={`${perfilesData.pagination.totalItems || 0} registros`}
+        icon={ShieldCheck}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <PerfilesList
         perfiles={filteredPerfiles.map((p) => ({ ...p, id: p.PerfilId }))}
         onEdit={puedeEditar ? handleEdit : undefined}
@@ -203,7 +213,10 @@ export default function PerfilesPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={perfilesData.pagination.totalItems}
+        currentItems={perfilesData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

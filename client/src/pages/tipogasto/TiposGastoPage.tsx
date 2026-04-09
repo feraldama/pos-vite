@@ -1,3 +1,4 @@
+import { List, AlertTriangle } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../../services/tipogasto.service";
 import TiposGastoList from "../../components/tipogasto/TiposGastoList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 
 interface TipoGasto {
@@ -19,7 +21,7 @@ interface TipoGasto {
   [key: string]: unknown;
 }
 
-interface Pagination {
+interface PaginationData {
   totalItems: number;
   totalPages: number;
   [key: string]: unknown;
@@ -28,7 +30,7 @@ interface Pagination {
 export default function TiposGastoPage() {
   const [tiposGastoData, setTiposGastoData] = useState<{
     tiposGasto: TipoGasto[];
-    pagination: Pagination;
+    pagination: PaginationData;
   }>({ tiposGasto: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +38,7 @@ export default function TiposGastoPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentTipoGasto, setCurrentTipoGasto] = useState<TipoGasto | null>(
-    null
-  );
+  const [currentTipoGasto, setCurrentTipoGasto] = useState<TipoGasto | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -50,37 +50,13 @@ export default function TiposGastoPage() {
   const fetchTiposGasto = useCallback(async () => {
     try {
       setLoading(true);
-      let data;
-      if (appliedSearchTerm) {
-        data = await searchTiposGasto(
-          appliedSearchTerm,
-          currentPage,
-          itemsPerPage,
-          sortKey,
-          sortOrder
-        );
-        setTiposGastoData({
-          tiposGasto: data.data,
-          pagination: data.pagination,
-        });
-      } else {
-        data = await getTiposGastoPaginated(
-          currentPage,
-          itemsPerPage,
-          sortKey,
-          sortOrder
-        );
-        setTiposGastoData({
-          tiposGasto: data.data,
-          pagination: data.pagination,
-        });
-      }
+      setError(null);
+      const data = appliedSearchTerm
+        ? await searchTiposGasto(appliedSearchTerm, currentPage, itemsPerPage, sortKey, sortOrder)
+        : await getTiposGastoPaginated(currentPage, itemsPerPage, sortKey, sortOrder);
+      setTiposGastoData({ tiposGasto: data.data, pagination: data.pagination });
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Error desconocido");
-      }
+      setError(err instanceof Error ? err.message : "Error al cargar tipos de gasto");
     } finally {
       setLoading(false);
     }
@@ -90,153 +66,114 @@ export default function TiposGastoPage() {
     fetchTiposGasto();
   }, [fetchTiposGasto]);
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-  };
-
   const applySearch = () => {
     setAppliedSearchTerm(searchTerm);
     setCurrentPage(1);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      applySearch();
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Estas seguro?",
+      text: "No podras revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Si, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (result.isConfirmed) {
+      try {
+        await deleteTipoGasto(id);
+        Swal.fire({ icon: "success", title: "Tipo de gasto eliminado", timer: 1500, showConfirmButton: false });
+        setTiposGastoData((prev) => ({
+          ...prev,
+          tiposGasto: prev.tiposGasto.filter((t) => t.TipoGastoId !== id),
+        }));
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        Swal.fire({ icon: "warning", title: "No permitido", text: err?.message || "No se pudo eliminar" });
+      }
     }
   };
 
-  const handleDelete = async (id: string) => {
-    Swal.fire({
-      title: "¿Estás seguro?",
-      text: "¡No podrás revertir esto!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Sí, eliminar!",
-      cancelButtonText: "Cancelar",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await deleteTipoGasto(id);
-          Swal.fire({
-            icon: "success",
-            title: "Tipo de gasto eliminado exitosamente",
-          });
-          setTiposGastoData((prev) => ({
-            ...prev,
-            tiposGasto: prev.tiposGasto.filter(
-              (tipo) => tipo.TipoGastoId !== id
-            ),
-          }));
-        } catch (error: unknown) {
-          const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar el tipo de gasto";
-          Swal.fire({
-            icon: "warning",
-            title: "No permitido",
-            text: msg,
-          });
-        }
-      }
-    });
-  };
-
-  const handleCreate = () => {
-    setCurrentTipoGasto(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (tipo: TipoGasto) => {
-    setCurrentTipoGasto(tipo);
-    setIsModalOpen(true);
-  };
-
   const handleSubmit = async (tipoGastoData: TipoGasto) => {
-    let mensaje = "";
     try {
       if (currentTipoGasto) {
         await updateTipoGasto(currentTipoGasto.TipoGastoId, tipoGastoData);
-        mensaje = "Tipo de gasto actualizado exitosamente";
       } else {
-        const response = await createTipoGasto(tipoGastoData);
-        mensaje = response.message || "Tipo de gasto creado exitosamente";
+        await createTipoGasto(tipoGastoData);
       }
       setIsModalOpen(false);
       Swal.fire({
         position: "top-end",
         icon: "success",
-        title: mensaje,
+        title: currentTipoGasto ? "Tipo de gasto actualizado" : "Tipo de gasto creado",
         showConfirmButton: false,
-        timer: 2000,
+        timer: 1500,
       });
       fetchTiposGasto();
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
-      }
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error instanceof Error ? error.message : "Error desconocido",
+      });
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  if (!puedeLeer)
-    return <div>No tienes permiso para ver los tipos de gasto.</div>;
-  if (loading) return <div>Cargando tipos de gasto...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (!puedeLeer) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <AlertTriangle className="size-12 mb-3" />
+        <p className="font-medium">No tienes permiso para ver esta seccion</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Tipos de Gasto</h1>
-      <TiposGastoList
-        tiposGasto={tiposGastoData.tiposGasto.map((t) => ({
-          ...t,
-          id: t.TipoGastoId,
-        }))}
-        onDelete={
-          puedeEliminar
-            ? (tipo) => handleDelete(tipo.TipoGastoId as string)
-            : undefined
-        }
-        onEdit={puedeEditar ? handleEdit : undefined}
-        onCreate={puedeCrear ? handleCreate : undefined}
-        pagination={tiposGastoData.pagination}
-        onSearch={handleSearch}
-        searchTerm={searchTerm}
-        onKeyPress={handleKeyPress}
-        onSearchSubmit={applySearch}
-        isModalOpen={isModalOpen}
-        onCloseModal={() => setIsModalOpen(false)}
-        currentTipoGasto={
-          currentTipoGasto
-            ? { ...currentTipoGasto, id: currentTipoGasto.TipoGastoId }
-            : null
-        }
-        onSubmit={handleSubmit}
-        sortKey={sortKey}
-        sortOrder={sortOrder}
-        onSort={(key, order) => {
-          setSortKey(key);
-          setSortOrder(order);
-          setCurrentPage(1);
-        }}
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Tipos de Gasto"
+        subtitle={`${tiposGastoData.pagination.totalItems || 0} registros`}
+        icon={List}
       />
-      <Pagination
-        currentPage={currentPage}
-        totalPages={tiposGastoData.pagination.totalPages}
-        onPageChange={handlePageChange}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={handleItemsPerPageChange}
-      />
+
+      {error && (
+        <div className="mb-4 p-3 bg-danger-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <TiposGastoList
+          tiposGasto={tiposGastoData.tiposGasto.map((t) => ({ ...t, id: t.TipoGastoId }))}
+          onDelete={puedeEliminar ? (tipo) => handleDelete(tipo.TipoGastoId as string) : undefined}
+          onEdit={puedeEditar ? (tipo) => { setCurrentTipoGasto(tipo); setIsModalOpen(true); } : undefined}
+          onCreate={puedeCrear ? () => { setCurrentTipoGasto(null); setIsModalOpen(true); } : undefined}
+          pagination={tiposGastoData.pagination}
+          onSearch={(term) => setSearchTerm(term)}
+          searchTerm={searchTerm}
+          onKeyPress={(e) => { if (e.key === "Enter") applySearch(); }}
+          onSearchSubmit={applySearch}
+          isModalOpen={isModalOpen}
+          onCloseModal={() => setIsModalOpen(false)}
+          currentTipoGasto={currentTipoGasto ? { ...currentTipoGasto, id: currentTipoGasto.TipoGastoId } : null}
+          onSubmit={handleSubmit}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={(key, order) => { setSortKey(key); setSortOrder(order); setCurrentPage(1); }}
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={tiposGastoData.pagination.totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }}
+          totalItems={tiposGastoData.pagination.totalItems}
+          currentItems={tiposGastoData.pagination.itemsPerPage}
+        />
+      </div>
     </div>
   );
 }

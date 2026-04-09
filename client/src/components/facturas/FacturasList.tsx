@@ -1,8 +1,8 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
 
 interface Factura {
   id: string | number;
@@ -127,14 +127,9 @@ export default function FacturasList({
             <ActionButton
               label="Nueva Factura"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {facturas.length} de {pagination?.totalItems} facturas
         </div>
       </div>
       <DataTable<Factura>
@@ -170,7 +165,7 @@ export default function FacturasList({
                   onClick={onCloseModal}
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="size-3"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -263,7 +258,7 @@ export default function FacturasList({
                 />
                 <ActionButton
                   label="Cancelar"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  variant="secondary"
                   onClick={onCloseModal}
                 />
               </div>

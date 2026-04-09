@@ -1,8 +1,8 @@
+import { Plus } from "lucide-react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import ClienteFormModal from "../common/ClienteFormModal";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/useAuth";
 import type { Cliente, ClienteWithId } from "../../types/cliente.types";
 
@@ -77,14 +77,9 @@ export default function CustomersList({
             <ActionButton
               label="Nuevo Cliente"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {clientes.length} de {pagination?.totalItems} clientes
         </div>
       </div>
       <DataTable<ClienteWithId>

@@ -1,3 +1,4 @@
+import { CalendarDays } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getRegistrosDiariosCaja,
@@ -10,6 +11,7 @@ import MovementsList, {
   type Movimiento,
 } from "../../components/movements/MovementsList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -180,12 +182,20 @@ export default function MovementsPage() {
 
   if (!puedeLeer)
     return <div>No tienes permiso para ver los registros diarios de caja.</div>;
-  if (loading) return <div>Cargando registros...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Registro Diario de Caja</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Registro Diario de Caja"
+        subtitle={`${movimientosData.pagination.totalItems || 0} registros`}
+        icon={CalendarDays}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <MovementsList
         movimientos={movimientosData.movimientos}
         onDelete={puedeEliminar ? handleDelete : undefined}
@@ -215,7 +225,10 @@ export default function MovementsPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={movimientosData.pagination.totalItems}
+        currentItems={movimientosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

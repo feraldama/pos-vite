@@ -1,85 +1,69 @@
 const db = require("../config/db");
 
 const Transporte = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM transporte", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "transporte"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM transporte WHERE TransporteId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "transporte" WHERE "TransporteId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "TransporteId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "TransporteId",
-        "TransporteNombre",
-        "TransporteTelefono",
-        "TransporteDireccion",
-        "TipoGastoId",
-        "TipoGastoGrupoId",
-        "TransporteComision",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    const allowedSortFields = [
+      "TransporteId",
+      "TransporteNombre",
+      "TransporteTelefono",
+      "TransporteDireccion",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "TransporteComision",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "TransporteId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "TransporteId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT t.*, 
-          tg.TipoGastoDescripcion, 
-          tgg.TipoGastoGrupoDescripcion
-        FROM transporte t
-        LEFT JOIN TipoGasto tg ON t.TipoGastoId = tg.TipoGastoId
-        LEFT JOIN tipogastogrupo tgg ON t.TipoGastoId = tgg.TipoGastoId AND t.TipoGastoGrupoId = tgg.TipoGastoGrupoId
-        ORDER BY t.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT t.*,
+        tg."TipoGastoDescripcion",
+        tgg."TipoGastoGrupoDescripcion"
+      FROM "transporte" t
+      LEFT JOIN "tipogasto" tg ON t."TipoGastoId" = tg."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tgg ON t."TipoGastoId" = tgg."TipoGastoId" AND t."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
+      ORDER BY t."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query(
-          "SELECT COUNT(*) as total FROM transporte",
-          (err, countResult) => {
-            if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "transporte"'
+    );
 
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -89,201 +73,168 @@ const Transporte = {
     sortBy = "TransporteId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "TransporteId",
+    const allowedSortFields = [
+      "TransporteId",
+      "TransporteNombre",
+      "TransporteTelefono",
+      "TransporteDireccion",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "TransporteComision",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "TransporteId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
+
+    const searchValue = `%${term}%`;
+
+    const searchQuery = `
+      SELECT t.*,
+        tg."TipoGastoDescripcion",
+        tgg."TipoGastoGrupoDescripcion"
+      FROM "transporte" t
+      LEFT JOIN "tipogasto" tg ON t."TipoGastoId" = tg."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tgg ON t."TipoGastoId" = tgg."TipoGastoId" AND t."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
+      WHERE t."TransporteNombre" LIKE $1
+        OR t."TransporteTelefono" LIKE $2
+        OR t."TransporteDireccion" LIKE $3
+        OR CAST(t."TransporteId" AS TEXT) LIKE $4
+        OR CAST(t."TipoGastoId" AS TEXT) LIKE $5
+        OR CAST(t."TipoGastoGrupoId" AS TEXT) LIKE $6
+        OR CAST(t."TransporteComision" AS TEXT) LIKE $7
+      ORDER BY t."${sortField}" ${order}
+      LIMIT $8 OFFSET $9
+    `;
+
+    const result = await db.query(searchQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      limit,
+      offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "transporte"
+      WHERE "TransporteNombre" LIKE $1
+        OR "TransporteTelefono" LIKE $2
+        OR "TransporteDireccion" LIKE $3
+        OR CAST("TransporteId" AS TEXT) LIKE $4
+        OR CAST("TipoGastoId" AS TEXT) LIKE $5
+        OR CAST("TipoGastoGrupoId" AS TEXT) LIKE $6
+        OR CAST("TransporteComision" AS TEXT) LIKE $7
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
+
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
+  },
+
+  create: async (transporteData) => {
+    const query = `
+      INSERT INTO "transporte" (
         "TransporteNombre",
         "TransporteTelefono",
         "TransporteDireccion",
         "TipoGastoId",
         "TipoGastoGrupoId",
-        "TransporteComision",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+        "TransporteComision"
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING "TransporteId"
+    `;
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "TransporteId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const values = [
+      transporteData.TransporteNombre,
+      transporteData.TransporteTelefono || "",
+      transporteData.TransporteDireccion || "",
+      transporteData.TipoGastoId,
+      transporteData.TipoGastoGrupoId,
+      transporteData.TransporteComision || 0,
+    ];
 
-      const searchQuery = `
-        SELECT t.*, 
-          tg.TipoGastoDescripcion, 
-          tgg.TipoGastoGrupoDescripcion
-        FROM transporte t
-        LEFT JOIN TipoGasto tg ON t.TipoGastoId = tg.TipoGastoId
-        LEFT JOIN tipogastogrupo tgg ON t.TipoGastoId = tgg.TipoGastoId AND t.TipoGastoGrupoId = tgg.TipoGastoGrupoId
-        WHERE t.TransporteNombre LIKE ? 
-          OR t.TransporteTelefono LIKE ?
-          OR t.TransporteDireccion LIKE ?
-          OR CAST(t.TransporteId AS CHAR) LIKE ?
-          OR CAST(t.TipoGastoId AS CHAR) LIKE ?
-          OR CAST(t.TipoGastoGrupoId AS CHAR) LIKE ?
-          OR CAST(t.TransporteComision AS CHAR) LIKE ?
-        ORDER BY t.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const result = await db.query(query, values);
 
-      db.query(
-        searchQuery,
-        [
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
-
-          const countQuery = `
-            SELECT COUNT(*) as total FROM transporte 
-            WHERE TransporteNombre LIKE ? 
-              OR TransporteTelefono LIKE ?
-              OR TransporteDireccion LIKE ?
-              OR CAST(TransporteId AS CHAR) LIKE ?
-              OR CAST(TipoGastoId AS CHAR) LIKE ?
-              OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
-              OR CAST(TransporteComision AS CHAR) LIKE ?
-          `;
-
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
-
-              const total = countResult[0]?.total || 0;
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    // Obtener el registro recién creado
+    return Transporte.getById(result.rows[0].TransporteId);
   },
 
-  create: (transporteData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO transporte (
-          TransporteNombre,
-          TransporteTelefono,
-          TransporteDireccion,
-          TipoGastoId,
-          TipoGastoGrupoId,
-          TransporteComision
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `;
+  update: async (id, transporteData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      const values = [
-        transporteData.TransporteNombre,
-        transporteData.TransporteTelefono || "",
-        transporteData.TransporteDireccion || "",
-        transporteData.TipoGastoId,
-        transporteData.TipoGastoGrupoId,
-        transporteData.TransporteComision || 0,
-      ];
+    const camposActualizables = [
+      "TransporteNombre",
+      "TransporteTelefono",
+      "TransporteDireccion",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "TransporteComision",
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        Transporte.getById(result.insertId)
-          .then((transporte) => resolve(transporte))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, transporteData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
-        "TransporteNombre",
-        "TransporteTelefono",
-        "TransporteDireccion",
-        "TipoGastoId",
-        "TipoGastoGrupoId",
-        "TransporteComision",
-      ];
-
-      camposActualizables.forEach((campo) => {
-        if (transporteData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(transporteData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null);
+    camposActualizables.forEach((campo) => {
+      if (transporteData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(transporteData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE transporte 
-        SET ${updateFields.join(", ")}
-        WHERE TransporteId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-
-        // Obtener el registro actualizado
-        Transporte.getById(id)
-          .then((transporte) => resolve(transporte))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "transporte"
+      SET ${updateFields.join(", ")}
+      WHERE "TransporteId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Obtener el registro actualizado
+    return Transporte.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM transporte WHERE TransporteId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "transporte" WHERE "TransporteId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

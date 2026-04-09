@@ -1,3 +1,4 @@
+import { Store } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getAlmacenes,
@@ -8,6 +9,7 @@ import {
 } from "../../services/almacenes.service";
 import AlmacenesList from "../../components/almacenes/AlmacenesList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -183,13 +185,21 @@ export default function AlmacenesPage() {
     setCurrentPage(1);
   };
 
-  if (loading) return <div>Cargando almacenes...</div>;
-  if (error) return <div>Error: {error}</div>;
   if (!puedeLeer) return <div>No tienes permiso para ver los almacenes</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Almacenes</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Almacenes"
+        subtitle={`${almacenesData.pagination.totalItems || 0} registros`}
+        icon={Store}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <AlmacenesList
         almacenes={almacenesData.almacenes.map((a) => ({
           ...a,
@@ -229,7 +239,10 @@ export default function AlmacenesPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={almacenesData.pagination.totalItems}
+        currentItems={almacenesData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.s
 import { getCajaById } from "../../services/cajas.service";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/utils";
+import Modal from "./Modal";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -104,123 +105,109 @@ const PagoModal: React.FC<PagoModalProps> = ({
     }
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
-          onClick={handleClose}
-        >
-          &times;
-        </button>
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-          Nuevo Pago
-        </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 mb-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Fecha
-              </label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Tipo de Gasto
-              </label>
-              <select
-                value={tipoGastoId}
-                onChange={(e) => setTipoGastoId(Number(e.target.value))}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              >
-                <option value="">Seleccione...</option>
-                {tiposGasto.map((tg) => (
-                  <option key={tg.TipoGastoId} value={tg.TipoGastoId}>
-                    {tg.TipoGastoDescripcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Grupo de Gasto
-              </label>
-              <select
-                value={tipoGastoGrupoId}
-                onChange={(e) => setTipoGastoGrupoId(Number(e.target.value))}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              >
-                <option value="">Seleccione...</option>
-                {gruposFiltrados.map((gg) => (
-                  <option key={gg.TipoGastoGrupoId} value={gg.TipoGastoGrupoId}>
-                    {gg.TipoGastoGrupoDescripcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Descripción
-              </label>
-              <input
-                type="text"
-                value={detalle}
-                onChange={(e) => setDetalle(e.target.value)}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Monto
-              </label>
-              <input
-                type="text"
-                value={monto !== "" ? formatMiles(monto) : ""}
-                onChange={(e) => {
-                  // Eliminar puntos y formatear correctamente
-                  const raw = e.target.value
-                    .replace(/\./g, "")
-                    .replace(/,/g, ".");
-                  const num = Number(raw);
-                  setMonto(isNaN(num) ? "" : num);
-                }}
-                required
-                className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
-                inputMode="numeric"
-                pattern="[0-9.]*"
-              />
-            </div>
+    <Modal isOpen={show} onClose={handleClose} title="Nuevo Pago" size="md">
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">
+              Fecha
+            </label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              required
+              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+            />
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">
+              Tipo de Gasto
+            </label>
+            <select
+              value={tipoGastoId}
+              onChange={(e) => setTipoGastoId(Number(e.target.value))}
+              required
+              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
             >
-              Guardar
-            </button>
-            <button
-              type="button"
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition"
-              onClick={handleClose}
-            >
-              Cancelar
-            </button>
+              <option value="">Seleccione...</option>
+              {tiposGasto.map((tg) => (
+                <option key={tg.TipoGastoId} value={tg.TipoGastoId}>
+                  {tg.TipoGastoDescripcion}
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-      </div>
-    </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">
+              Grupo de Gasto
+            </label>
+            <select
+              value={tipoGastoGrupoId}
+              onChange={(e) => setTipoGastoGrupoId(Number(e.target.value))}
+              required
+              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+            >
+              <option value="">Seleccione...</option>
+              {gruposFiltrados.map((gg) => (
+                <option key={gg.TipoGastoGrupoId} value={gg.TipoGastoGrupoId}>
+                  {gg.TipoGastoGrupoDescripcion}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">
+              Descripción
+            </label>
+            <input
+              type="text"
+              value={detalle}
+              onChange={(e) => setDetalle(e.target.value)}
+              required
+              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">
+              Monto
+            </label>
+            <input
+              type="text"
+              value={monto !== "" ? formatMiles(monto) : ""}
+              onChange={(e) => {
+                // Eliminar puntos y formatear correctamente
+                const raw = e.target.value
+                  .replace(/\./g, "")
+                  .replace(/,/g, ".");
+                const num = Number(raw);
+                setMonto(isNaN(num) ? "" : num);
+              }}
+              required
+              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+              inputMode="numeric"
+              pattern="[0-9.]*"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="submit"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          >
+            Guardar
+          </button>
+          <button
+            type="button"
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition"
+            onClick={handleClose}
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

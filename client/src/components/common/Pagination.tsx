@@ -1,4 +1,6 @@
-// import React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 
 interface PaginationProps {
   currentPage: number;
@@ -6,6 +8,8 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   itemsPerPage: number;
   onItemsPerPageChange: (items: number) => void;
+  totalItems?: number;
+  currentItems?: number;
 }
 
 const Pagination = ({
@@ -14,107 +18,94 @@ const Pagination = ({
   onPageChange,
   itemsPerPage,
   onItemsPerPageChange,
+  totalItems,
+  currentItems,
 }: PaginationProps) => {
-  // Calcular el rango de páginas a mostrar
   const getPageNumbers = () => {
     if (totalPages <= 7) {
-      // Mostrar todas las páginas si son pocas
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
 
-    const pageNumbers = [];
-    const maxVisiblePages = 2; // Menos páginas visibles en mobile
+    const pages: (number | string)[] = [1];
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
 
-    // Siempre mostrar la primera página
-    pageNumbers.push(1);
+    if (currentPage <= 3) end = 4;
+    else if (currentPage >= totalPages - 2) start = totalPages - 3;
 
-    // Calcular el rango alrededor de la página actual
-    let startPage = Math.max(2, currentPage - maxVisiblePages);
-    let endPage = Math.min(totalPages - 1, currentPage + maxVisiblePages);
+    if (start > 2) pages.push("...");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push("...");
+    pages.push(totalPages);
 
-    // Asegurarse de que mostramos suficientes páginas si estamos cerca de los extremos
-    if (currentPage <= 3) {
-      endPage = 4;
-    } else if (currentPage >= totalPages - 2) {
-      startPage = totalPages - 3;
-    }
-
-    // Agregar puntos suspensivos si hay un salto entre la primera página y el rango
-    if (startPage > 2) {
-      pageNumbers.push("...");
-    }
-
-    // Agregar páginas en el rango calculado
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-
-    // Agregar puntos suspensivos si hay un salto entre el rango y la última página
-    if (endPage < totalPages - 1) {
-      pageNumbers.push("...");
-    }
-
-    // Siempre mostrar la última página
-    pageNumbers.push(totalPages);
-
-    return pageNumbers;
+    return pages;
   };
 
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
-      <div className="flex items-center order-2 sm:order-1">
-        <label className="mr-2 text-sm text-gray-600">Mostrar:</label>
-        <select
-          value={itemsPerPage}
+    <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
+      <div className="flex items-center gap-2 order-2 sm:order-1 text-sm text-muted-foreground">
+        <span>Mostrar</span>
+        <Select
+          value={String(itemsPerPage)}
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+          className="w-16"
         >
           <option value={10}>10</option>
           <option value={25}>25</option>
           <option value={50}>50</option>
           <option value={100}>100</option>
-        </select>
+        </Select>
+        <span>por pagina</span>
+        {totalItems != null && currentItems != null && (
+          <span className="ml-1 text-muted-foreground/70">
+            — Mostrando {currentItems} de {totalItems}
+          </span>
+        )}
       </div>
 
-      <nav className="inline-flex rounded-md shadow order-1 sm:order-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible">
-        <div className="flex">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-          >
-            Anterior
-          </button>
+      <nav className="flex items-center gap-1 order-1 sm:order-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="size-8"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
 
-          {pageNumbers.map((number, index) => (
-            <button
-              key={number === "..." ? `ellipsis-${index}` : number}
-              onClick={() => {
-                if (typeof number === "number") onPageChange(number);
-              }}
-              disabled={number === "..."}
-              className={`px-3 py-1 border-t border-b border-gray-300 bg-white text-sm font-medium ${
-                currentPage === number
-                  ? "text-blue-600 bg-blue-50"
-                  : "text-gray-700 hover:bg-gray-50"
-              } ${
-                number === "..." ? "cursor-default" : "cursor-pointer"
-              } whitespace-nowrap`}
+        {pageNumbers.map((number, index) =>
+          number === "..." ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="px-2 py-1 text-sm text-muted-foreground"
+            >
+              ...
+            </span>
+          ) : (
+            <Button
+              key={number}
+              variant={currentPage === number ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onPageChange(number as number)}
+              className="min-w-8 h-8"
             >
               {number}
-            </button>
-          ))}
+            </Button>
+          )
+        )}
 
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-          >
-            Siguiente
-          </button>
-        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="size-8"
+        >
+          <ChevronRight className="size-4" />
+        </Button>
       </nav>
     </div>
   );

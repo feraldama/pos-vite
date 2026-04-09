@@ -1,3 +1,4 @@
+import { Banknote } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getPagosAdmin,
@@ -10,6 +11,7 @@ import PagoAdminList, {
   type PagoAdmin,
 } from "../../components/pagoadmin/PagoAdminList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -180,12 +182,20 @@ export default function PagoAdminPage() {
 
   if (!puedeLeer)
     return <div>No tienes permiso para ver los pagos admin.</div>;
-  if (loading) return <div>Cargando pagos admin...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Pagos Administrador</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Pagos Administrador"
+        subtitle={`${pagosAdminData.pagination.totalItems || 0} registros`}
+        icon={Banknote}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <PagoAdminList
         pagosAdmin={pagosAdminData.pagosAdmin}
         onDelete={puedeEliminar ? handleDelete : undefined}
@@ -215,7 +225,10 @@ export default function PagoAdminPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={pagosAdminData.pagination.totalItems}
+        currentItems={pagosAdminData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

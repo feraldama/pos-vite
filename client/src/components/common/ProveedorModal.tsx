@@ -1,5 +1,7 @@
+import { Plus } from "lucide-react";
 import React, { useState } from "react";
-import { PlusIcon } from "@heroicons/react/24/outline";
+
+import Modal from "./Modal";
 
 // Definir la interfaz Proveedor localmente
 interface Proveedor {
@@ -67,157 +69,143 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
     }
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative">
+    <Modal isOpen={show} onClose={onClose} title="Seleccionar Proveedor" size="4xl">
+      <div className="flex justify-end mb-4">
         <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
-          onClick={onClose}
+          onClick={() => setShowCreateForm(true)}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
-          &times;
+          <Plus className="size-4" />
+          Crear Nuevo Proveedor
         </button>
-        <div className="flex justify-between items-center mb-4 pr-8">
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Seleccionar Proveedor
-          </h2>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Crear Nuevo Proveedor
-          </button>
-        </div>
-
-        {!showCreateForm ? (
-          <>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Buscar proveedor..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div className="max-h-96 overflow-y-auto">
-              {filteredProveedores.map((proveedor) => (
-                <div
-                  key={proveedor.ProveedorId}
-                  className="p-3 border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onSelect(proveedor)}
-                >
-                  <div className="font-semibold">
-                    {proveedor.ProveedorNombre}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    RUC: {proveedor.ProveedorRUC || "Sin RUC"}
-                  </div>
-                  {proveedor.ProveedorTelefono && (
-                    <div className="text-sm text-gray-600">
-                      Tel: {proveedor.ProveedorTelefono}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <form onSubmit={handleCreateProveedor} className="space-y-4">
-            <h3 className="text-lg font-semibold">Crear Nuevo Proveedor</h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre *
-              </label>
-              <input
-                type="text"
-                value={newProveedor.ProveedorNombre}
-                onChange={(e) =>
-                  setNewProveedor({
-                    ...newProveedor,
-                    ProveedorNombre: e.target.value,
-                  })
-                }
-                className="w-full p-2 border border-gray-300 rounded-lg"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                RUC
-              </label>
-              <input
-                type="text"
-                value={newProveedor.ProveedorRUC}
-                onChange={(e) =>
-                  setNewProveedor({
-                    ...newProveedor,
-                    ProveedorRUC: e.target.value,
-                  })
-                }
-                className="w-full p-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                value={newProveedor.ProveedorDireccion}
-                onChange={(e) =>
-                  setNewProveedor({
-                    ...newProveedor,
-                    ProveedorDireccion: e.target.value,
-                  })
-                }
-                className="w-full p-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Teléfono
-              </label>
-              <input
-                type="text"
-                value={newProveedor.ProveedorTelefono}
-                onChange={(e) =>
-                  setNewProveedor({
-                    ...newProveedor,
-                    ProveedorTelefono: e.target.value,
-                  })
-                }
-                className="w-full p-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-              >
-                Crear
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
       </div>
-    </div>
+
+      {!showCreateForm ? (
+        <>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Buscar proveedor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          <div className="max-h-96 overflow-y-auto">
+            {filteredProveedores.map((proveedor) => (
+              <div
+                key={proveedor.ProveedorId}
+                className="p-3 border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 cursor-pointer"
+                onClick={() => onSelect(proveedor)}
+              >
+                <div className="font-semibold">
+                  {proveedor.ProveedorNombre}
+                </div>
+                <div className="text-sm text-gray-600">
+                  RUC: {proveedor.ProveedorRUC || "Sin RUC"}
+                </div>
+                {proveedor.ProveedorTelefono && (
+                  <div className="text-sm text-gray-600">
+                    Tel: {proveedor.ProveedorTelefono}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <form onSubmit={handleCreateProveedor} className="space-y-4">
+          <h3 className="text-lg font-semibold">Crear Nuevo Proveedor</h3>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre *
+            </label>
+            <input
+              type="text"
+              value={newProveedor.ProveedorNombre}
+              onChange={(e) =>
+                setNewProveedor({
+                  ...newProveedor,
+                  ProveedorNombre: e.target.value,
+                })
+              }
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              RUC
+            </label>
+            <input
+              type="text"
+              value={newProveedor.ProveedorRUC}
+              onChange={(e) =>
+                setNewProveedor({
+                  ...newProveedor,
+                  ProveedorRUC: e.target.value,
+                })
+              }
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dirección
+            </label>
+            <input
+              type="text"
+              value={newProveedor.ProveedorDireccion}
+              onChange={(e) =>
+                setNewProveedor({
+                  ...newProveedor,
+                  ProveedorDireccion: e.target.value,
+                })
+              }
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Teléfono
+            </label>
+            <input
+              type="text"
+              value={newProveedor.ProveedorTelefono}
+              onChange={(e) =>
+                setNewProveedor({
+                  ...newProveedor,
+                  ProveedorTelefono: e.target.value,
+                })
+              }
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+            >
+              Crear
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 };
 

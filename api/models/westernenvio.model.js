@@ -1,101 +1,83 @@
 const db = require("../config/db");
 
 const WesternEnvio = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM westernenvio", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "westernenvio"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT we.*, 
-          c.CajaDescripcion, 
-          t.TipoGastoDescripcion, 
-          tg.TipoGastoGrupoDescripcion,
-          u.UsuarioNombre
-        FROM westernenvio we
-        LEFT JOIN Caja c ON we.CajaId = c.CajaId
-        LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
-        LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
-        WHERE we.WesternEnvioId = ?`,
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      `SELECT we.*,
+        c."CajaDescripcion",
+        t."TipoGastoDescripcion",
+        tg."TipoGastoGrupoDescripcion",
+        u."UsuarioNombre"
+      FROM "westernenvio" we
+      LEFT JOIN "caja" c ON we."CajaId" = c."CajaId"
+      LEFT JOIN "tipogasto" t ON we."TipoGastoId" = t."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tg ON we."TipoGastoId" = tg."TipoGastoId" AND we."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
+      LEFT JOIN "usuario" u ON we."WesternEnvioUsuarioId" = u."UsuarioId"
+      WHERE we."WesternEnvioId" = $1`,
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "WesternEnvioId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza sortOrder y sortBy para evitar SQL Injection
-      const allowedSortFields = [
-        "WesternEnvioId",
-        "WesternEnvioFecha",
-        "WesternEnvioMonto",
-        "WesternEnvioDetalle",
-        "TipoGastoId",
-        "TipoGastoGrupoId",
-        "WesternEnvioUsuarioId",
-        "CajaId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    const allowedSortFields = [
+      "WesternEnvioId",
+      "WesternEnvioFecha",
+      "WesternEnvioMonto",
+      "WesternEnvioDetalle",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "WesternEnvioUsuarioId",
+      "CajaId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "WesternEnvioId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "WesternEnvioId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT we.*, 
-          c.CajaDescripcion, 
-          t.TipoGastoDescripcion, 
-          tg.TipoGastoGrupoDescripcion,
-          u.UsuarioNombre
-        FROM westernenvio we
-        LEFT JOIN Caja c ON we.CajaId = c.CajaId
-        LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
-        LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
-        ORDER BY we.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const result = await db.query(
+      `SELECT we.*,
+        c."CajaDescripcion",
+        t."TipoGastoDescripcion",
+        tg."TipoGastoGrupoDescripcion",
+        u."UsuarioNombre"
+      FROM "westernenvio" we
+      LEFT JOIN "caja" c ON we."CajaId" = c."CajaId"
+      LEFT JOIN "tipogasto" t ON we."TipoGastoId" = t."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tg ON we."TipoGastoId" = tg."TipoGastoId" AND we."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
+      LEFT JOIN "usuario" u ON we."WesternEnvioUsuarioId" = u."UsuarioId"
+      ORDER BY we."${sortField}" ${order}
+      LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "westernenvio"'
+    );
 
-        db.query(
-          "SELECT COUNT(*) as total FROM westernenvio",
-          (err, countResult) => {
-            if (err) return reject(err);
-
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -105,152 +87,110 @@ const WesternEnvio = {
     sortBy = "WesternEnvioId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza los campos para evitar SQL Injection
-      const allowedSortFields = [
-        "WesternEnvioId",
-        "WesternEnvioFecha",
-        "WesternEnvioMonto",
-        "WesternEnvioDetalle",
-        "TipoGastoId",
-        "TipoGastoGrupoId",
-        "WesternEnvioUsuarioId",
-        "CajaId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    const allowedSortFields = [
+      "WesternEnvioId",
+      "WesternEnvioFecha",
+      "WesternEnvioMonto",
+      "WesternEnvioDetalle",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "WesternEnvioUsuarioId",
+      "CajaId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "WesternEnvioId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "WesternEnvioId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const searchQuery = `
-        SELECT we.*, 
-          c.CajaDescripcion, 
-          t.TipoGastoDescripcion, 
-          tg.TipoGastoGrupoDescripcion,
-          u.UsuarioNombre
-        FROM westernenvio we
-        LEFT JOIN Caja c ON we.CajaId = c.CajaId
-        LEFT JOIN TipoGasto t ON we.TipoGastoId = t.TipoGastoId
-        LEFT JOIN tipogastogrupo tg ON we.TipoGastoId = tg.TipoGastoId AND we.TipoGastoGrupoId = tg.TipoGastoGrupoId
-        LEFT JOIN usuario u ON we.WesternEnvioUsuarioId = u.UsuarioId
-        WHERE we.WesternEnvioDetalle LIKE ? 
-          OR CAST(we.WesternEnvioUsuarioId AS CHAR) LIKE ?
-          OR CAST(we.CajaId AS CHAR) LIKE ?
-          OR CAST(we.TipoGastoId AS CHAR) LIKE ?
-          OR CAST(we.TipoGastoGrupoId AS CHAR) LIKE ?
-          OR CAST(we.WesternEnvioMonto AS CHAR) LIKE ?
-          OR CAST(we.WesternEnvioMTCN AS CHAR) LIKE ?
-          OR CAST(we.WesternEnvioFactura AS CHAR) LIKE ?
-          OR CAST(we.WesternEnvioTimbrado AS CHAR) LIKE ?
-          OR CAST(we.ClienteId AS CHAR) LIKE ?
-          OR DATE_FORMAT(we.WesternEnvioFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-        ORDER BY we.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [
-          searchValue, // Detalle
-          searchValue, // WesternEnvioUsuarioId
-          searchValue, // CajaId
-          searchValue, // TipoGastoId
-          searchValue, // TipoGastoGrupoId
-          searchValue, // Monto
-          searchValue, // MTCN
-          searchValue, // Factura
-          searchValue, // Timbrado
-          searchValue, // ClienteId
-          searchValue, // Fecha
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
+    const result = await db.query(
+      `SELECT we.*,
+        c."CajaDescripcion",
+        t."TipoGastoDescripcion",
+        tg."TipoGastoGrupoDescripcion",
+        u."UsuarioNombre"
+      FROM "westernenvio" we
+      LEFT JOIN "caja" c ON we."CajaId" = c."CajaId"
+      LEFT JOIN "tipogasto" t ON we."TipoGastoId" = t."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tg ON we."TipoGastoId" = tg."TipoGastoId" AND we."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
+      LEFT JOIN "usuario" u ON we."WesternEnvioUsuarioId" = u."UsuarioId"
+      WHERE we."WesternEnvioDetalle" LIKE $1
+        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) LIKE $2
+        OR CAST(we."CajaId" AS TEXT) LIKE $3
+        OR CAST(we."TipoGastoId" AS TEXT) LIKE $4
+        OR CAST(we."TipoGastoGrupoId" AS TEXT) LIKE $5
+        OR CAST(we."WesternEnvioMonto" AS TEXT) LIKE $6
+        OR CAST(we."WesternEnvioMTCN" AS TEXT) LIKE $7
+        OR CAST(we."WesternEnvioFactura" AS TEXT) LIKE $8
+        OR CAST(we."WesternEnvioTimbrado" AS TEXT) LIKE $9
+        OR CAST(we."ClienteId" AS TEXT) LIKE $10
+        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $11
+      ORDER BY we."${sortField}" ${order}
+      LIMIT $12 OFFSET $13`,
+      [
+        searchValue, searchValue, searchValue, searchValue, searchValue,
+        searchValue, searchValue, searchValue, searchValue, searchValue,
+        searchValue, limit, offset,
+      ]
+    );
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM westernenvio 
-            WHERE WesternEnvioDetalle LIKE ? 
-              OR CAST(WesternEnvioUsuarioId AS CHAR) LIKE ?
-              OR CAST(CajaId AS CHAR) LIKE ?
-              OR CAST(TipoGastoId AS CHAR) LIKE ?
-              OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
-              OR CAST(WesternEnvioMonto AS CHAR) LIKE ?
-              OR CAST(WesternEnvioMTCN AS CHAR) LIKE ?
-              OR CAST(WesternEnvioFactura AS CHAR) LIKE ?
-              OR CAST(WesternEnvioTimbrado AS CHAR) LIKE ?
-              OR CAST(ClienteId AS CHAR) LIKE ?
-              OR DATE_FORMAT(WesternEnvioFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-          `;
+    const countResult = await db.query(
+      `SELECT COUNT(*) as total FROM "westernenvio" we
+      WHERE we."WesternEnvioDetalle" LIKE $1
+        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) LIKE $2
+        OR CAST(we."CajaId" AS TEXT) LIKE $3
+        OR CAST(we."TipoGastoId" AS TEXT) LIKE $4
+        OR CAST(we."TipoGastoGrupoId" AS TEXT) LIKE $5
+        OR CAST(we."WesternEnvioMonto" AS TEXT) LIKE $6
+        OR CAST(we."WesternEnvioMTCN" AS TEXT) LIKE $7
+        OR CAST(we."WesternEnvioFactura" AS TEXT) LIKE $8
+        OR CAST(we."WesternEnvioTimbrado" AS TEXT) LIKE $9
+        OR CAST(we."ClienteId" AS TEXT) LIKE $10
+        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $11`,
+      [
+        searchValue, searchValue, searchValue, searchValue, searchValue,
+        searchValue, searchValue, searchValue, searchValue, searchValue,
+        searchValue,
+      ]
+    );
 
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
+    const total = countResult.rows[0]?.total || 0;
 
-              const total = countResult[0]?.total || 0;
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
-  create: (envioData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO westernenvio (
-          CajaId,
-          WesternEnvioFecha,
-          TipoGastoId,
-          TipoGastoGrupoId,
-          WesternEnvioCambio,
-          WesternEnvioDetalle,
-          WesternEnvioMTCN,
-          WesternEnvioCargoEnvio,
-          WesternEnvioFactura,
-          WesternEnvioTimbrado,
-          WesternEnvioMonto,
-          WesternEnvioUsuarioId,
-          ClienteId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const values = [
+  create: async (envioData) => {
+    const result = await db.query(
+      `INSERT INTO "westernenvio" (
+        "CajaId",
+        "WesternEnvioFecha",
+        "TipoGastoId",
+        "TipoGastoGrupoId",
+        "WesternEnvioCambio",
+        "WesternEnvioDetalle",
+        "WesternEnvioMTCN",
+        "WesternEnvioCargoEnvio",
+        "WesternEnvioFactura",
+        "WesternEnvioTimbrado",
+        "WesternEnvioMonto",
+        "WesternEnvioUsuarioId",
+        "ClienteId"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING "WesternEnvioId"`,
+      [
         envioData.CajaId,
         envioData.WesternEnvioFecha || new Date(),
         envioData.TipoGastoId,
@@ -264,86 +204,63 @@ const WesternEnvio = {
         envioData.WesternEnvioMonto,
         envioData.WesternEnvioUsuarioId,
         envioData.ClienteId || null,
-      ];
+      ]
+    );
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        WesternEnvio.getById(result.insertId)
-          .then((envio) => resolve(envio))
-          .catch((error) => reject(error));
-      });
-    });
+    return WesternEnvio.getById(result.rows[0].WesternEnvioId);
   },
 
-  update: (id, envioData) => {
-    return new Promise((resolve, reject) => {
-      // Construir la consulta dinámicamente
-      let updateFields = [];
-      let values = [];
+  update: async (id, envioData) => {
+    const camposActualizables = [
+      "CajaId",
+      "WesternEnvioFecha",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+      "WesternEnvioCambio",
+      "WesternEnvioDetalle",
+      "WesternEnvioMTCN",
+      "WesternEnvioCargoEnvio",
+      "WesternEnvioFactura",
+      "WesternEnvioTimbrado",
+      "WesternEnvioMonto",
+      "WesternEnvioUsuarioId",
+      "ClienteId",
+    ];
 
-      const camposActualizables = [
-        "CajaId",
-        "WesternEnvioFecha",
-        "TipoGastoId",
-        "TipoGastoGrupoId",
-        "WesternEnvioCambio",
-        "WesternEnvioDetalle",
-        "WesternEnvioMTCN",
-        "WesternEnvioCargoEnvio",
-        "WesternEnvioFactura",
-        "WesternEnvioTimbrado",
-        "WesternEnvioMonto",
-        "WesternEnvioUsuarioId",
-        "ClienteId",
-      ];
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      camposActualizables.forEach((campo) => {
-        if (envioData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(envioData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null); // No hay campos para actualizar
+    camposActualizables.forEach((campo) => {
+      if (envioData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(envioData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE westernenvio 
-        SET ${updateFields.join(", ")}
-        WHERE WesternEnvioId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null); // No se encontró el registro
-        }
-
-        // Obtener el registro actualizado
-        WesternEnvio.getById(id)
-          .then((envio) => resolve(envio))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) return null;
+
+    values.push(id);
+
+    const result = await db.query(
+      `UPDATE "westernenvio"
+      SET ${updateFields.join(", ")}
+      WHERE "WesternEnvioId" = $${paramIndex}`,
+      values
+    );
+
+    if (result.rowCount === 0) return null;
+
+    return WesternEnvio.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM westernenvio WHERE WesternEnvioId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "westernenvio" WHERE "WesternEnvioId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

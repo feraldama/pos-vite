@@ -1,3 +1,4 @@
+import { LayoutGrid } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getCombosPaginated,
@@ -8,6 +9,7 @@ import {
 } from "../../services/combos.service";
 import CombosList from "../../components/combos/CombosList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { getProductosAll } from "../../services/productos.service";
 import { usePermiso } from "../../hooks/usePermiso";
@@ -166,13 +168,21 @@ export default function CombosPage() {
     }
   };
 
-  if (loading) return <div>Cargando combos...</div>;
-  if (error) return <div>Error: {error}</div>;
   if (!puedeLeer) return <div>No tienes permiso para ver los combos</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Combos</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Combos"
+        subtitle={`${combosData.pagination.totalItems || 0} registros`}
+        icon={LayoutGrid}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <CombosList
         combos={combosData.combos.map((c) => ({ ...c, id: c.ComboId }))}
         productos={productos}
@@ -200,7 +210,10 @@ export default function CombosPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={combosData.pagination.totalItems}
+        currentItems={combosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

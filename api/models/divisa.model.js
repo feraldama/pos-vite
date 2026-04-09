@@ -1,69 +1,54 @@
 const db = require("../config/db");
 
 const Divisa = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM divisa", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "divisa"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM divisa WHERE DivisaId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "divisa" WHERE "DivisaId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "DivisaId", sortOrder = "DESC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "DivisaId",
-        "DivisaNombre",
-        "DivisaCompraMonto",
-        "DivisaVentaMonto",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+  getAllPaginated: async (limit, offset, sortBy = "DivisaId", sortOrder = "DESC") => {
+    const allowedSortFields = [
+      "DivisaId",
+      "DivisaNombre",
+      "DivisaCompraMonto",
+      "DivisaVentaMonto",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "DivisaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "DivisaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT * FROM divisa
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT * FROM "divisa"
+      ORDER BY "${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query("SELECT COUNT(*) as total FROM divisa", (err, countResult) => {
-          if (err) return reject(err);
+    const countResult = await db.query('SELECT COUNT(*) as total FROM "divisa"');
 
-          resolve({
-            data: results,
-            pagination: {
-              totalItems: countResult[0].total,
-              totalPages: Math.ceil(countResult[0].total / limit),
-              currentPage: Math.floor(offset / limit) + 1,
-              itemsPerPage: limit,
-            },
-          });
-        });
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -73,156 +58,133 @@ const Divisa = {
     sortBy = "DivisaId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "DivisaId",
-        "DivisaNombre",
-        "DivisaCompraMonto",
-        "DivisaVentaMonto",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    const allowedSortFields = [
+      "DivisaId",
+      "DivisaNombre",
+      "DivisaCompraMonto",
+      "DivisaVentaMonto",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "DivisaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "DivisaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const searchQuery = `
-        SELECT * FROM divisa
-        WHERE DivisaNombre LIKE ? 
-          OR CAST(DivisaId AS CHAR) LIKE ?
-          OR CAST(DivisaCompraMonto AS CHAR) LIKE ?
-          OR CAST(DivisaVentaMonto AS CHAR) LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchQuery = `
+      SELECT * FROM "divisa"
+      WHERE "DivisaNombre" LIKE $1
+        OR CAST("DivisaId" AS TEXT) LIKE $2
+        OR CAST("DivisaCompraMonto" AS TEXT) LIKE $3
+        OR CAST("DivisaVentaMonto" AS TEXT) LIKE $4
+      ORDER BY "${sortField}" ${order}
+      LIMIT $5 OFFSET $6
+    `;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
+    const result = await db.query(
+      searchQuery,
+      [searchValue, searchValue, searchValue, searchValue, limit, offset]
+    );
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM divisa 
-            WHERE DivisaNombre LIKE ? 
-              OR CAST(DivisaId AS CHAR) LIKE ?
-              OR CAST(DivisaCompraMonto AS CHAR) LIKE ?
-              OR CAST(DivisaVentaMonto AS CHAR) LIKE ?
-          `;
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "divisa"
+      WHERE "DivisaNombre" LIKE $1
+        OR CAST("DivisaId" AS TEXT) LIKE $2
+        OR CAST("DivisaCompraMonto" AS TEXT) LIKE $3
+        OR CAST("DivisaVentaMonto" AS TEXT) LIKE $4
+    `;
 
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
+    const countResult = await db.query(
+      countQuery,
+      [searchValue, searchValue, searchValue, searchValue]
+    );
 
-              const total = countResult[0]?.total || 0;
+    const total = countResult.rows[0]?.total || 0;
 
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
-  create: (divisaData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO divisa (
-          DivisaNombre,
-          DivisaCompraMonto,
-          DivisaVentaMonto
-        ) VALUES (?, ?, ?)
-      `;
-
-      const values = [
-        divisaData.DivisaNombre,
-        divisaData.DivisaCompraMonto || 0,
-        divisaData.DivisaVentaMonto || 0,
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        Divisa.getById(result.insertId)
-          .then((divisa) => resolve(divisa))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, divisaData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
+  create: async (divisaData) => {
+    const query = `
+      INSERT INTO "divisa" (
         "DivisaNombre",
         "DivisaCompraMonto",
-        "DivisaVentaMonto",
-      ];
+        "DivisaVentaMonto"
+      ) VALUES ($1, $2, $3) RETURNING "DivisaId"
+    `;
 
-      camposActualizables.forEach((campo) => {
-        if (divisaData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(divisaData[campo]);
-        }
-      });
+    const values = [
+      divisaData.DivisaNombre,
+      divisaData.DivisaCompraMonto || 0,
+      divisaData.DivisaVentaMonto || 0,
+    ];
 
-      if (updateFields.length === 0) {
-        return resolve(null);
+    const result = await db.query(query, values);
+
+    // Obtener el registro recién creado
+    const divisa = await Divisa.getById(result.rows[0].DivisaId);
+    return divisa;
+  },
+
+  update: async (id, divisaData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
+
+    const camposActualizables = [
+      "DivisaNombre",
+      "DivisaCompraMonto",
+      "DivisaVentaMonto",
+    ];
+
+    camposActualizables.forEach((campo) => {
+      if (divisaData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        paramIndex++;
+        values.push(divisaData[campo]);
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE divisa 
-        SET ${updateFields.join(", ")}
-        WHERE DivisaId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-
-        // Obtener el registro actualizado
-        Divisa.getById(id)
-          .then((divisa) => resolve(divisa))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "divisa"
+      SET ${updateFields.join(", ")}
+      WHERE "DivisaId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Obtener el registro actualizado
+    const divisa = await Divisa.getById(id);
+    return divisa;
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM divisa WHERE DivisaId = ?", [id], (err, result) => {
-        if (err) return reject(err);
-        resolve(result.affectedRows > 0);
-      });
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "divisa" WHERE "DivisaId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

@@ -1,8 +1,8 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
 
 interface Combo {
   id: string | number;
@@ -134,7 +134,7 @@ export default function CombosList({
             <ActionButton
               label="Nuevo Combo"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
         </div>
@@ -174,7 +174,7 @@ export default function CombosList({
                   onClick={onCloseModal}
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="size-3"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -281,7 +281,7 @@ export default function CombosList({
                 />
                 <ActionButton
                   label="Cancelar"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  variant="secondary"
                   onClick={onCloseModal}
                 />
               </div>

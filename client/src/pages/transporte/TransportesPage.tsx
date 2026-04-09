@@ -1,3 +1,4 @@
+import { Truck } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getTransportes,
@@ -8,6 +9,7 @@ import {
 } from "../../services/transporte.service";
 import TransportesList from "../../components/transporte/TransportesList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -192,12 +194,19 @@ export default function TransportesPage() {
 
   if (!puedeLeer) return <div>No tienes permiso para ver los transportes</div>;
 
-  if (loading) return <div>Cargando transportes...</div>;
-  if (error) return <div>Error: {error}</div>;
-
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Transportes</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Transportes"
+        subtitle={`${transportesData.pagination.totalItems || 0} registros`}
+        icon={Truck}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <TransportesList
         transportes={transportesData.transportes.map((t) => ({
           ...t,
@@ -237,7 +246,10 @@ export default function TransportesPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={transportesData.pagination.totalItems}
+        currentItems={transportesData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

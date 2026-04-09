@@ -1,3 +1,4 @@
+import { LockOpen } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { getCajas } from "../../services/cajas.service";
 import ActionButton from "../../components/common/Button/ActionButton";
@@ -11,6 +12,8 @@ import { formatMiles } from "../../utils/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { getRegistrosDiariosCaja } from "../../services/registros.service";
+import PageHeader from "../../components/common/PageHeader";
+
 
 const BILLETES = [100000, 50000, 20000, 10000, 5000, 2000];
 const MONEDAS = [1000, 500, 100, 50];
@@ -597,11 +600,18 @@ export default function AperturaCierreCajaPage() {
     return isNaN(n) ? 0 : n;
   };
 
-  if (loading) return <div>Cargando cajas...</div>;
-
   return (
-    <div className="container mx-auto px-4 max-w-xl">
-      <h1 className="text-2xl font-medium mb-6">Apertura/Cierre de Caja</h1>
+    <div className="max-w-xl">
+      <PageHeader
+        title="Apertura / Cierre de Caja"
+        icon={LockOpen}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       {user && (
         <div className="mb-4 p-3 bg-gray-100 rounded text-gray-700">
           <span className="font-semibold">Usuario:</span> {user.nombre} (
@@ -848,6 +858,7 @@ export default function AperturaCierreCajaPage() {
           />
         </div>
       )}
+      </div>
     </div>
   );
 }

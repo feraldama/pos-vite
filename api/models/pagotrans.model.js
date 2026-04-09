@@ -1,107 +1,92 @@
 const db = require("../config/db");
 
 const PagoTrans = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM pagotrans", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "pagotrans"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        SELECT p.*, 
-          t.TransporteNombre, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM pagotrans p
-        LEFT JOIN transporte t ON p.TransporteId = t.TransporteId
-        LEFT JOIN Caja c ON p.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON p.ClienteId = cl.ClienteId
-        WHERE p.PagoTransId = ?
-      `;
-      db.query(query, [id], (err, results) => {
-        if (err) return reject(err);
-        resolve(results && results.length > 0 ? results[0] : null);
-      });
-    });
+  getById: async (id) => {
+    const query = `
+      SELECT p.*,
+        t."TransporteNombre",
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "pagotrans" p
+      LEFT JOIN "transporte" t ON p."TransporteId" = t."TransporteId"
+      LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON p."ClienteId" = cl."ClienteId"
+      WHERE p."PagoTransId" = $1
+    `;
+    const result = await db.query(query, [id]);
+    return result.rows && result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "PagoTransId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza sortOrder y sortBy para evitar SQL Injection
-      const allowedSortFields = [
-        "PagoTransId",
-        "PagoTransFecha",
-        "TransporteId",
-        "PagoTransOrigen",
-        "PagoTransDestino",
-        "PagoTransFechaEmbarque",
-        "PagoTransHora",
-        "PagoTransAsiento",
-        "PagoTransMonto",
-        "CajaId",
-        "PagoTransNumeroBoleto",
-        "PagoTransNombreApellido",
-        "PagoTransCI",
-        "PagoTransTelefono",
-        "ClienteId",
-        "PagoTransUsuarioId",
-        "PagoTransClienteRUC",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    // Sanitiza sortOrder y sortBy para evitar SQL Injection
+    const allowedSortFields = [
+      "PagoTransId",
+      "PagoTransFecha",
+      "TransporteId",
+      "PagoTransOrigen",
+      "PagoTransDestino",
+      "PagoTransFechaEmbarque",
+      "PagoTransHora",
+      "PagoTransAsiento",
+      "PagoTransMonto",
+      "CajaId",
+      "PagoTransNumeroBoleto",
+      "PagoTransNombreApellido",
+      "PagoTransCI",
+      "PagoTransTelefono",
+      "ClienteId",
+      "PagoTransUsuarioId",
+      "PagoTransClienteRUC",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "PagoTransFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "PagoTransFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT p.*, 
-          t.TransporteNombre, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM pagotrans p
-        LEFT JOIN transporte t ON p.TransporteId = t.TransporteId
-        LEFT JOIN Caja c ON p.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON p.ClienteId = cl.ClienteId
-        ORDER BY p.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT p.*,
+        t."TransporteNombre",
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "pagotrans" p
+      LEFT JOIN "transporte" t ON p."TransporteId" = t."TransporteId"
+      LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON p."ClienteId" = cl."ClienteId"
+      ORDER BY p."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query(
-          "SELECT COUNT(*) as total FROM pagotrans",
-          (err, countResult) => {
-            if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "pagotrans"'
+    );
 
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -111,10 +96,131 @@ const PagoTrans = {
     sortBy = "PagoTransFecha",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza los campos para evitar SQL Injection
-      const allowedSortFields = [
-        "PagoTransId",
+    // Sanitiza los campos para evitar SQL Injection
+    const allowedSortFields = [
+      "PagoTransId",
+      "PagoTransFecha",
+      "TransporteId",
+      "PagoTransOrigen",
+      "PagoTransDestino",
+      "PagoTransFechaEmbarque",
+      "PagoTransHora",
+      "PagoTransAsiento",
+      "PagoTransMonto",
+      "CajaId",
+      "PagoTransNumeroBoleto",
+      "PagoTransNombreApellido",
+      "PagoTransCI",
+      "PagoTransTelefono",
+      "ClienteId",
+      "PagoTransUsuarioId",
+      "PagoTransClienteRUC",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "PagoTransFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
+
+    const searchValue = `%${term}%`;
+
+    const searchQuery = `
+      SELECT p.*,
+        t."TransporteNombre",
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "pagotrans" p
+      LEFT JOIN "transporte" t ON p."TransporteId" = t."TransporteId"
+      LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON p."ClienteId" = cl."ClienteId"
+      WHERE p."PagoTransOrigen" LIKE $1
+        OR p."PagoTransDestino" LIKE $2
+        OR p."PagoTransNumeroBoleto" LIKE $3
+        OR p."PagoTransNombreApellido" LIKE $4
+        OR p."PagoTransCI" LIKE $5
+        OR p."PagoTransTelefono" LIKE $6
+        OR p."PagoTransClienteRUC" LIKE $7
+        OR CAST(p."TransporteId" AS TEXT) LIKE $8
+        OR CAST(p."CajaId" AS TEXT) LIKE $9
+        OR CAST(p."ClienteId" AS TEXT) LIKE $10
+        OR CAST(p."PagoTransMonto" AS TEXT) LIKE $11
+        OR TO_CHAR(p."PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $12
+        OR TO_CHAR(p."PagoTransFechaEmbarque", 'DD/MM/YYYY') LIKE $13
+      ORDER BY p."${sortField}" ${order}
+      LIMIT $14 OFFSET $15
+    `;
+
+    const result = await db.query(searchQuery, [
+      searchValue, // Origen
+      searchValue, // Destino
+      searchValue, // NumeroBoleto
+      searchValue, // NombreApellido
+      searchValue, // CI
+      searchValue, // Telefono
+      searchValue, // ClienteRUC
+      searchValue, // TransporteId
+      searchValue, // CajaId
+      searchValue, // ClienteId
+      searchValue, // Monto
+      searchValue, // Fecha
+      searchValue, // FechaEmbarque
+      limit,
+      offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "pagotrans"
+      WHERE "PagoTransOrigen" LIKE $1
+        OR "PagoTransDestino" LIKE $2
+        OR "PagoTransNumeroBoleto" LIKE $3
+        OR "PagoTransNombreApellido" LIKE $4
+        OR "PagoTransCI" LIKE $5
+        OR "PagoTransTelefono" LIKE $6
+        OR "PagoTransClienteRUC" LIKE $7
+        OR CAST("TransporteId" AS TEXT) LIKE $8
+        OR CAST("CajaId" AS TEXT) LIKE $9
+        OR CAST("ClienteId" AS TEXT) LIKE $10
+        OR CAST("PagoTransMonto" AS TEXT) LIKE $11
+        OR TO_CHAR("PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $12
+        OR TO_CHAR("PagoTransFechaEmbarque", 'DD/MM/YYYY') LIKE $13
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
+
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
+  },
+
+  create: async (pagoTransData) => {
+    const query = `
+      INSERT INTO "pagotrans" (
         "PagoTransFecha",
         "TransporteId",
         "PagoTransOrigen",
@@ -130,251 +236,97 @@ const PagoTrans = {
         "PagoTransTelefono",
         "ClienteId",
         "PagoTransUsuarioId",
-        "PagoTransClienteRUC",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+        "PagoTransClienteRUC"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING "PagoTransId"
+    `;
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "PagoTransFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const values = [
+      pagoTransData.PagoTransFecha || new Date(),
+      pagoTransData.TransporteId || null,
+      pagoTransData.PagoTransOrigen || "",
+      pagoTransData.PagoTransDestino || "",
+      pagoTransData.PagoTransFechaEmbarque || null,
+      pagoTransData.PagoTransHora || "",
+      pagoTransData.PagoTransAsiento || "",
+      pagoTransData.PagoTransMonto || 0,
+      pagoTransData.CajaId || null,
+      pagoTransData.PagoTransNumeroBoleto || "",
+      pagoTransData.PagoTransNombreApellido || "",
+      pagoTransData.PagoTransCI || "",
+      pagoTransData.PagoTransTelefono || "",
+      pagoTransData.ClienteId || null,
+      pagoTransData.PagoTransUsuarioId || null,
+      pagoTransData.PagoTransClienteRUC || "",
+    ];
 
-      const searchQuery = `
-        SELECT p.*, 
-          t.TransporteNombre, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM pagotrans p
-        LEFT JOIN transporte t ON p.TransporteId = t.TransporteId
-        LEFT JOIN Caja c ON p.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON p.ClienteId = cl.ClienteId
-        WHERE p.PagoTransOrigen LIKE ? 
-          OR p.PagoTransDestino LIKE ?
-          OR p.PagoTransNumeroBoleto LIKE ?
-          OR p.PagoTransNombreApellido LIKE ?
-          OR p.PagoTransCI LIKE ?
-          OR p.PagoTransTelefono LIKE ?
-          OR p.PagoTransClienteRUC LIKE ?
-          OR CAST(p.TransporteId AS CHAR) LIKE ?
-          OR CAST(p.CajaId AS CHAR) LIKE ?
-          OR CAST(p.ClienteId AS CHAR) LIKE ?
-          OR CAST(p.PagoTransMonto AS CHAR) LIKE ?
-          OR DATE_FORMAT(p.PagoTransFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-          OR DATE_FORMAT(p.PagoTransFechaEmbarque, '%d/%m/%Y') LIKE ?
-        ORDER BY p.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const result = await db.query(query, values);
 
-      db.query(
-        searchQuery,
-        [
-          searchValue, // Origen
-          searchValue, // Destino
-          searchValue, // NumeroBoleto
-          searchValue, // NombreApellido
-          searchValue, // CI
-          searchValue, // Telefono
-          searchValue, // ClienteRUC
-          searchValue, // TransporteId
-          searchValue, // CajaId
-          searchValue, // ClienteId
-          searchValue, // Monto
-          searchValue, // Fecha
-          searchValue, // FechaEmbarque
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
-
-          const countQuery = `
-            SELECT COUNT(*) as total FROM pagotrans 
-            WHERE PagoTransOrigen LIKE ? 
-              OR PagoTransDestino LIKE ?
-              OR PagoTransNumeroBoleto LIKE ?
-              OR PagoTransNombreApellido LIKE ?
-              OR PagoTransCI LIKE ?
-              OR PagoTransTelefono LIKE ?
-              OR PagoTransClienteRUC LIKE ?
-              OR CAST(TransporteId AS CHAR) LIKE ?
-              OR CAST(CajaId AS CHAR) LIKE ?
-              OR CAST(ClienteId AS CHAR) LIKE ?
-              OR CAST(PagoTransMonto AS CHAR) LIKE ?
-              OR DATE_FORMAT(PagoTransFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-              OR DATE_FORMAT(PagoTransFechaEmbarque, '%d/%m/%Y') LIKE ?
-          `;
-
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
-
-              const total = countResult[0]?.total || 0;
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    // Obtener el registro recién creado
+    return PagoTrans.getById(result.rows[0].PagoTransId);
   },
 
-  create: (pagoTransData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO pagotrans (
-          PagoTransFecha,
-          TransporteId,
-          PagoTransOrigen,
-          PagoTransDestino,
-          PagoTransFechaEmbarque,
-          PagoTransHora,
-          PagoTransAsiento,
-          PagoTransMonto,
-          CajaId,
-          PagoTransNumeroBoleto,
-          PagoTransNombreApellido,
-          PagoTransCI,
-          PagoTransTelefono,
-          ClienteId,
-          PagoTransUsuarioId,
-          PagoTransClienteRUC
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+  update: async (id, pagoTransData) => {
+    // Construir la consulta dinámicamente
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      const values = [
-        pagoTransData.PagoTransFecha || new Date(),
-        pagoTransData.TransporteId || null,
-        pagoTransData.PagoTransOrigen || "",
-        pagoTransData.PagoTransDestino || "",
-        pagoTransData.PagoTransFechaEmbarque || null,
-        pagoTransData.PagoTransHora || "",
-        pagoTransData.PagoTransAsiento || "",
-        pagoTransData.PagoTransMonto || 0,
-        pagoTransData.CajaId || null,
-        pagoTransData.PagoTransNumeroBoleto || "",
-        pagoTransData.PagoTransNombreApellido || "",
-        pagoTransData.PagoTransCI || "",
-        pagoTransData.PagoTransTelefono || "",
-        pagoTransData.ClienteId || null,
-        pagoTransData.PagoTransUsuarioId || null,
-        pagoTransData.PagoTransClienteRUC || "",
-      ];
+    const camposActualizables = [
+      "PagoTransFecha",
+      "TransporteId",
+      "PagoTransOrigen",
+      "PagoTransDestino",
+      "PagoTransFechaEmbarque",
+      "PagoTransHora",
+      "PagoTransAsiento",
+      "PagoTransMonto",
+      "CajaId",
+      "PagoTransNumeroBoleto",
+      "PagoTransNombreApellido",
+      "PagoTransCI",
+      "PagoTransTelefono",
+      "ClienteId",
+      "PagoTransUsuarioId",
+      "PagoTransClienteRUC",
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        PagoTrans.getById(result.insertId)
-          .then((pagoTrans) => resolve(pagoTrans))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, pagoTransData) => {
-    return new Promise((resolve, reject) => {
-      // Construir la consulta dinámicamente
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
-        "PagoTransFecha",
-        "TransporteId",
-        "PagoTransOrigen",
-        "PagoTransDestino",
-        "PagoTransFechaEmbarque",
-        "PagoTransHora",
-        "PagoTransAsiento",
-        "PagoTransMonto",
-        "CajaId",
-        "PagoTransNumeroBoleto",
-        "PagoTransNombreApellido",
-        "PagoTransCI",
-        "PagoTransTelefono",
-        "ClienteId",
-        "PagoTransUsuarioId",
-        "PagoTransClienteRUC",
-      ];
-
-      camposActualizables.forEach((campo) => {
-        if (pagoTransData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(pagoTransData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null); // No hay campos para actualizar
+    camposActualizables.forEach((campo) => {
+      if (pagoTransData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(pagoTransData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE pagotrans 
-        SET ${updateFields.join(", ")}
-        WHERE PagoTransId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null); // No se encontró el registro
-        }
-
-        // Obtener el registro actualizado
-        PagoTrans.getById(id)
-          .then((pagoTrans) => resolve(pagoTrans))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null; // No hay campos para actualizar
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "pagotrans"
+      SET ${updateFields.join(", ")}
+      WHERE "PagoTransId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null; // No se encontró el registro
+    }
+
+    // Obtener el registro actualizado
+    return PagoTrans.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM pagotrans WHERE PagoTransId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "pagotrans" WHERE "PagoTransId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

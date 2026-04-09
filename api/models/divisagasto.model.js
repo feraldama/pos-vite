@@ -1,166 +1,130 @@
 const db = require("../config/db");
 
 const DivisaGasto = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM divisagasto", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "divisagasto"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM divisagasto WHERE DivisaGastoId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "divisagasto" WHERE "DivisaGastoId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByDivisaId: (divisaId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT dg.*, 
-          tg.TipoGastoDescripcion, 
-          tgg.TipoGastoGrupoDescripcion
-         FROM divisagasto dg
-         LEFT JOIN tipogasto tg ON dg.TipoGastoId = tg.TipoGastoId
-         LEFT JOIN tipogastogrupo tgg ON dg.TipoGastoId = tgg.TipoGastoId AND dg.TipoGastoGrupoId = tgg.TipoGastoGrupoId
-         WHERE dg.DivisaId = ?`,
-        [divisaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByDivisaId: async (divisaId) => {
+    const result = await db.query(
+      `SELECT dg.*,
+        tg."TipoGastoDescripcion",
+        tgg."TipoGastoGrupoDescripcion"
+       FROM "divisagasto" dg
+       LEFT JOIN "tipogasto" tg ON dg."TipoGastoId" = tg."TipoGastoId"
+       LEFT JOIN "tipogastogrupo" tgg ON dg."TipoGastoId" = tgg."TipoGastoId" AND dg."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
+       WHERE dg."DivisaId" = $1`,
+      [divisaId]
+    );
+    return result.rows;
   },
 
-  create: (divisaGastoData) => {
-    return new Promise((resolve, reject) => {
-      // Primero obtener el máximo DivisaGastoId para este DivisaId
-      db.query(
-        "SELECT MAX(DivisaGastoId) as maxId FROM divisagasto WHERE DivisaId = ?",
-        [divisaGastoData.DivisaId],
-        (err, results) => {
-          if (err) return reject(err);
+  create: async (divisaGastoData) => {
+    // Primero obtener el máximo DivisaGastoId para este DivisaId
+    const maxResult = await db.query(
+      'SELECT MAX("DivisaGastoId") as "maxId" FROM "divisagasto" WHERE "DivisaId" = $1',
+      [divisaGastoData.DivisaId]
+    );
 
-          // Si no hay datos, empezar desde 1, sino usar el máximo + 1
-          const nextId = (results[0]?.maxId || 0) + 1;
+    // Si no hay datos, empezar desde 1, sino usar el máximo + 1
+    const nextId = (maxResult.rows[0]?.maxId || 0) + 1;
 
-          const query = `
-            INSERT INTO divisagasto (
-              DivisaId,
-              DivisaGastoId,
-              TipoGastoId,
-              TipoGastoGrupoId
-            ) VALUES (?, ?, ?, ?)
-          `;
-
-          const values = [
-            divisaGastoData.DivisaId,
-            nextId,
-            divisaGastoData.TipoGastoId,
-            divisaGastoData.TipoGastoGrupoId,
-          ];
-
-          db.query(query, values, (err, result) => {
-            if (err) return reject(err);
-
-            // Obtener el registro recién creado usando DivisaId y DivisaGastoId
-            db.query(
-              "SELECT * FROM divisagasto WHERE DivisaId = ? AND DivisaGastoId = ?",
-              [divisaGastoData.DivisaId, nextId],
-              (err, results) => {
-                if (err) return reject(err);
-                if (results.length > 0) {
-                  resolve(results[0]);
-                } else {
-                  reject(new Error("No se pudo obtener el registro creado"));
-                }
-              }
-            );
-          });
-        }
-      );
-    });
-  },
-
-  update: (id, divisaGastoData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
+    const query = `
+      INSERT INTO "divisagasto" (
         "DivisaId",
+        "DivisaGastoId",
         "TipoGastoId",
-        "TipoGastoGrupoId",
-      ];
+        "TipoGastoGrupoId"
+      ) VALUES ($1, $2, $3, $4)
+    `;
 
-      camposActualizables.forEach((campo) => {
-        if (divisaGastoData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(divisaGastoData[campo]);
-        }
-      });
+    const values = [
+      divisaGastoData.DivisaId,
+      nextId,
+      divisaGastoData.TipoGastoId,
+      divisaGastoData.TipoGastoGrupoId,
+    ];
 
-      if (updateFields.length === 0) {
-        return resolve(null);
+    await db.query(query, values);
+
+    // Obtener el registro recién creado usando DivisaId y DivisaGastoId
+    const fetchResult = await db.query(
+      'SELECT * FROM "divisagasto" WHERE "DivisaId" = $1 AND "DivisaGastoId" = $2',
+      [divisaGastoData.DivisaId, nextId]
+    );
+
+    if (fetchResult.rows.length > 0) {
+      return fetchResult.rows[0];
+    } else {
+      throw new Error("No se pudo obtener el registro creado");
+    }
+  },
+
+  update: async (id, divisaGastoData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
+
+    const camposActualizables = [
+      "DivisaId",
+      "TipoGastoId",
+      "TipoGastoGrupoId",
+    ];
+
+    camposActualizables.forEach((campo) => {
+      if (divisaGastoData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        paramIndex++;
+        values.push(divisaGastoData[campo]);
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE divisagasto 
-        SET ${updateFields.join(", ")}
-        WHERE DivisaGastoId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-
-        // Obtener el registro actualizado
-        DivisaGasto.getById(id)
-          .then((divisaGasto) => resolve(divisaGasto))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "divisagasto"
+      SET ${updateFields.join(", ")}
+      WHERE "DivisaGastoId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Obtener el registro actualizado
+    const divisaGasto = await DivisaGasto.getById(id);
+    return divisaGasto;
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM divisagasto WHERE DivisaGastoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "divisagasto" WHERE "DivisaGastoId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  deleteByDivisaId: (divisaId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM divisagasto WHERE DivisaId = ?",
-        [divisaId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  deleteByDivisaId: async (divisaId) => {
+    const result = await db.query(
+      'DELETE FROM "divisagasto" WHERE "DivisaId" = $1',
+      [divisaId]
+    );
+    return result.rowCount > 0;
   },
 };
 

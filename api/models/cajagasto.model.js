@@ -1,114 +1,79 @@
 const db = require("../config/db");
 
 const CajaGasto = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM cajagasto", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "cajagasto"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM cajagasto WHERE CajaGastoId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "cajagasto" WHERE "CajaGastoId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getByCajaId: (cajaId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT cg.*, tg.TipoGastoDescripcion, tgg.TipoGastoGrupoDescripcion
-         FROM cajagasto cg
-         LEFT JOIN tipogasto tg ON cg.TipoGastoId = tg.TipoGastoId
-         LEFT JOIN tipogastogrupo tgg ON cg.TipoGastoId = tgg.TipoGastoId AND cg.TipoGastoGrupoId = tgg.TipoGastoGrupoId
-         WHERE cg.CajaId = ?`,
-        [cajaId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByCajaId: async (cajaId) => {
+    const result = await db.query(
+      `SELECT cg.*, tg."TipoGastoDescripcion", tgg."TipoGastoGrupoDescripcion"
+       FROM "cajagasto" cg
+       LEFT JOIN "tipogasto" tg ON cg."TipoGastoId" = tg."TipoGastoId"
+       LEFT JOIN "tipogastogrupo" tgg ON cg."TipoGastoId" = tgg."TipoGastoId" AND cg."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
+       WHERE cg."CajaId" = $1`,
+      [cajaId]
+    );
+    return result.rows;
   },
 
-  getByTipoGastoAndGrupo: (tipoGastoId, tipoGastoGrupoId) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT cg.*, tg.TipoGastoDescripcion, tgg.TipoGastoGrupoDescripcion
-         FROM cajagasto cg
-         LEFT JOIN tipogasto tg ON cg.TipoGastoId = tg.TipoGastoId
-         LEFT JOIN tipogastogrupo tgg ON cg.TipoGastoId = tgg.TipoGastoId AND cg.TipoGastoGrupoId = tgg.TipoGastoGrupoId
-         WHERE cg.TipoGastoId = ? AND cg.TipoGastoGrupoId = ?`,
-        [tipoGastoId, tipoGastoGrupoId],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getByTipoGastoAndGrupo: async (tipoGastoId, tipoGastoGrupoId) => {
+    const result = await db.query(
+      `SELECT cg.*, tg."TipoGastoDescripcion", tgg."TipoGastoGrupoDescripcion"
+       FROM "cajagasto" cg
+       LEFT JOIN "tipogasto" tg ON cg."TipoGastoId" = tg."TipoGastoId"
+       LEFT JOIN "tipogastogrupo" tgg ON cg."TipoGastoId" = tgg."TipoGastoId" AND cg."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
+       WHERE cg."TipoGastoId" = $1 AND cg."TipoGastoGrupoId" = $2`,
+      [tipoGastoId, tipoGastoGrupoId]
+    );
+    return result.rows;
   },
 
-  create: (data) => {
-    return new Promise((resolve, reject) => {
-      // Obtener el siguiente CajaGastoId disponible para la caja
-      db.query(
-        "SELECT MAX(CajaGastoId) as maxId FROM cajagasto WHERE CajaId = ?",
-        [data.CajaId],
-        (err, results) => {
-          if (err) return reject(err);
-          const nextId = (results[0]?.maxId || 0) + 1;
-          const query = `INSERT INTO cajagasto (CajaId, CajaGastoId, TipoGastoId, TipoGastoGrupoId) VALUES (?, ?, ?, ?)`;
-          const values = [
-            data.CajaId,
-            nextId,
-            data.TipoGastoId,
-            data.TipoGastoGrupoId,
-          ];
-          db.query(query, values, (err, result) => {
-            if (err) return reject(err);
-            CajaGasto.getById(nextId)
-              .then((gasto) => resolve(gasto))
-              .catch((error) => reject(error));
-          });
-        }
-      );
-    });
+  create: async (data) => {
+    // Obtener el siguiente CajaGastoId disponible para la caja
+    const maxResult = await db.query(
+      'SELECT MAX("CajaGastoId") as "maxId" FROM "cajagasto" WHERE "CajaId" = $1',
+      [data.CajaId]
+    );
+    const nextId = (maxResult.rows[0]?.maxId || 0) + 1;
+
+    const query = `INSERT INTO "cajagasto" ("CajaId", "CajaGastoId", "TipoGastoId", "TipoGastoGrupoId") VALUES ($1, $2, $3, $4)`;
+    const values = [
+      data.CajaId,
+      nextId,
+      data.TipoGastoId,
+      data.TipoGastoGrupoId,
+    ];
+    await db.query(query, values);
+
+    const gasto = await CajaGasto.getById(nextId);
+    return gasto;
   },
 
-  update: (id, data) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE cajagasto SET CajaId = ?, TipoGastoId = ?, TipoGastoGrupoId = ? WHERE CajaGastoId = ?`;
-      const values = [data.CajaId, data.TipoGastoId, data.TipoGastoGrupoId, id];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        CajaGasto.getById(id)
-          .then((gasto) => resolve(gasto))
-          .catch((error) => reject(error));
-      });
-    });
+  update: async (id, data) => {
+    const query = `UPDATE "cajagasto" SET "CajaId" = $1, "TipoGastoId" = $2, "TipoGastoGrupoId" = $3 WHERE "CajaGastoId" = $4`;
+    const values = [data.CajaId, data.TipoGastoId, data.TipoGastoGrupoId, id];
+    const result = await db.query(query, values);
+    if (result.rowCount === 0) return null;
+    const gasto = await CajaGasto.getById(id);
+    return gasto;
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM cajagasto WHERE CajaGastoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "cajagasto" WHERE "CajaGastoId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

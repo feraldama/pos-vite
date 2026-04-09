@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getFacturas,
@@ -8,6 +9,7 @@ import {
 } from "../../services/factura.service";
 import FacturasList from "../../components/facturas/FacturasList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -180,13 +182,21 @@ export default function FacturasPage() {
     setCurrentPage(1);
   };
 
-  if (loading) return <div>Cargando facturas...</div>;
-  if (error) return <div>Error: {error}</div>;
   if (!puedeLeer) return <div>No tienes permiso para ver las facturas</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Facturas</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Facturas"
+        subtitle={`${facturasData.pagination.totalItems || 0} registros`}
+        icon={FileText}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <FacturasList
         facturas={facturasData.facturas.map((f) => ({
           ...f,
@@ -226,7 +236,10 @@ export default function FacturasPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={facturasData.pagination.totalItems}
+        currentItems={facturasData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import DataTable from "../common/Table/DataTable";
 import type { Venta, VentaCreditoPago } from "../../services/venta.service";
@@ -5,7 +6,7 @@ import { formatCurrency } from "../../utils/utils";
 import { getAlmacenById } from "../../services/almacenes.service";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
-import { PlusIcon } from "@heroicons/react/24/outline";
+
 import Swal from "sweetalert2";
 import {
   getVentaCreditoByVentaId,
@@ -300,18 +301,11 @@ const VentasList = ({
             <ActionButton
               label="Nueva Venta"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
         </div>
       </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {ventasWithAlmacen.length} de{" "}
-          {pagination?.totalItems || ventasWithAlmacen.length} ventas
-        </div>
-      </div>
-
       <DataTable<VentaWithId>
         columns={columns}
         data={ventasWithAlmacen}

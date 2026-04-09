@@ -1,6 +1,8 @@
-"use client";
-
 import type { MouseEventHandler, ComponentType } from "react";
+import { Button } from "@/components/ui/button";
+
+type ButtonVariant = "primary" | "secondary" | "danger" | "success" | "ghost";
+type ButtonSize = "sm" | "md" | "lg";
 
 interface ActionButtonProps {
   label: string;
@@ -9,7 +11,23 @@ interface ActionButtonProps {
   className?: string;
   disabled?: boolean;
   type?: "button" | "submit" | "reset";
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
+
+const variantMap: Record<ButtonVariant, "default" | "outline" | "destructive" | "secondary" | "ghost" | "success"> = {
+  primary: "default",
+  secondary: "outline",
+  danger: "destructive",
+  success: "success",
+  ghost: "ghost",
+};
+
+const sizeMap: Record<ButtonSize, "sm" | "default" | "lg"> = {
+  sm: "sm",
+  md: "default",
+  lg: "lg",
+};
 
 export default function ActionButton({
   label,
@@ -18,22 +36,20 @@ export default function ActionButton({
   className = "",
   disabled = false,
   type = "button",
+  variant = "primary",
+  size = "md",
 }: ActionButtonProps) {
   return (
-    <button
+    <Button
       onClick={onClick}
       type={type}
-      className={`flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-lg whitespace-nowrap ${
-        className ? className : "text-white"
-      } ${
-        disabled
-          ? "opacity-50 cursor-not-allowed"
-          : "hover:bg-blue-800 cursor-pointer"
-      }`}
+      variant={variantMap[variant]}
+      size={sizeMap[size]}
       disabled={disabled}
+      className={className}
     >
-      {Icon && <Icon className="w-5 h-5" />}
+      {Icon && <Icon className="size-4" />}
       {label}
-    </button>
+    </Button>
   );
 }

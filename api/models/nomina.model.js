@@ -1,89 +1,75 @@
 const db = require("../config/db");
 
 const Nomina = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT n.*, 
-          c.ColegioNombre,
-          cc.ColegioCursoNombre
-        FROM nomina n
-        LEFT JOIN colegio c ON n.ColegioId = c.ColegioId
-        LEFT JOIN colegiocurso cc ON n.ColegioId = cc.ColegioId AND n.ColegioCursoId = cc.ColegioCursoId`,
-        (err, results) => {
-          if (err) reject(err);
-          resolve(results);
-        }
-      );
-    });
+  getAll: async () => {
+    const result = await db.query(
+      `SELECT n.*,
+        c."ColegioNombre",
+        cc."ColegioCursoNombre"
+      FROM "nomina" n
+      LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
+      LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"`
+    );
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT n.*, 
-          c.ColegioNombre,
-          cc.ColegioCursoNombre
-        FROM nomina n
-        LEFT JOIN colegio c ON n.ColegioId = c.ColegioId
-        LEFT JOIN colegiocurso cc ON n.ColegioId = cc.ColegioId AND n.ColegioCursoId = cc.ColegioCursoId
-        WHERE n.NominaId = ?`,
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      `SELECT n.*,
+        c."ColegioNombre",
+        cc."ColegioCursoNombre"
+      FROM "nomina" n
+      LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
+      LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
+      WHERE n."NominaId" = $1`,
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "NominaId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "NominaId",
-        "NominaNombre",
-        "NominaApellido",
-        "ColegioId",
-        "ColegioCursoId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+  getAllPaginated: async (limit, offset, sortBy = "NominaId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "NominaId",
+      "NominaNombre",
+      "NominaApellido",
+      "ColegioId",
+      "ColegioCursoId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "NominaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "NominaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const query = `
-        SELECT n.*, 
-          c.ColegioNombre,
-          cc.ColegioCursoNombre
-        FROM nomina n
-        LEFT JOIN colegio c ON n.ColegioId = c.ColegioId
-        LEFT JOIN colegiocurso cc ON n.ColegioId = cc.ColegioId AND n.ColegioCursoId = cc.ColegioCursoId
-        ORDER BY n.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT n.*,
+        c."ColegioNombre",
+        cc."ColegioCursoNombre"
+      FROM "nomina" n
+      LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
+      LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
+      ORDER BY n."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query("SELECT COUNT(*) as total FROM nomina", (err, countResult) => {
-          if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "nomina"'
+    );
 
-          resolve({
-            data: results,
-            pagination: {
-              totalItems: countResult[0].total,
-              totalPages: Math.ceil(countResult[0].total / limit),
-              currentPage: Math.floor(offset / limit) + 1,
-              itemsPerPage: limit,
-            },
-          });
-        });
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -93,193 +79,168 @@ const Nomina = {
     sortBy = "NominaId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "NominaId",
+    const allowedSortFields = [
+      "NominaId",
+      "NominaNombre",
+      "NominaApellido",
+      "ColegioId",
+      "ColegioCursoId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "NominaId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
+
+    const searchValue = `%${term}%`;
+
+    const searchQuery = `
+      SELECT n.*,
+        c."ColegioNombre",
+        cc."ColegioCursoNombre"
+      FROM "nomina" n
+      LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
+      LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
+      WHERE n."NominaNombre" LIKE $1
+        OR n."NominaApellido" LIKE $2
+        OR CAST(n."NominaId" AS TEXT) LIKE $3
+        OR CAST(n."ColegioId" AS TEXT) LIKE $4
+        OR CAST(n."ColegioCursoId" AS TEXT) LIKE $5
+        OR c."ColegioNombre" LIKE $6
+        OR cc."ColegioCursoNombre" LIKE $7
+      ORDER BY n."${sortField}" ${order}
+      LIMIT $8 OFFSET $9
+    `;
+
+    const result = await db.query(searchQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      limit,
+      offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM "nomina" n
+      LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
+      LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
+      WHERE n."NominaNombre" LIKE $1
+        OR n."NominaApellido" LIKE $2
+        OR CAST(n."NominaId" AS TEXT) LIKE $3
+        OR CAST(n."ColegioId" AS TEXT) LIKE $4
+        OR CAST(n."ColegioCursoId" AS TEXT) LIKE $5
+        OR c."ColegioNombre" LIKE $6
+        OR cc."ColegioCursoNombre" LIKE $7
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
+  },
+
+  create: async (nominaData) => {
+    const query = `
+      INSERT INTO "nomina" (
         "NominaNombre",
         "NominaApellido",
         "ColegioId",
-        "ColegioCursoId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+        "ColegioCursoId"
+      ) VALUES ($1, $2, $3, $4)
+      RETURNING "NominaId"
+    `;
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "NominaId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const result = await db.query(query, [
+      nominaData.NominaNombre,
+      nominaData.NominaApellido,
+      nominaData.ColegioId,
+      nominaData.ColegioCursoId,
+    ]);
 
-      const searchQuery = `
-        SELECT n.*, 
-          c.ColegioNombre,
-          cc.ColegioCursoNombre
-        FROM nomina n
-        LEFT JOIN colegio c ON n.ColegioId = c.ColegioId
-        LEFT JOIN colegiocurso cc ON n.ColegioId = cc.ColegioId AND n.ColegioCursoId = cc.ColegioCursoId
-        WHERE n.NominaNombre LIKE ? 
-          OR n.NominaApellido LIKE ?
-          OR CAST(n.NominaId AS CHAR) LIKE ?
-          OR CAST(n.ColegioId AS CHAR) LIKE ?
-          OR CAST(n.ColegioCursoId AS CHAR) LIKE ?
-          OR c.ColegioNombre LIKE ?
-          OR cc.ColegioCursoNombre LIKE ?
-        ORDER BY n.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
-
-      db.query(
-        searchQuery,
-        [
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) return reject(err);
-
-          db.query(
-            `SELECT COUNT(*) as total 
-            FROM nomina n
-            LEFT JOIN colegio c ON n.ColegioId = c.ColegioId
-            LEFT JOIN colegiocurso cc ON n.ColegioId = cc.ColegioId AND n.ColegioCursoId = cc.ColegioCursoId
-            WHERE n.NominaNombre LIKE ? 
-              OR n.NominaApellido LIKE ?
-              OR CAST(n.NominaId AS CHAR) LIKE ?
-              OR CAST(n.ColegioId AS CHAR) LIKE ?
-              OR CAST(n.ColegioCursoId AS CHAR) LIKE ?
-              OR c.ColegioNombre LIKE ?
-              OR cc.ColegioCursoNombre LIKE ?`,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) return reject(err);
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: countResult[0].total,
-                  totalPages: Math.ceil(countResult[0].total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    return Nomina.getById(result.rows[0].NominaId);
   },
 
-  create: (nominaData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO nomina (
-          NominaNombre,
-          NominaApellido,
-          ColegioId,
-          ColegioCursoId
-        ) VALUES (?, ?, ?, ?)
-      `;
+  update: async (id, nominaData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      db.query(
-        query,
-        [
-          nominaData.NominaNombre,
-          nominaData.NominaApellido,
-          nominaData.ColegioId,
-          nominaData.ColegioCursoId,
-        ],
-        (err, result) => {
-          if (err) return reject(err);
+    const camposActualizables = [
+      "NominaNombre",
+      "NominaApellido",
+      "ColegioId",
+      "ColegioCursoId",
+    ];
 
-          Nomina.getById(result.insertId)
-            .then((nomina) => resolve(nomina))
-            .catch((error) => reject(error));
+    camposActualizables.forEach((campo) => {
+      if (
+        nominaData[campo] !== undefined &&
+        nominaData[campo] !== null &&
+        nominaData[campo] !== ""
+      ) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        // Convertir a número si es ColegioId o ColegioCursoId
+        if (campo === "ColegioId" || campo === "ColegioCursoId") {
+          values.push(Number(nominaData[campo]));
+        } else {
+          values.push(nominaData[campo]);
         }
-      );
-    });
-  },
-
-  update: (id, nominaData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
-        "NominaNombre",
-        "NominaApellido",
-        "ColegioId",
-        "ColegioCursoId",
-      ];
-
-      camposActualizables.forEach((campo) => {
-        if (
-          nominaData[campo] !== undefined &&
-          nominaData[campo] !== null &&
-          nominaData[campo] !== ""
-        ) {
-          updateFields.push(`${campo} = ?`);
-          // Convertir a número si es ColegioId o ColegioCursoId
-          if (campo === "ColegioId" || campo === "ColegioCursoId") {
-            values.push(Number(nominaData[campo]));
-          } else {
-            values.push(nominaData[campo]);
-          }
-        }
-      });
-
-      if (updateFields.length === 0) {
-        // Si no hay campos para actualizar, devolver la nomina actual sin cambios
-        return Nomina.getById(id)
-          .then((nomina) => resolve(nomina))
-          .catch((error) => reject(error));
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE nomina 
-        SET ${updateFields.join(", ")}
-        WHERE NominaId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-
-        // Obtener el registro actualizado
-        Nomina.getById(id)
-          .then((nomina) => resolve(nomina))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      // Si no hay campos para actualizar, devolver la nomina actual sin cambios
+      return Nomina.getById(id);
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "nomina"
+      SET ${updateFields.join(", ")}
+      WHERE "NominaId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Obtener el registro actualizado
+    return Nomina.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query("DELETE FROM nomina WHERE NominaId = ?", [id], (err, result) => {
-        if (err) return reject(err);
-        resolve(result.affectedRows > 0);
-      });
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "nomina" WHERE "NominaId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

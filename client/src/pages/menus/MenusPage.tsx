@@ -1,3 +1,4 @@
+import { Menu } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
@@ -8,6 +9,7 @@ import {
 } from "../../services/menus.service";
 import MenusList from "../../components/menus/MenusList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 
 interface Menu {
@@ -160,12 +162,20 @@ export default function MenusPage() {
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver los menús.</div>;
-  if (loading) return <div>Cargando menús...</div>;
-  if (error) return <div>{error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Menús</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Menus"
+        subtitle={`${menusData.pagination.totalItems || 0} registros`}
+        icon={Menu}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <MenusList
         menus={menusData.menus.map((m) => ({ ...m, id: m.MenuId }))}
         onEdit={puedeEditar ? handleEdit : undefined}
@@ -186,7 +196,10 @@ export default function MenusPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={menusData.pagination.totalItems}
+        currentItems={menusData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

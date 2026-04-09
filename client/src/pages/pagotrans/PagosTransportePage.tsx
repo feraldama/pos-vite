@@ -1,3 +1,4 @@
+import { Truck } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getPagosTrans,
@@ -9,6 +10,7 @@ import {
 } from "../../services/pagotrans.service";
 import PagosTransporteList from "../../components/pagotrans/PagosTransporteList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -179,12 +181,20 @@ export default function PagosTransportePage() {
 
   if (!puedeLeer)
     return <div>No tienes permiso para ver los pagos de transporte.</div>;
-  if (loading) return <div>Cargando pagos de transporte...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Pagos de Transporte</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Pagos de Transporte"
+        subtitle={`${pagosTransData.pagination.totalItems || 0} registros`}
+        icon={Truck}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <PagosTransporteList
         pagosTrans={pagosTransData.pagosTrans}
         onDelete={puedeEliminar ? handleDelete : undefined}
@@ -214,7 +224,10 @@ export default function PagosTransportePage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={pagosTransData.pagination.totalItems}
+        currentItems={pagosTransData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Archive } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getProductosPaginated,
@@ -8,6 +9,7 @@ import {
 } from "../../services/productos.service";
 import ProductsList from "../../components/products/ProductsList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -200,12 +202,20 @@ export default function ProductsPage() {
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver los productos</div>;
-  if (loading) return <div>Cargando productos...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Productos</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Productos"
+        subtitle={`${productosData.pagination.totalItems || 0} registros`}
+        icon={Archive}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <ProductsList
         productos={productosData.productos.map((p) => ({
           ...p,
@@ -250,7 +260,10 @@ export default function ProductsPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={productosData.pagination.totalItems}
+        currentItems={productosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

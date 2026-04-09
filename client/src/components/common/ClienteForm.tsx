@@ -12,6 +12,11 @@ interface ClienteFormProps {
   showCodJSI?: boolean;
 }
 
+const inputClass =
+  "block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-300 focus:border-primary-500 transition-colors";
+
+const labelClass = "block mb-1.5 text-sm font-medium text-gray-700";
+
 export default function ClienteForm({
   formData,
   onInputChange,
@@ -20,13 +25,10 @@ export default function ClienteForm({
   isEditing = false,
 }: ClienteFormProps) {
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid grid-cols-6 gap-6">
+    <form onSubmit={onSubmit} className="space-y-5">
+      <div className="grid grid-cols-6 gap-x-4 gap-y-4">
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteRUC"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
+          <label htmlFor="ClienteRUC" className={labelClass}>
             RUC
           </label>
           <input
@@ -35,15 +37,12 @@ export default function ClienteForm({
             id="ClienteRUC"
             value={formData.ClienteRUC || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteNombre"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            Nombre
+          <label htmlFor="ClienteNombre" className={labelClass}>
+            Nombre <span className="text-danger-500">*</span>
           </label>
           <input
             type="text"
@@ -51,15 +50,12 @@ export default function ClienteForm({
             id="ClienteNombre"
             value={formData.ClienteNombre || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
             required
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteApellido"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
+          <label htmlFor="ClienteApellido" className={labelClass}>
             Apellido
           </label>
           <input
@@ -68,15 +64,12 @@ export default function ClienteForm({
             id="ClienteApellido"
             value={formData.ClienteApellido || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteDireccion"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            Dirección
+          <label htmlFor="ClienteDireccion" className={labelClass}>
+            Direccion
           </label>
           <input
             type="text"
@@ -84,15 +77,12 @@ export default function ClienteForm({
             id="ClienteDireccion"
             value={formData.ClienteDireccion || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteTelefono"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            Teléfono
+          <label htmlFor="ClienteTelefono" className={labelClass}>
+            Telefono
           </label>
           <input
             type="text"
@@ -100,15 +90,12 @@ export default function ClienteForm({
             id="ClienteTelefono"
             value={formData.ClienteTelefono || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="ClienteCodJSI"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            Código JSI
+          <label htmlFor="ClienteCodJSI" className={labelClass}>
+            Codigo JSI
           </label>
           <input
             type="text"
@@ -116,14 +103,11 @@ export default function ClienteForm({
             id="ClienteCodJSI"
             value={formData.ClienteCodJSI || ""}
             onChange={onInputChange}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            className={inputClass}
           />
         </div>
         <div className="col-span-6 sm:col-span-3">
-          <label
-            htmlFor="UsuarioId"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
+          <label htmlFor="UsuarioId" className={labelClass}>
             Usuario ID
           </label>
           <input
@@ -133,18 +117,19 @@ export default function ClienteForm({
             value={formData.UsuarioId || ""}
             readOnly
             disabled
-            className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+            className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
           />
+          <p className="mt-1 text-xs text-gray-400">Asignado automaticamente</p>
         </div>
       </div>
-      <div className="flex items-center space-x-2 border-t border-gray-200 pt-6">
+      <div className="flex items-center gap-2 border-t border-gray-100 pt-4">
         <ActionButton
           label={isEditing ? "Actualizar" : "Crear"}
           type="submit"
         />
         <ActionButton
           label="Cancelar"
-          className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+          variant="secondary"
           onClick={onCancel}
         />
       </div>

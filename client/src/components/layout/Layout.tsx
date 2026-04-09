@@ -6,32 +6,26 @@ import Sidebar from "./Sidebar";
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const ocultarLayout = location.pathname === "/ventas";
+  const fullscreen = location.pathname === "/ventas";
+
+  if (fullscreen) {
+    return (
+      <div className="h-screen font-sans">
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-screen font-baloo">
-      {/* Navbar con altura fija */}
-      {!ocultarLayout && (
-        <div className="flex-shrink-0">
-          <Navbar setMobileOpen={setMobileOpen} />
-        </div>
-      )}
+    <div className="flex flex-col h-screen font-sans">
+      <div className="flex-shrink-0">
+        <Navbar setMobileOpen={setMobileOpen} />
+      </div>
 
-      {/* Contenedor principal que ocupa el resto */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        {!ocultarLayout && (
-          <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-        )}
+        <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
-        {/* Contenido principal con scroll */}
-        <main
-          className={
-            ocultarLayout
-              ? "flex-1 overflow-y-auto p-0 m-0"
-              : "flex-1 overflow-y-auto p-4 lg:ml-64"
-          }
-        >
+        <main className="flex-1 overflow-y-auto bg-page-bg p-4 sm:p-6 lg:ml-64">
           <Outlet />
         </main>
       </div>

@@ -1,3 +1,4 @@
+import { ShoppingCart } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
@@ -13,6 +14,7 @@ import { getProductoById } from "../../services/productos.service";
 import { getAlmacenById } from "../../services/almacenes.service";
 import ComprasList from "../../components/compras/ComprasList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -365,12 +367,20 @@ export default function ComprasPage() {
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver las compras.</div>;
-  if (loading) return <div>Cargando compras...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Historial de Compras</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Historial de Compras"
+        subtitle={`${comprasData.pagination.totalItems || 0} registros`}
+        icon={ShoppingCart}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <ComprasList
         compras={comprasData.compras}
         onViewDetails={handleViewDetails}
@@ -395,7 +405,10 @@ export default function ComprasPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={comprasData.pagination.totalItems}
+        currentItems={comprasData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

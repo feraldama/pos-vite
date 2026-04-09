@@ -1,3 +1,4 @@
+import { Users, AlertTriangle } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getClientes,
@@ -8,6 +9,7 @@ import {
 } from "../../services/clientes.service";
 import CustomersList from "../../components/customers/CustomersList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -25,7 +27,7 @@ interface Cliente {
   [key: string]: unknown;
 }
 
-interface Pagination {
+interface PaginationData {
   totalItems: number;
   totalPages: number;
   [key: string]: unknown;
@@ -34,7 +36,7 @@ interface Pagination {
 export default function CustomersPage() {
   const [clientesData, setClientesData] = useState<{
     clientes: Cliente[];
-    pagination: Pagination;
+    pagination: PaginationData;
   }>({ clientes: [], pagination: { totalItems: 0, totalPages: 1 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,28 +57,13 @@ export default function CustomersPage() {
   const fetchClientes = useCallback(async () => {
     try {
       setLoading(true);
-      let data;
-      if (appliedSearchTerm) {
-        data = await searchClientes(
-          appliedSearchTerm,
-          currentPage,
-          itemsPerPage,
-          sortKey,
-          sortOrder
-        );
-      } else {
-        data = await getClientes(currentPage, itemsPerPage, sortKey, sortOrder);
-      }
-      setClientesData({
-        clientes: data.data,
-        pagination: data.pagination,
-      });
+      setError(null);
+      const data = appliedSearchTerm
+        ? await searchClientes(appliedSearchTerm, currentPage, itemsPerPage, sortKey, sortOrder)
+        : await getClientes(currentPage, itemsPerPage, sortKey, sortOrder);
+      setClientesData({ clientes: data.data, pagination: data.pagination });
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Error desconocido");
-      }
+      setError(err instanceof Error ? err.message : "Error al cargar clientes");
     } finally {
       setLoading(false);
     }
@@ -86,149 +73,115 @@ export default function CustomersPage() {
     fetchClientes();
   }, [fetchClientes]);
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-  };
-
   const applySearch = () => {
     setAppliedSearchTerm(searchTerm);
     setCurrentPage(1);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      applySearch();
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Estas seguro?",
+      text: "No podras revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Si, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteCliente(id);
+        Swal.fire({ icon: "success", title: "Cliente eliminado", timer: 1500, showConfirmButton: false });
+        setClientesData((prev) => ({
+          ...prev,
+          clientes: prev.clientes.filter((c) => c.ClienteId !== id),
+        }));
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        Swal.fire({ icon: "warning", title: "No permitido", text: err?.message || "No se pudo eliminar" });
+      }
     }
   };
 
-  const handleDelete = async (id: string) => {
-    Swal.fire({
-      title: "¿Estás seguro?",
-      text: "¡No podrás revertir esto!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Sí, eliminar!",
-      cancelButtonText: "Cancelar",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await deleteCliente(id);
-          Swal.fire({
-            icon: "success",
-            title: "Cliente eliminado exitosamente",
-          });
-          setClientesData((prev) => ({
-            ...prev,
-            clientes: prev.clientes.filter(
-              (cliente) => cliente.ClienteId !== id
-            ),
-          }));
-        } catch (error: unknown) {
-          const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar el cliente";
-          Swal.fire({
-            icon: "warning",
-            title: "No permitido",
-            text: msg,
-          });
-        }
-      }
-    });
-  };
-
-  const handleCreate = () => {
-    setCurrentCliente(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (cliente: Cliente) => {
-    setCurrentCliente(cliente);
-    setIsModalOpen(true);
-  };
-
   const handleSubmit = async (clienteData: Cliente) => {
-    let mensaje = "";
     try {
       if (currentCliente) {
         await updateCliente(currentCliente.ClienteId, clienteData);
-        mensaje = "Cliente actualizado exitosamente";
       } else {
-        const response = await createCliente(clienteData);
-        mensaje = response.message || "Cliente creado exitosamente";
+        await createCliente(clienteData);
       }
       setIsModalOpen(false);
       Swal.fire({
         position: "top-end",
         icon: "success",
-        title: mensaje,
+        title: currentCliente ? "Cliente actualizado" : "Cliente creado",
         showConfirmButton: false,
-        timer: 2000,
+        timer: 1500,
       });
       fetchClientes();
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
-      }
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error instanceof Error ? error.message : "Error desconocido",
+      });
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  if (loading) return <div>Cargando clientes...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!puedeLeer) return <div>No tienes permiso para ver los clientes</div>;
+  if (!puedeLeer) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <AlertTriangle className="w-12 h-12 mb-3" />
+        <p className="font-medium">No tienes permiso para ver esta seccion</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Clientes</h1>
-      <CustomersList
-        clientes={clientesData.clientes.map((c) => ({ ...c, id: c.ClienteId }))}
-        onDelete={
-          puedeEliminar
-            ? (cliente) => handleDelete(cliente.ClienteId)
-            : undefined
-        }
-        onEdit={puedeEditar ? handleEdit : undefined}
-        onCreate={puedeCrear ? handleCreate : undefined}
-        pagination={clientesData.pagination}
-        onSearch={handleSearch}
-        searchTerm={searchTerm}
-        onKeyPress={handleKeyPress}
-        onSearchSubmit={applySearch}
-        isModalOpen={isModalOpen}
-        onCloseModal={() => setIsModalOpen(false)}
-        currentCliente={
-          currentCliente
-            ? { ...currentCliente, id: currentCliente.ClienteId }
-            : null
-        }
-        onSubmit={handleSubmit}
-        sortKey={sortKey}
-        sortOrder={sortOrder}
-        onSort={(key, order) => {
-          setSortKey(key);
-          setSortOrder(order);
-          setCurrentPage(1);
-        }}
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Clientes"
+        subtitle={`${clientesData.pagination.totalItems || 0} clientes registrados`}
+        icon={Users}
       />
-      <Pagination
-        currentPage={currentPage}
-        totalPages={clientesData.pagination.totalPages}
-        onPageChange={handlePageChange}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={handleItemsPerPageChange}
-      />
+
+      {error && (
+        <div className="mb-4 p-3 bg-danger-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <CustomersList
+          clientes={clientesData.clientes.map((c) => ({ ...c, id: c.ClienteId }))}
+          onDelete={puedeEliminar ? (cliente) => handleDelete(cliente.ClienteId) : undefined}
+          onEdit={puedeEditar ? (cliente) => { setCurrentCliente(cliente); setIsModalOpen(true); } : undefined}
+          onCreate={puedeCrear ? () => { setCurrentCliente(null); setIsModalOpen(true); } : undefined}
+          pagination={clientesData.pagination}
+          onSearch={(term) => setSearchTerm(term)}
+          searchTerm={searchTerm}
+          onKeyPress={(e) => { if (e.key === "Enter") applySearch(); }}
+          onSearchSubmit={applySearch}
+          isModalOpen={isModalOpen}
+          onCloseModal={() => setIsModalOpen(false)}
+          currentCliente={currentCliente ? { ...currentCliente, id: currentCliente.ClienteId } : null}
+          onSubmit={handleSubmit}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSort={(key, order) => { setSortKey(key); setSortOrder(order); setCurrentPage(1); }}
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={clientesData.pagination.totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }}
+          totalItems={clientesData.pagination.totalItems}
+          currentItems={clientesData.clientes.length}
+        />
+      </div>
     </div>
   );
 }

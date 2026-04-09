@@ -1,8 +1,8 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import { getColegios } from "../../services/colegio.service";
 import { getColegioCursos } from "../../services/colegio.service";
 
@@ -213,14 +213,9 @@ export default function NominasList({
             <ActionButton
               label="Nueva Nomina"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {nominas.length} de {pagination?.totalItems} nominas
         </div>
       </div>
       <DataTable<Nomina>
@@ -256,7 +251,7 @@ export default function NominasList({
                   onClick={onCloseModal}
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="size-3"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -380,7 +375,7 @@ export default function NominasList({
                 />
                 <ActionButton
                   label="Cancelar"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  variant="secondary"
                   onClick={onCloseModal}
                 />
               </div>

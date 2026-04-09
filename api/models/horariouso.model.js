@@ -1,170 +1,129 @@
 const db = require("../config/db");
 
 const HorarioUso = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM horariouso", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "horariouso"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM horariouso WHERE HorarioUsoId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "horariouso" WHERE "HorarioUsoId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  create: (horarioUsoData) => {
-    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO horariouso (HorarioUsoDesde, HorarioUsoHasta) VALUES (?, ?)`;
-      const values = [
-        horarioUsoData.HorarioUsoDesde,
-        horarioUsoData.HorarioUsoHasta,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        // Obtener el horario recién creado
-        HorarioUso.getById(result.insertId)
-          .then((horario) => resolve(horario))
-          .catch((error) => reject(error));
-      });
-    });
+  create: async (horarioUsoData) => {
+    const query = `INSERT INTO "horariouso" ("HorarioUsoDesde", "HorarioUsoHasta") VALUES ($1, $2) RETURNING "HorarioUsoId"`;
+    const values = [
+      horarioUsoData.HorarioUsoDesde,
+      horarioUsoData.HorarioUsoHasta,
+    ];
+    const result = await db.query(query, values);
+    // Obtener el horario recién creado
+    return HorarioUso.getById(result.rows[0].HorarioUsoId);
   },
 
-  update: (id, horarioUsoData) => {
-    return new Promise((resolve, reject) => {
-      const query = `UPDATE horariouso SET HorarioUsoDesde = ?, HorarioUsoHasta = ? WHERE HorarioUsoId = ?`;
-      const values = [
-        horarioUsoData.HorarioUsoDesde,
-        horarioUsoData.HorarioUsoHasta,
-        id,
-      ];
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-        if (result.affectedRows === 0) return resolve(null);
-        HorarioUso.getById(id)
-          .then((horario) => resolve(horario))
-          .catch((error) => reject(error));
-      });
-    });
+  update: async (id, horarioUsoData) => {
+    const query = `UPDATE "horariouso" SET "HorarioUsoDesde" = $1, "HorarioUsoHasta" = $2 WHERE "HorarioUsoId" = $3`;
+    const values = [
+      horarioUsoData.HorarioUsoDesde,
+      horarioUsoData.HorarioUsoHasta,
+      id,
+    ];
+    const result = await db.query(query, values);
+    if (result.rowCount === 0) return null;
+    return HorarioUso.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM horariouso WHERE HorarioUsoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "horariouso" WHERE "HorarioUsoId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 
-  getAllPaginated: (limit, offset, sortBy = "HorarioUsoId", sortOrder = "ASC") => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "HorarioUsoId",
-        "HorarioUsoDesde",
-        "HorarioUsoHasta",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "HorarioUsoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+  getAllPaginated: async (limit, offset, sortBy = "HorarioUsoId", sortOrder = "ASC") => {
+    const allowedSortFields = [
+      "HorarioUsoId",
+      "HorarioUsoDesde",
+      "HorarioUsoHasta",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "HorarioUsoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      db.query(
-        `SELECT * FROM horariouso ORDER BY ${sortField} ${order} LIMIT ? OFFSET ?`,
-        [limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const result = await db.query(
+      `SELECT * FROM "horariouso" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
 
-          db.query(
-            "SELECT COUNT(*) as total FROM horariouso",
-            (err, countResult) => {
-              if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "horariouso"'
+    );
 
-              resolve({
-                horarios: results,
-                total: countResult[0].total,
-              });
-            }
-          );
-        }
-      );
-    });
+    return {
+      horarios: result.rows,
+      total: countResult.rows[0].total,
+    };
   },
 
-  searchHorarios: (
+  searchHorarios: async (
     term,
     limit,
     offset,
     sortBy = "HorarioUsoId",
     sortOrder = "ASC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "HorarioUsoId",
-        "HorarioUsoDesde",
-        "HorarioUsoHasta",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "HorarioUsoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "ASC";
+    const allowedSortFields = [
+      "HorarioUsoId",
+      "HorarioUsoDesde",
+      "HorarioUsoHasta",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "HorarioUsoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "ASC";
 
-      const searchQuery = `
-        SELECT * FROM horariouso
-        WHERE CAST(HorarioUsoId AS CHAR) LIKE ?
-        OR DATE_FORMAT(HorarioUsoDesde, '%Y-%m-%d %H:%i:%s') LIKE ?
-        OR DATE_FORMAT(HorarioUsoHasta, '%Y-%m-%d %H:%i:%s') LIKE ?
-        ORDER BY ${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
-        (err, results) => {
-          if (err) return reject(err);
+    const searchQuery = `
+      SELECT * FROM "horariouso"
+      WHERE CAST("HorarioUsoId" AS TEXT) LIKE $1
+      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
+      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') LIKE $3
+      ORDER BY "${sortField}" ${order}
+      LIMIT $4 OFFSET $5
+    `;
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM horariouso
-            WHERE CAST(HorarioUsoId AS CHAR) LIKE ?
-            OR DATE_FORMAT(HorarioUsoDesde, '%Y-%m-%d %H:%i:%s') LIKE ?
-            OR DATE_FORMAT(HorarioUsoHasta, '%Y-%m-%d %H:%i:%s') LIKE ?
-          `;
-          db.query(
-            countQuery,
-            [searchValue, searchValue, searchValue],
-            (err, countResult) => {
-              if (err) return reject(err);
-              resolve({
-                horarios: results,
-                total: countResult[0]?.total || 0,
-              });
-            }
-          );
-        }
-      );
-    });
+    const result = await db.query(searchQuery, [
+      searchValue, searchValue, searchValue, limit, offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "horariouso"
+      WHERE CAST("HorarioUsoId" AS TEXT) LIKE $1
+      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
+      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') LIKE $3
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue, searchValue, searchValue,
+    ]);
+
+    return {
+      horarios: result.rows,
+      total: countResult.rows[0]?.total || 0,
+    };
   },
 };
 

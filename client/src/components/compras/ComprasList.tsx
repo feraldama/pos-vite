@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import DataTable from "../common/Table/DataTable";
 import type { Compra, CompraProducto } from "../../services/compras.service";
@@ -5,7 +6,7 @@ import { formatCurrency } from "../../utils/utils";
 import { getAlmacenById } from "../../services/almacenes.service";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
-import { PlusIcon } from "@heroicons/react/24/outline";
+
 
 interface Pagination {
   totalItems: number;
@@ -208,18 +209,11 @@ const ComprasList = ({
             <ActionButton
               label="Nueva Compra"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
         </div>
       </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {comprasWithAlmacen.length} de{" "}
-          {pagination?.totalItems || comprasWithAlmacen.length} compras
-        </div>
-      </div>
-
       <DataTable<CompraWithId>
         columns={columns}
         data={comprasWithAlmacen}

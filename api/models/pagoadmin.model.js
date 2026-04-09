@@ -1,86 +1,70 @@
 const db = require("../config/db");
 
 const PagoAdmin = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM pagoadmin", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "pagoadmin"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM pagoadmin WHERE PagoAdminId = ?",
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      'SELECT * FROM "pagoadmin" WHERE "PagoAdminId" = $1',
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "PagoAdminId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza sortOrder y sortBy para evitar SQL Injection
-      const allowedSortFields = [
-        "PagoAdminId",
-        "PagoAdminFecha",
-        "PagoAdminMonto",
-        "PagoAdminDetalle",
-        "UsuarioId",
-        "CajaId",
-        "CajaOrigenId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    // Sanitiza sortOrder y sortBy para evitar SQL Injection
+    const allowedSortFields = [
+      "PagoAdminId",
+      "PagoAdminFecha",
+      "PagoAdminMonto",
+      "PagoAdminDetalle",
+      "UsuarioId",
+      "CajaId",
+      "CajaOrigenId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "PagoAdminFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "PagoAdminFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT p.*, 
-          c.CajaDescripcion, 
-          co.CajaDescripcion as CajaOrigenDescripcion
-        FROM pagoadmin p
-        LEFT JOIN Caja c ON p.CajaId = c.CajaId
-        LEFT JOIN Caja co ON p.CajaOrigenId = co.CajaId
-        ORDER BY p.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT p.*,
+        c."CajaDescripcion",
+        co."CajaDescripcion" as "CajaOrigenDescripcion"
+      FROM "pagoadmin" p
+      LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
+      LEFT JOIN "caja" co ON p."CajaOrigenId" = co."CajaId"
+      ORDER BY p."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query(
-          "SELECT COUNT(*) as total FROM pagoadmin",
-          (err, countResult) => {
-            if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "pagoadmin"'
+    );
 
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -90,199 +74,166 @@ const PagoAdmin = {
     sortBy = "PagoAdminFecha",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza los campos para evitar SQL Injection
-      const allowedSortFields = [
-        "PagoAdminId",
-        "PagoAdminFecha",
-        "PagoAdminMonto",
-        "PagoAdminDetalle",
-        "UsuarioId",
-        "CajaId",
-        "CajaOrigenId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    // Sanitiza los campos para evitar SQL Injection
+    const allowedSortFields = [
+      "PagoAdminId",
+      "PagoAdminFecha",
+      "PagoAdminMonto",
+      "PagoAdminDetalle",
+      "UsuarioId",
+      "CajaId",
+      "CajaOrigenId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "PagoAdminFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "PagoAdminFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const searchQuery = `
-        SELECT p.*, 
-          c.CajaDescripcion, 
-          co.CajaDescripcion as CajaOrigenDescripcion
-        FROM pagoadmin p
-        LEFT JOIN Caja c ON p.CajaId = c.CajaId
-        LEFT JOIN Caja co ON p.CajaOrigenId = co.CajaId
-        WHERE p.PagoAdminDetalle LIKE ? 
-          OR CAST(p.UsuarioId AS CHAR) LIKE ?
-          OR CAST(p.CajaId AS CHAR) LIKE ?
-          OR CAST(p.CajaOrigenId AS CHAR) LIKE ?
-          OR CAST(p.PagoAdminMonto AS CHAR) LIKE ?
-          OR DATE_FORMAT(p.PagoAdminFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-        ORDER BY p.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const searchValue = `%${term}%`;
 
-      db.query(
-        searchQuery,
-        [
-          searchValue, // Detalle
-          searchValue, // UsuarioId
-          searchValue, // CajaId
-          searchValue, // CajaOrigenId
-          searchValue, // Monto
-          searchValue, // Fecha
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
+    const searchQuery = `
+      SELECT p.*,
+        c."CajaDescripcion",
+        co."CajaDescripcion" as "CajaOrigenDescripcion"
+      FROM "pagoadmin" p
+      LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
+      LEFT JOIN "caja" co ON p."CajaOrigenId" = co."CajaId"
+      WHERE p."PagoAdminDetalle" LIKE $1
+        OR CAST(p."UsuarioId" AS TEXT) LIKE $2
+        OR CAST(p."CajaId" AS TEXT) LIKE $3
+        OR CAST(p."CajaOrigenId" AS TEXT) LIKE $4
+        OR CAST(p."PagoAdminMonto" AS TEXT) LIKE $5
+        OR TO_CHAR(p."PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $6
+      ORDER BY p."${sortField}" ${order}
+      LIMIT $7 OFFSET $8
+    `;
 
-          const countQuery = `
-            SELECT COUNT(*) as total FROM pagoadmin 
-            WHERE PagoAdminDetalle LIKE ? 
-              OR CAST(UsuarioId AS CHAR) LIKE ?
-              OR CAST(CajaId AS CHAR) LIKE ?
-              OR CAST(CajaOrigenId AS CHAR) LIKE ?
-              OR CAST(PagoAdminMonto AS CHAR) LIKE ?
-              OR DATE_FORMAT(PagoAdminFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-          `;
+    const result = await db.query(searchQuery, [
+      searchValue, // Detalle
+      searchValue, // UsuarioId
+      searchValue, // CajaId
+      searchValue, // CajaOrigenId
+      searchValue, // Monto
+      searchValue, // Fecha
+      limit,
+      offset,
+    ]);
 
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "pagoadmin"
+      WHERE "PagoAdminDetalle" LIKE $1
+        OR CAST("UsuarioId" AS TEXT) LIKE $2
+        OR CAST("CajaId" AS TEXT) LIKE $3
+        OR CAST("CajaOrigenId" AS TEXT) LIKE $4
+        OR CAST("PagoAdminMonto" AS TEXT) LIKE $5
+        OR TO_CHAR("PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $6
+    `;
 
-              const total = countResult[0]?.total || 0;
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
 
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
-  create: (pagoAdminData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO pagoadmin (
-          CajaOrigenId,
-          CajaId,
-          PagoAdminFecha,
-          PagoAdminDetalle,
-          PagoAdminMonto,
-          UsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `;
-
-      const values = [
-        pagoAdminData.CajaOrigenId,
-        pagoAdminData.CajaId,
-        pagoAdminData.PagoAdminFecha || new Date(),
-        pagoAdminData.PagoAdminDetalle,
-        pagoAdminData.PagoAdminMonto,
-        pagoAdminData.UsuarioId,
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        PagoAdmin.getById(result.insertId)
-          .then((pagoAdmin) => resolve(pagoAdmin))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, pagoAdminData) => {
-    return new Promise((resolve, reject) => {
-      // Construir la consulta dinámicamente
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
+  create: async (pagoAdminData) => {
+    const query = `
+      INSERT INTO "pagoadmin" (
         "CajaOrigenId",
         "CajaId",
         "PagoAdminFecha",
         "PagoAdminDetalle",
         "PagoAdminMonto",
-        "UsuarioId",
-      ];
+        "UsuarioId"
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING "PagoAdminId"
+    `;
 
-      camposActualizables.forEach((campo) => {
-        if (pagoAdminData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(pagoAdminData[campo]);
-        }
-      });
+    const values = [
+      pagoAdminData.CajaOrigenId,
+      pagoAdminData.CajaId,
+      pagoAdminData.PagoAdminFecha || new Date(),
+      pagoAdminData.PagoAdminDetalle,
+      pagoAdminData.PagoAdminMonto,
+      pagoAdminData.UsuarioId,
+    ];
 
-      if (updateFields.length === 0) {
-        return resolve(null); // No hay campos para actualizar
+    const result = await db.query(query, values);
+
+    // Obtener el registro recién creado
+    return PagoAdmin.getById(result.rows[0].PagoAdminId);
+  },
+
+  update: async (id, pagoAdminData) => {
+    // Construir la consulta dinámicamente
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
+
+    const camposActualizables = [
+      "CajaOrigenId",
+      "CajaId",
+      "PagoAdminFecha",
+      "PagoAdminDetalle",
+      "PagoAdminMonto",
+      "UsuarioId",
+    ];
+
+    camposActualizables.forEach((campo) => {
+      if (pagoAdminData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(pagoAdminData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE pagoadmin 
-        SET ${updateFields.join(", ")}
-        WHERE PagoAdminId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null); // No se encontró el registro
-        }
-
-        // Obtener el registro actualizado
-        PagoAdmin.getById(id)
-          .then((pagoAdmin) => resolve(pagoAdmin))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null; // No hay campos para actualizar
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "pagoadmin"
+      SET ${updateFields.join(", ")}
+      WHERE "PagoAdminId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null; // No se encontró el registro
+    }
+
+    // Obtener el registro actualizado
+    return PagoAdmin.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM pagoadmin WHERE PagoAdminId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "pagoadmin" WHERE "PagoAdminId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

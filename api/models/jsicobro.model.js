@@ -1,93 +1,78 @@
 const db = require("../config/db");
 
 const JSICobro = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM jsicobro", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "jsicobro"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        SELECT j.*, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM jsicobro j
-        LEFT JOIN Caja c ON j.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON j.ClienteId = cl.ClienteId
-        WHERE j.JSICobroId = ?
-      `;
-      db.query(query, [id], (err, results) => {
-        if (err) return reject(err);
-        resolve(results && results.length > 0 ? results[0] : null);
-      });
-    });
+  getById: async (id) => {
+    const query = `
+      SELECT j.*,
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "jsicobro" j
+      LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
+      WHERE j."JSICobroId" = $1
+    `;
+    const result = await db.query(query, [id]);
+    return result.rows && result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "JSICobroId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza sortOrder y sortBy para evitar SQL Injection
-      const allowedSortFields = [
-        "JSICobroId",
-        "CajaId",
-        "JSICobroFecha",
-        "JSICobroCod",
-        "ClienteId",
-        "JSICobroMonto",
-        "JSICobroUsuarioId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    // Sanitiza sortOrder y sortBy para evitar SQL Injection
+    const allowedSortFields = [
+      "JSICobroId",
+      "CajaId",
+      "JSICobroFecha",
+      "JSICobroCod",
+      "ClienteId",
+      "JSICobroMonto",
+      "JSICobroUsuarioId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "JSICobroFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "JSICobroFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT j.*, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM jsicobro j
-        LEFT JOIN Caja c ON j.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON j.ClienteId = cl.ClienteId
-        ORDER BY j.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT j.*,
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "jsicobro" j
+      LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
+      ORDER BY j."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query(
-          "SELECT COUNT(*) as total FROM jsicobro",
-          (err, countResult) => {
-            if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "jsicobro"'
+    );
 
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -97,218 +82,185 @@ const JSICobro = {
     sortBy = "JSICobroFecha",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      // Sanitiza los campos para evitar SQL Injection
-      const allowedSortFields = [
-        "JSICobroId",
+    // Sanitiza los campos para evitar SQL Injection
+    const allowedSortFields = [
+      "JSICobroId",
+      "CajaId",
+      "JSICobroFecha",
+      "JSICobroCod",
+      "ClienteId",
+      "JSICobroMonto",
+      "JSICobroUsuarioId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "JSICobroFecha";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
+
+    const searchValue = `%${term}%`;
+
+    const searchQuery = `
+      SELECT j.*,
+        c."CajaDescripcion",
+        cl."ClienteNombre",
+        cl."ClienteApellido"
+      FROM "jsicobro" j
+      LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
+      WHERE j."JSICobroCod" LIKE $1
+        OR CAST(j."JSICobroId" AS TEXT) LIKE $2
+        OR CAST(j."CajaId" AS TEXT) LIKE $3
+        OR CAST(j."ClienteId" AS TEXT) LIKE $4
+        OR CAST(j."JSICobroMonto" AS TEXT) LIKE $5
+        OR CAST(j."JSICobroUsuarioId" AS TEXT) LIKE $6
+        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
+        OR cl."ClienteNombre" LIKE $8
+        OR cl."ClienteApellido" LIKE $9
+        OR c."CajaDescripcion" LIKE $10
+      ORDER BY j."${sortField}" ${order}
+      LIMIT $11 OFFSET $12
+    `;
+
+    const result = await db.query(searchQuery, [
+      searchValue, // JSICobroCod
+      searchValue, // JSICobroId
+      searchValue, // CajaId
+      searchValue, // ClienteId
+      searchValue, // JSICobroMonto
+      searchValue, // JSICobroUsuarioId
+      searchValue, // JSICobroFecha
+      searchValue, // ClienteNombre
+      searchValue, // ClienteApellido
+      searchValue, // CajaDescripcion
+      limit,
+      offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "jsicobro" j
+      LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
+      LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
+      WHERE j."JSICobroCod" LIKE $1
+        OR CAST(j."JSICobroId" AS TEXT) LIKE $2
+        OR CAST(j."CajaId" AS TEXT) LIKE $3
+        OR CAST(j."ClienteId" AS TEXT) LIKE $4
+        OR CAST(j."JSICobroMonto" AS TEXT) LIKE $5
+        OR CAST(j."JSICobroUsuarioId" AS TEXT) LIKE $6
+        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
+        OR cl."ClienteNombre" LIKE $8
+        OR cl."ClienteApellido" LIKE $9
+        OR c."CajaDescripcion" LIKE $10
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
+
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
+  },
+
+  create: async (jsicobroData) => {
+    const query = `
+      INSERT INTO "jsicobro" (
         "CajaId",
         "JSICobroFecha",
         "JSICobroCod",
         "ClienteId",
         "JSICobroMonto",
-        "JSICobroUsuarioId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+        "JSICobroUsuarioId"
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING "JSICobroId"
+    `;
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "JSICobroFecha";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const values = [
+      jsicobroData.CajaId || null,
+      jsicobroData.JSICobroFecha || new Date(),
+      jsicobroData.JSICobroCod || "",
+      jsicobroData.ClienteId || null,
+      jsicobroData.JSICobroMonto || 0,
+      jsicobroData.JSICobroUsuarioId || null,
+    ];
 
-      const searchQuery = `
-        SELECT j.*, 
-          c.CajaDescripcion,
-          cl.ClienteNombre,
-          cl.ClienteApellido
-        FROM jsicobro j
-        LEFT JOIN Caja c ON j.CajaId = c.CajaId
-        LEFT JOIN clientes cl ON j.ClienteId = cl.ClienteId
-        WHERE j.JSICobroCod LIKE ? 
-          OR CAST(j.JSICobroId AS CHAR) LIKE ?
-          OR CAST(j.CajaId AS CHAR) LIKE ?
-          OR CAST(j.ClienteId AS CHAR) LIKE ?
-          OR CAST(j.JSICobroMonto AS CHAR) LIKE ?
-          OR CAST(j.JSICobroUsuarioId AS CHAR) LIKE ?
-          OR DATE_FORMAT(j.JSICobroFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-          OR cl.ClienteNombre LIKE ?
-          OR cl.ClienteApellido LIKE ?
-          OR c.CajaDescripcion LIKE ?
-        ORDER BY j.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const result = await db.query(query, values);
 
-      db.query(
-        searchQuery,
-        [
-          searchValue, // JSICobroCod
-          searchValue, // JSICobroId
-          searchValue, // CajaId
-          searchValue, // ClienteId
-          searchValue, // JSICobroMonto
-          searchValue, // JSICobroUsuarioId
-          searchValue, // JSICobroFecha
-          searchValue, // ClienteNombre
-          searchValue, // ClienteApellido
-          searchValue, // CajaDescripcion
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
-
-          const countQuery = `
-            SELECT COUNT(*) as total FROM jsicobro j
-            LEFT JOIN Caja c ON j.CajaId = c.CajaId
-            LEFT JOIN clientes cl ON j.ClienteId = cl.ClienteId
-            WHERE j.JSICobroCod LIKE ? 
-              OR CAST(j.JSICobroId AS CHAR) LIKE ?
-              OR CAST(j.CajaId AS CHAR) LIKE ?
-              OR CAST(j.ClienteId AS CHAR) LIKE ?
-              OR CAST(j.JSICobroMonto AS CHAR) LIKE ?
-              OR CAST(j.JSICobroUsuarioId AS CHAR) LIKE ?
-              OR DATE_FORMAT(j.JSICobroFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
-              OR cl.ClienteNombre LIKE ?
-              OR cl.ClienteApellido LIKE ?
-              OR c.CajaDescripcion LIKE ?
-          `;
-
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
-
-              const total = countResult[0]?.total || 0;
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    // Obtener el registro recién creado
+    return JSICobro.getById(result.rows[0].JSICobroId);
   },
 
-  create: (jsicobroData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO jsicobro (
-          CajaId,
-          JSICobroFecha,
-          JSICobroCod,
-          ClienteId,
-          JSICobroMonto,
-          JSICobroUsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `;
+  update: async (id, jsicobroData) => {
+    // Construir la consulta dinámicamente
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      const values = [
-        jsicobroData.CajaId || null,
-        jsicobroData.JSICobroFecha || new Date(),
-        jsicobroData.JSICobroCod || "",
-        jsicobroData.ClienteId || null,
-        jsicobroData.JSICobroMonto || 0,
-        jsicobroData.JSICobroUsuarioId || null,
-      ];
+    const camposActualizables = [
+      "CajaId",
+      "JSICobroFecha",
+      "JSICobroCod",
+      "ClienteId",
+      "JSICobroMonto",
+      "JSICobroUsuarioId",
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        JSICobro.getById(result.insertId)
-          .then((jsicobro) => resolve(jsicobro))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, jsicobroData) => {
-    return new Promise((resolve, reject) => {
-      // Construir la consulta dinámicamente
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
-        "CajaId",
-        "JSICobroFecha",
-        "JSICobroCod",
-        "ClienteId",
-        "JSICobroMonto",
-        "JSICobroUsuarioId",
-      ];
-
-      camposActualizables.forEach((campo) => {
-        if (jsicobroData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(jsicobroData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null); // No hay campos para actualizar
+    camposActualizables.forEach((campo) => {
+      if (jsicobroData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(jsicobroData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE jsicobro 
-        SET ${updateFields.join(", ")}
-        WHERE JSICobroId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null); // No se encontró el registro
-        }
-
-        // Obtener el registro actualizado
-        JSICobro.getById(id)
-          .then((jsicobro) => resolve(jsicobro))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null; // No hay campos para actualizar
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "jsicobro"
+      SET ${updateFields.join(", ")}
+      WHERE "JSICobroId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null; // No se encontró el registro
+    }
+
+    // Obtener el registro actualizado
+    return JSICobro.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM jsicobro WHERE JSICobroId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "jsicobro" WHERE "JSICobroId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

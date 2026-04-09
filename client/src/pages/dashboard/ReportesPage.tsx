@@ -1,3 +1,4 @@
+import { BarChart3 } from "lucide-react";
 import React, { useState } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import { jsPDF } from "jspdf";
@@ -7,6 +8,7 @@ import {
   getReportePaseCajas,
   getReporteMovimientosCajas,
 } from "../../services/registros.service";
+import PageHeader from "../../components/common/PageHeader";
 
 interface RegistroCaja {
   RegistroDiarioCajaId: number;
@@ -426,9 +428,12 @@ const ReportesPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
-      <div className="flex flex-col items-center gap-6">
+    <div className="w-full">
+      <PageHeader
+        title="Reportes"
+        icon={BarChart3}
+      />
+      <div className={`flex flex-col items-center gap-6${loading ? " opacity-50 pointer-events-none" : ""}`}>
         {/* Reporte de Pase de Cajas */}
         <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-4">Reporte de Pase de Cajas</h2>

@@ -1,3 +1,4 @@
+import { Inbox } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getCajas,
@@ -8,6 +9,7 @@ import {
 } from "../../services/cajas.service";
 import CajasList from "../../components/cajas/CajasList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -188,12 +190,19 @@ export default function CajasPage() {
 
   if (!puedeLeer) return <div>No tienes permiso para ver las cajas</div>;
 
-  if (loading) return <div>Cargando cajas...</div>;
-  if (error) return <div>Error: {error}</div>;
-
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Cajas</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Cajas"
+        subtitle={`${cajasData.pagination.totalItems || 0} registros`}
+        icon={Inbox}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <CajasList
         cajas={cajasData.cajas.map((c) => ({ ...c, id: c.CajaId }))}
         onDelete={
@@ -230,7 +239,10 @@ export default function CajasPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={cajasData.pagination.totalItems}
+        currentItems={cajasData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

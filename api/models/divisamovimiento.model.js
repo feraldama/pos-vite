@@ -1,97 +1,81 @@
 const db = require("../config/db");
 
 const DivisaMovimiento = {
-  getAll: () => {
-    return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM divisamovimiento", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
-      });
-    });
+  getAll: async () => {
+    const result = await db.query('SELECT * FROM "divisamovimiento"');
+    return result.rows;
   },
 
-  getById: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        `SELECT dm.*, 
-          c.CajaDescripcion,
-          d.DivisaNombre,
-          u.UsuarioNombre
-        FROM divisamovimiento dm
-        LEFT JOIN caja c ON dm.CajaId = c.CajaId
-        LEFT JOIN divisa d ON dm.DivisaId = d.DivisaId
-        LEFT JOIN usuario u ON dm.UsuarioId = u.UsuarioId
-        WHERE dm.DivisaMovimientoId = ?`,
-        [id],
-        (err, results) => {
-          if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
-        }
-      );
-    });
+  getById: async (id) => {
+    const result = await db.query(
+      `SELECT dm.*,
+        c."CajaDescripcion",
+        d."DivisaNombre",
+        u."UsuarioNombre"
+      FROM "divisamovimiento" dm
+      LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
+      LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
+      WHERE dm."DivisaMovimientoId" = $1`,
+      [id]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
   },
 
-  getAllPaginated: (
+  getAllPaginated: async (
     limit,
     offset,
     sortBy = "DivisaMovimientoId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "DivisaMovimientoId",
-        "CajaId",
-        "DivisaMovimientoFecha",
-        "DivisaMovimientoTipo",
-        "DivisaId",
-        "DivisaMovimientoCambio",
-        "DivisaMovimientoCantidad",
-        "DivisaMovimientoMonto",
-        "UsuarioId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+    const allowedSortFields = [
+      "DivisaMovimientoId",
+      "CajaId",
+      "DivisaMovimientoFecha",
+      "DivisaMovimientoTipo",
+      "DivisaId",
+      "DivisaMovimientoCambio",
+      "DivisaMovimientoCantidad",
+      "DivisaMovimientoMonto",
+      "UsuarioId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "DivisaMovimientoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "DivisaMovimientoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
 
-      const query = `
-        SELECT dm.*, 
-          c.CajaDescripcion,
-          d.DivisaNombre,
-          u.UsuarioNombre
-        FROM divisamovimiento dm
-        LEFT JOIN caja c ON dm.CajaId = c.CajaId
-        LEFT JOIN divisa d ON dm.DivisaId = d.DivisaId
-        LEFT JOIN usuario u ON dm.UsuarioId = u.UsuarioId
-        ORDER BY dm.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
+    const query = `
+      SELECT dm.*,
+        c."CajaDescripcion",
+        d."DivisaNombre",
+        u."UsuarioNombre"
+      FROM "divisamovimiento" dm
+      LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
+      LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
+      ORDER BY dm."${sortField}" ${order}
+      LIMIT $1 OFFSET $2
+    `;
 
-      db.query(query, [limit, offset], (err, results) => {
-        if (err) return reject(err);
+    const result = await db.query(query, [limit, offset]);
 
-        db.query(
-          "SELECT COUNT(*) as total FROM divisamovimiento",
-          (err, countResult) => {
-            if (err) return reject(err);
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM "divisamovimiento"'
+    );
 
-            resolve({
-              data: results,
-              pagination: {
-                totalItems: countResult[0].total,
-                totalPages: Math.ceil(countResult[0].total / limit),
-                currentPage: Math.floor(offset / limit) + 1,
-                itemsPerPage: limit,
-              },
-            });
-          }
-        );
-      });
-    });
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: countResult.rows[0].total,
+        totalPages: Math.ceil(countResult.rows[0].total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
   },
 
   search: async (
@@ -101,9 +85,116 @@ const DivisaMovimiento = {
     sortBy = "DivisaMovimientoId",
     sortOrder = "DESC"
   ) => {
-    return new Promise((resolve, reject) => {
-      const allowedSortFields = [
-        "DivisaMovimientoId",
+    const allowedSortFields = [
+      "DivisaMovimientoId",
+      "CajaId",
+      "DivisaMovimientoFecha",
+      "DivisaMovimientoTipo",
+      "DivisaId",
+      "DivisaMovimientoCambio",
+      "DivisaMovimientoCantidad",
+      "DivisaMovimientoMonto",
+      "UsuarioId",
+    ];
+    const allowedSortOrders = ["ASC", "DESC"];
+
+    const sortField = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "DivisaMovimientoId";
+    const order = allowedSortOrders.includes(sortOrder.toUpperCase())
+      ? sortOrder.toUpperCase()
+      : "DESC";
+
+    const searchValue = `%${term}%`;
+
+    const searchQuery = `
+      SELECT dm.*,
+        c."CajaDescripcion",
+        d."DivisaNombre",
+        u."UsuarioNombre"
+      FROM "divisamovimiento" dm
+      LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
+      LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
+      WHERE dm."DivisaMovimientoTipo" LIKE $1
+        OR CAST(dm."DivisaMovimientoId" AS TEXT) LIKE $2
+        OR CAST(dm."CajaId" AS TEXT) LIKE $3
+        OR CAST(dm."DivisaId" AS TEXT) LIKE $4
+        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) LIKE $5
+        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) LIKE $6
+        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) LIKE $7
+        OR CAST(dm."UsuarioId" AS TEXT) LIKE $8
+        OR c."CajaDescripcion" LIKE $9
+        OR d."DivisaNombre" LIKE $10
+        OR u."UsuarioNombre" LIKE $11
+      ORDER BY dm."${sortField}" ${order}
+      LIMIT $12 OFFSET $13
+    `;
+
+    const result = await db.query(searchQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      limit,
+      offset,
+    ]);
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM "divisamovimiento" dm
+      LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
+      LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
+      WHERE dm."DivisaMovimientoTipo" LIKE $1
+        OR CAST(dm."DivisaMovimientoId" AS TEXT) LIKE $2
+        OR CAST(dm."CajaId" AS TEXT) LIKE $3
+        OR CAST(dm."DivisaId" AS TEXT) LIKE $4
+        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) LIKE $5
+        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) LIKE $6
+        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) LIKE $7
+        OR CAST(dm."UsuarioId" AS TEXT) LIKE $8
+        OR c."CajaDescripcion" LIKE $9
+        OR d."DivisaNombre" LIKE $10
+        OR u."UsuarioNombre" LIKE $11
+    `;
+
+    const countResult = await db.query(countQuery, [
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    ]);
+
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+      data: result.rows,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Math.floor(offset / limit) + 1,
+        itemsPerPage: limit,
+      },
+    };
+  },
+
+  create: async (divisaMovimientoData) => {
+    const query = `
+      INSERT INTO "divisamovimiento" (
         "CajaId",
         "DivisaMovimientoFecha",
         "DivisaMovimientoTipo",
@@ -111,220 +202,80 @@ const DivisaMovimiento = {
         "DivisaMovimientoCambio",
         "DivisaMovimientoCantidad",
         "DivisaMovimientoMonto",
-        "UsuarioId",
-      ];
-      const allowedSortOrders = ["ASC", "DESC"];
+        "UsuarioId"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING "DivisaMovimientoId"
+    `;
 
-      const sortField = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "DivisaMovimientoId";
-      const order = allowedSortOrders.includes(sortOrder.toUpperCase())
-        ? sortOrder.toUpperCase()
-        : "DESC";
+    const values = [
+      divisaMovimientoData.CajaId,
+      divisaMovimientoData.DivisaMovimientoFecha || new Date(),
+      divisaMovimientoData.DivisaMovimientoTipo,
+      divisaMovimientoData.DivisaId,
+      divisaMovimientoData.DivisaMovimientoCambio || 0,
+      divisaMovimientoData.DivisaMovimientoCantidad || 0,
+      divisaMovimientoData.DivisaMovimientoMonto || 0,
+      divisaMovimientoData.UsuarioId,
+    ];
 
-      const searchQuery = `
-        SELECT dm.*, 
-          c.CajaDescripcion,
-          d.DivisaNombre,
-          u.UsuarioNombre
-        FROM divisamovimiento dm
-        LEFT JOIN caja c ON dm.CajaId = c.CajaId
-        LEFT JOIN divisa d ON dm.DivisaId = d.DivisaId
-        LEFT JOIN usuario u ON dm.UsuarioId = u.UsuarioId
-        WHERE dm.DivisaMovimientoTipo LIKE ? 
-          OR CAST(dm.DivisaMovimientoId AS CHAR) LIKE ?
-          OR CAST(dm.CajaId AS CHAR) LIKE ?
-          OR CAST(dm.DivisaId AS CHAR) LIKE ?
-          OR CAST(dm.DivisaMovimientoCambio AS CHAR) LIKE ?
-          OR CAST(dm.DivisaMovimientoCantidad AS CHAR) LIKE ?
-          OR CAST(dm.DivisaMovimientoMonto AS CHAR) LIKE ?
-          OR CAST(dm.UsuarioId AS CHAR) LIKE ?
-          OR c.CajaDescripcion LIKE ?
-          OR d.DivisaNombre LIKE ?
-          OR u.UsuarioNombre LIKE ?
-        ORDER BY dm.${sortField} ${order}
-        LIMIT ? OFFSET ?
-      `;
-      const searchValue = `%${term}%`;
+    const result = await db.query(query, values);
 
-      db.query(
-        searchQuery,
-        [
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          searchValue,
-          limit,
-          offset,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error("Error en la consulta de búsqueda:", err);
-            return reject(err);
-          }
-
-          const countQuery = `
-            SELECT COUNT(*) as total FROM divisamovimiento dm
-            LEFT JOIN caja c ON dm.CajaId = c.CajaId
-            LEFT JOIN divisa d ON dm.DivisaId = d.DivisaId
-            LEFT JOIN usuario u ON dm.UsuarioId = u.UsuarioId
-            WHERE dm.DivisaMovimientoTipo LIKE ? 
-              OR CAST(dm.DivisaMovimientoId AS CHAR) LIKE ?
-              OR CAST(dm.CajaId AS CHAR) LIKE ?
-              OR CAST(dm.DivisaId AS CHAR) LIKE ?
-              OR CAST(dm.DivisaMovimientoCambio AS CHAR) LIKE ?
-              OR CAST(dm.DivisaMovimientoCantidad AS CHAR) LIKE ?
-              OR CAST(dm.DivisaMovimientoMonto AS CHAR) LIKE ?
-              OR CAST(dm.UsuarioId AS CHAR) LIKE ?
-              OR c.CajaDescripcion LIKE ?
-              OR d.DivisaNombre LIKE ?
-              OR u.UsuarioNombre LIKE ?
-          `;
-
-          db.query(
-            countQuery,
-            [
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-              searchValue,
-            ],
-            (err, countResult) => {
-              if (err) {
-                console.error("Error en la consulta de conteo:", err);
-                return reject(err);
-              }
-
-              const total = countResult[0]?.total || 0;
-
-              resolve({
-                data: results,
-                pagination: {
-                  totalItems: total,
-                  totalPages: Math.ceil(total / limit),
-                  currentPage: Math.floor(offset / limit) + 1,
-                  itemsPerPage: limit,
-                },
-              });
-            }
-          );
-        }
-      );
-    });
+    // Obtener el registro recién creado
+    return DivisaMovimiento.getById(result.rows[0].DivisaMovimientoId);
   },
 
-  create: (divisaMovimientoData) => {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO divisamovimiento (
-          CajaId,
-          DivisaMovimientoFecha,
-          DivisaMovimientoTipo,
-          DivisaId,
-          DivisaMovimientoCambio,
-          DivisaMovimientoCantidad,
-          DivisaMovimientoMonto,
-          UsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+  update: async (id, divisaMovimientoData) => {
+    let updateFields = [];
+    let values = [];
+    let paramIndex = 1;
 
-      const values = [
-        divisaMovimientoData.CajaId,
-        divisaMovimientoData.DivisaMovimientoFecha || new Date(),
-        divisaMovimientoData.DivisaMovimientoTipo,
-        divisaMovimientoData.DivisaId,
-        divisaMovimientoData.DivisaMovimientoCambio || 0,
-        divisaMovimientoData.DivisaMovimientoCantidad || 0,
-        divisaMovimientoData.DivisaMovimientoMonto || 0,
-        divisaMovimientoData.UsuarioId,
-      ];
+    const camposActualizables = [
+      "CajaId",
+      "DivisaMovimientoFecha",
+      "DivisaMovimientoTipo",
+      "DivisaId",
+      "DivisaMovimientoCambio",
+      "DivisaMovimientoCantidad",
+      "DivisaMovimientoMonto",
+      "UsuarioId",
+    ];
 
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        // Obtener el registro recién creado
-        DivisaMovimiento.getById(result.insertId)
-          .then((divisaMovimiento) => resolve(divisaMovimiento))
-          .catch((error) => reject(error));
-      });
-    });
-  },
-
-  update: (id, divisaMovimientoData) => {
-    return new Promise((resolve, reject) => {
-      let updateFields = [];
-      let values = [];
-
-      const camposActualizables = [
-        "CajaId",
-        "DivisaMovimientoFecha",
-        "DivisaMovimientoTipo",
-        "DivisaId",
-        "DivisaMovimientoCambio",
-        "DivisaMovimientoCantidad",
-        "DivisaMovimientoMonto",
-        "UsuarioId",
-      ];
-
-      camposActualizables.forEach((campo) => {
-        if (divisaMovimientoData[campo] !== undefined) {
-          updateFields.push(`${campo} = ?`);
-          values.push(divisaMovimientoData[campo]);
-        }
-      });
-
-      if (updateFields.length === 0) {
-        return resolve(null);
+    camposActualizables.forEach((campo) => {
+      if (divisaMovimientoData[campo] !== undefined) {
+        updateFields.push(`"${campo}" = $${paramIndex}`);
+        values.push(divisaMovimientoData[campo]);
+        paramIndex++;
       }
-
-      values.push(id);
-
-      const query = `
-        UPDATE divisamovimiento 
-        SET ${updateFields.join(", ")}
-        WHERE DivisaMovimientoId = ?
-      `;
-
-      db.query(query, values, (err, result) => {
-        if (err) return reject(err);
-
-        if (result.affectedRows === 0) {
-          return resolve(null);
-        }
-
-        // Obtener el registro actualizado
-        DivisaMovimiento.getById(id)
-          .then((divisaMovimiento) => resolve(divisaMovimiento))
-          .catch((error) => reject(error));
-      });
     });
+
+    if (updateFields.length === 0) {
+      return null;
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE "divisamovimiento"
+      SET ${updateFields.join(", ")}
+      WHERE "DivisaMovimientoId" = $${paramIndex}
+    `;
+
+    const result = await db.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Obtener el registro actualizado
+    return DivisaMovimiento.getById(id);
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM divisamovimiento WHERE DivisaMovimientoId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
-      );
-    });
+  delete: async (id) => {
+    const result = await db.query(
+      'DELETE FROM "divisamovimiento" WHERE "DivisaMovimientoId" = $1',
+      [id]
+    );
+    return result.rowCount > 0;
   },
 };
 

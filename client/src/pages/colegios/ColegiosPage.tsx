@@ -1,3 +1,4 @@
+import { GraduationCap } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getColegios,
@@ -8,6 +9,7 @@ import {
 } from "../../services/colegio.service";
 import ColegiosList from "../../components/colegios/ColegiosList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 
@@ -179,12 +181,20 @@ export default function ColegiosPage() {
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver los colegios.</div>;
-  if (loading) return <div>Cargando colegios...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Administración de Colegios</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Administracion de Colegios"
+        subtitle={`${colegiosData.pagination.totalItems || 0} registros`}
+        icon={GraduationCap}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <ColegiosList
         colegios={colegiosData.colegios.map((c) => ({ ...c, id: c.ColegioId }))}
         onDelete={
@@ -222,7 +232,10 @@ export default function ColegiosPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={colegiosData.pagination.totalItems}
+        currentItems={colegiosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

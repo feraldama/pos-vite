@@ -1,3 +1,4 @@
+import { Send } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getWesternEnvios,
@@ -10,6 +11,7 @@ import WesternEnvioList, {
   type WesternEnvio,
 } from "../../components/westernenvio/WesternEnvioList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 import { useAuth } from "../../contexts/useAuth";
@@ -180,12 +182,20 @@ export default function WesternEnvioPage() {
 
   if (!puedeLeer)
     return <div>No tienes permiso para ver los envíos western.</div>;
-  if (loading) return <div>Cargando envíos western...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Western</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Western Envios"
+        subtitle={`${enviosData.pagination.totalItems || 0} registros`}
+        icon={Send}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <WesternEnvioList
         envios={enviosData.envios}
         onDelete={puedeEliminar ? handleDelete : undefined}
@@ -215,7 +225,10 @@ export default function WesternEnvioPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={enviosData.pagination.totalItems}
+        currentItems={enviosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

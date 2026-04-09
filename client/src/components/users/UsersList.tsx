@@ -1,8 +1,8 @@
+import { Plus, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
 import { getPerfiles } from "../../services/perfiles.service";
 import { getPerfilesByUsuario } from "../../services/usuarioperfil.service";
@@ -232,17 +232,12 @@ export default function UsuariosList({
             <ActionButton
               label="Nuevo Usuario"
               onClick={onCreate}
-              icon={PlusIcon}
+              icon={Plus}
             />
           )}
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {usuarios.length} de {pagination?.totalItems} usuarios
-        </div>
-      </div>
 
       {/* Tabla de usuarios usando el componente DataTable */}
       <DataTable<Usuario>
@@ -284,7 +279,7 @@ export default function UsuariosList({
                   onClick={onCloseModal}
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="size-3"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -492,9 +487,9 @@ export default function UsuariosList({
                           className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
                         >
                           {showPassword ? (
-                            <EyeSlashIcon className="h-5 w-5" />
+                            <EyeOff className="size-5" />
                           ) : (
-                            <EyeIcon className="h-5 w-5" />
+                            <Eye className="size-5" />
                           )}
                         </button>
                       </div>
@@ -544,7 +539,7 @@ export default function UsuariosList({
                 />
                 <ActionButton
                   label="Cancelar"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  variant="secondary"
                   onClick={onCloseModal}
                 />
               </div>

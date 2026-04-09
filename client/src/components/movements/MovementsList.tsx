@@ -1,7 +1,7 @@
+import { Plus } from "lucide-react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
 
 export interface Movimiento {
   id: string | number;
@@ -175,13 +175,8 @@ export default function MovementsList({
           <ActionButton
             label="Nuevo Registro"
             onClick={onCreate}
-            icon={PlusIcon}
+            icon={Plus}
           />
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-600">
-          Mostrando {movimientos.length} de {pagination?.totalItems} registros
         </div>
       </div>
 
@@ -213,7 +208,7 @@ export default function MovementsList({
               />
               <ActionButton
                 label="Cancelar"
-                className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                variant="secondary"
                 onClick={onCloseModal}
               />
             </form>

@@ -1,3 +1,4 @@
+import { Users } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import {
   getUsuarios,
@@ -8,6 +9,7 @@ import {
 } from "../../services/usuarios.service";
 import UsersList from "../../components/users/UsersList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
@@ -220,12 +222,19 @@ export default function UsuariosPage() {
 
   if (!puedeLeer) return <div>No tienes permiso para ver los usuarios</div>;
 
-  if (loading) return <div>Cargando usuarios...</div>;
-  if (error) return <div>Error: {error}</div>;
-
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Gestión de Usuarios</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Gestion de Usuarios"
+        subtitle={`${usuariosData.pagination.totalItems || 0} registros`}
+        icon={Users}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <UsersList
         usuarios={usuariosData.usuarios.map((u) => ({ ...u, id: u.UsuarioId }))}
         onDelete={
@@ -260,7 +269,10 @@ export default function UsuariosPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={usuariosData.pagination.totalItems}
+        currentItems={usuariosData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

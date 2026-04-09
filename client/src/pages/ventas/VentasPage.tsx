@@ -1,3 +1,4 @@
+import { ShoppingBag } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import {
@@ -13,6 +14,7 @@ import { getProductoById } from "../../services/productos.service";
 import { getAlmacenById } from "../../services/almacenes.service";
 import VentasList from "../../components/ventas/VentasList";
 import Pagination from "../../components/common/Pagination";
+import PageHeader from "../../components/common/PageHeader";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -376,12 +378,20 @@ export default function VentasPage() {
   };
 
   if (!puedeLeer) return <div>No tienes permiso para ver las ventas.</div>;
-  if (loading) return <div>Cargando ventas...</div>;
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Historial de Ventas</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Historial de Ventas"
+        subtitle={`${ventasData.pagination.totalItems || 0} registros`}
+        icon={ShoppingBag}
+      />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          Error: {error}
+        </div>
+      )}
+      <div className={loading ? "opacity-50 pointer-events-none" : ""}>
       <VentasList
         ventas={ventasData.ventas}
         onViewDetails={handleViewDetails}
@@ -406,7 +416,10 @@ export default function VentasPage() {
         onPageChange={handlePageChange}
         itemsPerPage={itemsPerPage}
         onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={ventasData.pagination.totalItems}
+        currentItems={ventasData.pagination.itemsPerPage}
       />
+      </div>
     </div>
   );
 }

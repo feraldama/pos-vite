@@ -1,3 +1,4 @@
+import { Banknote } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -9,6 +10,7 @@ import { getVentasPendientesPorCliente } from "../../services/venta.service";
 import { useAuth } from "../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
+import PageHeader from "../../components/common/PageHeader";
 
 interface Cliente {
   ClienteId: number;
@@ -249,8 +251,11 @@ const CreditoPagosPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-medium mb-3">Cobro de Créditos</h1>
+    <div className="w-full">
+      <PageHeader
+        title="Cobro de Creditos"
+        icon={Banknote}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Formulario de pago */}

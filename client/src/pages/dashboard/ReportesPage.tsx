@@ -1,4 +1,4 @@
-import { BarChart3 } from "lucide-react";
+import { BarChart3, FileText, Wallet, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import React, { useState } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import { jsPDF } from "jspdf";
@@ -7,8 +7,14 @@ import { formatMiles } from "../../utils/utils";
 import {
   getReportePaseCajas,
   getReporteMovimientosCajas,
+  getReporteCierreDiario,
+  getReporteDivisas,
 } from "../../services/registros.service";
 import PageHeader from "../../components/common/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+// ── Tipos ──
 
 interface RegistroCaja {
   RegistroDiarioCajaId: number;
@@ -34,499 +40,375 @@ interface ReporteCaja {
   saldo: number;
 }
 
+// ── Componente ReportCard ──
+
+interface ReportCardProps {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}
+
+function ReportCard({ title, description, icon, children }: ReportCardProps) {
+  return (
+    <div className="bg-white border border-border rounded-xl shadow-card p-5">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="p-2 rounded-lg bg-primary-50 flex-shrink-0">{icon}</div>
+        <div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Componente DateRange ──
+
+interface DateRangeProps {
+  fechaInicio: string;
+  fechaFin: string;
+  onChangeFechaInicio: (v: string) => void;
+  onChangeFechaFin: (v: string) => void;
+}
+
+function DateRange({ fechaInicio, fechaFin, onChangeFechaInicio, onChangeFechaFin }: DateRangeProps) {
+  return (
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1">Desde</label>
+        <Input type="date" value={fechaInicio} onChange={(e) => onChangeFechaInicio(e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1">Hasta</label>
+        <Input type="date" value={fechaFin} onChange={(e) => onChangeFechaFin(e.target.value)} />
+      </div>
+    </div>
+  );
+}
+
+// ── Helpers ──
+
+const fmt = (fecha: string) => {
+  if (!fecha) return "";
+  const [y, m, d] = fecha.split("-");
+  return `${d}/${m}/${y}`;
+};
+
+const getLastY = (doc: jsPDF) =>
+  (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+
+// ── Pagina principal ──
+
 const ReportesPage: React.FC = () => {
   const puedeLeer = usePermiso("REPORTES", "leer");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
-  const [fechaInicio, setFechaInicio] = useState(today);
-  const [fechaFin, setFechaFin] = useState(today);
-  const [fechaInicioMovimientos, setFechaInicioMovimientos] = useState(today);
-  const [fechaFinMovimientos, setFechaFinMovimientos] = useState(today);
 
-  if (!puedeLeer) return <div>No tienes permiso para ver los reportes</div>;
+  // Fechas por reporte
+  const [f, setF] = useState({
+    pase: [today, today],
+    mov: [today, today],
+    cierre: [today, today],
+    divisas: [today, today],
+  });
 
-  const formatearFecha = (fecha: string): string => {
-    if (!fecha) return "";
-    const [year, month, day] = fecha.split("-");
-    return `${day}/${month}/${year}`;
+  const updateF = (key: keyof typeof f, idx: 0 | 1, val: string) => {
+    setF((prev) => {
+      const arr = [...prev[key]];
+      arr[idx] = val;
+      return { ...prev, [key]: arr };
+    });
   };
 
-  const generarPdfPaseCajas = (reportePaseCajas: ReporteCaja[]) => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Reporte de Pase de Cajas", 14, 18);
-    doc.setFontSize(12);
-    doc.text(
-      `Período: ${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)}`,
-      14,
-      26
+  if (!puedeLeer) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <AlertTriangle className="size-12 mb-3" />
+        <p className="font-medium">No tienes permiso para ver los reportes</p>
+      </div>
     );
+  }
 
-    let y = 35;
+  // ── Generadores de PDF ──
 
-    reportePaseCajas.forEach((caja, index) => {
-      // Si no cabe en la página, agregar nueva página
-      if (y > 250) {
-        doc.addPage();
-        y = 20;
-      }
+  const runReport = async (key: string, fn: () => Promise<void>) => {
+    setLoading(key);
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al generar el reporte");
+      console.error(err);
+    } finally {
+      setLoading(null);
+    }
+  };
 
-      // Título de la caja
-      doc.setFontSize(14);
-      doc.text(`Caja: ${caja.CajaDescripcion} (ID: ${caja.CajaId})`, 14, y);
-      y += 8;
+  // 1. Pase de Cajas
+  const handlePaseCajas = () => runReport("pase", async () => {
+    const response = await getReportePaseCajas(f.pase[0], f.pase[1]);
+    const data = (response.data || []) as ReporteCaja[];
+    if (!data.length) { setError("No hay datos para el periodo seleccionado"); return; }
+
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Reporte de Pase de Cajas", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${fmt(f.pase[0])} al ${fmt(f.pase[1])}`, 14, 25);
+    let y = 32;
+
+    data.forEach((caja, i) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${caja.CajaDescripcion}`, 14, y);
+      doc.setFont("helvetica", "normal");
+      y += 6;
 
       // Ingresos
-      doc.setFontSize(12);
-      doc.text("INGRESOS", 14, y);
-      y += 6;
-
       if (caja.ingresos.length > 0) {
-        const ingresosRows = caja.ingresos.map((ingreso) => [
-          ingreso.RegistroDiarioCajaId.toString(),
-          new Date(ingreso.RegistroDiarioCajaFecha).toLocaleDateString("es-ES"),
-          ingreso.UsuarioId || "",
-          ingreso.RegistroDiarioCajaDetalle || "",
-          formatMiles(ingreso.RegistroDiarioCajaMonto),
-        ]);
-
         autoTable(doc, {
           head: [["ID", "Fecha", "Usuario", "Detalle", "Monto"]],
-          body: ingresosRows,
-          startY: y,
-          theme: "grid",
-          headStyles: { fillColor: [34, 197, 94] },
-          styles: { fontSize: 9 },
-          margin: { left: 14, right: 14 },
+          body: caja.ingresos.map((r) => [
+            r.RegistroDiarioCajaId, new Date(r.RegistroDiarioCajaFecha).toLocaleDateString("es-PY"),
+            r.UsuarioId || "", r.RegistroDiarioCajaDetalle || "", formatMiles(r.RegistroDiarioCajaMonto),
+          ]),
+          startY: y, theme: "striped", headStyles: { fillColor: [16, 185, 129] },
+          styles: { fontSize: 8 }, margin: { left: 14, right: 14 },
         });
-
-        y =
-          (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
-            .finalY + 5;
-      } else {
-        doc.setFontSize(10);
-        doc.text("No hay ingresos", 14, y);
-        y += 6;
+        y = getLastY(doc) + 4;
       }
-
-      // Total ingresos
-      doc.setFontSize(10);
-      doc.text(`Total Ingresos: Gs. ${formatMiles(caja.totalIngresos)}`, 14, y);
-      y += 8;
+      doc.setFontSize(9);
+      doc.text(`Ingresos: Gs. ${formatMiles(caja.totalIngresos)}`, 14, y);
+      y += 4;
 
       // Egresos
-      doc.setFontSize(12);
-      doc.text("EGRESOS", 14, y);
-      y += 6;
-
       if (caja.egresos.length > 0) {
-        const egresosRows = caja.egresos.map((egreso) => [
-          egreso.RegistroDiarioCajaId.toString(),
-          new Date(egreso.RegistroDiarioCajaFecha).toLocaleDateString("es-ES"),
-          egreso.UsuarioId || "",
-          egreso.RegistroDiarioCajaDetalle || "",
-          formatMiles(egreso.RegistroDiarioCajaMonto),
-        ]);
-
         autoTable(doc, {
           head: [["ID", "Fecha", "Usuario", "Detalle", "Monto"]],
-          body: egresosRows,
-          startY: y,
-          theme: "grid",
-          headStyles: { fillColor: [239, 68, 68] },
-          styles: { fontSize: 9 },
-          margin: { left: 14, right: 14 },
+          body: caja.egresos.map((r) => [
+            r.RegistroDiarioCajaId, new Date(r.RegistroDiarioCajaFecha).toLocaleDateString("es-PY"),
+            r.UsuarioId || "", r.RegistroDiarioCajaDetalle || "", formatMiles(r.RegistroDiarioCajaMonto),
+          ]),
+          startY: y, theme: "striped", headStyles: { fillColor: [220, 38, 38] },
+          styles: { fontSize: 8 }, margin: { left: 14, right: 14 },
         });
-
-        y =
-          (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
-            .finalY + 5;
-      } else {
-        doc.setFontSize(10);
-        doc.text("No hay egresos", 14, y);
-        y += 6;
+        y = getLastY(doc) + 4;
       }
-
-      // Total egresos
-      doc.setFontSize(10);
-      doc.text(`Total Egresos: Gs. ${formatMiles(caja.totalEgresos)}`, 14, y);
-      y += 6;
-
-      // Saldo
-      doc.setFontSize(11);
+      doc.setFontSize(9);
+      doc.text(`Egresos: Gs. ${formatMiles(caja.totalEgresos)}`, 14, y);
+      y += 5;
       doc.setFont("helvetica", "bold");
       doc.text(`Saldo: Gs. ${formatMiles(caja.saldo)}`, 14, y);
       doc.setFont("helvetica", "normal");
-      y += 12;
-
-      // Separador entre cajas
-      if (index < reportePaseCajas.length - 1) {
-        doc.setDrawColor(200, 200, 200);
-        doc.line(14, y, 196, y);
-        y += 8;
-      }
+      y += 10;
+      if (i < data.length - 1) { doc.line(14, y - 4, 196, y - 4); }
     });
 
-    // Abrir el PDF en una nueva pestaña
-    const blobUrl = doc.output("bloburl");
-    window.open(blobUrl, "_blank");
-  };
+    window.open(doc.output("bloburl") as unknown as string, "_blank");
+  });
 
-  const handleGenerarReportePaseCajas = async () => {
-    if (!fechaInicio || !fechaFin) {
-      setError("Debes seleccionar fecha de inicio y fecha de fin");
-      return;
-    }
+  // 2. Movimientos de Cajas
+  const handleMovimientos = () => runReport("mov", async () => {
+    const response = await getReporteMovimientosCajas(f.mov[0], f.mov[1]);
+    const movimientos = (response.data || []) as RegistroCaja[];
+    if (!movimientos.length) { setError("No hay datos para el periodo seleccionado"); return; }
 
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getReportePaseCajas(fechaInicio, fechaFin);
-      const data = (response.data || []) as ReporteCaja[];
+    // Agrupar por caja
+    const porCaja: Record<number, { desc: string; ing: RegistroCaja[]; egr: RegistroCaja[]; tIng: number; tEgr: number }> = {};
+    movimientos.forEach((m) => {
+      if (!porCaja[m.CajaId]) porCaja[m.CajaId] = { desc: m.CajaDescripcion || `Caja ${m.CajaId}`, ing: [], egr: [], tIng: 0, tEgr: 0 };
+      const monto = Number(m.RegistroDiarioCajaMonto) || 0;
+      if (m.TipoGastoId === 2) { porCaja[m.CajaId].ing.push(m); porCaja[m.CajaId].tIng += monto; }
+      else { porCaja[m.CajaId].egr.push(m); porCaja[m.CajaId].tEgr += monto; }
+    });
 
-      if (!data.length) {
-        setError("No hay datos para el período seleccionado");
-        return;
-      }
-
-      generarPdfPaseCajas(data);
-    } catch (err) {
-      setError("Error al generar el reporte de pase de cajas");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generarPdfMovimientosCajas = (movimientos: RegistroCaja[]) => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.text("Reporte de Movimientos de Cajas", 14, 18);
-    doc.setFontSize(12);
-    doc.text(
-      `Período: ${formatearFecha(fechaInicioMovimientos)} al ${formatearFecha(
-        fechaFinMovimientos
-      )}`,
-      14,
-      26
-    );
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${fmt(f.mov[0])} al ${fmt(f.mov[1])}`, 14, 25);
+    let y = 32;
 
-    let y = 35;
-
-    if (movimientos.length > 0) {
-      // Agrupar movimientos por caja
-      const movimientosPorCaja: Record<
-        number,
-        {
-          CajaId: number;
-          CajaDescripcion: string;
-          ingresos: RegistroCaja[];
-          egresos: RegistroCaja[];
-          totalIngresos: number;
-          totalEgresos: number;
-        }
-      > = {};
-
-      movimientos.forEach((movimiento) => {
-        const cajaId = movimiento.CajaId;
-        if (!movimientosPorCaja[cajaId]) {
-          movimientosPorCaja[cajaId] = {
-            CajaId: cajaId,
-            CajaDescripcion:
-              movimiento.CajaDescripcion || `Caja ${cajaId}`,
-            ingresos: [],
-            egresos: [],
-            totalIngresos: 0,
-            totalEgresos: 0,
-          };
-        }
-
-        const monto = Number(movimiento.RegistroDiarioCajaMonto) || 0;
-
-        // TipoGastoId === 2 es ingreso, TipoGastoId === 1 es egreso
-        if (movimiento.TipoGastoId === 2) {
-          movimientosPorCaja[cajaId].ingresos.push(movimiento);
-          movimientosPorCaja[cajaId].totalIngresos += monto;
-        } else if (movimiento.TipoGastoId === 1) {
-          movimientosPorCaja[cajaId].egresos.push(movimiento);
-          movimientosPorCaja[cajaId].totalEgresos += monto;
-        }
-      });
-
-      // Ordenar cajas por CajaId
-      const cajasOrdenadas = Object.values(movimientosPorCaja).sort(
-        (a, b) => a.CajaId - b.CajaId
-      );
-
-      cajasOrdenadas.forEach((caja, index) => {
-        // Si no cabe en la página, agregar nueva página
-        if (y > 250) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Título de la caja
-        doc.setFontSize(14);
-        doc.text(
-          `Caja: ${caja.CajaDescripcion} (ID: ${caja.CajaId})`,
-          14,
-          y
-        );
-        y += 8;
-
-        // Ingresos
-        doc.setFontSize(12);
-        doc.text("INGRESOS", 14, y);
-        y += 6;
-
-        if (caja.ingresos.length > 0) {
-          // Ordenar ingresos por RegistroDiarioCajaId ascendente
-          const ingresosOrdenados = [...caja.ingresos].sort(
-            (a, b) => a.RegistroDiarioCajaId - b.RegistroDiarioCajaId
-          );
-
-          const ingresosRows = ingresosOrdenados.map((ingreso) => [
-            ingreso.RegistroDiarioCajaId.toString(),
-            new Date(ingreso.RegistroDiarioCajaFecha).toLocaleDateString(
-              "es-ES"
-            ),
-            ingreso.UsuarioId || "",
-            ingreso.RegistroDiarioCajaDetalle || "",
-            formatMiles(ingreso.RegistroDiarioCajaMonto),
-          ]);
-
-          autoTable(doc, {
-            head: [["ID", "Fecha", "Usuario", "Detalle", "Monto"]],
-            body: ingresosRows,
-            startY: y,
-            theme: "grid",
-            headStyles: { fillColor: [34, 197, 94] },
-            styles: { fontSize: 9 },
-            margin: { left: 14, right: 14 },
-          });
-
-          y =
-            (doc as unknown as { lastAutoTable: { finalY: number } })
-              .lastAutoTable.finalY + 5;
-        } else {
-          doc.setFontSize(10);
-          doc.text("No hay ingresos", 14, y);
-          y += 6;
-        }
-
-        // Total ingresos
-        doc.setFontSize(10);
-        doc.text(
-          `Total Ingresos: Gs. ${formatMiles(caja.totalIngresos)}`,
-          14,
-          y
-        );
-        y += 8;
-
-        // Egresos
-        doc.setFontSize(12);
-        doc.text("EGRESOS", 14, y);
-        y += 6;
-
-        if (caja.egresos.length > 0) {
-          // Ordenar egresos por RegistroDiarioCajaId ascendente
-          const egresosOrdenados = [...caja.egresos].sort(
-            (a, b) => a.RegistroDiarioCajaId - b.RegistroDiarioCajaId
-          );
-
-          const egresosRows = egresosOrdenados.map((egreso) => [
-            egreso.RegistroDiarioCajaId.toString(),
-            new Date(egreso.RegistroDiarioCajaFecha).toLocaleDateString(
-              "es-ES"
-            ),
-            egreso.UsuarioId || "",
-            egreso.RegistroDiarioCajaDetalle || "",
-            formatMiles(egreso.RegistroDiarioCajaMonto),
-          ]);
-
-          autoTable(doc, {
-            head: [["ID", "Fecha", "Usuario", "Detalle", "Monto"]],
-            body: egresosRows,
-            startY: y,
-            theme: "grid",
-            headStyles: { fillColor: [239, 68, 68] },
-            styles: { fontSize: 9 },
-            margin: { left: 14, right: 14 },
-          });
-
-          y =
-            (doc as unknown as { lastAutoTable: { finalY: number } })
-              .lastAutoTable.finalY + 5;
-        } else {
-          doc.setFontSize(10);
-          doc.text("No hay egresos", 14, y);
-          y += 6;
-        }
-
-        // Total egresos
-        doc.setFontSize(10);
-        doc.text(
-          `Total Egresos: Gs. ${formatMiles(caja.totalEgresos)}`,
-          14,
-          y
-        );
-        y += 6;
-
-        // Saldo
-        const saldo = caja.totalIngresos - caja.totalEgresos;
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text(`Saldo: Gs. ${formatMiles(saldo)}`, 14, y);
-        doc.setFont("helvetica", "normal");
-        y += 12;
-
-        // Separador entre cajas
-        if (index < cajasOrdenadas.length - 1) {
-          doc.setDrawColor(200, 200, 200);
-          doc.line(14, y, 196, y);
-          y += 8;
-        }
-      });
-    } else {
-      doc.setFontSize(10);
-      doc.text("No hay movimientos para el período seleccionado", 14, y);
-    }
-
-    // Abrir el PDF en una nueva pestaña
-    const blobUrl = doc.output("bloburl");
-    window.open(blobUrl, "_blank");
-  };
-
-  const handleGenerarReporteMovimientosCajas = async () => {
-    if (!fechaInicioMovimientos || !fechaFinMovimientos) {
-      setError("Debes seleccionar fecha de inicio y fecha de fin");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getReporteMovimientosCajas(
-        fechaInicioMovimientos,
-        fechaFinMovimientos
-      );
-      const data = (response.data || []) as RegistroCaja[];
-
-      if (!data.length) {
-        setError("No hay datos para el período seleccionado");
-        return;
+    Object.values(porCaja).forEach((caja) => {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(caja.desc, 14, y);
+      doc.setFont("helvetica", "normal");
+      y += 6;
+      const allRows = [...caja.ing.map((r) => [r.RegistroDiarioCajaId, new Date(r.RegistroDiarioCajaFecha).toLocaleDateString("es-PY"), "Ingreso", r.TipoGastoGrupoDescripcion || "", r.RegistroDiarioCajaDetalle || "", formatMiles(Number(r.RegistroDiarioCajaMonto))]),
+        ...caja.egr.map((r) => [r.RegistroDiarioCajaId, new Date(r.RegistroDiarioCajaFecha).toLocaleDateString("es-PY"), "Egreso", r.TipoGastoGrupoDescripcion || "", r.RegistroDiarioCajaDetalle || "", formatMiles(Number(r.RegistroDiarioCajaMonto))])];
+      if (allRows.length) {
+        autoTable(doc, {
+          head: [["ID", "Fecha", "Tipo", "Grupo", "Detalle", "Monto"]],
+          body: allRows, startY: y, theme: "striped", styles: { fontSize: 7 }, margin: { left: 14, right: 14 },
+        });
+        y = getLastY(doc) + 4;
       }
+      doc.setFontSize(9);
+      doc.text(`Ingresos: Gs. ${formatMiles(caja.tIng)} | Egresos: Gs. ${formatMiles(caja.tEgr)} | Saldo: Gs. ${formatMiles(caja.tIng - caja.tEgr)}`, 14, y);
+      y += 10;
+    });
 
-      generarPdfMovimientosCajas(data);
-    } catch (err) {
-      setError("Error al generar el reporte de movimientos de cajas");
-      console.error(err);
-    } finally {
-      setLoading(false);
+    window.open(doc.output("bloburl") as unknown as string, "_blank");
+  });
+
+  // 3. Cierre Diario de Caja
+  const handleCierreDiario = () => runReport("cierre", async () => {
+    const response = await getReporteCierreDiario(f.cierre[0], f.cierre[1]);
+    const data = response.data || [];
+    if (!data.length) { setError("No hay datos para el periodo seleccionado"); return; }
+
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Cierre Diario de Caja", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${fmt(f.cierre[0])} al ${fmt(f.cierre[1])}`, 14, 25);
+
+    const rows = data.map((r: { CajaDescripcion: string; TotalIngresos: number; TotalEgresos: number; Saldo: number; CantMovimientos: number }) => [
+      (r.CajaDescripcion || "").trim(),
+      formatMiles(Number(r.TotalIngresos)),
+      formatMiles(Number(r.TotalEgresos)),
+      formatMiles(Number(r.Saldo)),
+      r.CantMovimientos,
+    ]);
+
+    const totIng = data.reduce((s: number, r: { TotalIngresos: number }) => s + Number(r.TotalIngresos), 0);
+    const totEgr = data.reduce((s: number, r: { TotalEgresos: number }) => s + Number(r.TotalEgresos), 0);
+    rows.push(["TOTAL", formatMiles(totIng), formatMiles(totEgr), formatMiles(totIng - totEgr), ""]);
+
+    autoTable(doc, {
+      head: [["Caja", "Ingresos", "Egresos", "Saldo", "Mov."]],
+      body: rows,
+      startY: 32,
+      theme: "striped",
+      headStyles: { fillColor: [79, 70, 229] },
+      styles: { fontSize: 9 },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.row.index === rows.length - 1) {
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fillColor = [241, 245, 249];
+        }
+      },
+    });
+
+    window.open(doc.output("bloburl") as unknown as string, "_blank");
+  });
+
+  // 4. Historial de Divisas
+  const handleDivisas = () => runReport("divisas", async () => {
+    const response = await getReporteDivisas(f.divisas[0], f.divisas[1]);
+    const resumen = response.resumen || [];
+    const data = response.data || [];
+    if (!data.length) { setError("No hay movimientos de divisas para el periodo seleccionado"); return; }
+
+    const doc = new jsPDF("landscape");
+    doc.setFontSize(16);
+    doc.text("Historial de Cambio de Divisas", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${fmt(f.divisas[0])} al ${fmt(f.divisas[1])}`, 14, 25);
+
+    // Resumen
+    if (resumen.length) {
+      doc.setFontSize(12);
+      doc.text("Resumen por Divisa", 14, 34);
+      autoTable(doc, {
+        head: [["Divisa", "Compras (Cant.)", "Compras (Gs.)", "Ventas (Cant.)", "Ventas (Gs.)", "Operaciones"]],
+        body: resumen.map((r: { DivisaNombre: string; CantCompra: number; MontoCompra: number; CantVenta: number; MontoVenta: number; CantOperaciones: number }) => [
+          (r.DivisaNombre || "").trim(), formatMiles(Number(r.CantCompra)), formatMiles(Number(r.MontoCompra)),
+          formatMiles(Number(r.CantVenta)), formatMiles(Number(r.MontoVenta)), r.CantOperaciones,
+        ]),
+        startY: 38, theme: "striped", headStyles: { fillColor: [79, 70, 229] }, styles: { fontSize: 9 },
+      });
     }
-  };
+
+    // Detalle
+    const detY = resumen.length ? getLastY(doc) + 10 : 34;
+    doc.setFontSize(12);
+    doc.text("Detalle de Operaciones", 14, detY);
+    autoTable(doc, {
+      head: [["ID", "Fecha", "Divisa", "Tipo", "Cambio", "Cantidad", "Monto Gs.", "Usuario", "Caja"]],
+      body: data.map((r: { DivisaMovimientoId: number; DivisaMovimientoFecha: string; DivisaNombre: string; DivisaMovimientoTipo: string; DivisaMovimientoCambio: number; DivisaMovimientoCantidad: number; DivisaMovimientoMonto: number; UsuarioNombre: string; CajaDescripcion: string }) => [
+        r.DivisaMovimientoId, new Date(r.DivisaMovimientoFecha).toLocaleDateString("es-PY"),
+        (r.DivisaNombre || "").trim(), r.DivisaMovimientoTipo === "C" ? "Compra" : "Venta",
+        formatMiles(Number(r.DivisaMovimientoCambio)), formatMiles(Number(r.DivisaMovimientoCantidad)),
+        formatMiles(Number(r.DivisaMovimientoMonto)), (r.UsuarioNombre || "").trim(), (r.CajaDescripcion || "").trim(),
+      ]),
+      startY: detY + 4, theme: "striped", styles: { fontSize: 8 },
+    });
+
+    window.open(doc.output("bloburl") as unknown as string, "_blank");
+  });
+
+  // ── Render ──
 
   return (
     <div className="w-full">
-      <PageHeader
-        title="Reportes"
-        icon={BarChart3}
-      />
-      <div className={`flex flex-col items-center gap-6${loading ? " opacity-50 pointer-events-none" : ""}`}>
-        {/* Reporte de Pase de Cajas */}
-        <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Reporte de Pase de Cajas</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Genera y abre automáticamente un PDF con los movimientos de cada caja
-            (ingresos y egresos) en el período seleccionado.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Inicio
-              </label>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Fin
-              </label>
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="flex gap-4 mb-2">
-            <button
-              className="bg-primary hover:bg-primary-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
-              onClick={handleGenerarReportePaseCajas}
-              disabled={loading || !fechaInicio || !fechaFin}
-            >
-              Generar PDF
-            </button>
-          </div>
+      <PageHeader title="Reportes" icon={BarChart3} subtitle="Genera reportes en PDF" />
 
-          {loading && <div className="mt-2">Generando PDF...</div>}
-          {error && <div className="mt-2 text-danger-600">{error}</div>}
+      {error && (
+        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded-lg text-sm text-danger-600">
+          {error}
         </div>
+      )}
 
-        {/* Reporte de Movimientos de Cajas */}
-        <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">
-            Reporte de Movimientos de Cajas
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Genera y abre automáticamente un PDF con todos los movimientos de
-            las cajas (CajaTipoId=1) ordenados por ID en el período seleccionado.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Inicio
-              </label>
-              <input
-                type="date"
-                value={fechaInicioMovimientos}
-                onChange={(e) => setFechaInicioMovimientos(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha Fin
-              </label>
-              <input
-                type="date"
-                value={fechaFinMovimientos}
-                onChange={(e) => setFechaFinMovimientos(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="flex gap-4 mb-2">
-            <button
-              className="bg-primary hover:bg-primary-700 text-white font-bold py-2 px-6 rounded-lg shadow transition"
-              onClick={handleGenerarReporteMovimientosCajas}
-              disabled={
-                loading || !fechaInicioMovimientos || !fechaFinMovimientos
-              }
-            >
-              Generar PDF
-            </button>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {/* 1. Cierre Diario */}
+        <ReportCard
+          title="Cierre Diario de Caja"
+          description="Resumen de ingresos, egresos y saldo por caja"
+          icon={<Wallet className="size-5 text-primary" />}
+        >
+          <DateRange fechaInicio={f.cierre[0]} fechaFin={f.cierre[1]}
+            onChangeFechaInicio={(v) => updateF("cierre", 0, v)} onChangeFechaFin={(v) => updateF("cierre", 1, v)} />
+          <Button onClick={handleCierreDiario} disabled={loading === "cierre"} className="w-full">
+            {loading === "cierre" ? "Generando..." : "Generar PDF"}
+          </Button>
+        </ReportCard>
 
-          {loading && <div className="mt-2">Generando PDF...</div>}
-          {error && <div className="mt-2 text-danger-600">{error}</div>}
-        </div>
+        {/* 2. Historial de Divisas */}
+        <ReportCard
+          title="Historial de Divisas"
+          description="Compras, ventas, tipos de cambio y resumen por moneda"
+          icon={<ArrowLeftRight className="size-5 text-primary" />}
+        >
+          <DateRange fechaInicio={f.divisas[0]} fechaFin={f.divisas[1]}
+            onChangeFechaInicio={(v) => updateF("divisas", 0, v)} onChangeFechaFin={(v) => updateF("divisas", 1, v)} />
+          <Button onClick={handleDivisas} disabled={loading === "divisas"} className="w-full">
+            {loading === "divisas" ? "Generando..." : "Generar PDF"}
+          </Button>
+        </ReportCard>
+
+        {/* 6. Pase de Cajas */}
+        <ReportCard
+          title="Pase de Cajas"
+          description="Detalle de ingresos y egresos por caja"
+          icon={<FileText className="size-5 text-primary" />}
+        >
+          <DateRange fechaInicio={f.pase[0]} fechaFin={f.pase[1]}
+            onChangeFechaInicio={(v) => updateF("pase", 0, v)} onChangeFechaFin={(v) => updateF("pase", 1, v)} />
+          <Button onClick={handlePaseCajas} disabled={loading === "pase"} className="w-full">
+            {loading === "pase" ? "Generando..." : "Generar PDF"}
+          </Button>
+        </ReportCard>
+
+        {/* 7. Movimientos de Cajas */}
+        <ReportCard
+          title="Movimientos de Cajas"
+          description="Todos los movimientos de cajas internas (CajaTipoId=1)"
+          icon={<FileText className="size-5 text-primary" />}
+        >
+          <DateRange fechaInicio={f.mov[0]} fechaFin={f.mov[1]}
+            onChangeFechaInicio={(v) => updateF("mov", 0, v)} onChangeFechaFin={(v) => updateF("mov", 1, v)} />
+          <Button onClick={handleMovimientos} disabled={loading === "mov"} className="w-full">
+            {loading === "mov" ? "Generando..." : "Generar PDF"}
+          </Button>
+        </ReportCard>
       </div>
     </div>
   );

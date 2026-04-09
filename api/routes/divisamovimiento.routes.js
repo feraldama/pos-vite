@@ -7,6 +7,7 @@ const authMiddleware = require("../middlewares/auth");
 router.use(authMiddleware);
 
 // Rutas para movimientos de divisa
+router.get("/reporte-historial", authMiddleware, divisaMovimientoController.reporteHistorial);
 router.get("/", authMiddleware, divisaMovimientoController.getAll);
 router.get("/search", authMiddleware, divisaMovimientoController.search);
 router.get("/:id", authMiddleware, divisaMovimientoController.getById);

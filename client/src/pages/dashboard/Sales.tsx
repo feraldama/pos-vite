@@ -1,14 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/useAuth";
 import { useNavigate } from "react-router-dom";
-import ActionButton from "../../components/common/Button/ActionButton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
 import Swal from "sweetalert2";
-import "../../App.css";
+import {
+  ArrowLeft,
+  LockOpen,
+  User,
+  MapPin,
+  Wallet,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-// Componentes de las pestañas
 import PagoTab from "./tabs/PagoTab";
 import WesternPagosTab from "./tabs/WesternPagosTab";
 import PaseCajasTab from "./tabs/PaseCajasTab";
@@ -26,65 +34,53 @@ interface Caja {
   [key: string]: unknown;
 }
 
+const tabs = [
+  { id: "cobranza", label: "Cobranza", component: CobranzaTab },
+  { id: "western-pagos", label: "Western", component: WesternPagosTab },
+  { id: "pase-cajas", label: "Pase de Cajas", component: PaseCajasTab },
+  { id: "cobranza-colegios", label: "Colegios", component: CobranzaColegiosTab },
+  { id: "empresas-transporte", label: "Transporte", component: EmpresasTransporteTab },
+  { id: "divisas", label: "Divisas", component: DivisasTab },
+  { id: "junta-saneamiento", label: "JSI", component: JuntaSaneamientoTab },
+  { id: "pago", label: "Pago", component: PagoTab },
+];
+
 export default function Sales() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // Obtener el último tab usado desde localStorage, o "cobranza" por defecto
-  const getInitialTab = () => {
-    const savedTab = localStorage.getItem("sales-active-tab");
-    return savedTab || "cobranza";
-  };
-  
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const [activeTab, setActiveTab] = useState(
+    () => localStorage.getItem("sales-active-tab") || "cobranza"
+  );
   const [cajaAperturada, setCajaAperturada] = useState<Caja | null>(null);
   const [localNombre, setLocalNombre] = useState("");
-  
-  // Guardar el tab activo en localStorage cuando cambie
+
   useEffect(() => {
     localStorage.setItem("sales-active-tab", activeTab);
   }, [activeTab]);
 
-  // Configuración de las pestañas
-  const tabs = [
-    {
-      id: "cobranza",
-      label: "COBRANZA",
-      component: CobranzaTab,
-    },
-    {
-      id: "western-pagos",
-      label: "WESTERN PAGOS/ENVÍOS",
-      component: WesternPagosTab,
-    },
-    {
-      id: "pase-cajas",
-      label: "PASE DE CAJAS",
-      component: PaseCajasTab,
-    },
-    {
-      id: "cobranza-colegios",
-      label: "COBRANZA COLEGIOS",
-      component: CobranzaColegiosTab,
-    },
-    {
-      id: "empresas-transporte",
-      label: "EMPRESAS TRANSPORTE",
-      component: EmpresasTransporteTab,
-    },
-    { id: "divisas", label: "DIVISAS", component: DivisasTab },
-    {
-      id: "junta-saneamiento",
-      label: "JUNTA DE SANEAMIENTO",
-      component: JuntaSaneamientoTab,
-    },
-    { id: "pago", label: "PAGO", component: PagoTab },
-  ];
+  // Check scroll state
+  const checkScroll = () => {
+    const el = tabsRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
 
-  const ActiveComponent =
-    tabs.find((tab) => tab.id === activeTab)?.component || CobranzaTab;
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, []);
 
-  // Obtener información de caja y local
+  const scrollTabs = (dir: "left" | "right") => {
+    tabsRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
+  };
+
+  // Fetch caja info
   useEffect(() => {
     const fetchCaja = async () => {
       if (!user?.id) return;
@@ -95,25 +91,23 @@ export default function Sales() {
           setCajaAperturada(caja);
         } else {
           setCajaAperturada(null);
-          // Mostrar mensaje y redirigir a apertura/cierre de caja si no hay caja aperturada
           await Swal.fire({
             icon: "warning",
             title: "Caja no aperturada",
             text: "Debes aperturar una caja antes de realizar cobros.",
             confirmButtonText: "Ir a aperturar caja",
-            confirmButtonColor: "#2563eb",
+            confirmButtonColor: "#4f46e5",
           });
           navigate("/apertura-cierre-caja");
         }
       } catch {
         setCajaAperturada(null);
-        // Mostrar mensaje y redirigir a apertura/cierre de caja si hay error
         await Swal.fire({
           icon: "warning",
           title: "Caja no aperturada",
           text: "Debes aperturar una caja antes de realizar cobros.",
           confirmButtonText: "Ir a aperturar caja",
-          confirmButtonColor: "#2563eb",
+          confirmButtonColor: "#4f46e5",
         });
         navigate("/apertura-cierre-caja");
       }
@@ -124,82 +118,117 @@ export default function Sales() {
   useEffect(() => {
     if (user?.LocalId) {
       getLocalById(user.LocalId)
-        .then((data) => {
-          setLocalNombre(data.LocalNombre || "");
-        })
+        .then((data) => setLocalNombre(data.LocalNombre || ""))
         .catch(() => setLocalNombre(""));
     } else {
       setLocalNombre("");
     }
   }, [user?.LocalId]);
 
+  const ActiveComponent =
+    tabs.find((tab) => tab.id === activeTab)?.component || CobranzaTab;
+
   return (
-    <div className="min-h-screen bg-[#f5f8ff] p-2">
-      {/* Header con información del usuario */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-800">
-              REGISTRAR COBROS/PAGOS
+    <div className="min-h-screen bg-page-bg p-3 sm:p-4 flex flex-col gap-3">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-card border border-border p-4">
+        {/* Top row: back + title + actions */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+              className="size-9 flex-shrink-0"
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">
+              Registrar Cobros / Pagos
             </h1>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Información de usuario, local y caja */}
-            {user && (
-              <div className="flex items-center gap-2 text-gray-600 text-sm">
-                <span className="font-medium">{user.nombre}</span>
-                <span className="text-gray-500">({user.id})</span>
-                {localNombre && (
-                  <span className="text-danger-600 font-medium">
-                    | Local: {localNombre}
-                  </span>
-                )}
-                {cajaAperturada && (
-                  <span className="text-primary font-medium">
-                    | Caja: {cajaAperturada.CajaDescripcion}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <ActionButton
-                label="Apertura/Cierre Caja"
-                onClick={() => navigate("/apertura-cierre-caja")}
-                className="bg-primary hover:bg-primary-700 text-white"
-              />
-              <ActionButton
-                label="Configuración"
-                onClick={() => navigate("/configuracion")}
-                className="bg-gray-500 hover:bg-gray-700 text-white"
-              />
-            </div>
-          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/apertura-cierre-caja")}
+          >
+            <LockOpen className="size-4" />
+            <span className="hidden sm:inline">Apertura/Cierre</span>
+          </Button>
         </div>
+
+        {/* Info badges */}
+        {user && (
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border">
+            <Badge variant="secondary" className="gap-1.5 font-normal">
+              <User className="size-3" />
+              {user.nombre}
+              <span className="text-muted-foreground">({user.id})</span>
+            </Badge>
+            {localNombre && (
+              <Badge variant="outline" className="gap-1.5 font-normal">
+                <MapPin className="size-3" />
+                {localNombre}
+              </Badge>
+            )}
+            {cajaAperturada && (
+              <Badge variant="default" className="gap-1.5 font-normal">
+                <Wallet className="size-3" />
+                {cajaAperturada.CajaDescripcion}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Pestañas principales */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Navegación de pestañas */}
-        <div className="bg-success-600 px-6 py-4">
-          <div className="flex space-x-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 rounded-t-lg font-semibold text-sm transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-white text-success-600 shadow-lg"
-                    : "text-white hover:bg-success-500 hover:text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+      {/* Tabs + Content */}
+      <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden flex-1 flex flex-col">
+        {/* Tab navigation */}
+        <div className="relative border-b border-border bg-muted/30 flex-shrink-0">
+          {/* Scroll indicators */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scrollTabs("left")}
+              className="absolute left-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-r from-white to-transparent flex items-center justify-center cursor-pointer"
+            >
+              <ChevronLeft className="size-4 text-muted-foreground" />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              onClick={() => scrollTabs("right")}
+              className="absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-white to-transparent flex items-center justify-center cursor-pointer"
+            >
+              <ChevronRight className="size-4 text-muted-foreground" />
+            </button>
+          )}
+
+          <div
+            ref={tabsRef}
+            onScroll={checkScroll}
+            className="flex overflow-x-auto scrollbar-none px-2 py-2 gap-1"
+          >
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150 cursor-pointer
+                    ${isActive
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Contenido de la pestaña activa */}
-        <div className="p-4">
+        {/* Tab content */}
+        <div className="p-4 flex-1 overflow-y-auto">
           <ActiveComponent />
         </div>
       </div>

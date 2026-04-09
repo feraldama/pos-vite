@@ -479,6 +479,48 @@ const Venta = {
       ventas: ventasConDetalle,
     };
   },
+
+  // ── REPORTES ──
+
+  getVentasPorTipoPago: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT
+        v."VentaTipo",
+        COUNT(*) AS "CantVentas",
+        COALESCE(SUM(v."Total"), 0) AS "MontoTotal",
+        COALESCE(SUM(v."VentaEntrega"), 0) AS "MontoEntregado"
+      FROM "venta" v
+      WHERE v."VentaFecha"::date >= $1::date
+        AND v."VentaFecha"::date <= $2::date
+      GROUP BY v."VentaTipo"
+      ORDER BY "MontoTotal" DESC`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
+
+  getVentasPorUsuario: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT
+        u."UsuarioId",
+        TRIM(u."UsuarioNombre") AS "UsuarioNombre",
+        TRIM(u."UsuarioApellido") AS "UsuarioApellido",
+        COUNT(*) AS "CantVentas",
+        COALESCE(SUM(v."Total"), 0) AS "MontoTotal",
+        COALESCE(SUM(CASE WHEN v."VentaTipo" = 'CO' THEN v."Total" ELSE 0 END), 0) AS "Contado",
+        COALESCE(SUM(CASE WHEN v."VentaTipo" = 'CR' THEN v."Total" ELSE 0 END), 0) AS "Credito",
+        COALESCE(SUM(CASE WHEN v."VentaTipo" = 'PO' THEN v."Total" ELSE 0 END), 0) AS "POS",
+        COALESCE(SUM(CASE WHEN v."VentaTipo" = 'TR' THEN v."Total" ELSE 0 END), 0) AS "Transferencia"
+      FROM "venta" v
+      JOIN "usuario" u ON v."VentaUsuario" = u."UsuarioId"
+      WHERE v."VentaFecha"::date >= $1::date
+        AND v."VentaFecha"::date <= $2::date
+      GROUP BY u."UsuarioId", u."UsuarioNombre", u."UsuarioApellido"
+      ORDER BY "MontoTotal" DESC`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
 };
 
 module.exports = Venta;

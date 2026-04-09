@@ -341,6 +341,68 @@ const RegistroDiarioCaja = {
       cajaId: apertura.CajaId || null,
     };
   },
+  // ── REPORTES ──
+
+  getReportePaseCajas: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT r.*,
+        c."CajaDescripcion",
+        t."TipoGastoDescripcion",
+        tg."TipoGastoGrupoDescripcion"
+      FROM "registrodiariocaja" r
+      LEFT JOIN "caja" c ON r."CajaId" = c."CajaId"
+      LEFT JOIN "tipogasto" t ON r."TipoGastoId" = t."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tg ON r."TipoGastoId" = tg."TipoGastoId" AND r."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
+      WHERE r."RegistroDiarioCajaFecha"::date >= $1::date
+        AND r."RegistroDiarioCajaFecha"::date <= $2::date
+      ORDER BY r."CajaId", r."RegistroDiarioCajaId" ASC`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
+
+  getReporteMovimientosCajas: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT r.*,
+        c."CajaDescripcion",
+        c."CajaTipoId",
+        t."TipoGastoDescripcion",
+        tg."TipoGastoGrupoDescripcion",
+        u."UsuarioNombre"
+      FROM "registrodiariocaja" r
+      LEFT JOIN "caja" c ON r."CajaId" = c."CajaId"
+      LEFT JOIN "tipogasto" t ON r."TipoGastoId" = t."TipoGastoId"
+      LEFT JOIN "tipogastogrupo" tg ON r."TipoGastoId" = tg."TipoGastoId" AND r."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
+      LEFT JOIN "usuario" u ON r."UsuarioId" = u."UsuarioId"
+      WHERE c."CajaTipoId" = 1
+        AND r."RegistroDiarioCajaFecha"::date >= $1::date
+        AND r."RegistroDiarioCajaFecha"::date <= $2::date
+      ORDER BY r."RegistroDiarioCajaId" ASC`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
+
+  getCierreDiario: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT
+        c."CajaId",
+        c."CajaDescripcion",
+        COALESCE(SUM(CASE WHEN r."TipoGastoId" = 2 THEN r."RegistroDiarioCajaMonto" ELSE 0 END), 0) AS "TotalIngresos",
+        COALESCE(SUM(CASE WHEN r."TipoGastoId" = 1 THEN r."RegistroDiarioCajaMonto" ELSE 0 END), 0) AS "TotalEgresos",
+        COALESCE(SUM(CASE WHEN r."TipoGastoId" = 2 THEN r."RegistroDiarioCajaMonto" ELSE 0 END), 0) -
+        COALESCE(SUM(CASE WHEN r."TipoGastoId" = 1 THEN r."RegistroDiarioCajaMonto" ELSE 0 END), 0) AS "Saldo",
+        COUNT(*) AS "CantMovimientos"
+      FROM "registrodiariocaja" r
+      JOIN "caja" c ON r."CajaId" = c."CajaId"
+      WHERE r."RegistroDiarioCajaFecha"::date >= $1::date
+        AND r."RegistroDiarioCajaFecha"::date <= $2::date
+      GROUP BY c."CajaId", c."CajaDescripcion"
+      ORDER BY c."CajaDescripcion"`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
 };
 
 module.exports = RegistroDiarioCaja;

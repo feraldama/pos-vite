@@ -179,3 +179,94 @@ export const getReporteMovimientosCajas = async (
     );
   }
 };
+
+export const getReporteCierreDiario = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get(
+      "/registrodiariocaja/reporte-cierre-diario",
+      { params: { fechaInicio, fechaFin } }
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de cierre diario",
+      }
+    );
+  }
+};
+
+export const getReporteVentasPorTipoPago = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get("/venta/reporte-tipo-pago", {
+      params: { fechaInicio, fechaFin },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de ventas por tipo de pago",
+      }
+    );
+  }
+};
+
+export const getReporteVentasPorUsuario = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get("/venta/reporte-por-usuario", {
+      params: { fechaInicio, fechaFin },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de ventas por usuario",
+      }
+    );
+  }
+};
+
+export const getReporteDeudasPendientes = async () => {
+  try {
+    const response = await api.get("/venta/reporte-deudas");
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de deudas pendientes",
+      }
+    );
+  }
+};
+
+export const getReporteDivisas = async (
+  fechaInicio: string,
+  fechaFin: string
+) => {
+  try {
+    const response = await api.get("/divisamovimiento/reporte-historial", {
+      params: { fechaInicio, fechaFin },
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el reporte de divisas",
+      }
+    );
+  }
+};

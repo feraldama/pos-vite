@@ -181,3 +181,41 @@ exports.getDeudasPendientesPorCliente = async (req, res) => {
     });
   }
 };
+
+// Reporte: Ventas por Tipo de Pago
+exports.reporteVentasPorTipoPago = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ message: "Faltan los parámetros fechaInicio y fechaFin" });
+    }
+    const data = await Venta.getVentasPorTipoPago(fechaInicio, fechaFin);
+    res.json({ fechaInicio, fechaFin, data });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Reporte: Ventas por Usuario/Cajero
+exports.reporteVentasPorUsuario = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ message: "Faltan los parámetros fechaInicio y fechaFin" });
+    }
+    const data = await Venta.getVentasPorUsuario(fechaInicio, fechaFin);
+    res.json({ fechaInicio, fechaFin, data });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Reporte: Deudas pendientes (para PDF)
+exports.reporteDeudasPendientes = async (req, res) => {
+  try {
+    const data = await Venta.getDeudasPendientesPorCliente();
+    res.json({ data });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

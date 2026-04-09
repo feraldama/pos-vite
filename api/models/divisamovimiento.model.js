@@ -277,6 +277,48 @@ const DivisaMovimiento = {
     );
     return result.rowCount > 0;
   },
+
+  // ── REPORTES ──
+
+  getReporteHistorial: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT
+        dm.*,
+        d."DivisaNombre",
+        u."UsuarioNombre",
+        c."CajaDescripcion"
+      FROM "divisamovimiento" dm
+      JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
+      LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
+      WHERE dm."DivisaMovimientoFecha"::date >= $1::date
+        AND dm."DivisaMovimientoFecha"::date <= $2::date
+      ORDER BY dm."DivisaMovimientoFecha" ASC, dm."DivisaMovimientoId" ASC`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
+
+  getReporteResumen: async (fechaDesde, fechaHasta) => {
+    const result = await db.query(
+      `SELECT
+        d."DivisaId",
+        d."DivisaNombre",
+        COALESCE(SUM(CASE WHEN dm."DivisaMovimientoTipo" = 'C' THEN dm."DivisaMovimientoCantidad" ELSE 0 END), 0) AS "CantCompra",
+        COALESCE(SUM(CASE WHEN dm."DivisaMovimientoTipo" = 'C' THEN dm."DivisaMovimientoMonto" ELSE 0 END), 0) AS "MontoCompra",
+        COALESCE(SUM(CASE WHEN dm."DivisaMovimientoTipo" = 'V' THEN dm."DivisaMovimientoCantidad" ELSE 0 END), 0) AS "CantVenta",
+        COALESCE(SUM(CASE WHEN dm."DivisaMovimientoTipo" = 'V' THEN dm."DivisaMovimientoMonto" ELSE 0 END), 0) AS "MontoVenta",
+        COUNT(*) AS "CantOperaciones"
+      FROM "divisamovimiento" dm
+      JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
+      WHERE dm."DivisaMovimientoFecha"::date >= $1::date
+        AND dm."DivisaMovimientoFecha"::date <= $2::date
+      GROUP BY d."DivisaId", d."DivisaNombre"
+      ORDER BY d."DivisaNombre"`,
+      [fechaDesde, fechaHasta]
+    );
+    return result.rows;
+  },
 };
 
 module.exports = DivisaMovimiento;

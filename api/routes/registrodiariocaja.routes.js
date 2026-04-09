@@ -23,6 +23,11 @@ router.get(
   authMiddleware,
   registroDiarioCajaController.reporteMovimientosCajas
 );
+router.get(
+  "/reporte-cierre-diario",
+  authMiddleware,
+  registroDiarioCajaController.reporteCierreDiario
+);
 router.get("/:id", authMiddleware, registroDiarioCajaController.getById);
 router.post("/", authMiddleware, registroDiarioCajaController.create);
 router.post(

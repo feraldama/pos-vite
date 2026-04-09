@@ -137,3 +137,18 @@ exports.delete = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Reporte: Historial de cambio de divisas
+exports.reporteHistorial = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ message: "Faltan los parámetros fechaInicio y fechaFin" });
+    }
+    const data = await DivisaMovimiento.getReporteHistorial(fechaInicio, fechaFin);
+    const resumen = await DivisaMovimiento.getReporteResumen(fechaInicio, fechaFin);
+    res.json({ fechaInicio, fechaFin, data, resumen });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

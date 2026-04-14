@@ -104,13 +104,13 @@ const Nomina = {
       FROM "nomina" n
       LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
       LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
-      WHERE n."NominaNombre" LIKE $1
-        OR n."NominaApellido" LIKE $2
-        OR CAST(n."NominaId" AS TEXT) LIKE $3
-        OR CAST(n."ColegioId" AS TEXT) LIKE $4
-        OR CAST(n."ColegioCursoId" AS TEXT) LIKE $5
-        OR c."ColegioNombre" LIKE $6
-        OR cc."ColegioCursoNombre" LIKE $7
+      WHERE n."NominaNombre" ILIKE $1
+        OR n."NominaApellido" ILIKE $2
+        OR CAST(n."NominaId" AS TEXT) ILIKE $3
+        OR CAST(n."ColegioId" AS TEXT) ILIKE $4
+        OR CAST(n."ColegioCursoId" AS TEXT) ILIKE $5
+        OR c."ColegioNombre" ILIKE $6
+        OR cc."ColegioCursoNombre" ILIKE $7
       ORDER BY n."${sortField}" ${order}
       LIMIT $8 OFFSET $9
     `;
@@ -132,13 +132,13 @@ const Nomina = {
       FROM "nomina" n
       LEFT JOIN "colegio" c ON n."ColegioId" = c."ColegioId"
       LEFT JOIN "colegiocurso" cc ON n."ColegioId" = cc."ColegioId" AND n."ColegioCursoId" = cc."ColegioCursoId"
-      WHERE n."NominaNombre" LIKE $1
-        OR n."NominaApellido" LIKE $2
-        OR CAST(n."NominaId" AS TEXT) LIKE $3
-        OR CAST(n."ColegioId" AS TEXT) LIKE $4
-        OR CAST(n."ColegioCursoId" AS TEXT) LIKE $5
-        OR c."ColegioNombre" LIKE $6
-        OR cc."ColegioCursoNombre" LIKE $7
+      WHERE n."NominaNombre" ILIKE $1
+        OR n."NominaApellido" ILIKE $2
+        OR CAST(n."NominaId" AS TEXT) ILIKE $3
+        OR CAST(n."ColegioId" AS TEXT) ILIKE $4
+        OR CAST(n."ColegioCursoId" AS TEXT) ILIKE $5
+        OR c."ColegioNombre" ILIKE $6
+        OR cc."ColegioCursoNombre" ILIKE $7
     `;
 
     const countResult = await db.query(countQuery, [

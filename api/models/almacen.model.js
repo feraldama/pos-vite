@@ -84,7 +84,7 @@ const Almacen = {
 
     const result = await db.query(
       `SELECT * FROM "almacen"
-        WHERE "AlmacenNombre" LIKE $1
+        WHERE "AlmacenNombre" ILIKE $1
         ORDER BY "${sortField}" ${order}
         LIMIT $2 OFFSET $3`,
       [searchValue, limit, offset]
@@ -92,7 +92,7 @@ const Almacen = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "almacen"
-        WHERE "AlmacenNombre" LIKE $1`,
+        WHERE "AlmacenNombre" ILIKE $1`,
       [searchValue]
     );
 

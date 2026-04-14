@@ -97,8 +97,8 @@ const TipoGasto = {
 
     const result = await db.query(
       `SELECT * FROM "tipogasto"
-        WHERE "TipoGastoDescripcion" LIKE $1
-        OR CAST("TipoGastoCantGastos" AS TEXT) LIKE $2
+        WHERE "TipoGastoDescripcion" ILIKE $1
+        OR CAST("TipoGastoCantGastos" AS TEXT) ILIKE $2
         ORDER BY "${sortField}" ${order}
         LIMIT $3 OFFSET $4`,
       [searchValue, searchValue, limit, offset]
@@ -106,8 +106,8 @@ const TipoGasto = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "tipogasto"
-        WHERE "TipoGastoDescripcion" LIKE $1
-        OR CAST("TipoGastoCantGastos" AS TEXT) LIKE $2`,
+        WHERE "TipoGastoDescripcion" ILIKE $1
+        OR CAST("TipoGastoCantGastos" AS TEXT) ILIKE $2`,
       [searchValue, searchValue]
     );
 

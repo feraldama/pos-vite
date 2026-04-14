@@ -119,17 +119,17 @@ const WesternEnvio = {
       LEFT JOIN "tipogasto" t ON we."TipoGastoId" = t."TipoGastoId"
       LEFT JOIN "tipogastogrupo" tg ON we."TipoGastoId" = tg."TipoGastoId" AND we."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
       LEFT JOIN "usuario" u ON we."WesternEnvioUsuarioId" = u."UsuarioId"
-      WHERE we."WesternEnvioDetalle" LIKE $1
-        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) LIKE $2
-        OR CAST(we."CajaId" AS TEXT) LIKE $3
-        OR CAST(we."TipoGastoId" AS TEXT) LIKE $4
-        OR CAST(we."TipoGastoGrupoId" AS TEXT) LIKE $5
-        OR CAST(we."WesternEnvioMonto" AS TEXT) LIKE $6
-        OR CAST(we."WesternEnvioMTCN" AS TEXT) LIKE $7
-        OR CAST(we."WesternEnvioFactura" AS TEXT) LIKE $8
-        OR CAST(we."WesternEnvioTimbrado" AS TEXT) LIKE $9
-        OR CAST(we."ClienteId" AS TEXT) LIKE $10
-        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $11
+      WHERE we."WesternEnvioDetalle" ILIKE $1
+        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) ILIKE $2
+        OR CAST(we."CajaId" AS TEXT) ILIKE $3
+        OR CAST(we."TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST(we."TipoGastoGrupoId" AS TEXT) ILIKE $5
+        OR CAST(we."WesternEnvioMonto" AS TEXT) ILIKE $6
+        OR CAST(we."WesternEnvioMTCN" AS TEXT) ILIKE $7
+        OR CAST(we."WesternEnvioFactura" AS TEXT) ILIKE $8
+        OR CAST(we."WesternEnvioTimbrado" AS TEXT) ILIKE $9
+        OR CAST(we."ClienteId" AS TEXT) ILIKE $10
+        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $11
       ORDER BY we."${sortField}" ${order}
       LIMIT $12 OFFSET $13`,
       [
@@ -141,17 +141,17 @@ const WesternEnvio = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "westernenvio" we
-      WHERE we."WesternEnvioDetalle" LIKE $1
-        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) LIKE $2
-        OR CAST(we."CajaId" AS TEXT) LIKE $3
-        OR CAST(we."TipoGastoId" AS TEXT) LIKE $4
-        OR CAST(we."TipoGastoGrupoId" AS TEXT) LIKE $5
-        OR CAST(we."WesternEnvioMonto" AS TEXT) LIKE $6
-        OR CAST(we."WesternEnvioMTCN" AS TEXT) LIKE $7
-        OR CAST(we."WesternEnvioFactura" AS TEXT) LIKE $8
-        OR CAST(we."WesternEnvioTimbrado" AS TEXT) LIKE $9
-        OR CAST(we."ClienteId" AS TEXT) LIKE $10
-        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $11`,
+      WHERE we."WesternEnvioDetalle" ILIKE $1
+        OR CAST(we."WesternEnvioUsuarioId" AS TEXT) ILIKE $2
+        OR CAST(we."CajaId" AS TEXT) ILIKE $3
+        OR CAST(we."TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST(we."TipoGastoGrupoId" AS TEXT) ILIKE $5
+        OR CAST(we."WesternEnvioMonto" AS TEXT) ILIKE $6
+        OR CAST(we."WesternEnvioMTCN" AS TEXT) ILIKE $7
+        OR CAST(we."WesternEnvioFactura" AS TEXT) ILIKE $8
+        OR CAST(we."WesternEnvioTimbrado" AS TEXT) ILIKE $9
+        OR CAST(we."ClienteId" AS TEXT) ILIKE $10
+        OR TO_CHAR(we."WesternEnvioFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $11`,
       [
         searchValue, searchValue, searchValue, searchValue, searchValue,
         searchValue, searchValue, searchValue, searchValue, searchValue,
@@ -199,8 +199,8 @@ const WesternEnvio = {
         envioData.WesternEnvioDetalle,
         envioData.WesternEnvioMTCN || 0,
         envioData.WesternEnvioCargoEnvio || 0,
-        envioData.WesternEnvioFactura || "",
-        envioData.WesternEnvioTimbrado || "",
+        envioData.WesternEnvioFactura === "" || envioData.WesternEnvioFactura == null ? 0 : envioData.WesternEnvioFactura,
+        envioData.WesternEnvioTimbrado === "" || envioData.WesternEnvioTimbrado == null ? 0 : envioData.WesternEnvioTimbrado,
         envioData.WesternEnvioMonto,
         envioData.WesternEnvioUsuarioId,
         envioData.ClienteId || null,
@@ -234,7 +234,10 @@ const WesternEnvio = {
     camposActualizables.forEach((campo) => {
       if (envioData[campo] !== undefined) {
         updateFields.push(`"${campo}" = $${paramIndex}`);
-        values.push(envioData[campo]);
+        const valor = (campo === "WesternEnvioFactura" || campo === "WesternEnvioTimbrado") && (envioData[campo] === "" || envioData[campo] == null)
+          ? 0
+          : envioData[campo];
+        values.push(valor);
         paramIndex++;
       }
     });

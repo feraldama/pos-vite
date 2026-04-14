@@ -61,11 +61,11 @@ const Local = {
 
     const result = await db.query(
       `SELECT * FROM "local"
-        WHERE "LocalNombre" LIKE $1
-        OR "LocalTelefono" LIKE $2
-        OR "LocalCelular" LIKE $3
-        OR "LocalDireccion" LIKE $4
-        OR CAST("LocalId" AS TEXT) LIKE $5
+        WHERE "LocalNombre" ILIKE $1
+        OR "LocalTelefono" ILIKE $2
+        OR "LocalCelular" ILIKE $3
+        OR "LocalDireccion" ILIKE $4
+        OR CAST("LocalId" AS TEXT) ILIKE $5
         ORDER BY "${sortField}" ${order}
         LIMIT $6 OFFSET $7`,
       [searchValue, searchValue, searchValue, searchValue, searchValue, limit, offset]
@@ -73,11 +73,11 @@ const Local = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "local"
-        WHERE "LocalNombre" LIKE $1
-        OR "LocalTelefono" LIKE $2
-        OR "LocalCelular" LIKE $3
-        OR "LocalDireccion" LIKE $4
-        OR CAST("LocalId" AS TEXT) LIKE $5`,
+        WHERE "LocalNombre" ILIKE $1
+        OR "LocalTelefono" ILIKE $2
+        OR "LocalCelular" ILIKE $3
+        OR "LocalDireccion" ILIKE $4
+        OR CAST("LocalId" AS TEXT) ILIKE $5`,
       [searchValue, searchValue, searchValue, searchValue, searchValue]
     );
 

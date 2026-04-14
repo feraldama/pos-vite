@@ -100,13 +100,13 @@ const Transporte = {
       FROM "transporte" t
       LEFT JOIN "tipogasto" tg ON t."TipoGastoId" = tg."TipoGastoId"
       LEFT JOIN "tipogastogrupo" tgg ON t."TipoGastoId" = tgg."TipoGastoId" AND t."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
-      WHERE t."TransporteNombre" LIKE $1
-        OR t."TransporteTelefono" LIKE $2
-        OR t."TransporteDireccion" LIKE $3
-        OR CAST(t."TransporteId" AS TEXT) LIKE $4
-        OR CAST(t."TipoGastoId" AS TEXT) LIKE $5
-        OR CAST(t."TipoGastoGrupoId" AS TEXT) LIKE $6
-        OR CAST(t."TransporteComision" AS TEXT) LIKE $7
+      WHERE t."TransporteNombre" ILIKE $1
+        OR t."TransporteTelefono" ILIKE $2
+        OR t."TransporteDireccion" ILIKE $3
+        OR CAST(t."TransporteId" AS TEXT) ILIKE $4
+        OR CAST(t."TipoGastoId" AS TEXT) ILIKE $5
+        OR CAST(t."TipoGastoGrupoId" AS TEXT) ILIKE $6
+        OR CAST(t."TransporteComision" AS TEXT) ILIKE $7
       ORDER BY t."${sortField}" ${order}
       LIMIT $8 OFFSET $9
     `;
@@ -125,13 +125,13 @@ const Transporte = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "transporte"
-      WHERE "TransporteNombre" LIKE $1
-        OR "TransporteTelefono" LIKE $2
-        OR "TransporteDireccion" LIKE $3
-        OR CAST("TransporteId" AS TEXT) LIKE $4
-        OR CAST("TipoGastoId" AS TEXT) LIKE $5
-        OR CAST("TipoGastoGrupoId" AS TEXT) LIKE $6
-        OR CAST("TransporteComision" AS TEXT) LIKE $7
+      WHERE "TransporteNombre" ILIKE $1
+        OR "TransporteTelefono" ILIKE $2
+        OR "TransporteDireccion" ILIKE $3
+        OR CAST("TransporteId" AS TEXT) ILIKE $4
+        OR CAST("TipoGastoId" AS TEXT) ILIKE $5
+        OR CAST("TipoGastoGrupoId" AS TEXT) ILIKE $6
+        OR CAST("TransporteComision" AS TEXT) ILIKE $7
     `;
 
     const countResult = await db.query(countQuery, [

@@ -98,9 +98,9 @@ const HorarioUso = {
 
     const searchQuery = `
       SELECT * FROM "horariouso"
-      WHERE CAST("HorarioUsoId" AS TEXT) LIKE $1
-      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
-      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') LIKE $3
+      WHERE CAST("HorarioUsoId" AS TEXT) ILIKE $1
+      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') ILIKE $2
+      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') ILIKE $3
       ORDER BY "${sortField}" ${order}
       LIMIT $4 OFFSET $5
     `;
@@ -111,9 +111,9 @@ const HorarioUso = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "horariouso"
-      WHERE CAST("HorarioUsoId" AS TEXT) LIKE $1
-      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
-      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') LIKE $3
+      WHERE CAST("HorarioUsoId" AS TEXT) ILIKE $1
+      OR TO_CHAR("HorarioUsoDesde", 'YYYY-MM-DD HH24:MI:SS') ILIKE $2
+      OR TO_CHAR("HorarioUsoHasta", 'YYYY-MM-DD HH24:MI:SS') ILIKE $3
     `;
 
     const countResult = await db.query(countQuery, [

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,23 @@ export default function SearchButton({
   hideButton = false,
   inputRef,
 }: SearchButtonProps) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSearchSubmit();
+    }, 1000);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchTerm]);
+
   return (
     <div className="flex items-center py-4 sm:max-w-full lg:max-w-xl gap-2">
       <div className="relative flex-1 min-w-0">
@@ -34,6 +51,7 @@ export default function SearchButton({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
+              if (debounceRef.current) clearTimeout(debounceRef.current);
               onSearchSubmit();
             }
             onKeyPress?.(e);
@@ -43,7 +61,10 @@ export default function SearchButton({
         />
       </div>
       {!hideButton && (
-        <Button onClick={() => onSearchSubmit()}>
+        <Button onClick={() => {
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          onSearchSubmit();
+        }}>
           <Search className="size-4" />
           Buscar
         </Button>

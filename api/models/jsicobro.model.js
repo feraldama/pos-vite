@@ -111,16 +111,16 @@ const JSICobro = {
       FROM "jsicobro" j
       LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
       LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
-      WHERE j."JSICobroCod" LIKE $1
-        OR CAST(j."JSICobroId" AS TEXT) LIKE $2
-        OR CAST(j."CajaId" AS TEXT) LIKE $3
-        OR CAST(j."ClienteId" AS TEXT) LIKE $4
-        OR CAST(j."JSICobroMonto" AS TEXT) LIKE $5
-        OR CAST(j."JSICobroUsuarioId" AS TEXT) LIKE $6
-        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
-        OR cl."ClienteNombre" LIKE $8
-        OR cl."ClienteApellido" LIKE $9
-        OR c."CajaDescripcion" LIKE $10
+      WHERE j."JSICobroCod" ILIKE $1
+        OR CAST(j."JSICobroId" AS TEXT) ILIKE $2
+        OR CAST(j."CajaId" AS TEXT) ILIKE $3
+        OR CAST(j."ClienteId" AS TEXT) ILIKE $4
+        OR CAST(j."JSICobroMonto" AS TEXT) ILIKE $5
+        OR CAST(j."JSICobroUsuarioId" AS TEXT) ILIKE $6
+        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $7
+        OR cl."ClienteNombre" ILIKE $8
+        OR cl."ClienteApellido" ILIKE $9
+        OR c."CajaDescripcion" ILIKE $10
       ORDER BY j."${sortField}" ${order}
       LIMIT $11 OFFSET $12
     `;
@@ -144,16 +144,16 @@ const JSICobro = {
       SELECT COUNT(*) as total FROM "jsicobro" j
       LEFT JOIN "caja" c ON j."CajaId" = c."CajaId"
       LEFT JOIN "clientes" cl ON j."ClienteId" = cl."ClienteId"
-      WHERE j."JSICobroCod" LIKE $1
-        OR CAST(j."JSICobroId" AS TEXT) LIKE $2
-        OR CAST(j."CajaId" AS TEXT) LIKE $3
-        OR CAST(j."ClienteId" AS TEXT) LIKE $4
-        OR CAST(j."JSICobroMonto" AS TEXT) LIKE $5
-        OR CAST(j."JSICobroUsuarioId" AS TEXT) LIKE $6
-        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
-        OR cl."ClienteNombre" LIKE $8
-        OR cl."ClienteApellido" LIKE $9
-        OR c."CajaDescripcion" LIKE $10
+      WHERE j."JSICobroCod" ILIKE $1
+        OR CAST(j."JSICobroId" AS TEXT) ILIKE $2
+        OR CAST(j."CajaId" AS TEXT) ILIKE $3
+        OR CAST(j."ClienteId" AS TEXT) ILIKE $4
+        OR CAST(j."JSICobroMonto" AS TEXT) ILIKE $5
+        OR CAST(j."JSICobroUsuarioId" AS TEXT) ILIKE $6
+        OR TO_CHAR(j."JSICobroFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $7
+        OR cl."ClienteNombre" ILIKE $8
+        OR cl."ClienteApellido" ILIKE $9
+        OR c."CajaDescripcion" ILIKE $10
     `;
 
     const countResult = await db.query(countQuery, [

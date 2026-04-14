@@ -132,13 +132,13 @@ const RegistroDiarioCaja = {
       LEFT JOIN "caja" c ON r."CajaId" = c."CajaId"
       LEFT JOIN "tipogasto" t ON r."TipoGastoId" = t."TipoGastoId"
       LEFT JOIN "tipogastogrupo" tg ON r."TipoGastoId" = tg."TipoGastoId" AND r."TipoGastoGrupoId" = tg."TipoGastoGrupoId"
-      WHERE r."RegistroDiarioCajaDetalle" LIKE $1
-        OR CAST(r."UsuarioId" AS TEXT) LIKE $2
-        OR CAST(r."CajaId" AS TEXT) LIKE $3
-        OR CAST(r."TipoGastoId" AS TEXT) LIKE $4
-        OR CAST(r."TipoGastoGrupoId" AS TEXT) LIKE $5
-        OR CAST(r."RegistroDiarioCajaMonto" AS TEXT) LIKE $6
-        OR TO_CHAR(r."RegistroDiarioCajaFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
+      WHERE r."RegistroDiarioCajaDetalle" ILIKE $1
+        OR CAST(r."UsuarioId" AS TEXT) ILIKE $2
+        OR CAST(r."CajaId" AS TEXT) ILIKE $3
+        OR CAST(r."TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST(r."TipoGastoGrupoId" AS TEXT) ILIKE $5
+        OR CAST(r."RegistroDiarioCajaMonto" AS TEXT) ILIKE $6
+        OR TO_CHAR(r."RegistroDiarioCajaFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $7
       ORDER BY r."${sortField}" ${order}
       LIMIT $8 OFFSET $9
     `;
@@ -161,13 +161,13 @@ const RegistroDiarioCaja = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "registrodiariocaja"
-      WHERE "RegistroDiarioCajaDetalle" LIKE $1
-        OR CAST("UsuarioId" AS TEXT) LIKE $2
-        OR CAST("CajaId" AS TEXT) LIKE $3
-        OR CAST("TipoGastoId" AS TEXT) LIKE $4
-        OR CAST("TipoGastoGrupoId" AS TEXT) LIKE $5
-        OR CAST("RegistroDiarioCajaMonto" AS TEXT) LIKE $6
-        OR TO_CHAR("RegistroDiarioCajaFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $7
+      WHERE "RegistroDiarioCajaDetalle" ILIKE $1
+        OR CAST("UsuarioId" AS TEXT) ILIKE $2
+        OR CAST("CajaId" AS TEXT) ILIKE $3
+        OR CAST("TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST("TipoGastoGrupoId" AS TEXT) ILIKE $5
+        OR CAST("RegistroDiarioCajaMonto" AS TEXT) ILIKE $6
+        OR TO_CHAR("RegistroDiarioCajaFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $7
     `;
 
     const countResult = await db.query(

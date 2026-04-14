@@ -113,9 +113,9 @@ const VentaCredito = {
 
     const result = await db.query(
       `SELECT * FROM "ventacredito"
-        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
-        OR CAST("VentaId" AS TEXT) LIKE $2
-        OR CAST("VentaCreditoPagoCant" AS TEXT) LIKE $3
+        WHERE CAST("VentaCreditoId" AS TEXT) ILIKE $1
+        OR CAST("VentaId" AS TEXT) ILIKE $2
+        OR CAST("VentaCreditoPagoCant" AS TEXT) ILIKE $3
         ORDER BY "${sortField}" ${order}
         LIMIT $4 OFFSET $5`,
       [searchValue, searchValue, searchValue, limit, offset]
@@ -123,9 +123,9 @@ const VentaCredito = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "ventacredito"
-        WHERE CAST("VentaCreditoId" AS TEXT) LIKE $1
-        OR CAST("VentaId" AS TEXT) LIKE $2
-        OR CAST("VentaCreditoPagoCant" AS TEXT) LIKE $3`,
+        WHERE CAST("VentaCreditoId" AS TEXT) ILIKE $1
+        OR CAST("VentaId" AS TEXT) ILIKE $2
+        OR CAST("VentaCreditoPagoCant" AS TEXT) ILIKE $3`,
       [searchValue, searchValue, searchValue]
     );
 

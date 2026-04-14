@@ -111,9 +111,9 @@ const Compra = {
       FROM "compra" c
       LEFT JOIN "proveedor" p ON c."ProveedorId" = p."ProveedorId"
       LEFT JOIN "compraproducto" cp ON c."CompraId" = cp."CompraId"
-      WHERE c."CompraFactura" LIKE $1
-      OR c."CompraTipo" LIKE $2
-      OR p."ProveedorNombre" LIKE $3
+      WHERE c."CompraFactura" ILIKE $1
+      OR c."CompraTipo" ILIKE $2
+      OR p."ProveedorNombre" ILIKE $3
       GROUP BY c."CompraId", p."ProveedorNombre", p."ProveedorRUC"
       ORDER BY ${orderByField} ${order}
       LIMIT $4 OFFSET $5
@@ -128,9 +128,9 @@ const Compra = {
     const countQuery = `
       SELECT COUNT(*) as total FROM "compra" c
       LEFT JOIN "proveedor" p ON c."ProveedorId" = p."ProveedorId"
-      WHERE c."CompraFactura" LIKE $1
-      OR c."CompraTipo" LIKE $2
-      OR p."ProveedorNombre" LIKE $3
+      WHERE c."CompraFactura" ILIKE $1
+      OR c."CompraTipo" ILIKE $2
+      OR p."ProveedorNombre" ILIKE $3
     `;
 
     const countResult = await db.query(

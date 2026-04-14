@@ -43,7 +43,7 @@ export default function CajasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCaja, setCurrentCaja] = useState<Caja | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(25);
-  const [sortKey, setSortKey] = useState<string | undefined>("CajaDescripcion");
+  const [sortKey, setSortKey] = useState<string | undefined>("CajaId");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const puedeCrear = usePermiso("CAJAS", "crear");

@@ -132,9 +132,9 @@ const Producto = {
       SELECT p.*, l."LocalNombre"
       FROM "producto" p
       LEFT JOIN "local" l ON p."LocalId" = l."LocalId"
-      WHERE p."ProductoNombre" LIKE $1
-      OR p."ProductoCodigo" LIKE $2
-      OR l."LocalNombre" LIKE $3
+      WHERE p."ProductoNombre" ILIKE $1
+      OR p."ProductoCodigo" ILIKE $2
+      OR l."LocalNombre" ILIKE $3
       ORDER BY ${orderByField} ${order}
       LIMIT $4 OFFSET $5
     `;
@@ -152,9 +152,9 @@ const Producto = {
     const countQuery = `
       SELECT COUNT(*) as total FROM "producto" p
       LEFT JOIN "local" l ON p."LocalId" = l."LocalId"
-      WHERE p."ProductoNombre" LIKE $1
-      OR p."ProductoCodigo" LIKE $2
-      OR l."LocalNombre" LIKE $3
+      WHERE p."ProductoNombre" ILIKE $1
+      OR p."ProductoCodigo" ILIKE $2
+      OR l."LocalNombre" ILIKE $3
     `;
 
     const countResult = await db.query(

@@ -69,9 +69,9 @@ const Cliente = {
 
     const searchQuery = `
       SELECT * FROM "clientes"
-      WHERE CONCAT("ClienteNombre", ' ', "ClienteApellido") LIKE $1
-      OR "ClienteRUC" LIKE $2
-      OR CAST("ClienteId" AS TEXT) LIKE $3
+      WHERE CONCAT("ClienteNombre", ' ', "ClienteApellido") ILIKE $1
+      OR "ClienteRUC" ILIKE $2
+      OR CAST("ClienteId" AS TEXT) ILIKE $3
       ORDER BY "${sortField}" ${order}
       LIMIT $4 OFFSET $5
     `;
@@ -81,9 +81,9 @@ const Cliente = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "clientes"
-      WHERE CONCAT("ClienteNombre", ' ', "ClienteApellido") LIKE $1
-      OR "ClienteRUC" LIKE $2
-      OR CAST("ClienteId" AS TEXT) LIKE $3
+      WHERE CONCAT("ClienteNombre", ' ', "ClienteApellido") ILIKE $1
+      OR "ClienteRUC" ILIKE $2
+      OR CAST("ClienteId" AS TEXT) ILIKE $3
     `;
 
     const countResult = await db.query(countQuery, [searchValue, searchValue, searchValue]);

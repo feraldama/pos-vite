@@ -70,10 +70,10 @@ const Factura = {
 
     const result = await db.query(
       `SELECT * FROM "factura"
-        WHERE CAST("FacturaId" AS TEXT) LIKE $1
-        OR CAST("FacturaTimbrado" AS TEXT) LIKE $2
-        OR CAST("FacturaDesde" AS TEXT) LIKE $3
-        OR CAST("FacturaHasta" AS TEXT) LIKE $4
+        WHERE CAST("FacturaId" AS TEXT) ILIKE $1
+        OR CAST("FacturaTimbrado" AS TEXT) ILIKE $2
+        OR CAST("FacturaDesde" AS TEXT) ILIKE $3
+        OR CAST("FacturaHasta" AS TEXT) ILIKE $4
         ORDER BY "${sortField}" ${order}
         LIMIT $5 OFFSET $6`,
       [searchTerm, searchTerm, searchTerm, searchTerm, limit, offset]
@@ -81,10 +81,10 @@ const Factura = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "factura"
-        WHERE CAST("FacturaId" AS TEXT) LIKE $1
-        OR CAST("FacturaTimbrado" AS TEXT) LIKE $2
-        OR CAST("FacturaDesde" AS TEXT) LIKE $3
-        OR CAST("FacturaHasta" AS TEXT) LIKE $4`,
+        WHERE CAST("FacturaId" AS TEXT) ILIKE $1
+        OR CAST("FacturaTimbrado" AS TEXT) ILIKE $2
+        OR CAST("FacturaDesde" AS TEXT) ILIKE $3
+        OR CAST("FacturaHasta" AS TEXT) ILIKE $4`,
       [searchTerm, searchTerm, searchTerm, searchTerm]
     );
 

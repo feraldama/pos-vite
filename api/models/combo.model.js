@@ -99,7 +99,7 @@ const Combo = {
       `SELECT c."ComboId", c."ComboDescripcion", c."ProductoId", c."ComboCantidad", c."ComboPrecio", p."ProductoNombre"
         FROM "combo" c
         LEFT JOIN "producto" p ON c."ProductoId" = p."ProductoId"
-        WHERE c."ComboDescripcion" LIKE $1 OR p."ProductoNombre" LIKE $2
+        WHERE c."ComboDescripcion" ILIKE $1 OR p."ProductoNombre" ILIKE $2
         ORDER BY c."${sortField}" ${order}
         LIMIT $3 OFFSET $4`,
       [searchValue, searchValue, limit, offset]
@@ -109,7 +109,7 @@ const Combo = {
       `SELECT COUNT(*) as total
         FROM "combo" c
         LEFT JOIN "producto" p ON c."ProductoId" = p."ProductoId"
-        WHERE c."ComboDescripcion" LIKE $1 OR p."ProductoNombre" LIKE $2`,
+        WHERE c."ComboDescripcion" ILIKE $1 OR p."ProductoNombre" ILIKE $2`,
       [searchValue, searchValue]
     );
 

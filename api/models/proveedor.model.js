@@ -72,8 +72,8 @@ const Proveedor = {
 
     const result = await db.query(
       `SELECT * FROM "proveedor"
-        WHERE "ProveedorNombre" LIKE $1
-        OR "ProveedorRUC" LIKE $2
+        WHERE "ProveedorNombre" ILIKE $1
+        OR "ProveedorRUC" ILIKE $2
         ORDER BY "${sortField}" ${order}
         LIMIT $3 OFFSET $4`,
       [searchValue, searchValue, limit, offset]
@@ -81,8 +81,8 @@ const Proveedor = {
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "proveedor"
-        WHERE "ProveedorNombre" LIKE $1
-        OR "ProveedorRUC" LIKE $2`,
+        WHERE "ProveedorNombre" ILIKE $1
+        OR "ProveedorRUC" ILIKE $2`,
       [searchValue, searchValue]
     );
 

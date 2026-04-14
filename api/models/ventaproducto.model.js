@@ -153,14 +153,14 @@ const VentaProducto = {
 
     const searchQuery = `
       SELECT * FROM "ventaproducto"
-      WHERE CAST("VentaId" AS TEXT) LIKE $1
-      OR CAST("VentaProductoId" AS TEXT) LIKE $2
-      OR CAST("ProductoId" AS TEXT) LIKE $3
-      OR CAST("VentaProductoPrecioPromedio" AS TEXT) LIKE $4
-      OR CAST("VentaProductoCantidad" AS TEXT) LIKE $5
-      OR CAST("VentaProductoPrecio" AS TEXT) LIKE $6
-      OR CAST("VentaProductoPrecioTotal" AS TEXT) LIKE $7
-      OR CAST("VentaProductoUnitario" AS TEXT) LIKE $8
+      WHERE CAST("VentaId" AS TEXT) ILIKE $1
+      OR CAST("VentaProductoId" AS TEXT) ILIKE $2
+      OR CAST("ProductoId" AS TEXT) ILIKE $3
+      OR CAST("VentaProductoPrecioPromedio" AS TEXT) ILIKE $4
+      OR CAST("VentaProductoCantidad" AS TEXT) ILIKE $5
+      OR CAST("VentaProductoPrecio" AS TEXT) ILIKE $6
+      OR CAST("VentaProductoPrecioTotal" AS TEXT) ILIKE $7
+      OR CAST("VentaProductoUnitario" AS TEXT) ILIKE $8
       ORDER BY "${sortField}" ${order}
       LIMIT $9 OFFSET $10
     `;
@@ -172,14 +172,14 @@ const VentaProducto = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "ventaproducto"
-      WHERE CAST("VentaId" AS TEXT) LIKE $1
-      OR CAST("VentaProductoId" AS TEXT) LIKE $2
-      OR CAST("ProductoId" AS TEXT) LIKE $3
-      OR CAST("VentaProductoPrecioPromedio" AS TEXT) LIKE $4
-      OR CAST("VentaProductoCantidad" AS TEXT) LIKE $5
-      OR CAST("VentaProductoPrecio" AS TEXT) LIKE $6
-      OR CAST("VentaProductoPrecioTotal" AS TEXT) LIKE $7
-      OR CAST("VentaProductoUnitario" AS TEXT) LIKE $8
+      WHERE CAST("VentaId" AS TEXT) ILIKE $1
+      OR CAST("VentaProductoId" AS TEXT) ILIKE $2
+      OR CAST("ProductoId" AS TEXT) ILIKE $3
+      OR CAST("VentaProductoPrecioPromedio" AS TEXT) ILIKE $4
+      OR CAST("VentaProductoCantidad" AS TEXT) ILIKE $5
+      OR CAST("VentaProductoPrecio" AS TEXT) ILIKE $6
+      OR CAST("VentaProductoPrecioTotal" AS TEXT) ILIKE $7
+      OR CAST("VentaProductoUnitario" AS TEXT) ILIKE $8
     `;
 
     const countResult = await db.query(countQuery, Array(8).fill(searchValue));

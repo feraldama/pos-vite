@@ -81,7 +81,7 @@ const CajaTipo = {
 
     const searchQuery = `
       SELECT * FROM "cajatipo"
-      WHERE "CajaTipoDescripcion" LIKE $1
+      WHERE "CajaTipoDescripcion" ILIKE $1
       ORDER BY "${sortField}" ${order}
       LIMIT $2 OFFSET $3
     `;
@@ -91,7 +91,7 @@ const CajaTipo = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "cajatipo"
-      WHERE "CajaTipoDescripcion" LIKE $1
+      WHERE "CajaTipoDescripcion" ILIKE $1
     `;
     const countResult = await db.query(countQuery, [searchValue]);
 

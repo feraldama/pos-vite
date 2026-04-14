@@ -202,14 +202,14 @@ const CompraProducto = {
 
     const searchQuery = `
       SELECT * FROM "compraproducto"
-      WHERE CAST("CompraId" AS TEXT) LIKE $1
-      OR CAST("CompraProductoId" AS TEXT) LIKE $2
-      OR CAST("ProductoId" AS TEXT) LIKE $3
-      OR CAST("CompraProductoCantidad" AS TEXT) LIKE $4
-      OR "CompraProductoCantidadUnidad" LIKE $5
-      OR CAST("CompraProductoBonificacion" AS TEXT) LIKE $6
-      OR CAST("CompraProductoPrecio" AS TEXT) LIKE $7
-      OR CAST("AlmacenOrigenId" AS TEXT) LIKE $8
+      WHERE CAST("CompraId" AS TEXT) ILIKE $1
+      OR CAST("CompraProductoId" AS TEXT) ILIKE $2
+      OR CAST("ProductoId" AS TEXT) ILIKE $3
+      OR CAST("CompraProductoCantidad" AS TEXT) ILIKE $4
+      OR "CompraProductoCantidadUnidad" ILIKE $5
+      OR CAST("CompraProductoBonificacion" AS TEXT) ILIKE $6
+      OR CAST("CompraProductoPrecio" AS TEXT) ILIKE $7
+      OR CAST("AlmacenOrigenId" AS TEXT) ILIKE $8
       ORDER BY "${sortField}" ${order}
       LIMIT $9 OFFSET $10
     `;
@@ -221,14 +221,14 @@ const CompraProducto = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "compraproducto"
-      WHERE CAST("CompraId" AS TEXT) LIKE $1
-      OR CAST("CompraProductoId" AS TEXT) LIKE $2
-      OR CAST("ProductoId" AS TEXT) LIKE $3
-      OR CAST("CompraProductoCantidad" AS TEXT) LIKE $4
-      OR "CompraProductoCantidadUnidad" LIKE $5
-      OR CAST("CompraProductoBonificacion" AS TEXT) LIKE $6
-      OR CAST("CompraProductoPrecio" AS TEXT) LIKE $7
-      OR CAST("AlmacenOrigenId" AS TEXT) LIKE $8
+      WHERE CAST("CompraId" AS TEXT) ILIKE $1
+      OR CAST("CompraProductoId" AS TEXT) ILIKE $2
+      OR CAST("ProductoId" AS TEXT) ILIKE $3
+      OR CAST("CompraProductoCantidad" AS TEXT) ILIKE $4
+      OR "CompraProductoCantidadUnidad" ILIKE $5
+      OR CAST("CompraProductoBonificacion" AS TEXT) ILIKE $6
+      OR CAST("CompraProductoPrecio" AS TEXT) ILIKE $7
+      OR CAST("AlmacenOrigenId" AS TEXT) ILIKE $8
     `;
 
     const countResult = await db.query(countQuery, Array(8).fill(searchValue));

@@ -129,20 +129,20 @@ const ColegioCobranza = {
       LEFT JOIN "caja" c ON cc."CajaId" = c."CajaId"
       LEFT JOIN "nomina" n ON cc."NominaId" = n."NominaId"
       LEFT JOIN "usuario" u ON cc."UsuarioId" = u."UsuarioId"
-      WHERE CAST(cc."ColegioCobranzaId" AS TEXT) LIKE $1
-        OR CAST(cc."CajaId" AS TEXT) LIKE $2
-        OR cc."ColegioCobranzaFecha"::TEXT LIKE $3
-        OR CAST(cc."NominaId" AS TEXT) LIKE $4
-        OR cc."ColegioCobranzaMesPagado" LIKE $5
-        OR cc."ColegioCobranzaMes" LIKE $6
-        OR CAST(cc."ColegioCobranzaDiasMora" AS TEXT) LIKE $7
-        OR cc."ColegioCobranzaExamen" LIKE $8
-        OR CAST(cc."UsuarioId" AS TEXT) LIKE $9
-        OR CAST(cc."ColegioCobranzaDescuento" AS TEXT) LIKE $10
-        OR c."CajaDescripcion" LIKE $11
-        OR n."NominaNombre" LIKE $12
-        OR n."NominaApellido" LIKE $13
-        OR u."UsuarioNombre" LIKE $14
+      WHERE CAST(cc."ColegioCobranzaId" AS TEXT) ILIKE $1
+        OR CAST(cc."CajaId" AS TEXT) ILIKE $2
+        OR cc."ColegioCobranzaFecha"::TEXT ILIKE $3
+        OR CAST(cc."NominaId" AS TEXT) ILIKE $4
+        OR cc."ColegioCobranzaMesPagado" ILIKE $5
+        OR cc."ColegioCobranzaMes" ILIKE $6
+        OR CAST(cc."ColegioCobranzaDiasMora" AS TEXT) ILIKE $7
+        OR cc."ColegioCobranzaExamen" ILIKE $8
+        OR CAST(cc."UsuarioId" AS TEXT) ILIKE $9
+        OR CAST(cc."ColegioCobranzaDescuento" AS TEXT) ILIKE $10
+        OR c."CajaDescripcion" ILIKE $11
+        OR n."NominaNombre" ILIKE $12
+        OR n."NominaApellido" ILIKE $13
+        OR u."UsuarioNombre" ILIKE $14
       ORDER BY cc."${sortField}" ${order}
       LIMIT $15 OFFSET $16
     `;
@@ -176,20 +176,20 @@ const ColegioCobranza = {
       LEFT JOIN "caja" c ON cc."CajaId" = c."CajaId"
       LEFT JOIN "nomina" n ON cc."NominaId" = n."NominaId"
       LEFT JOIN "usuario" u ON cc."UsuarioId" = u."UsuarioId"
-      WHERE CAST(cc."ColegioCobranzaId" AS TEXT) LIKE $1
-        OR CAST(cc."CajaId" AS TEXT) LIKE $2
-        OR cc."ColegioCobranzaFecha"::TEXT LIKE $3
-        OR CAST(cc."NominaId" AS TEXT) LIKE $4
-        OR cc."ColegioCobranzaMesPagado" LIKE $5
-        OR cc."ColegioCobranzaMes" LIKE $6
-        OR CAST(cc."ColegioCobranzaDiasMora" AS TEXT) LIKE $7
-        OR cc."ColegioCobranzaExamen" LIKE $8
-        OR CAST(cc."UsuarioId" AS TEXT) LIKE $9
-        OR CAST(cc."ColegioCobranzaDescuento" AS TEXT) LIKE $10
-        OR c."CajaDescripcion" LIKE $11
-        OR n."NominaNombre" LIKE $12
-        OR n."NominaApellido" LIKE $13
-        OR u."UsuarioNombre" LIKE $14`,
+      WHERE CAST(cc."ColegioCobranzaId" AS TEXT) ILIKE $1
+        OR CAST(cc."CajaId" AS TEXT) ILIKE $2
+        OR cc."ColegioCobranzaFecha"::TEXT ILIKE $3
+        OR CAST(cc."NominaId" AS TEXT) ILIKE $4
+        OR cc."ColegioCobranzaMesPagado" ILIKE $5
+        OR cc."ColegioCobranzaMes" ILIKE $6
+        OR CAST(cc."ColegioCobranzaDiasMora" AS TEXT) ILIKE $7
+        OR cc."ColegioCobranzaExamen" ILIKE $8
+        OR CAST(cc."UsuarioId" AS TEXT) ILIKE $9
+        OR CAST(cc."ColegioCobranzaDescuento" AS TEXT) ILIKE $10
+        OR c."CajaDescripcion" ILIKE $11
+        OR n."NominaNombre" ILIKE $12
+        OR n."NominaApellido" ILIKE $13
+        OR u."UsuarioNombre" ILIKE $14`,
       [
         searchValue,
         searchValue,

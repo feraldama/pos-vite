@@ -75,10 +75,10 @@ const Divisa = {
 
     const searchQuery = `
       SELECT * FROM "divisa"
-      WHERE "DivisaNombre" LIKE $1
-        OR CAST("DivisaId" AS TEXT) LIKE $2
-        OR CAST("DivisaCompraMonto" AS TEXT) LIKE $3
-        OR CAST("DivisaVentaMonto" AS TEXT) LIKE $4
+      WHERE "DivisaNombre" ILIKE $1
+        OR CAST("DivisaId" AS TEXT) ILIKE $2
+        OR CAST("DivisaCompraMonto" AS TEXT) ILIKE $3
+        OR CAST("DivisaVentaMonto" AS TEXT) ILIKE $4
       ORDER BY "${sortField}" ${order}
       LIMIT $5 OFFSET $6
     `;
@@ -91,10 +91,10 @@ const Divisa = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "divisa"
-      WHERE "DivisaNombre" LIKE $1
-        OR CAST("DivisaId" AS TEXT) LIKE $2
-        OR CAST("DivisaCompraMonto" AS TEXT) LIKE $3
-        OR CAST("DivisaVentaMonto" AS TEXT) LIKE $4
+      WHERE "DivisaNombre" ILIKE $1
+        OR CAST("DivisaId" AS TEXT) ILIKE $2
+        OR CAST("DivisaCompraMonto" AS TEXT) ILIKE $3
+        OR CAST("DivisaVentaMonto" AS TEXT) ILIKE $4
     `;
 
     const countResult = await db.query(

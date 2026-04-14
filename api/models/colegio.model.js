@@ -89,11 +89,11 @@ const Colegio = {
       FROM "colegio" c
       LEFT JOIN "tipogasto" tg ON c."TipoGastoId" = tg."TipoGastoId"
       LEFT JOIN "tipogastogrupo" tgg ON c."TipoGastoId" = tgg."TipoGastoId" AND c."TipoGastoGrupoId" = tgg."TipoGastoGrupoId"
-      WHERE c."ColegioNombre" LIKE $1
-        OR CAST(c."ColegioId" AS TEXT) LIKE $2
-        OR CAST(c."ColegioCantCurso" AS TEXT) LIKE $3
-        OR CAST(c."TipoGastoId" AS TEXT) LIKE $4
-        OR CAST(c."TipoGastoGrupoId" AS TEXT) LIKE $5
+      WHERE c."ColegioNombre" ILIKE $1
+        OR CAST(c."ColegioId" AS TEXT) ILIKE $2
+        OR CAST(c."ColegioCantCurso" AS TEXT) ILIKE $3
+        OR CAST(c."TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST(c."TipoGastoGrupoId" AS TEXT) ILIKE $5
       ORDER BY c."${sortField}" ${order}
       LIMIT $6 OFFSET $7
     `;
@@ -114,11 +114,11 @@ const Colegio = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "colegio"
-      WHERE "ColegioNombre" LIKE $1
-        OR CAST("ColegioId" AS TEXT) LIKE $2
-        OR CAST("ColegioCantCurso" AS TEXT) LIKE $3
-        OR CAST("TipoGastoId" AS TEXT) LIKE $4
-        OR CAST("TipoGastoGrupoId" AS TEXT) LIKE $5
+      WHERE "ColegioNombre" ILIKE $1
+        OR CAST("ColegioId" AS TEXT) ILIKE $2
+        OR CAST("ColegioCantCurso" AS TEXT) ILIKE $3
+        OR CAST("TipoGastoId" AS TEXT) ILIKE $4
+        OR CAST("TipoGastoGrupoId" AS TEXT) ILIKE $5
     `;
 
     const countResult = await db.query(

@@ -16,16 +16,16 @@ const Caja = {
 
   create: async (cajaData) => {
     const result = await db.query(
-      'INSERT INTO "caja" ("CajaDescripcion", "CajaMonto") VALUES ($1, $2) RETURNING "CajaId"',
-      [cajaData.CajaDescripcion, cajaData.CajaMonto]
+      'INSERT INTO "caja" ("CajaDescripcion", "CajaMonto", "CajaGastoCantidad", "CajaTipoId") VALUES ($1, $2, $3, $4) RETURNING "CajaId"',
+      [cajaData.CajaDescripcion, cajaData.CajaMonto, cajaData.CajaGastoCantidad || 0, cajaData.CajaTipoId || 1]
     );
     return Caja.getById(result.rows[0].CajaId);
   },
 
   update: async (id, cajaData) => {
     const result = await db.query(
-      'UPDATE "caja" SET "CajaDescripcion" = $1, "CajaMonto" = $2 WHERE "CajaId" = $3',
-      [cajaData.CajaDescripcion, cajaData.CajaMonto, id]
+      'UPDATE "caja" SET "CajaDescripcion" = $1, "CajaMonto" = $2, "CajaGastoCantidad" = $3, "CajaTipoId" = $4 WHERE "CajaId" = $5',
+      [cajaData.CajaDescripcion, cajaData.CajaMonto, cajaData.CajaGastoCantidad || 0, cajaData.CajaTipoId || 1, id]
     );
     if (result.rowCount === 0) return null;
     return Caja.getById(id);
@@ -39,7 +39,7 @@ const Caja = {
     return result.rowCount > 0;
   },
 
-  getAllPaginated: async (limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+  getAllPaginated: async (limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
     const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
     const allowedSortOrders = ["ASC", "DESC"];
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
@@ -47,13 +47,21 @@ const Caja = {
       ? sortOrder.toUpperCase()
       : "ASC";
 
+    const params = [];
+    let whereClause = "";
+    if (cajaTipoId !== null) {
+      params.push(cajaTipoId);
+      whereClause = `WHERE "CajaTipoId" = $${params.length}`;
+    }
+
     const result = await db.query(
-      `SELECT * FROM "caja" ORDER BY "${sortField}" ${order} LIMIT $1 OFFSET $2`,
-      [limit, offset]
+      `SELECT * FROM "caja" ${whereClause} ORDER BY "${sortField}" ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     const countResult = await db.query(
-      'SELECT COUNT(*) as total FROM "caja"'
+      `SELECT COUNT(*) as total FROM "caja" ${whereClause}`,
+      params
     );
 
     return {
@@ -62,7 +70,7 @@ const Caja = {
     };
   },
 
-  searchCajas: async (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC") => {
+  searchCajas: async (term, limit, offset, sortBy = "CajaId", sortOrder = "ASC", cajaTipoId = null) => {
     const allowedSortFields = ["CajaId", "CajaDescripcion", "CajaMonto"];
     const allowedSortOrders = ["ASC", "DESC"];
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : "CajaId";
@@ -71,21 +79,29 @@ const Caja = {
       : "ASC";
 
     const searchValue = `%${term}%`;
+    const params = [searchValue, searchValue];
+    let tipoFilter = "";
+    if (cajaTipoId !== null) {
+      params.push(cajaTipoId);
+      tipoFilter = `AND "CajaTipoId" = $${params.length}`;
+    }
 
     const result = await db.query(
       `SELECT * FROM "caja"
-        WHERE "CajaDescripcion" LIKE $1
-        OR CAST("CajaMonto" AS TEXT) LIKE $2
+        WHERE ("CajaDescripcion" ILIKE $1
+        OR CAST("CajaMonto" AS TEXT) ILIKE $2)
+        ${tipoFilter}
         ORDER BY "${sortField}" ${order}
-        LIMIT $3 OFFSET $4`,
-      [searchValue, searchValue, limit, offset]
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
     const countResult = await db.query(
       `SELECT COUNT(*) as total FROM "caja"
-        WHERE "CajaDescripcion" LIKE $1
-        OR CAST("CajaMonto" AS TEXT) LIKE $2`,
-      [searchValue, searchValue]
+        WHERE ("CajaDescripcion" ILIKE $1
+        OR CAST("CajaMonto" AS TEXT) ILIKE $2)
+        ${tipoFilter}`,
+      params
     );
 
     return {

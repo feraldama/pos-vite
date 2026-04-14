@@ -229,7 +229,7 @@ const Venta = {
       LEFT JOIN "usuario" u ON v."VentaUsuario" = u."UsuarioId"
       WHERE
         CAST(v."VentaId" AS TEXT) = $1
-        OR TO_CHAR(v."VentaFecha", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
+        OR TO_CHAR(v."VentaFecha", 'YYYY-MM-DD HH24:MI:SS') ILIKE $2
         OR LOWER(CONCAT(COALESCE(c."ClienteNombre", ''), ' ', COALESCE(c."ClienteApellido", ''))) LIKE LOWER($3)
         OR LOWER(COALESCE(a."AlmacenNombre", '')) LIKE LOWER($4)
         OR v."VentaTipo" = $5
@@ -281,7 +281,7 @@ const Venta = {
       LEFT JOIN "usuario" u ON v."VentaUsuario" = u."UsuarioId"
       WHERE
         CAST(v."VentaId" AS TEXT) = $1
-        OR TO_CHAR(v."VentaFecha", 'YYYY-MM-DD HH24:MI:SS') LIKE $2
+        OR TO_CHAR(v."VentaFecha", 'YYYY-MM-DD HH24:MI:SS') ILIKE $2
         OR LOWER(CONCAT(COALESCE(c."ClienteNombre", ''), ' ', COALESCE(c."ClienteApellido", ''))) LIKE LOWER($3)
         OR LOWER(COALESCE(a."AlmacenNombre", '')) LIKE LOWER($4)
         OR v."VentaTipo" = $5

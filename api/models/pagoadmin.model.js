@@ -102,12 +102,12 @@ const PagoAdmin = {
       FROM "pagoadmin" p
       LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
       LEFT JOIN "caja" co ON p."CajaOrigenId" = co."CajaId"
-      WHERE p."PagoAdminDetalle" LIKE $1
-        OR CAST(p."UsuarioId" AS TEXT) LIKE $2
-        OR CAST(p."CajaId" AS TEXT) LIKE $3
-        OR CAST(p."CajaOrigenId" AS TEXT) LIKE $4
-        OR CAST(p."PagoAdminMonto" AS TEXT) LIKE $5
-        OR TO_CHAR(p."PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $6
+      WHERE p."PagoAdminDetalle" ILIKE $1
+        OR CAST(p."UsuarioId" AS TEXT) ILIKE $2
+        OR CAST(p."CajaId" AS TEXT) ILIKE $3
+        OR CAST(p."CajaOrigenId" AS TEXT) ILIKE $4
+        OR CAST(p."PagoAdminMonto" AS TEXT) ILIKE $5
+        OR TO_CHAR(p."PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $6
       ORDER BY p."${sortField}" ${order}
       LIMIT $7 OFFSET $8
     `;
@@ -125,12 +125,12 @@ const PagoAdmin = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "pagoadmin"
-      WHERE "PagoAdminDetalle" LIKE $1
-        OR CAST("UsuarioId" AS TEXT) LIKE $2
-        OR CAST("CajaId" AS TEXT) LIKE $3
-        OR CAST("CajaOrigenId" AS TEXT) LIKE $4
-        OR CAST("PagoAdminMonto" AS TEXT) LIKE $5
-        OR TO_CHAR("PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $6
+      WHERE "PagoAdminDetalle" ILIKE $1
+        OR CAST("UsuarioId" AS TEXT) ILIKE $2
+        OR CAST("CajaId" AS TEXT) ILIKE $3
+        OR CAST("CajaOrigenId" AS TEXT) ILIKE $4
+        OR CAST("PagoAdminMonto" AS TEXT) ILIKE $5
+        OR TO_CHAR("PagoAdminFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $6
     `;
 
     const countResult = await db.query(countQuery, [

@@ -97,10 +97,10 @@ const Usuario = {
       SELECT u.*, l."LocalNombre"
       FROM "usuario" u
       LEFT JOIN "local" l ON u."LocalId" = l."LocalId"
-      WHERE CONCAT(u."UsuarioNombre", ' ', u."UsuarioApellido") LIKE $1
-      OR u."UsuarioCorreo" LIKE $2
-      OR CAST(u."UsuarioId" AS TEXT) LIKE $3
-      OR l."LocalNombre" LIKE $4
+      WHERE CONCAT(u."UsuarioNombre", ' ', u."UsuarioApellido") ILIKE $1
+      OR u."UsuarioCorreo" ILIKE $2
+      OR CAST(u."UsuarioId" AS TEXT) ILIKE $3
+      OR l."LocalNombre" ILIKE $4
       ORDER BY ${orderByField} ${order}
       LIMIT $5 OFFSET $6
     `;
@@ -114,10 +114,10 @@ const Usuario = {
     const countQuery = `
       SELECT COUNT(*) as total FROM "usuario" u
       LEFT JOIN "local" l ON u."LocalId" = l."LocalId"
-      WHERE CONCAT(u."UsuarioNombre", ' ', u."UsuarioApellido") LIKE $1
-      OR u."UsuarioCorreo" LIKE $2
-      OR CAST(u."UsuarioId" AS TEXT) LIKE $3
-      OR l."LocalNombre" LIKE $4
+      WHERE CONCAT(u."UsuarioNombre", ' ', u."UsuarioApellido") ILIKE $1
+      OR u."UsuarioCorreo" ILIKE $2
+      OR CAST(u."UsuarioId" AS TEXT) ILIKE $3
+      OR l."LocalNombre" ILIKE $4
     `;
 
     const countResult = await db.query(

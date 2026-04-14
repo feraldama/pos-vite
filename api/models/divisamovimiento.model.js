@@ -116,17 +116,17 @@ const DivisaMovimiento = {
       LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
       LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
       LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
-      WHERE dm."DivisaMovimientoTipo" LIKE $1
-        OR CAST(dm."DivisaMovimientoId" AS TEXT) LIKE $2
-        OR CAST(dm."CajaId" AS TEXT) LIKE $3
-        OR CAST(dm."DivisaId" AS TEXT) LIKE $4
-        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) LIKE $5
-        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) LIKE $6
-        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) LIKE $7
-        OR CAST(dm."UsuarioId" AS TEXT) LIKE $8
-        OR c."CajaDescripcion" LIKE $9
-        OR d."DivisaNombre" LIKE $10
-        OR u."UsuarioNombre" LIKE $11
+      WHERE dm."DivisaMovimientoTipo" ILIKE $1
+        OR CAST(dm."DivisaMovimientoId" AS TEXT) ILIKE $2
+        OR CAST(dm."CajaId" AS TEXT) ILIKE $3
+        OR CAST(dm."DivisaId" AS TEXT) ILIKE $4
+        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) ILIKE $5
+        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) ILIKE $6
+        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) ILIKE $7
+        OR CAST(dm."UsuarioId" AS TEXT) ILIKE $8
+        OR c."CajaDescripcion" ILIKE $9
+        OR d."DivisaNombre" ILIKE $10
+        OR u."UsuarioNombre" ILIKE $11
       ORDER BY dm."${sortField}" ${order}
       LIMIT $12 OFFSET $13
     `;
@@ -152,17 +152,17 @@ const DivisaMovimiento = {
       LEFT JOIN "caja" c ON dm."CajaId" = c."CajaId"
       LEFT JOIN "divisa" d ON dm."DivisaId" = d."DivisaId"
       LEFT JOIN "usuario" u ON dm."UsuarioId" = u."UsuarioId"
-      WHERE dm."DivisaMovimientoTipo" LIKE $1
-        OR CAST(dm."DivisaMovimientoId" AS TEXT) LIKE $2
-        OR CAST(dm."CajaId" AS TEXT) LIKE $3
-        OR CAST(dm."DivisaId" AS TEXT) LIKE $4
-        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) LIKE $5
-        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) LIKE $6
-        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) LIKE $7
-        OR CAST(dm."UsuarioId" AS TEXT) LIKE $8
-        OR c."CajaDescripcion" LIKE $9
-        OR d."DivisaNombre" LIKE $10
-        OR u."UsuarioNombre" LIKE $11
+      WHERE dm."DivisaMovimientoTipo" ILIKE $1
+        OR CAST(dm."DivisaMovimientoId" AS TEXT) ILIKE $2
+        OR CAST(dm."CajaId" AS TEXT) ILIKE $3
+        OR CAST(dm."DivisaId" AS TEXT) ILIKE $4
+        OR CAST(dm."DivisaMovimientoCambio" AS TEXT) ILIKE $5
+        OR CAST(dm."DivisaMovimientoCantidad" AS TEXT) ILIKE $6
+        OR CAST(dm."DivisaMovimientoMonto" AS TEXT) ILIKE $7
+        OR CAST(dm."UsuarioId" AS TEXT) ILIKE $8
+        OR c."CajaDescripcion" ILIKE $9
+        OR d."DivisaNombre" ILIKE $10
+        OR u."UsuarioNombre" ILIKE $11
     `;
 
     const countResult = await db.query(countQuery, [

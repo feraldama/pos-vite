@@ -137,19 +137,19 @@ const PagoTrans = {
       LEFT JOIN "transporte" t ON p."TransporteId" = t."TransporteId"
       LEFT JOIN "caja" c ON p."CajaId" = c."CajaId"
       LEFT JOIN "clientes" cl ON p."ClienteId" = cl."ClienteId"
-      WHERE p."PagoTransOrigen" LIKE $1
-        OR p."PagoTransDestino" LIKE $2
-        OR p."PagoTransNumeroBoleto" LIKE $3
-        OR p."PagoTransNombreApellido" LIKE $4
-        OR p."PagoTransCI" LIKE $5
-        OR p."PagoTransTelefono" LIKE $6
-        OR p."PagoTransClienteRUC" LIKE $7
-        OR CAST(p."TransporteId" AS TEXT) LIKE $8
-        OR CAST(p."CajaId" AS TEXT) LIKE $9
-        OR CAST(p."ClienteId" AS TEXT) LIKE $10
-        OR CAST(p."PagoTransMonto" AS TEXT) LIKE $11
-        OR TO_CHAR(p."PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $12
-        OR TO_CHAR(p."PagoTransFechaEmbarque", 'DD/MM/YYYY') LIKE $13
+      WHERE p."PagoTransOrigen" ILIKE $1
+        OR p."PagoTransDestino" ILIKE $2
+        OR p."PagoTransNumeroBoleto" ILIKE $3
+        OR p."PagoTransNombreApellido" ILIKE $4
+        OR p."PagoTransCI" ILIKE $5
+        OR p."PagoTransTelefono" ILIKE $6
+        OR p."PagoTransClienteRUC" ILIKE $7
+        OR CAST(p."TransporteId" AS TEXT) ILIKE $8
+        OR CAST(p."CajaId" AS TEXT) ILIKE $9
+        OR CAST(p."ClienteId" AS TEXT) ILIKE $10
+        OR CAST(p."PagoTransMonto" AS TEXT) ILIKE $11
+        OR TO_CHAR(p."PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $12
+        OR TO_CHAR(p."PagoTransFechaEmbarque", 'DD/MM/YYYY') ILIKE $13
       ORDER BY p."${sortField}" ${order}
       LIMIT $14 OFFSET $15
     `;
@@ -174,19 +174,19 @@ const PagoTrans = {
 
     const countQuery = `
       SELECT COUNT(*) as total FROM "pagotrans"
-      WHERE "PagoTransOrigen" LIKE $1
-        OR "PagoTransDestino" LIKE $2
-        OR "PagoTransNumeroBoleto" LIKE $3
-        OR "PagoTransNombreApellido" LIKE $4
-        OR "PagoTransCI" LIKE $5
-        OR "PagoTransTelefono" LIKE $6
-        OR "PagoTransClienteRUC" LIKE $7
-        OR CAST("TransporteId" AS TEXT) LIKE $8
-        OR CAST("CajaId" AS TEXT) LIKE $9
-        OR CAST("ClienteId" AS TEXT) LIKE $10
-        OR CAST("PagoTransMonto" AS TEXT) LIKE $11
-        OR TO_CHAR("PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') LIKE $12
-        OR TO_CHAR("PagoTransFechaEmbarque", 'DD/MM/YYYY') LIKE $13
+      WHERE "PagoTransOrigen" ILIKE $1
+        OR "PagoTransDestino" ILIKE $2
+        OR "PagoTransNumeroBoleto" ILIKE $3
+        OR "PagoTransNombreApellido" ILIKE $4
+        OR "PagoTransCI" ILIKE $5
+        OR "PagoTransTelefono" ILIKE $6
+        OR "PagoTransClienteRUC" ILIKE $7
+        OR CAST("TransporteId" AS TEXT) ILIKE $8
+        OR CAST("CajaId" AS TEXT) ILIKE $9
+        OR CAST("ClienteId" AS TEXT) ILIKE $10
+        OR CAST("PagoTransMonto" AS TEXT) ILIKE $11
+        OR TO_CHAR("PagoTransFecha", 'DD/MM/YYYY HH24:MI:SS') ILIKE $12
+        OR TO_CHAR("PagoTransFechaEmbarque", 'DD/MM/YYYY') ILIKE $13
     `;
 
     const countResult = await db.query(countQuery, [

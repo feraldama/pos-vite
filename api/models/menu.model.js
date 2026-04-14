@@ -26,7 +26,7 @@ const Menu = {
     let paramIndex = 1;
 
     if (search) {
-      where = `WHERE "MenuId" LIKE $${paramIndex} OR "MenuNombre" LIKE $${paramIndex + 1}`;
+      where = `WHERE "MenuId" ILIKE $${paramIndex} OR "MenuNombre" ILIKE $${paramIndex + 1}`;
       params.push(`%${search}%`, `%${search}%`);
       paramIndex += 2;
     }
@@ -45,7 +45,7 @@ const Menu = {
     let countParams = [];
     let countWhere = "";
     if (search) {
-      countWhere = `WHERE "MenuId" LIKE $1 OR "MenuNombre" LIKE $2`;
+      countWhere = `WHERE "MenuId" ILIKE $1 OR "MenuNombre" ILIKE $2`;
       countParams.push(`%${search}%`, `%${search}%`);
     }
 

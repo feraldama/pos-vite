@@ -27,8 +27,15 @@ import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
+import SystemBlocked from "./components/common/SystemBlocked";
 
 function App() {
+  const systemBlocked = import.meta.env.VITE_SYSTEM_BLOCKED === "true";
+
+  if (systemBlocked) {
+    return <SystemBlocked />;
+  }
+
   return (
     <Router>
       <AuthProvider>

@@ -168,7 +168,7 @@ const Cliente = {
         "UsuarioId",
       ];
       camposActualizables.forEach((campo) => {
-        if (clienteData[campo] !== undefined) {
+        if (clienteData[campo] !== undefined && clienteData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           // Aplicar trim solo al UsuarioId si es string
           if (campo === "UsuarioId" && typeof clienteData[campo] === "string") {

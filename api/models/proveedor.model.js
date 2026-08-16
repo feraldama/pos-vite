@@ -135,11 +135,12 @@ const Proveedor = {
           ProveedorTelefono
         ) VALUES (?, ?, ?, ?)
       `;
+      // Las columnas son NOT NULL: los vacíos se guardan como '' (como hacía MySQL)
       const values = [
-        proveedorData.ProveedorRUC || null,
+        proveedorData.ProveedorRUC || "",
         proveedorData.ProveedorNombre,
-        proveedorData.ProveedorDireccion || null,
-        proveedorData.ProveedorTelefono || null,
+        proveedorData.ProveedorDireccion || "",
+        proveedorData.ProveedorTelefono || "",
       ];
 
       db.query(query, values, (err, result) => {
@@ -164,7 +165,7 @@ const Proveedor = {
       ];
 
       camposActualizables.forEach((campo) => {
-        if (proveedorData[campo] !== undefined) {
+        if (proveedorData[campo] !== undefined && proveedorData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           values.push(proveedorData[campo]);
         }

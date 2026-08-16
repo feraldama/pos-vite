@@ -72,10 +72,10 @@ const AlquilerPrendas = {
           [data.AlquilerId],
           (err, results) => {
             if (err) {
+              // 40P01 = deadlock, 55P03 = lock timeout (SQLSTATE de PostgreSQL)
               if (
                 retries > 0 &&
-                (err.code === "ER_LOCK_DEADLOCK" ||
-                  err.code === "ER_LOCK_WAIT_TIMEOUT")
+                (err.code === "40P01" || err.code === "55P03")
               ) {
                 return setTimeout(
                   () => attemptInsert(retries - 1),
@@ -105,19 +105,18 @@ const AlquilerPrendas = {
 
             db.query(insertQuery, values, (err, result) => {
               if (err) {
-                // Si es error de clave duplicada, otra transacción insertó primero
+                // Si es error de clave duplicada (23505), otra transacción insertó primero
                 // Reintentar con un nuevo cálculo del ID
-                if (err.code === "ER_DUP_ENTRY") {
+                if (err.code === "23505") {
                   return setTimeout(
                     () => attemptInsert(retries - 1),
                     Math.random() * 30 + 10
                   );
                 }
-                // Si es deadlock, reintentar
+                // Si es deadlock o lock timeout, reintentar
                 if (
                   retries > 0 &&
-                  (err.code === "ER_LOCK_DEADLOCK" ||
-                    err.code === "ER_LOCK_WAIT_TIMEOUT")
+                  (err.code === "40P01" || err.code === "55P03")
                 ) {
                   return setTimeout(
                     () => attemptInsert(retries - 1),

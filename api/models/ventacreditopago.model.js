@@ -48,8 +48,8 @@ const VentaCreditoPago = {
       const values = [
         data.VentaCreditoId,
         data.VentaCreditoPagoId,
-        data.VentaCreditoPagoFecha,
-        data.VentaCreditoPagoMonto,
+        data.VentaCreditoPagoFecha || new Date(),
+        data.VentaCreditoPagoMonto || 0,
       ];
 
       db.query(query, values, (err, result) => {

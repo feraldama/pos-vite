@@ -185,10 +185,18 @@ out.push("SET client_encoding = 'UTF8';");
 out.push("BEGIN;");
 out.push("");
 
+// Columnas que MySQL llenaba con centinelas ('0000-00-00', 0) cuando faltaban;
+// en Postgres las hacemos nullable (la app envía null en esos casos)
+const NULLABLE_OVERRIDES = {
+  alquiler: ["AlquilerFechaEntrega", "AlquilerFechaDevolucion"],
+  producto: ["TipoPrendaId"],
+};
+
 // 1. tablas
 for (const name of tableOrder) {
   const t = tables[name];
   const colLines = t.cols.map((c) => {
+    if ((NULLABLE_OVERRIDES[name] || []).includes(c.name)) c.notnull = false;
     let line = `  "${c.name}" ${c.type}`;
     if (c.notnull) {
       line += " NOT NULL";
@@ -227,6 +235,16 @@ out.push("");
 out.push(`INSERT INTO tipogastogrupo ("TipoGastoId", "TipoGastoGrupoId", "TipoGastoGrupoDescripcion") VALUES (1, 5, 'DEVOLUCIÓN') ON CONFLICT DO NOTHING;`);
 // Cliente "consumidor final" que la pantalla de ventas usa por defecto (ClienteId 1 hardcodeado en el frontend)
 out.push(`INSERT INTO clientes ("ClienteId", "ClienteRUC", "ClienteRazonSocial", "ClienteNombre", "ClienteApellido", "ClienteDireccion", "ClienteTelefono", "ClienteTipo", "UsuarioId") VALUES (1, '', '', 'SIN NOMBRE', 'MINORISTA', '', '', 'MI', NULL) ON CONFLICT DO NOTHING;`);
+// GeneXus llevaba el stock en producto.ProductoStock y la mayoría de los productos
+// no tiene fila en productoalmacen: crearla con el stock actual para que la
+// invariante "stock del producto = suma de almacenes" se cumpla desde el inicio
+out.push(`INSERT INTO productoalmacen ("ProductoId", "AlmacenId", "ProductoAlmacenStock", "ProductoAlmacenStockUnitario")
+SELECT p."ProductoId",
+       COALESCE((SELECT a."AlmacenId" FROM almacen a WHERE a."AlmacenId" = p."LocalId"), 1),
+       p."ProductoStock",
+       p."ProductoStockUnitario"
+FROM producto p
+WHERE NOT EXISTS (SELECT 1 FROM productoalmacen pa WHERE pa."ProductoId" = p."ProductoId");`);
 out.push("");
 
 // 3. índices

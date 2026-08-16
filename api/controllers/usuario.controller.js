@@ -358,7 +358,7 @@ exports.deleteUsuario = async (req, res) => {
     if (
       error &&
       error.message &&
-      error.message.includes("a foreign key constraint fails")
+      (error.code === "23503" || error.message.includes("a foreign key constraint fails"))
     ) {
       // Si aún así hay un error de foreign key, intentar obtener más información
       try {

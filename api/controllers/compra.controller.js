@@ -114,9 +114,11 @@ exports.createCompra = async (req, res) => {
       CompraFecha: new Date(),
       ProveedorId: req.body.ProveedorId,
       UsuarioId: req.body.UsuarioId,
-      CompraFactura: req.body.CompraFactura,
+      CompraFactura: parseInt(String(req.body.CompraFactura).replace(/\D/g, "")) || 0,
       CompraTipo: req.body.CompraTipo,
-      CompraPagoCompleto: req.body.CompraPagoCompleto || false,
+      // La columna es varchar(1): normalizar booleanos a "S"/"N"
+      CompraPagoCompleto:
+        req.body.CompraPagoCompleto === true || req.body.CompraPagoCompleto === "S" ? "S" : "N",
       CompraEntrega: req.body.CompraEntrega || 0,
     });
 
@@ -163,7 +165,15 @@ exports.createCompra = async (req, res) => {
 exports.updateCompra = async (req, res) => {
   try {
     const { id } = req.params;
-    const compraData = req.body;
+    const compraData = { ...req.body };
+    // La columna es varchar(1): normalizar booleanos a "S"/"N"
+    if (typeof compraData.CompraPagoCompleto === "boolean") {
+      compraData.CompraPagoCompleto = compraData.CompraPagoCompleto ? "S" : "N";
+    }
+    if (compraData.CompraFactura !== undefined) {
+      compraData.CompraFactura =
+        parseInt(String(compraData.CompraFactura).replace(/\D/g, "")) || 0;
+    }
 
     const updatedCompra = await Compra.update(id, compraData);
     if (!updatedCompra) {
@@ -244,7 +254,7 @@ exports.deleteCompra = async (req, res) => {
     if (
       error &&
       error.message &&
-      error.message.includes("a foreign key constraint fails")
+      (error.code === "23503" || error.message.includes("a foreign key constraint fails"))
     ) {
       return res.status(400).json({
         success: false,

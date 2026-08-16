@@ -159,9 +159,9 @@ const RegistroDiarioCaja = {
             SELECT COUNT(*) as total FROM registrodiariocaja 
             WHERE RegistroDiarioCajaDetalle LIKE ? 
               OR CAST(UsuarioId AS CHAR) LIKE ?
-              OR CAST(CajaId AS INTEGER) LIKE ?
-              OR CAST(TipoGastoId AS INTEGER) LIKE ?
-              OR CAST(TipoGastoGrupoId AS INTEGER) LIKE ?
+              OR CAST(CajaId AS CHAR) LIKE ?
+              OR CAST(TipoGastoId AS CHAR) LIKE ?
+              OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
               OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
               OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
           `;
@@ -220,7 +220,8 @@ const RegistroDiarioCaja = {
         registroData.RegistroDiarioCajaFecha || new Date(),
         registroData.TipoGastoId,
         registroData.TipoGastoGrupoId,
-        registroData.RegistroDiarioCajaDetalle,
+        // La columna es varchar(50); MySQL truncaba en silencio, PG rechaza
+        String(registroData.RegistroDiarioCajaDetalle || "").slice(0, 50),
         registroData.RegistroDiarioCajaMonto,
         registroData.UsuarioId,
       ];
@@ -253,7 +254,7 @@ const RegistroDiarioCaja = {
       ];
 
       camposActualizables.forEach((campo) => {
-        if (registroData[campo] !== undefined) {
+        if (registroData[campo] !== undefined && registroData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           values.push(registroData[campo]);
         }

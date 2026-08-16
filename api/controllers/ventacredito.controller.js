@@ -108,7 +108,7 @@ exports.delete = async (req, res) => {
     if (
       error &&
       error.message &&
-      error.message.includes("a foreign key constraint fails")
+      (error.code === "23503" || error.message.includes("a foreign key constraint fails"))
     ) {
       return res.status(400).json({
         message:

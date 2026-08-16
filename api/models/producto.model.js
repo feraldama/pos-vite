@@ -200,7 +200,8 @@ const Producto = {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
-        productoData.ProductoCodigo,
+        // La columna es bigint: quedarse solo con los dígitos
+        parseInt(String(productoData.ProductoCodigo).replace(/\D/g, "")) || 0,
         productoData.ProductoNombre,
         productoData.ProductoPrecioVenta,
         productoData.ProductoPrecioVentaMayorista,
@@ -265,9 +266,13 @@ const Producto = {
             updateFields.push(`${campo} = ?`);
             values.push(Buffer.from([]));
           }
-        } else if (productoData[campo] !== undefined) {
+        } else if (productoData[campo] !== undefined && productoData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
-          values.push(productoData[campo]);
+          values.push(
+            campo === "ProductoCodigo"
+              ? parseInt(String(productoData[campo]).replace(/\D/g, "")) || 0
+              : productoData[campo]
+          );
         }
       });
       if (updateFields.length === 0) {
@@ -295,12 +300,21 @@ const Producto = {
 
   delete: (id) => {
     return new Promise((resolve, reject) => {
+      // Primero el detalle por almacén (FK); las demás referencias (ventas,
+      // compras, alquileres) siguen bloqueando el borrado, como corresponde
       db.query(
-        "DELETE FROM producto WHERE ProductoId = ?",
+        "DELETE FROM productoalmacen WHERE ProductoId = ?",
         [id],
-        (err, result) => {
+        (err) => {
           if (err) return reject(err);
-          resolve(result.affectedRows > 0);
+          db.query(
+            "DELETE FROM producto WHERE ProductoId = ?",
+            [id],
+            (err, result) => {
+              if (err) return reject(err);
+              resolve(result.affectedRows > 0);
+            }
+          );
         }
       );
     });

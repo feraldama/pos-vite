@@ -164,7 +164,7 @@ const Local = {
         "LocalDireccion",
       ];
       camposActualizables.forEach((campo) => {
-        if (localData[campo] !== undefined) {
+        if (localData[campo] !== undefined && localData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           values.push(localData[campo]);
         }

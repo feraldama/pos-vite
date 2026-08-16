@@ -49,9 +49,10 @@ const PerfilMenu = {
           Number(Boolean(data.puedeEliminar)),
           Number(Boolean(data.puedeLeer)),
         ],
-        (err, result) => {
+        (err) => {
           if (err) return reject(err);
-          resolve({ PerfilMenuId: result.insertId, ...data });
+          // La tabla tiene clave compuesta (PerfilId, MenuId); no hay id autogenerado
+          resolve({ ...data });
         }
       );
     });

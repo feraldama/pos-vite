@@ -233,9 +233,17 @@ const Usuario = {
 
         // Construir la consulta dinámicamente
         camposActualizables.forEach((campo) => {
-          if (usuarioData[campo] !== undefined) {
+          if (usuarioData[campo] !== undefined && usuarioData[campo] !== null) {
+            let valor = usuarioData[campo];
+            // Columnas varchar(1): normalizar booleanos
+            if (campo === "UsuarioIsAdmin" && typeof valor === "boolean") {
+              valor = valor ? "S" : "N";
+            }
+            if (campo === "UsuarioEstado" && typeof valor === "boolean") {
+              valor = valor ? "A" : "I";
+            }
             updateFields.push(`${campo} = ?`);
-            values.push(usuarioData[campo]);
+            values.push(valor);
           }
         });
 

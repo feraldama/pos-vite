@@ -125,7 +125,7 @@ const TipoPrenda = {
       const camposActualizables = ["TipoPrendaNombre"];
 
       camposActualizables.forEach((campo) => {
-        if (tipoPrendaData[campo] !== undefined) {
+        if (tipoPrendaData[campo] !== undefined && tipoPrendaData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           values.push(tipoPrendaData[campo]);
         }

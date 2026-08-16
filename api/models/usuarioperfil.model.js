@@ -18,9 +18,10 @@ const UsuarioPerfil = {
       db.query(
         "INSERT INTO usuarioperfil (UsuarioId, PerfilId) VALUES (?, ?)",
         [data.UsuarioId, data.PerfilId],
-        (err, result) => {
+        (err) => {
           if (err) return reject(err);
-          resolve({ UsuarioPerfilId: result.insertId, ...data });
+          // La tabla tiene clave compuesta (UsuarioId, PerfilId); no hay id autogenerado
+          resolve({ ...data });
         }
       );
     });

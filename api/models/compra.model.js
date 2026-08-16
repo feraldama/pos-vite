@@ -52,6 +52,7 @@ const Compra = {
         "CompraPagoCompleto",
         "CompraEntrega",
         "ProveedorNombre",
+        "Total",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -103,6 +104,7 @@ const Compra = {
         "CompraPagoCompleto",
         "CompraEntrega",
         "ProveedorNombre",
+        "Total",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -206,7 +208,7 @@ const Compra = {
       ];
 
       camposActualizables.forEach((campo) => {
-        if (compraData[campo] !== undefined) {
+        if (compraData[campo] !== undefined && compraData[campo] !== null) {
           updateFields.push(`${campo} = ?`);
           values.push(compraData[campo]);
         }

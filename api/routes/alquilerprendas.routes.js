@@ -20,6 +20,11 @@ router.get(
   alquilerprendasController.getPrendasAlquiladasActuales
 );
 router.get(
+  "/fechas-ocupadas",
+  authMiddleware,
+  alquilerprendasController.getFechasOcupadas
+);
+router.get(
   "/alquiler/:alquilerId",
   authMiddleware,
   alquilerprendasController.getAlquilerPrendasByAlquilerId

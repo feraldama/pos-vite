@@ -143,3 +143,28 @@ export const searchAlquilerPrendas = async (
     );
   }
 };
+
+// Fechas ya alquiladas por producto (alquileres vigentes o futuros, no devueltos/cancelados)
+export interface FechaOcupada {
+  ProductoId: number;
+  AlquilerId: number;
+  AlquilerFechaEntrega: string;
+  AlquilerFechaDevolucion: string;
+  AlquilerEstado: string;
+  ClienteNombre?: string;
+  ClienteApellido?: string;
+}
+
+export const getFechasOcupadas = async (): Promise<FechaOcupada[]> => {
+  try {
+    const response = await api.get("/alquilerprendas/fechas-ocupadas");
+    return response.data.data || [];
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener fechas ocupadas",
+      }
+    );
+  }
+};

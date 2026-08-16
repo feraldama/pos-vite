@@ -78,6 +78,21 @@ exports.getPrendasAlquiladasActuales = async (req, res) => {
   }
 };
 
+// getFechasOcupadas - rangos de fechas ya alquilados por producto (vigentes o futuros)
+exports.getFechasOcupadas = async (req, res) => {
+  try {
+    const fechas = await AlquilerPrendas.getFechasOcupadas();
+    res.json({ success: true, data: fechas });
+  } catch (error) {
+    console.error("Error al obtener fechas ocupadas:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener fechas ocupadas",
+      error: error.message,
+    });
+  }
+};
+
 // getAlquilerPrendasByAlquilerId
 exports.getAlquilerPrendasByAlquilerId = async (req, res) => {
   try {

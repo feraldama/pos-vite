@@ -93,6 +93,16 @@ export default function ProductsList({
     { TipoPrendaId: number; TipoPrendaNombre: string }[]
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Vista ampliada de la imagen al pasar el mouse por la miniatura
+  const [imagePreview, setImagePreview] = useState<{
+    src: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const moverPreview = (src: string) => (e: React.MouseEvent) => {
+    setImagePreview({ src, x: e.clientX, y: e.clientY });
+  };
 
   useEffect(() => {
     if (currentProduct) {
@@ -210,6 +220,33 @@ export default function ProductsList({
   // Configuración de columnas para la tabla
   const columns = [
     {
+      key: "ProductoId",
+      label: "ID",
+    },
+    {
+      key: "ProductoImagen",
+      label: "Imagen",
+      render: (item: Producto) =>
+        item.ProductoImagen ? (
+          <img
+            src={`data:image/jpeg;base64,${item.ProductoImagen}`}
+            alt={item.ProductoNombre}
+            className="h-12 w-12 object-cover rounded cursor-zoom-in"
+            loading="lazy"
+            decoding="async"
+            onMouseEnter={moverPreview(
+              `data:image/jpeg;base64,${item.ProductoImagen}`
+            )}
+            onMouseMove={moverPreview(
+              `data:image/jpeg;base64,${item.ProductoImagen}`
+            )}
+            onMouseLeave={() => setImagePreview(null)}
+          />
+        ) : (
+          "-"
+        ),
+    },
+    {
       key: "ProductoCodigo",
       label: "Código",
     },
@@ -281,6 +318,29 @@ export default function ProductsList({
         sortOrder={sortOrder}
         onSort={onSort}
       />
+
+      {/* Zoom de imagen al pasar el mouse por la miniatura */}
+      {imagePreview && (
+        <div
+          className="fixed z-50 pointer-events-none bg-white border border-gray-300 rounded-lg shadow-xl p-1"
+          style={{
+            left:
+              imagePreview.x + 360 > window.innerWidth
+                ? imagePreview.x - 344
+                : imagePreview.x + 24,
+            top: Math.min(
+              Math.max(imagePreview.y - 160, 8),
+              window.innerHeight - 340
+            ),
+          }}
+        >
+          <img
+            src={imagePreview.src}
+            alt="Vista ampliada"
+            className="h-80 w-80 object-contain rounded"
+          />
+        </div>
+      )}
 
       {/* Modal para crear/editar */}
       {isModalOpen && (

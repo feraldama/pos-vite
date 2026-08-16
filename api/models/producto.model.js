@@ -154,6 +154,27 @@ const Producto = {
     });
   },
 
+  // Sincroniza la fila de productoalmacen del local del producto para que la
+  // suma de almacenes coincida con el stock cargado/editado desde la pantalla
+  syncAlmacen: (id) => {
+    const query = `
+      INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario)
+      SELECT p.ProductoId,
+             COALESCE((SELECT a.AlmacenId FROM almacen a WHERE a.AlmacenId = p.LocalId), 1),
+             p.ProductoStock - COALESCE((SELECT SUM(pa.ProductoAlmacenStock) FROM productoalmacen pa
+                WHERE pa.ProductoId = p.ProductoId
+                  AND pa.AlmacenId <> COALESCE((SELECT a2.AlmacenId FROM almacen a2 WHERE a2.AlmacenId = p.LocalId), 1)), 0),
+             p.ProductoStockUnitario - COALESCE((SELECT SUM(pa.ProductoAlmacenStockUnitario) FROM productoalmacen pa
+                WHERE pa.ProductoId = p.ProductoId
+                  AND pa.AlmacenId <> COALESCE((SELECT a3.AlmacenId FROM almacen a3 WHERE a3.AlmacenId = p.LocalId), 1)), 0)
+      FROM producto p WHERE p.ProductoId = ?
+      ON CONFLICT ("ProductoId", "AlmacenId") DO UPDATE
+        SET "ProductoAlmacenStock" = EXCLUDED."ProductoAlmacenStock",
+            "ProductoAlmacenStockUnitario" = EXCLUDED."ProductoAlmacenStockUnitario"
+    `;
+    return db.query(query, [id]);
+  },
+
   create: (productoData) => {
     return new Promise((resolve, reject) => {
       const imagenBuffer = productoData.ProductoImagen
@@ -197,10 +218,14 @@ const Producto = {
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
-        resolve({
-          ProductoId: result.insertId,
-          ...productoData,
-        });
+        Producto.syncAlmacen(result.insertId)
+          .then(() =>
+            resolve({
+              ProductoId: result.insertId,
+              ...productoData,
+            })
+          )
+          .catch(reject);
       });
     });
   },
@@ -259,8 +284,11 @@ const Producto = {
         if (result.affectedRows === 0) {
           return resolve(null);
         }
-        // Obtener el producto actualizado
-        Producto.getById(id).then(resolve).catch(reject);
+        // Sincronizar el almacén (por si se editó el stock) y devolver el producto
+        Producto.syncAlmacen(id)
+          .then(() => Producto.getById(id))
+          .then(resolve)
+          .catch(reject);
       });
     });
   },

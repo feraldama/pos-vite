@@ -62,6 +62,8 @@ const Pagination = ({
 
   const pageNumbers = getPageNumbers();
 
+  const opcionesPorPagina = [10, 25, 50, 100];
+
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
       <div className="flex items-center order-2 sm:order-1">
@@ -71,10 +73,11 @@ const Pagination = ({
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
           className="border border-gray-300 rounded-md px-2 py-1 text-sm"
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
+          {opcionesPorPagina.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
         </select>
       </div>
 

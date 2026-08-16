@@ -5,7 +5,10 @@ import {
   getProductosPaginated,
   searchProductos,
 } from "../../services/productos.service";
-import ProductCard from "../../components/products/ProductCard";
+import ProductCard, {
+  type RangoAlquilado,
+} from "../../components/products/ProductCard";
+import { getFechasOcupadas } from "../../services/alquilerprendas.service";
 import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
@@ -74,7 +77,35 @@ export default function Rentals() {
   >([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(24);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  // Rangos de fechas ya alquilados, por ProductoId
+  const [fechasOcupadas, setFechasOcupadas] = useState<
+    Record<number, RangoAlquilado[]>
+  >({});
+
+  const cargarFechasOcupadas = useCallback(async () => {
+    try {
+      const rows = await getFechasOcupadas();
+      const map: Record<number, RangoAlquilado[]> = {};
+      for (const r of rows) {
+        if (!map[r.ProductoId]) map[r.ProductoId] = [];
+        map[r.ProductoId].push({
+          desde: r.AlquilerFechaEntrega,
+          hasta: r.AlquilerFechaDevolucion,
+          cliente: [r.ClienteNombre, r.ClienteApellido]
+            .filter(Boolean)
+            .join(" "),
+        });
+      }
+      setFechasOcupadas(map);
+    } catch (error) {
+      console.error("Error al cargar fechas ocupadas:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarFechasOcupadas();
+  }, [cargarFechasOcupadas]);
   const [pagination, setPagination] = useState({
     totalItems: 0,
     totalPages: 1,
@@ -455,6 +486,8 @@ export default function Rentals() {
         allowOutsideClick: false,
         allowEscapeKey: false,
       }).then(() => {
+        // Refrescar las fechas alquiladas en las fichas
+        cargarFechasOcupadas();
         // Limpiar estados
         setCarrito([]);
         setEfectivo(0);
@@ -1270,6 +1303,7 @@ export default function Rentals() {
                         : logo
                     }
                     stock={p.ProductoStock}
+                    fechasAlquiladas={fechasOcupadas[p.ProductoId]}
                     onAdd={() =>
                       agregarProducto({
                         id: p.ProductoId,

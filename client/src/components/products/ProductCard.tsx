@@ -1,6 +1,12 @@
 import React from "react";
 import { formatMiles } from "../../utils/utils";
 
+export interface RangoAlquilado {
+  desde: string; // ISO date
+  hasta: string; // ISO date
+  cliente?: string;
+}
+
 interface ProductCardProps {
   nombre: string;
   precio: number;
@@ -10,7 +16,16 @@ interface ProductCardProps {
   stock: number;
   onAdd: () => void;
   precioUnitario?: number;
+  fechasAlquiladas?: RangoAlquilado[];
 }
+
+const formatFecha = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-PY", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+
+const MAX_RANGOS_VISIBLES = 3;
 
 const ProductCard: React.FC<ProductCardProps> = ({
   nombre,
@@ -20,6 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   imagen,
   stock,
   onAdd,
+  fechasAlquiladas,
 }) => {
   const mostrarPrecio =
     clienteTipo === "MA" && precioMayorista !== undefined
@@ -49,6 +65,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="text-sm text-gray-500 mt-1">
           Stock: <span className="text-green-600 font-semibold">{stock}</span>
         </div>
+        {fechasAlquiladas && fechasAlquiladas.length > 0 && (
+          <div className="mt-2 mb-1 flex flex-col gap-1">
+            {fechasAlquiladas
+              .slice(0, MAX_RANGOS_VISIBLES)
+              .map((rango, idx) => (
+                <div
+                  key={idx}
+                  className="text-xs bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5 font-semibold"
+                  title={rango.cliente ? `Alquilado por ${rango.cliente}` : "Alquilado"}
+                >
+                  Alquilado: {formatFecha(rango.desde)} al{" "}
+                  {formatFecha(rango.hasta)}
+                </div>
+              ))}
+            {fechasAlquiladas.length > MAX_RANGOS_VISIBLES && (
+              <div className="text-xs text-red-500 font-medium">
+                +{fechasAlquiladas.length - MAX_RANGOS_VISIBLES} alquiler
+                {fechasAlquiladas.length - MAX_RANGOS_VISIBLES > 1 ? "es" : ""}{" "}
+                más
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

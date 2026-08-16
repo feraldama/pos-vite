@@ -182,8 +182,10 @@ export default function Inventario() {
       return;
     }
 
-    // Validar que al menos un producto tenga cantidad mayor a 0
-    const productosValidos = carrito.filter((p) => p.caja > 0);
+    // En modo Fijar el 0 es válido (dejar un producto sin stock);
+    // en modo Sumar, 0 no tiene efecto y se descarta
+    const productosValidos =
+      tipoInventario === "F" ? carrito : carrito.filter((p) => p.caja > 0);
 
     if (productosValidos.length === 0) {
       Swal.fire({

@@ -29,21 +29,40 @@ async function registrarCaja(client, { cajaId, fecha, tipoGastoId, grupoId, deta
   );
 }
 
-async function ajustarStock(client, productoId, almacenId, delta) {
+// Si el producto aún no tiene fila en este almacén, crearla con el stock NO
+// asignado a otros almacenes (los datos de GeneXus llevaban el stock en
+// producto.ProductoStock y muchas veces sin fila en productoalmacen)
+async function asegurarFilaAlmacen(client, productoId, almacenId) {
   await client.q(
     `INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario)
-     VALUES (?, ?, ?, 0)
-     ON CONFLICT ("ProductoId", "AlmacenId")
-     DO UPDATE SET "ProductoAlmacenStock" = productoalmacen."ProductoAlmacenStock" + ?`,
-    [productoId, almacenId, delta, delta]
+     SELECT p.ProductoId, ?,
+            p.ProductoStock - COALESCE((SELECT SUM(pa.ProductoAlmacenStock) FROM productoalmacen pa WHERE pa.ProductoId = p.ProductoId), 0),
+            p.ProductoStockUnitario - COALESCE((SELECT SUM(pa.ProductoAlmacenStockUnitario) FROM productoalmacen pa WHERE pa.ProductoId = p.ProductoId), 0)
+     FROM producto p WHERE p.ProductoId = ?
+     ON CONFLICT ("ProductoId", "AlmacenId") DO NOTHING`,
+    [almacenId, productoId]
   );
-  // Stock total del producto = suma de todos los almacenes
+}
+
+// Recalcular el stock total del producto como la suma de todos los almacenes
+async function recalcularStockTotal(client, productoId) {
   await client.q(
-    `UPDATE producto SET ProductoStock =
-       (SELECT COALESCE(SUM(pa.ProductoAlmacenStock), 0) FROM productoalmacen pa WHERE pa.ProductoId = ?)
+    `UPDATE producto SET
+       ProductoStock = (SELECT COALESCE(SUM(pa.ProductoAlmacenStock), 0) FROM productoalmacen pa WHERE pa.ProductoId = ?),
+       ProductoStockUnitario = (SELECT COALESCE(SUM(pa.ProductoAlmacenStockUnitario), 0) FROM productoalmacen pa WHERE pa.ProductoId = ?)
      WHERE ProductoId = ?`,
-    [productoId, productoId]
+    [productoId, productoId, productoId]
   );
+}
+
+async function ajustarStock(client, productoId, almacenId, delta) {
+  await asegurarFilaAlmacen(client, productoId, almacenId);
+  await client.q(
+    `UPDATE productoalmacen SET ProductoAlmacenStock = ProductoAlmacenStock + ?
+     WHERE ProductoId = ? AND AlmacenId = ?`,
+    [delta, productoId, almacenId]
+  );
+  await recalcularStockTotal(client, productoId);
 }
 
 function validarItems(items) {
@@ -293,15 +312,16 @@ exports.actualizarInventario = async (req, res) => {
 
     await withTransaction(async (client) => {
       if (tipo === "S") {
+        await asegurarFilaAlmacen(client, productoId, almacenId);
         await client.q(
-          `INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT ("ProductoId", "AlmacenId")
-           DO UPDATE SET "ProductoAlmacenStock" = productoalmacen."ProductoAlmacenStock" + ?,
-                         "ProductoAlmacenStockUnitario" = productoalmacen."ProductoAlmacenStockUnitario" + ?`,
-          [productoId, almacenId, caja, unidad, caja, unidad]
+          `UPDATE productoalmacen
+           SET ProductoAlmacenStock = ProductoAlmacenStock + ?,
+               ProductoAlmacenStockUnitario = ProductoAlmacenStockUnitario + ?
+           WHERE ProductoId = ? AND AlmacenId = ?`,
+          [caja, unidad, productoId, almacenId]
         );
       } else {
+        // F = fijar: el valor indicado es el stock absoluto de este almacén
         await client.q(
           `INSERT INTO productoalmacen (ProductoId, AlmacenId, ProductoAlmacenStock, ProductoAlmacenStockUnitario)
            VALUES (?, ?, ?, ?)
@@ -310,13 +330,7 @@ exports.actualizarInventario = async (req, res) => {
           [productoId, almacenId, caja, unidad, caja, unidad]
         );
       }
-      await client.q(
-        `UPDATE producto SET
-           ProductoStock = (SELECT COALESCE(SUM(pa.ProductoAlmacenStock), 0) FROM productoalmacen pa WHERE pa.ProductoId = ?),
-           ProductoStockUnitario = (SELECT COALESCE(SUM(pa.ProductoAlmacenStockUnitario), 0) FROM productoalmacen pa WHERE pa.ProductoId = ?)
-         WHERE ProductoId = ?`,
-        [productoId, productoId, productoId]
-      );
+      await recalcularStockTotal(client, productoId);
     });
 
     res.json({ success: true });

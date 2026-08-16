@@ -360,6 +360,36 @@ const AlquilerPrendas = {
     });
   },
 
+  // Fechas ocupadas por producto: alquileres vigentes o futuros (no devueltos/cancelados)
+  // para mostrar en la ficha de la prenda qué rangos ya están alquilados
+  getFechasOcupadas: () => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT
+          ap.ProductoId,
+          a.AlquilerId,
+          a.AlquilerFechaEntrega,
+          a.AlquilerFechaDevolucion,
+          a.AlquilerEstado,
+          TRIM(c.ClienteNombre) AS ClienteNombre,
+          TRIM(c.ClienteApellido) AS ClienteApellido
+        FROM alquilerprendas ap
+        INNER JOIN alquiler a ON ap.AlquilerId = a.AlquilerId
+        LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
+        WHERE a.AlquilerEstado NOT IN ('Devuelto', 'Cancelado')
+          AND DATE(a.AlquilerFechaDevolucion) >= CURDATE()
+        ORDER BY ap.ProductoId, a.AlquilerFechaEntrega
+      `;
+      db.query(query, (err, results) => {
+        if (err) {
+          console.error("Error en getFechasOcupadas:", err);
+          return reject(err);
+        }
+        resolve(results);
+      });
+    });
+  },
+
   // Obtener todas las prendas actualmente alquiladas (hoy dentro del rango de entrega-devolución, estado no Devuelto/Cancelado)
   getPrendasAlquiladasActuales: () => {
     return new Promise((resolve, reject) => {

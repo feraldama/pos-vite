@@ -108,7 +108,7 @@ const Venta = {
       // Primero eliminar registros asociados en orden correcto
       const deleteQueries = [
         // 1. Eliminar pagos de crédito (ventacreditopago)
-        "DELETE vcp FROM ventacreditopago vcp INNER JOIN ventacredito vc ON vcp.VentaCreditoId = vc.VentaCreditoId WHERE vc.VentaId = ?",
+        "DELETE FROM ventacreditopago WHERE VentaCreditoId IN (SELECT VentaCreditoId FROM ventacredito WHERE VentaId = ?)",
         // 2. Eliminar registros de crédito (ventacredito)
         "DELETE FROM ventacredito WHERE VentaId = ?",
         // 3. Eliminar productos de la venta (ventaproducto)
@@ -262,7 +262,7 @@ const Venta = {
           OR CAST(v.VentaCantidadProductos AS CHAR) = ?
           OR LOWER(COALESCE(u.UsuarioNombre, '')) LIKE LOWER(?)
           OR CAST(v.Total AS CHAR) = ?
-          OR LOWER(COALESCE(v.VentaEntrega, '')) LIKE LOWER(?)
+          OR CAST(COALESCE(v.VentaEntrega, 0) AS CHAR) LIKE ?
         ORDER BY v.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -318,7 +318,7 @@ const Venta = {
             OR CAST(v.VentaCantidadProductos AS CHAR) = ?
             OR LOWER(COALESCE(u.UsuarioNombre, '')) LIKE LOWER(?)
             OR CAST(v.Total AS CHAR) = ?
-            OR LOWER(COALESCE(v.VentaEntrega, '')) LIKE LOWER(?)
+            OR CAST(COALESCE(v.VentaEntrega, 0) AS CHAR) LIKE ?
         `;
 
         const countValues = [
@@ -373,7 +373,7 @@ const Venta = {
         params.push(localId);
       }
 
-      query += ` HAVING Saldo > 0 ORDER BY v.VentaFecha ASC`;
+      query += ` AND (v.Total - COALESCE(v.VentaEntrega, 0)) > 0 ORDER BY v.VentaFecha ASC`;
 
       db.query(query, params, (err, results) => {
         if (err) {
@@ -406,7 +406,7 @@ const Venta = {
         JOIN clientes c ON v.ClienteId = c.ClienteId
         WHERE v.VentaTipo = 'CR'
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
-        HAVING Saldo > 0
+        HAVING SUM(v.Total - COALESCE(v.VentaEntrega, 0)) > 0
         ORDER BY Cliente
       `;
       db.query(query, (err, results) => {

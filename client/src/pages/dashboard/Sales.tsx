@@ -9,8 +9,10 @@ import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
+import {
+  confirmarVenta,
+  confirmarDevolucion,
+} from "../../services/pos.service";
 import logo from "../../assets/img/logo.jpg";
 import {
   getAllClientesSinPaginacion,
@@ -363,101 +365,49 @@ export default function Sales() {
   // Ya no se calcula precio con combo porque siempre es caja
 
   const sendRequest = async () => {
-    const fecha = new Date();
-    const dia = fecha.getDate();
-    const mes = fecha.getMonth() + 1;
-    const año = fecha.getFullYear() % 100;
-    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-    const añoStr = año < 10 ? `0${año}` : año.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-    const SDTProductoItem = carrito.map((p) => {
-      return {
-        ClienteId: clienteSeleccionado?.ClienteId,
-        Producto: {
-          ProductoId: p.id,
-          VentaProductoCantidad: p.cantidad,
-          ProductoPrecioVenta: p.precioVentaMayorista,
-          ProductoUnidad: "C", // Siempre caja
-          VentaProductoPrecioTotal: obtenerTotal(p),
-          Combo: "N", // No se usan combos en modo caja
-          ComboPrecio: 0,
-        },
-      };
-    });
+    const hoy = new Date();
+    const fecha = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(hoy.getDate()).padStart(2, "0")}`;
 
     // Determinar si es venta o devolución
     const isDevolucionMode = isDevolucion;
-    const endpoint = isDevolucionMode ? "apdevolucionws" : "apventaconfirmarws";
-    const operationName = isDevolucionMode
-      ? "PDevolucionWS.VENTACONFIRMAR"
-      : "PVentaConfirmarWS.VENTACONFIRMAR";
-    const namespace = isDevolucionMode ? "Tech" : "TechNow";
 
-    const json = {
-      Envelope: {
-        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
-        Body: {
-          [operationName]: {
-            _attributes: { xmlns: namespace },
-            Sdtproducto: {
-              SDTProductoItem: SDTProductoItem,
-            },
-            ...(isDevolucionMode
-              ? {
-                  Ventafechastring: fechaFormateada,
-                  Almacenorigenid: user?.LocalId,
-                  Clientetipo: clienteSeleccionado?.ClienteTipo,
-                  Cajaid: cajaAperturada?.CajaId,
-                  Usuarioid: user?.id,
-                  Efectivo: efectivo,
-                  Total2: getSubtotal(cartItems),
-                  Ventatipo: "CO",
-                  Clienteid: clienteSeleccionado?.ClienteId,
-                  Voucherreact: voucher,
-                  Transferreact: Number(banco),
-                  Ventanrofactura: 0,
-                  Ventatimbrado: 0,
-                }
-              : {
-                  Ventafechastring: fechaFormateada,
-                  Almacenorigenid: user?.LocalId,
-                  Clientetipo: clienteSeleccionado?.ClienteTipo,
-                  Cajaid: cajaAperturada?.CajaId,
-                  Usuarioid: user?.id,
-                  Efectivo: efectivo,
-                  Total2: getSubtotal(cartItems),
-                  Ventatipo: "CO",
-                  Pagotipo: "E",
-                  Clienteid: clienteSeleccionado?.ClienteId,
-                  Efectivoreact: Number(efectivo) + Number(totalRest),
-                  Bancoreact: Number(bancoDebito) + Number(bancoCredito),
-                  Clientecuentareact: cuentaCliente,
-                  Voucherreact: voucher,
-                  Transferreact: Number(banco),
-                  Ventanrofactura: 0,
-                  Ventatimbrado: 0,
-                }),
+    const payload = {
+      fecha,
+      clienteId: clienteSeleccionado?.ClienteId ?? 0,
+      almacenId: Number(user?.LocalId ?? 0),
+      cajaId: Number(cajaAperturada?.CajaId ?? 0),
+      usuarioId: String(user?.id ?? ""),
+      ventaTipo: "CO",
+      pagoTipo: "E",
+      total: getSubtotal(cartItems),
+      pagos: isDevolucionMode
+        ? {
+            efectivo: Number(efectivo),
+            transferencia: Number(banco),
+          }
+        : {
+            efectivo: Number(efectivo) + Number(totalRest),
+            pos: Number(bancoDebito) + Number(bancoCredito),
+            transferencia: Number(banco),
           },
-        },
-      },
+      items: carrito.map((p) => ({
+        productoId: p.id,
+        cantidad: p.cantidad,
+        precio: p.precioVentaMayorista,
+        precioTotal: obtenerTotal(p),
+        unidad: "C", // Siempre caja
+      })),
     };
 
-    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    };
     try {
-      await axios.post(
-        import.meta.env.VITE_APP_URL +
-          import.meta.env.VITE_APP_URL_GENEXUS +
-          endpoint,
-        xml,
-        config
-      );
+      if (isDevolucionMode) {
+        await confirmarDevolucion(payload);
+      } else {
+        await confirmarVenta(payload);
+      }
       if (printTicket) {
         generateTicketPDF();
       }

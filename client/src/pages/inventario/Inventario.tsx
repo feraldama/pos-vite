@@ -5,8 +5,7 @@ import { getProductosAll } from "../../services/productos.service";
 import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
+import { actualizarInventario } from "../../services/pos.service";
 import logo from "../../assets/img/logo.jpg";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
@@ -198,43 +197,13 @@ export default function Inventario() {
     // Enviar cada producto por separado
     try {
       for (const producto of productosValidos) {
-        const json = {
-          Envelope: {
-            _attributes: {
-              xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
-            },
-            Body: {
-              "PInventarioWS.VENTACONFIRMAR": {
-                _attributes: { xmlns: "Tech" },
-                Productoid: producto.id,
-                Caja: producto.caja,
-                Unidad: 0,
-                Almacenid: Number(user.LocalId),
-                Tipo: tipoInventario,
-              },
-            },
-          },
-        };
-
-        const xml = js2xml(json, {
-          compact: true,
-          ignoreComment: true,
-          spaces: 4,
+        await actualizarInventario({
+          productoId: producto.id,
+          almacenId: Number(user.LocalId),
+          caja: producto.caja,
+          unidad: 0,
+          tipo: tipoInventario,
         });
-
-        const config = {
-          headers: {
-            "Content-Type": "text/xml",
-          },
-        };
-
-        await axios.post(
-          `${import.meta.env.VITE_APP_URL}${
-            import.meta.env.VITE_APP_URL_GENEXUS
-          }apinventariows`,
-          xml,
-          config
-        );
       }
 
       Swal.fire({

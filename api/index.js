@@ -27,6 +27,7 @@ const proveedorRoutes = require("./routes/proveedor.routes");
 const tipoprendaRoutes = require("./routes/tipoprenda.routes");
 const alquilerRoutes = require("./routes/alquiler.routes");
 const alquilerprendasRoutes = require("./routes/alquilerprendas.routes");
+const posRoutes = require("./routes/pos.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -70,6 +71,7 @@ app.use("/api/proveedores", proveedorRoutes);
 app.use("/api/tipoprenda", tipoprendaRoutes);
 app.use("/api/alquiler", alquilerRoutes);
 app.use("/api/alquilerprendas", alquilerprendasRoutes);
+app.use("/api/pos", posRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

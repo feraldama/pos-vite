@@ -44,10 +44,10 @@ const PerfilMenu = {
         [
           data.PerfilId,
           data.MenuId,
-          data.puedeCrear,
-          data.puedeEditar,
-          data.puedeEliminar,
-          data.puedeLeer,
+          Number(Boolean(data.puedeCrear)),
+          Number(Boolean(data.puedeEditar)),
+          Number(Boolean(data.puedeEliminar)),
+          Number(Boolean(data.puedeLeer)),
         ],
         (err, result) => {
           if (err) return reject(err);
@@ -61,10 +61,10 @@ const PerfilMenu = {
       db.query(
         "UPDATE perfilmenu SET puedeCrear=?, puedeEditar=?, puedeEliminar=?, puedeLeer=? WHERE PerfilId=? AND MenuId=?",
         [
-          data.puedeCrear,
-          data.puedeEditar,
-          data.puedeEliminar,
-          data.puedeLeer,
+          Number(Boolean(data.puedeCrear)),
+          Number(Boolean(data.puedeEditar)),
+          Number(Boolean(data.puedeEliminar)),
+          Number(Boolean(data.puedeLeer)),
           perfilId,
           menuId,
         ],

@@ -34,24 +34,23 @@ const Menu = {
       params.push(parseInt(itemsPerPage), parseInt(offset));
 
       const query = `
-        SELECT SQL_CALC_FOUND_ROWS * FROM menu
+        SELECT *, COUNT(*) OVER() AS total_rows FROM menu
         ${where}
         ORDER BY ${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       db.query(query, params, (err, results) => {
         if (err) return reject(err);
-        db.query("SELECT FOUND_ROWS() as total", (err2, totalResult) => {
-          if (err2) return reject(err2);
-          resolve({
-            data: results,
-            pagination: {
-              totalItems: totalResult[0].total,
-              totalPages: Math.ceil(totalResult[0].total / itemsPerPage),
-              currentPage: page,
-              itemsPerPage: itemsPerPage,
-            },
-          });
+        const total = results.length > 0 ? Number(results[0].total_rows) : 0;
+        const data = results.map(({ total_rows, ...row }) => row);
+        resolve({
+          data,
+          pagination: {
+            totalItems: total,
+            totalPages: Math.ceil(total / itemsPerPage),
+            currentPage: page,
+            itemsPerPage: itemsPerPage,
+          },
         });
       });
     });

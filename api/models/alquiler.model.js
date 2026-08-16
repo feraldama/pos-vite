@@ -299,7 +299,7 @@ const Alquiler = {
       //   params.push(localId);
       // }
 
-      query += ` HAVING Saldo > 0 ORDER BY a.AlquilerFechaAlquiler ASC`;
+      query += ` AND (a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) > 0 ORDER BY a.AlquilerFechaAlquiler ASC`;
 
       db.query(query, params, (err, results) => {
         if (err) {
@@ -331,7 +331,7 @@ const Alquiler = {
         FROM alquiler a
         JOIN clientes c ON a.ClienteId = c.ClienteId
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
-        HAVING Saldo > 0
+        HAVING SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) > 0
         ORDER BY Cliente
       `;
       db.query(query, (err, results) => {

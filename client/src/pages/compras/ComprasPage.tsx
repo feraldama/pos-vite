@@ -15,8 +15,7 @@ import ComprasList from "../../components/compras/ComprasList";
 import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
+import { borrarRegistroDiario } from "../../services/pos.service";
 
 interface Pagination {
   totalItems: number;
@@ -279,54 +278,10 @@ export default function ComprasPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          // Preparar fecha para el webservice
-          const fechaDate = new Date();
-          const dia = fechaDate.getDate();
-          const mes = fechaDate.getMonth() + 1;
-          const año = fechaDate.getFullYear() % 100;
-          const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-          const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-          const añoStr = año < 10 ? `0${año}` : año.toString();
-          const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+          // PRIMERO: descontar stock y eliminar registros de caja y detalle de la compra
+          await borrarRegistroDiario(compra.CompraId, 2);
 
-          // Preparar datos para el webservice
-          const json = {
-            Envelope: {
-              _attributes: {
-                xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
-              },
-              Body: {
-                "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
-                  _attributes: { xmlns: "TechNow" },
-                  Ventaid: compra.CompraId,
-                  Fechastring: fechaFormateada,
-                  Regla: 2, // Valor por defecto para Regla
-                },
-              },
-            },
-          };
-
-          const xml = js2xml(json, {
-            compact: true,
-            ignoreComment: true,
-            spaces: 4,
-          });
-          const config = {
-            headers: {
-              "Content-Type": "text/xml",
-            },
-          };
-
-          // PRIMERO: Llamar al webservice
-          await axios.post(
-            `${import.meta.env.VITE_APP_URL}${
-              import.meta.env.VITE_APP_URL_GENEXUS
-            }apborrarregistodiariows`,
-            xml,
-            config
-          );
-
-          // SEGUNDO: Solo si el webservice fue exitoso, eliminar la compra
+          // SEGUNDO: eliminar la compra
           await deleteCompra(compra.CompraId);
 
           let timerInterval: ReturnType<typeof setInterval>;

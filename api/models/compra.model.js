@@ -10,7 +10,7 @@ const Compra = {
          FROM compra c 
          LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
          LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
-         GROUP BY c.CompraId
+         GROUP BY c.CompraId, p.ProveedorNombre, p.ProveedorRUC
          ORDER BY c.CompraFecha DESC`,
         (err, results) => {
           if (err) reject(err);
@@ -30,7 +30,7 @@ const Compra = {
          LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
          LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
          WHERE c.CompraId = ?
-         GROUP BY c.CompraId`,
+         GROUP BY c.CompraId, p.ProveedorNombre, p.ProveedorRUC`,
         [id],
         (err, results) => {
           if (err) return reject(err);
@@ -61,7 +61,7 @@ const Compra = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
-      const orderByField = sortField === "Total" ? "Total" : `c.${sortField}`;
+      const orderByField = sortField === "Total" ? `"Total"` : sortField === "ProveedorNombre" ? `p.${sortField}` : `c.${sortField}`;
       db.query(
         `SELECT c.*, p.ProveedorNombre, p.ProveedorRUC, 
          COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
@@ -69,7 +69,7 @@ const Compra = {
          FROM compra c 
          LEFT JOIN proveedor p ON c.ProveedorId = p.ProveedorId 
          LEFT JOIN compraproducto cp ON c.CompraId = cp.CompraId
-         GROUP BY c.CompraId
+         GROUP BY c.CompraId, p.ProveedorNombre, p.ProveedorRUC
          ORDER BY ${orderByField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
@@ -112,7 +112,7 @@ const Compra = {
         ? sortOrder.toUpperCase()
         : "DESC";
 
-      const orderByField = sortField === "Total" ? "Total" : `c.${sortField}`;
+      const orderByField = sortField === "Total" ? `"Total"` : sortField === "ProveedorNombre" ? `p.${sortField}` : `c.${sortField}`;
       const searchQuery = `
         SELECT c.*, p.ProveedorNombre, p.ProveedorRUC,
         COALESCE(SUM(cp.CompraProductoPrecio * cp.CompraProductoCantidad), 0) as Total,
@@ -123,7 +123,7 @@ const Compra = {
         WHERE c.CompraFactura LIKE ? 
         OR c.CompraTipo LIKE ? 
         OR p.ProveedorNombre LIKE ?
-        GROUP BY c.CompraId
+        GROUP BY c.CompraId, p.ProveedorNombre, p.ProveedorRUC
         ORDER BY ${orderByField} ${order}
         LIMIT ? OFFSET ?
       `;
@@ -179,7 +179,7 @@ const Compra = {
         compraData.UsuarioId,
         compraData.CompraFactura,
         compraData.CompraTipo,
-        compraData.CompraPagoCompleto || false,
+        compraData.CompraPagoCompleto || "N",
         compraData.CompraEntrega,
       ];
 

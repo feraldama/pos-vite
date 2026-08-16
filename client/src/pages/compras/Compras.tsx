@@ -5,8 +5,7 @@ import { getProductosAll } from "../../services/productos.service";
 import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
+import { confirmarCompra } from "../../services/pos.service";
 import logo from "../../assets/img/logo.jpg";
 import {
   getAllProveedoresSinPaginacion,
@@ -286,80 +285,27 @@ export default function Compras() {
       return;
     }
 
-    // Formatear la fecha seleccionada al formato DD/MM/YY
-    // Parsear directamente del string para evitar problemas de zona horaria
-    const [añoCompleto, mesCompleto, diaCompleto] = compraFecha.split("-");
-    const diaFormato = parseInt(diaCompleto, 10);
-    const mesFormato = parseInt(mesCompleto, 10);
-    const añoFormato = parseInt(añoCompleto, 10) % 100;
-    const diaStr = diaFormato < 10 ? `0${diaFormato}` : diaFormato.toString();
-    const mesStr = mesFormato < 10 ? `0${mesFormato}` : mesFormato.toString();
-    const añoStr = añoFormato < 10 ? `0${añoFormato}` : añoFormato.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-    // Mapear el carrito (CompraProductoId se asignará en GeneXus usando el contador &i)
-    const SDTCompraItem = carrito.map((p) => ({
-      ProveedorId: proveedorSeleccionado.ProveedorId,
-      Producto: {
-        ProductoId: p.id,
-        // CompraProductoId NO se envía aquí porque el SDT no lo tiene definido
-        // Se asignará automáticamente en GeneXus usando el contador &i
-        CompraProductoCantidad: p.cantidad,
-        CompraProductoPrecio: p.precioUnitario,
-        AlmacenId: user.LocalId || 1,
-        Bonificacion: 0,
-        CompraProductoCantidadUnidad: p.caja ? "C" : "U",
-      },
-    }));
-
-    const json = {
-      Envelope: {
-        _attributes: {
-          xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
-        },
-        Body: {
-          "PCompraConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "Tech" },
-            Sdtcompra: {
-              SDTCompraItem: SDTCompraItem,
-            },
-            Comprafechastring: fechaFormateada,
-            Comprafactura: parseInt(compraFactura),
-            Compratipo: compraTipo,
-            Entregado: compraEntrega,
-            Total: total,
-            Usuarioid: user.id,
-          },
-        },
-      },
-    };
-
-    const xml = js2xml(json, {
-      compact: true,
-      ignoreComment: true,
-      spaces: 4,
-    });
-
-    // Verificar que el XML tenga todos los productos
-    const productosEnXML = (xml.match(/SDTCompraItem/g) || []).length;
-    console.log("Productos encontrados en XML:", productosEnXML);
-
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
+    const payload = {
+      fecha: compraFecha, // ya viene como YYYY-MM-DD
+      proveedorId: proveedorSeleccionado.ProveedorId,
+      factura: parseInt(compraFactura),
+      tipo: compraTipo,
+      entrega: compraEntrega,
+      total: total,
+      usuarioId: String(user.id),
+      cajaId: cajaAperturada ? Number(cajaAperturada.CajaId) : undefined,
+      items: carrito.map((p) => ({
+        productoId: p.id,
+        cantidad: p.cantidad,
+        precio: p.precioUnitario,
+        unidad: p.caja ? "C" : "U",
+        almacenId: Number(user.LocalId || 1),
+        bonificacion: 0,
+      })),
     };
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_APP_URL}${
-          import.meta.env.VITE_APP_URL_GENEXUS
-        }apcompraconfirmarws`,
-        xml,
-        config
-      );
-
-      // El webservice SOAP se encarga de crear la compra en la base de datos
+      await confirmarCompra(payload);
 
       Swal.fire({
         title: "Compra realizada con éxito!",

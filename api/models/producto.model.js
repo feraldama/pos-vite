@@ -58,7 +58,7 @@ const Producto = {
         : "ASC";
 
       db.query(
-        `SELECT p.*, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT p.*, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId ORDER BY ${sortField === "LocalNombre" ? "l" : sortField === "TipoPrendaNombre" ? "tp" : "p"}.${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -116,7 +116,7 @@ const Producto = {
         OR p.ProductoCodigo LIKE ? 
         OR l.LocalNombre LIKE ?
         OR tp.TipoPrendaNombre LIKE ?
-        ORDER BY p.${sortField} ${order}
+        ORDER BY ${sortField === "LocalNombre" ? "l" : sortField === "TipoPrendaNombre" ? "tp" : "p"}.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;
@@ -231,11 +231,15 @@ const Producto = {
           updateFields.push(`${campo} = ?`);
           values.push(productoData.ProductoImagen_GXI || null);
         } else if (campo === "ProductoImagen") {
-          const imagenBuffer = productoData.ProductoImagen
-            ? Buffer.from(productoData.ProductoImagen, "base64")
-            : null;
-          updateFields.push(`${campo} = ?`);
-          values.push(imagenBuffer);
+          // La columna es NOT NULL: imagen nueva -> reemplazar; "" -> borrar (bytea vacío);
+          // ausente -> conservar la existente
+          if (productoData.ProductoImagen) {
+            updateFields.push(`${campo} = ?`);
+            values.push(Buffer.from(productoData.ProductoImagen, "base64"));
+          } else if (productoData.ProductoImagen === "") {
+            updateFields.push(`${campo} = ?`);
+            values.push(Buffer.from([]));
+          }
         } else if (productoData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
           values.push(productoData[campo]);

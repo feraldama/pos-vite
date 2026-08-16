@@ -65,7 +65,7 @@ const Usuario = {
         SELECT u.*, l.LocalNombre
         FROM usuario u
         LEFT JOIN local l ON u.LocalId = l.LocalId
-        ORDER BY u.${sortField} ${order}
+        ORDER BY ${sortField === "LocalNombre" ? "l" : "u"}.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       db.query(query, [limit, offset], (err, results) => {
@@ -115,7 +115,7 @@ const Usuario = {
         OR u.UsuarioCorreo LIKE ?
         OR u.UsuarioId LIKE ?
         OR l.LocalNombre LIKE ?
-        ORDER BY u.${sortField} ${order}
+        ORDER BY ${sortField === "LocalNombre" ? "l" : "u"}.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;

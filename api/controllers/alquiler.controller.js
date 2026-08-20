@@ -234,6 +234,7 @@ exports.createAlquiler = async (req, res) => {
           AlquilerPrendasId: prenda.AlquilerPrendasId,
           ProductoId: prenda.ProductoId,
           AlquilerPrendasPrecio: prenda.AlquilerPrendasPrecio,
+          AlquilerPrendasObservacion: prenda.AlquilerPrendasObservacion,
         });
       }
     }
@@ -364,6 +365,7 @@ exports.updateAlquiler = async (req, res) => {
           AlquilerPrendasId: prenda.AlquilerPrendasId,
           ProductoId: prenda.ProductoId,
           AlquilerPrendasPrecio: prenda.AlquilerPrendasPrecio,
+          AlquilerPrendasObservacion: prenda.AlquilerPrendasObservacion,
         });
       }
     }

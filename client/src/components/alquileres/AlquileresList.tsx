@@ -33,6 +33,7 @@ interface AlquilerPrenda {
   AlquilerPrendasId: number;
   ProductoId: number;
   AlquilerPrendasPrecio: number;
+  AlquilerPrendasObservacion?: string;
   ProductoNombre?: string;
   ProductoCodigo?: string;
   TipoPrendaNombre?: string;
@@ -110,6 +111,7 @@ export default function AlquileresList({
     AlquilerPrendasId: 0,
     ProductoId: 0,
     AlquilerPrendasPrecio: 0,
+    AlquilerPrendasObservacion: "",
   });
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<{
@@ -288,6 +290,7 @@ export default function AlquileresList({
         AlquilerPrendasId: 0,
         ProductoId: 0,
         AlquilerPrendasPrecio: 0,
+        AlquilerPrendasObservacion: "",
       });
     }
   };
@@ -606,6 +609,23 @@ export default function AlquileresList({
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
+                    <div className="col-span-6 sm:col-span-5">
+                      <label
+                        htmlFor="AlquilerPrendasObservacion"
+                        className="block mb-2 text-sm font-medium text-gray-900"
+                      >
+                        Ajuste / Detalle (antes de la entrega)
+                      </label>
+                      <input
+                        type="text"
+                        name="AlquilerPrendasObservacion"
+                        id="AlquilerPrendasObservacion"
+                        value={prendaActual.AlquilerPrendasObservacion || ""}
+                        onChange={handlePrendaChange}
+                        placeholder="Ej: acortar ruedo 3 cm, entallar cintura"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      />
+                    </div>
                     <div className="col-span-6 sm:col-span-1 flex items-end">
                       <button
                         type="button"
@@ -630,6 +650,9 @@ export default function AlquileresList({
                               Precio
                             </th>
                             <th className="border border-gray-300 px-2 py-1">
+                              Ajuste
+                            </th>
+                            <th className="border border-gray-300 px-2 py-1">
                               Acción
                             </th>
                           </tr>
@@ -642,6 +665,9 @@ export default function AlquileresList({
                               </td>
                               <td className="border border-gray-300 px-2 py-1">
                                 {formatCurrency(prenda.AlquilerPrendasPrecio)}
+                              </td>
+                              <td className="border border-gray-300 px-2 py-1 text-sm">
+                                {prenda.AlquilerPrendasObservacion || "-"}
                               </td>
                               <td className="border border-gray-300 px-2 py-1">
                                 <button

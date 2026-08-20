@@ -32,6 +32,7 @@ interface AlquilerPrenda {
   AlquilerPrendasId: number;
   ProductoId: number;
   AlquilerPrendasPrecio: number;
+  AlquilerPrendasObservacion?: string;
   ProductoNombre?: string;
   ProductoCodigo?: string;
   TipoPrendaNombre?: string;

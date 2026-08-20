@@ -93,14 +93,16 @@ const AlquilerPrendas = {
               AlquilerId,
               AlquilerPrendasId,
               ProductoId,
-              AlquilerPrendasPrecio
-            ) VALUES (?, ?, ?, ?)`;
+              AlquilerPrendasPrecio,
+              AlquilerPrendasObservacion
+            ) VALUES (?, ?, ?, ?, ?)`;
 
             const values = [
               data.AlquilerId,
               nextPrendasId,
               data.ProductoId,
               data.AlquilerPrendasPrecio,
+              data.AlquilerPrendasObservacion || "",
             ];
 
             db.query(insertQuery, values, (err, result) => {
@@ -141,14 +143,16 @@ const AlquilerPrendas = {
 
   update: (alquilerId, alquilerPrendasId, data) => {
     return new Promise((resolve, reject) => {
-      const query = `UPDATE alquilerprendas SET 
+      const query = `UPDATE alquilerprendas SET
         ProductoId = ?,
-        AlquilerPrendasPrecio = ?
+        AlquilerPrendasPrecio = ?,
+        AlquilerPrendasObservacion = ?
         WHERE AlquilerId = ? AND AlquilerPrendasId = ?`;
 
       const values = [
         data.ProductoId,
         data.AlquilerPrendasPrecio,
+        data.AlquilerPrendasObservacion || "",
         alquilerId,
         alquilerPrendasId,
       ];
@@ -398,6 +402,7 @@ const AlquilerPrendas = {
           ap.AlquilerPrendasId,
           ap.ProductoId,
           ap.AlquilerPrendasPrecio,
+          ap.AlquilerPrendasObservacion,
           p.ProductoNombre,
           p.ProductoCodigo,
           p.ProductoImagen,

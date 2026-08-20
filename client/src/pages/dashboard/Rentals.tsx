@@ -60,6 +60,7 @@ export default function Rentals() {
       cantidad: number;
       cartItemId: number;
       precioAlquiler: number;
+      observacion: string;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
@@ -171,6 +172,7 @@ export default function Rentals() {
         cantidad: 1,
         cartItemId: nuevoCartItemId,
         precioAlquiler: producto.precio,
+        observacion: "",
       },
     ]);
     setSelectedProductId(nuevoCartItemId);
@@ -186,6 +188,14 @@ export default function Rentals() {
         p.cartItemId === cartItemId
           ? { ...p, cantidad: Math.max(1, cantidad) }
           : p
+      )
+    );
+  };
+
+  const cambiarObservacion = (cartItemId: number, observacion: string) => {
+    setCarrito(
+      carrito.map((p) =>
+        p.cartItemId === cartItemId ? { ...p, observacion } : p
       )
     );
   };
@@ -432,6 +442,7 @@ export default function Rentals() {
       const prendas: Array<{
         ProductoId: number;
         AlquilerPrendasPrecio: number;
+        AlquilerPrendasObservacion: string;
       }> = [];
       carrito.forEach((item) => {
         // Agregar tantas prendas como indique la cantidad
@@ -439,6 +450,7 @@ export default function Rentals() {
           prendas.push({
             ProductoId: item.id,
             AlquilerPrendasPrecio: item.precioAlquiler,
+            AlquilerPrendasObservacion: item.observacion.trim(),
           });
         }
       });
@@ -670,7 +682,9 @@ export default function Rentals() {
 
     const tableData = carrito.map((p) => {
       return [
-        p.nombre,
+        p.observacion.trim()
+          ? `${p.nombre}\nAjuste: ${p.observacion.trim()}`
+          : p.nombre,
         p.cantidad,
         `Gs. ${p.precioAlquiler.toLocaleString("es-ES")}`,
         `Gs. ${obtenerTotal(p).toLocaleString("es-ES")}`,
@@ -1000,7 +1014,7 @@ export default function Rentals() {
                           alt={p.nombre}
                           className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
-                        <div>
+                        <div className="flex-1">
                           <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
@@ -1013,6 +1027,16 @@ export default function Rentals() {
                           >
                             Eliminar
                           </div>
+                          <input
+                            type="text"
+                            value={p.observacion}
+                            onChange={(e) =>
+                              cambiarObservacion(p.cartItemId, e.target.value)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="Ajuste / detalle antes de la entrega (opcional)"
+                            className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 bg-gray-50"
+                          />
                         </div>
                       </div>
                     </td>

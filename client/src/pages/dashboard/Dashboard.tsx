@@ -15,6 +15,7 @@ interface AlquilerPrenda {
   TipoPrendaNombre: string;
   AlquilerPrendasPrecio: number;
   ProductoImagen?: string;
+  AlquilerPrendasObservacion?: string;
 }
 
 interface Alquiler {
@@ -247,6 +248,11 @@ function Dashboard() {
                                   {prenda.ProductoCodigo}
                                 </div>
                               )}
+                              {prenda.AlquilerPrendasObservacion && (
+                                <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                  ✂ {prenda.AlquilerPrendasObservacion}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -370,6 +376,11 @@ function Dashboard() {
                                   {prenda.ProductoCodigo}
                                 </div>
                               )}
+                              {prenda.AlquilerPrendasObservacion && (
+                                <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                  ✂ {prenda.AlquilerPrendasObservacion}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -414,6 +425,28 @@ function Dashboard() {
                   {currentAlquiler.AlquilerEstado}
                 </span>
               </p>
+              {currentAlquiler.prendas?.some(
+                (p) => p.AlquilerPrendasObservacion
+              ) && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Ajustes pendientes
+                  </p>
+                  <ul className="space-y-1">
+                    {currentAlquiler.prendas
+                      .filter((p) => p.AlquilerPrendasObservacion)
+                      .map((p, index) => (
+                        <li
+                          key={index}
+                          className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1"
+                        >
+                          ✂ <span className="font-medium">{p.ProductoNombre}:</span>{" "}
+                          {p.AlquilerPrendasObservacion}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nuevo Estado
               </label>

@@ -1,15 +1,45 @@
 @import "tailwindcss";
 
+/* Inter variable, self-hosted vía @fontsource: sin request a Google Fonts, así
+   el sistema no depende del internet del local para renderizar bien. */
+@import "@fontsource-variable/inter";
+
 @theme {
+  /* --- Tipografía ---------------------------------------------------------
+     Reemplaza a "Baloo 2", que estaba declarada y aplicada en Layout pero
+     nunca se cargaba (no había link ni @font-face), así que toda la app venía
+     cayendo a la sans-serif del navegador. Inter trae cifras tabulares, que es
+     lo que mantiene alineadas las columnas de montos con la clase tabular-nums. */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+
+  /* --- Superficies de marca ---------------------------------------------- */
   --color-sidebar: #0f172a;
-
   --color-primary: #0f172a;
-  --color-secondary: #0f172a;
-  --color-tertiary: #0f172a;
-  --color-quaternary: #0f172a;
-  --color-quinary: #0f172a;
-  --color-senary: #0f172a;
-  --color-septenary: #0f172a;
+  --color-secondary: #1e293b;
 
-  --font-baloo: "Baloo 2", sans-serif;
+  /* --- Acento / acción ----------------------------------------------------
+     blue-600, el acento que ya domina la app. Contraste 5.17:1 sobre blanco,
+     cumple AA para texto normal. */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+
+  /* --- Estados semánticos ------------------------------------------------- */
+  --color-success: #16a34a;
+  --color-warning: #b45309;
+  --color-danger: #dc2626;
+}
+
+/* Respeta la preferencia del sistema de reducir movimiento. Global, así aplica
+   a toda animación y transición sin tener que recordarlo componente por
+   componente. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

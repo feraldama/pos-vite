@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
+import { activarConTeclado } from "../../utils/teclado";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import Modal from "./Modal";
+import ActionButton from "./Button/ActionButton";
 
 // Definir la interfaz Proveedor localmente
 interface Proveedor {
@@ -75,29 +78,19 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
     }
   }, [show, showCreateForm]);
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
-          onClick={onClose}
-        >
-          &times;
-        </button>
-        <div className="flex justify-between items-center mb-4 pr-8">
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Seleccionar Proveedor
-          </h2>
-          <button
+    <Modal
+      open={show}
+      onClose={onClose}
+      title="Seleccionar Proveedor"
+      maxWidth="max-w-4xl"
+    >
+        <div className="flex justify-between items-center mb-4">
+          <ActionButton
+            icon={PlusIcon}
+            label="Crear Nuevo Proveedor"
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Crear Nuevo Proveedor
-          </button>
+          />
         </div>
 
         {!showCreateForm ? (
@@ -117,8 +110,12 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
               {filteredProveedores.map((proveedor) => (
                 <div
                   key={proveedor.ProveedorId}
-                  className="p-3 border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Seleccionar proveedor ${proveedor.ProveedorNombre}`}
+                  className="mb-2 cursor-pointer rounded-lg border border-slate-200 p-3 transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                   onClick={() => onSelect(proveedor)}
+                  onKeyDown={activarConTeclado(() => onSelect(proveedor))}
                 >
                   <div className="font-semibold">
                     {proveedor.ProveedorNombre}
@@ -140,10 +137,12 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
             <h3 className="text-lg font-semibold">Crear Nuevo Proveedor</h3>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="proveedormodal-nombre" className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre *
               </label>
               <input
+                id="proveedormodal-nombre"
                 type="text"
                 value={newProveedor.ProveedorNombre}
                 onChange={(e) =>
@@ -158,10 +157,12 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="proveedormodal-ruc" className="block text-sm font-medium text-gray-700 mb-1">
                 RUC
               </label>
               <input
+                id="proveedormodal-ruc"
                 type="text"
                 value={newProveedor.ProveedorRUC}
                 onChange={(e) =>
@@ -175,10 +176,12 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="proveedormodal-direccion" className="block text-sm font-medium text-gray-700 mb-1">
                 Dirección
               </label>
               <input
+                id="proveedormodal-direccion"
                 type="text"
                 value={newProveedor.ProveedorDireccion}
                 onChange={(e) =>
@@ -192,10 +195,12 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="proveedormodal-telefono" className="block text-sm font-medium text-gray-700 mb-1">
                 Teléfono
               </label>
               <input
+                id="proveedormodal-telefono"
                 type="text"
                 value={newProveedor.ProveedorTelefono}
                 onChange={(e) =>
@@ -209,24 +214,17 @@ const ProveedorModal: React.FC<ProveedorModalProps> = ({
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-              >
-                Crear
-              </button>
-              <button
+              <ActionButton type="submit" variant="success" label="Crear" />
+              <ActionButton
                 type="button"
+                variant="secondary"
+                label="Cancelar"
                 onClick={() => setShowCreateForm(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-              >
-                Cancelar
-              </button>
+              />
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 };
 

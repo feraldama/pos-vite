@@ -1,4 +1,5 @@
 import SearchButton from "../common/Input/SearchButton";
+import Modal from "../common/Modal";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
 import { PlusIcon } from "@heroicons/react/24/outline";
@@ -125,14 +126,6 @@ export default function MovementsList({
     },
   ];
 
-  const handleBackdropClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    if (event.target === event.currentTarget) {
-      onCloseModal();
-    }
-  };
-
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (currentMovement) {
@@ -178,28 +171,23 @@ export default function MovementsList({
       />
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={handleBackdropClick}
+        <Modal
+          open={isModalOpen}
+          onClose={onCloseModal}
+          title={currentMovement ? "Editar movimiento" : "Crear movimiento"}
         >
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <div className="relative w-full max-w-2xl max-h-full z-10">
-            <form
-              onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
-            >
-              <ActionButton
-                label={currentMovement ? "Actualizar" : "Crear"}
-                type="submit"
-              />
-              <ActionButton
-                label="Cancelar"
-                className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
-                onClick={onCloseModal}
-              />
-            </form>
-          </div>
-        </div>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <ActionButton
+              label={currentMovement ? "Actualizar" : "Crear"}
+              type="submit"
+            />
+            <ActionButton
+              label="Cancelar"
+              variant="secondary"
+              onClick={onCloseModal}
+            />
+          </form>
+        </Modal>
       )}
     </>
   );

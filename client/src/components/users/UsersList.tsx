@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Modal from "../common/Modal";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
@@ -166,11 +167,6 @@ export default function UsuariosList({
     return (estado as string) === "A" ? "bg-green-500" : "bg-red-500";
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onCloseModal();
-    }
-  };
 
   const handlePerfilChange = (perfilId: number) => {
     setPerfilesSeleccionados((prev) =>
@@ -260,48 +256,16 @@ export default function UsuariosList({
 
       {/* Modal para crear/editar */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={handleBackdropClick}
-        >
-          {/* Fondo opacado */}
-          <div className="absolute inset-0 bg-black opacity-50" />
-
-          <div className="relative w-full max-w-2xl max-h-full z-10">
-            <form
-              onSubmit={handleSubmit}
-              className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-start justify-between p-4 border-b rounded-t">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {currentUser
+        <Modal
+          open={isModalOpen}
+          onClose={onCloseModal}
+          title={currentUser
                     ? `Editar usuario: ${currentUser.UsuarioId}`
                     : "Crear nuevo usuario"}
-                </h3>
-                <button
-                  type="button"
-                  className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center"
-                  onClick={onCloseModal}
-                >
-                  <svg
-                    className="w-3 h-3"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 14 14"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                    />
-                  </svg>
-                </button>
-              </div>
+        >
+            <form onSubmit={handleSubmit}>
 
-              <div className="p-6 space-y-6">
+              <div className="space-y-6">
                 <div className="grid grid-cols-6 gap-6">
                   {!currentUser && (
                     <div className="col-span-6 sm:col-span-3">
@@ -317,7 +281,7 @@ export default function UsuariosList({
                         id="UsuarioId"
                         value={formData.UsuarioId}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                         required
                       />
                     </div>
@@ -343,7 +307,7 @@ export default function UsuariosList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                       required
                     />
                   </div>
@@ -368,7 +332,7 @@ export default function UsuariosList({
                           },
                         } as React.ChangeEvent<HTMLInputElement>);
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -384,7 +348,7 @@ export default function UsuariosList({
                       id="UsuarioCorreo"
                       value={formData.UsuarioCorreo}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                     />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
@@ -423,7 +387,7 @@ export default function UsuariosList({
                       id="UsuarioIsAdmin"
                       value={formData.UsuarioIsAdmin}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                     >
                       <option value="N">No</option>
                       <option value="S">Sí</option>
@@ -442,7 +406,7 @@ export default function UsuariosList({
                       id="UsuarioEstado"
                       value={formData.UsuarioEstado}
                       onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                     >
                       <option value="A">Activo</option>
                       <option value="I">Inactivo</option>
@@ -489,7 +453,13 @@ export default function UsuariosList({
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
+                          aria-label={
+                            showPassword
+                              ? "Ocultar contraseña"
+                              : "Mostrar contraseña"
+                          }
+                          aria-pressed={showPassword}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700"
                         >
                           {showPassword ? (
                             <EyeSlashIcon className="h-5 w-5" />
@@ -501,9 +471,10 @@ export default function UsuariosList({
                     </div>
                   )}
                   <div className="col-span-6">
-                    <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Perfiles
-                    </label>
+                    <fieldset>
+                      <legend className="block mb-2 text-sm font-medium text-gray-900">
+                        Perfiles
+                      </legend>
                     <div className="flex flex-col gap-0">
                       {perfiles.map((perfil) => {
                         const checkboxId = `perfil-checkbox-${perfil.PerfilId}`;
@@ -533,24 +504,24 @@ export default function UsuariosList({
                         );
                       })}
                     </div>
+                    </fieldset>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
+              <div className="-mx-6 mt-6 flex flex-wrap items-center gap-2 border-t border-slate-200 px-6 pt-5">
                 <ActionButton
                   label={currentUser ? "Actualizar" : "Crear"}
                   type="submit"
                 />
                 <ActionButton
                   label="Cancelar"
-                  className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10"
+                  variant="secondary"
                   onClick={onCloseModal}
                 />
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

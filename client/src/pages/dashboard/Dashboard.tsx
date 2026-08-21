@@ -1,4 +1,8 @@
 import { useState, useEffect } from "react";
+import { activarConTeclado } from "../../utils/teclado";
+import Modal from "../../components/common/Modal";
+import ActionButton from "../../components/common/Button/ActionButton";
+import { ScissorsIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/useAuth";
 import {
   getAlquileresProximosEntrega,
@@ -6,7 +10,7 @@ import {
   updateAlquiler,
   getAlquilerById,
 } from "../../services/alquiler.service";
-import { formatCurrency } from "../../utils/utils";
+import { formatCurrency } from "../../utils/formato";
 import Swal from "sweetalert2";
 
 interface AlquilerPrenda {
@@ -30,6 +34,7 @@ interface Alquiler {
   ClienteNombre?: string;
   ClienteApellido?: string;
   ClienteTelefono?: string;
+  ClienteRUC?: string;
   prendas: AlquilerPrenda[];
 }
 
@@ -95,6 +100,30 @@ function Dashboard() {
     setIsModalOpen(false);
     setCurrentAlquiler(null);
     setEstadoSeleccionado("");
+  };
+
+  // El generador de tickets arrastra jspdf (~350 KB). Se carga recién al
+  // imprimir, no al abrir el dashboard.
+  const handlePrintTicket = async () => {
+    if (!currentAlquiler) return;
+    const { generarTicketAlquiler, agruparPrendasTicket } = await import(
+      "../../utils/ticketAlquiler"
+    );
+    generarTicketAlquiler({
+      alquilerId: currentAlquiler.AlquilerId,
+      cliente: {
+        nombre: currentAlquiler.ClienteNombre || "",
+        apellido: currentAlquiler.ClienteApellido || "",
+        ruc: currentAlquiler.ClienteRUC || "",
+      },
+      fechaAlquiler: currentAlquiler.AlquilerFechaAlquiler,
+      fechaEntrega: currentAlquiler.AlquilerFechaEntrega,
+      fechaDevolucion: currentAlquiler.AlquilerFechaDevolucion,
+      prendas: agruparPrendasTicket(currentAlquiler.prendas || []),
+      total: currentAlquiler.AlquilerTotal || 0,
+      entregado: currentAlquiler.AlquilerEntrega || 0,
+      esReimpresion: true,
+    });
   };
 
   const handleUpdateEstado = async () => {
@@ -195,8 +224,14 @@ function Dashboard() {
                 {alquileresEntrega.map((alquiler) => (
                   <tr
                     key={alquiler.AlquilerId}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
                     onClick={() => handleAlquilerClick(alquiler)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    onKeyDown={activarConTeclado(() =>
+                      handleAlquilerClick(alquiler)
+                    )}
+                    className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {alquiler.AlquilerId}
@@ -244,7 +279,7 @@ function Dashboard() {
                                 {prenda.TipoPrendaNombre}
                               </div>
                               {prenda.ProductoCodigo && (
-                                <div className="text-gray-400">
+                                <div className="text-slate-500">
                                   {prenda.ProductoCodigo}
                                 </div>
                               )}
@@ -321,8 +356,14 @@ function Dashboard() {
                 {alquileresDevolucion.map((alquiler) => (
                   <tr
                     key={alquiler.AlquilerId}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
                     onClick={() => handleAlquilerClick(alquiler)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    onKeyDown={activarConTeclado(() =>
+                      handleAlquilerClick(alquiler)
+                    )}
+                    className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                   >
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {alquiler.AlquilerId}
@@ -372,7 +413,7 @@ function Dashboard() {
                                 {prenda.TipoPrendaNombre}
                               </div>
                               {prenda.ProductoCodigo && (
-                                <div className="text-gray-400">
+                                <div className="text-slate-500">
                                   {prenda.ProductoCodigo}
                                 </div>
                               )}
@@ -408,12 +449,29 @@ function Dashboard() {
 
       {/* Modal para editar estado del alquiler */}
       {isModalOpen && currentAlquiler && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black opacity-50" />
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              Editar Estado del Alquiler #{currentAlquiler.AlquilerId}
-            </h2>
+        <Modal
+          open={isModalOpen}
+          onClose={handleCloseModal}
+          title={`Editar estado del alquiler #${currentAlquiler.AlquilerId}`}
+          maxWidth="max-w-md"
+          footer={
+            <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              <ActionButton
+                variant="success"
+                label="Reimprimir ticket"
+                onClick={handlePrintTicket}
+              />
+              <div className="flex gap-2">
+                <ActionButton
+                  variant="secondary"
+                  label="Cancelar"
+                  onClick={handleCloseModal}
+                />
+                <ActionButton label="Guardar" onClick={handleUpdateEstado} />
+              </div>
+            </div>
+          }
+        >
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 Cliente: {currentAlquiler.ClienteNombre}{" "}
@@ -440,17 +498,25 @@ function Dashboard() {
                           key={index}
                           className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1"
                         >
-                          ✂ <span className="font-medium">{p.ProductoNombre}:</span>{" "}
+                          <ScissorsIcon
+                            aria-hidden="true"
+                            className="mr-1 inline h-4 w-4 align-text-bottom"
+                          />
+                          <span className="font-medium">{p.ProductoNombre}:</span>{" "}
                           {p.AlquilerPrendasObservacion}
                         </li>
                       ))}
                   </ul>
                 </div>
               )}
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="alquiler-estado"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Nuevo Estado
               </label>
               <select
+                id="alquiler-estado"
                 value={estadoSeleccionado}
                 onChange={(e) => setEstadoSeleccionado(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -461,22 +527,7 @@ function Dashboard() {
                 <option value="Cancelado">Cancelado</option>
               </select>
             </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleUpdateEstado}
-                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

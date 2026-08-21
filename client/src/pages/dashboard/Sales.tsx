@@ -13,14 +13,17 @@ import {
   confirmarVenta,
   confirmarDevolucion,
 } from "../../services/pos.service";
-import logo from "../../assets/img/logo.jpg";
+import logo from "../../assets/placeholderPrenda";
+import { EMPRESA } from "../../config/empresa";
+import {
+  ArrowUturnLeftIcon,
+  ShoppingCartIcon,
+} from "@heroicons/react/24/outline";
 import {
   getAllClientesSinPaginacion,
   createCliente,
 } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
@@ -30,11 +33,8 @@ import PagoModal from "../../components/common/PagoModal";
 import InvoicePrintModal from "../../components/common/InvoicePrintModal";
 // Ya no se importa getCombos porque siempre es caja
 import Pagination from "../../components/common/Pagination";
-import {
-  formatMiles,
-  generatePresupuestoPDF,
-  type CarritoItem,
-} from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
+import type { CarritoItem } from "../../utils/utils";
 
 interface Cliente {
   ClienteId: number;
@@ -409,7 +409,7 @@ export default function Sales() {
         await confirmarVenta(payload);
       }
       if (printTicket) {
-        generateTicketPDF();
+        await generateTicketPDF();
       }
 
       const successMessage = isDevolucionMode
@@ -449,7 +449,10 @@ export default function Sales() {
     setIsDevolucion(false); // Resetear el checkbox de devolución
   };
 
-  const generateTicketPDF = () => {
+  // jspdf pesa ~350 KB y sólo hace falta al imprimir: se carga en ese momento
+  const generateTicketPDF = async () => {
+    const { jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     // Crear una instancia de jsPDF con un tamaño personalizado (80mm de ancho)
     const doc = new jsPDF({
       orientation: "portrait",
@@ -473,10 +476,10 @@ export default function Sales() {
     doc.setFont("helvetica", "normal");
 
     // Encabezado del ticket
-    doc.text("Auto Shop Alonso", 0, 15);
-    doc.text("BODEGA", 0, 20);
-    doc.text("Bernardino Caballero c/ Antequera, Ypacaraí", 0, 25);
-    doc.text("Teléfono: +595 892 784989", 0, 30);
+    doc.text(EMPRESA.nombre, 0, 15);
+    doc.text(EMPRESA.rubro.toUpperCase(), 0, 20);
+    if (EMPRESA.direccion) doc.text(EMPRESA.direccion, 0, 25);
+    doc.text(`Teléfono: ${EMPRESA.telefono}`, 0, 30);
     doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
     doc.text(
       clienteSeleccionado?.ClienteRUC
@@ -616,7 +619,7 @@ export default function Sales() {
   };
 
   // --- Generar PDF de Presupuesto ---
-  const handlePresupuestoPDF = () => {
+  const handlePresupuestoPDF = async () => {
     // Convertir el carrito al formato esperado por la función de utils
     const carritoItems: CarritoItem[] = carrito.map((item) => ({
       nombre: item.nombre,
@@ -624,6 +627,7 @@ export default function Sales() {
       precio: item.precio,
     }));
 
+    const { generatePresupuestoPDF } = await import("../../utils/utils");
     generatePresupuestoPDF(carritoItems, clienteSeleccionado || undefined);
   };
 
@@ -723,15 +727,17 @@ export default function Sales() {
                           <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
-                          <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                          <button
+                            type="button"
+                            aria-label={`Eliminar ${p.nombre} del carrito`}
+                            className="mt-1 -mx-1 cursor-pointer rounded px-1 text-sm text-red-700 transition-colors duration-200 hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               quitarProducto(p.cartItemId);
                             }}
                           >
                             Eliminar
-                          </div>
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -744,15 +750,17 @@ export default function Sales() {
                               cambiarCantidad(p.cartItemId, p.cantidad - 1);
                               setSelectedProductId(p.cartItemId);
                             }}
-                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                            aria-label={`Quitar una unidad de ${p.nombre}`}
+                            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded border border-slate-300 bg-white text-lg font-bold text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                           >
-                            -
+                            &minus;
                           </button>
                           <input
                             type="number"
                             value={p.cantidad}
                             min={0}
-                            className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
+                            aria-label={`Cantidad de ${p.nombre}`}
+                            className="mx-1 h-11 w-12 rounded border border-slate-300 bg-white text-center text-base font-semibold tabular-nums text-slate-900 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                             readOnly
                             ref={(el) => {
                               cantidadRefs.current[p.cartItemId] = el || null;
@@ -785,7 +793,8 @@ export default function Sales() {
                               cambiarCantidad(p.cartItemId, p.cantidad + 1);
                               setSelectedProductId(p.cartItemId);
                             }}
-                            className="w-8 h-8 border border-gray-300 rounded bg-gray-50 text-gray-700 text-lg font-bold flex items-center justify-center hover:bg-gray-100"
+                            aria-label={`Agregar una unidad de ${p.nombre}`}
+                            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded border border-slate-300 bg-white text-lg font-bold text-slate-700 transition-colors duration-200 hover:bg-slate-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                           >
                             +
                           </button>
@@ -819,15 +828,31 @@ export default function Sales() {
               htmlFor="devolucion-checkbox"
               className="ml-2 text-sm font-medium text-red-700 cursor-pointer select-none"
             >
-              {isDevolucion ? "🔴 MODO DEVOLUCIÓN" : "⚪ MODO VENTA"}
+              {isDevolucion ? (
+                <>
+                  <ArrowUturnLeftIcon
+                    aria-hidden="true"
+                    className="mr-1 inline h-4 w-4 align-text-bottom"
+                  />
+                  MODO DEVOLUCIÓN
+                </>
+              ) : (
+                <>
+                  <ShoppingCartIcon
+                    aria-hidden="true"
+                    className="mr-1 inline h-4 w-4 align-text-bottom"
+                  />
+                  MODO VENTA
+                </>
+              )}
             </label>
           </div>
           {/* Total */}
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
             <span
-              className={`font-semibold text-lg ${
-                isDevolucion ? "text-red-500" : "text-blue-500"
+              className={`font-semibold text-lg tabular-nums ${
+                isDevolucion ? "text-red-700" : "text-blue-700"
               }`}
             >
               Gs. {formatMiles(total)}
@@ -837,10 +862,10 @@ export default function Sales() {
           <div className="grid grid-cols-3 gap-4 mb-3">
             {/* Botón Pagar/Devolver grande */}
             <button
-              className={`text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[100px] border-2 transition cursor-pointer ${
+              className={`flex h-[100px] cursor-pointer items-center justify-center rounded-lg border-2 text-lg font-semibold text-white transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 isDevolucion
-                  ? "bg-red-500 border-red-500 hover:bg-red-600"
-                  : "bg-blue-500 border-blue-500 hover:bg-blue-600"
+                  ? "border-red-600 bg-red-600 hover:bg-red-700 focus-visible:outline-red-600"
+                  : "border-blue-600 bg-blue-600 hover:bg-blue-700 focus-visible:outline-blue-600"
               }`}
               onClick={() => setShowModal(true)}
             >
@@ -848,14 +873,14 @@ export default function Sales() {
             </button>
             {/* Botón Presupuesto */}
             <button
-              className="bg-white border border-gray-200 rounded-lg text-gray-700 font-medium text-lg h-[100px] flex items-center justify-center hover:bg-gray-100 transition"
+              className="flex h-[100px] cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-lg font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               onClick={handlePresupuestoPDF}
             >
               Presupuesto
             </button>
             {/* Botón Imprimir Factura */}
             <button
-              className="bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-green-600 transition"
+              className="flex h-[100px] cursor-pointer items-center justify-center rounded-lg border border-green-700 bg-green-700 text-lg font-medium text-white transition-colors duration-200 hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
               onClick={() => setShowInvoicePrintModal(true)}
             >
               Imprimir Factura
@@ -864,7 +889,7 @@ export default function Sales() {
           {/* Recuadro inferior para el nombre del cliente */}
           <div className="mt-2">
             <button
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 text-center text-gray-700 font-semibold text-base tracking-wide hover:bg-blue-100 transition cursor-pointer"
+              className="min-h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-white py-2 text-center text-base font-semibold tracking-wide text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               onClick={() => setShowClienteModal(true)}
             >
               {clienteSeleccionado
@@ -904,8 +929,9 @@ export default function Sales() {
               inputRef={searchInputRef}
             />
             {isDevolucion && (
-              <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
-                🔴 MODO DEVOLUCIÓN
+              <div className="flex items-center gap-1 rounded-full border border-red-300 bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+                <ArrowUturnLeftIcon aria-hidden="true" className="h-4 w-4" />
+                MODO DEVOLUCIÓN
               </div>
             )}
           </div>
@@ -913,9 +939,7 @@ export default function Sales() {
             <div className="ml-6 font-semibold text-[#222] text-[16px] flex items-center gap-2">
               <span>
                 {user.nombre + " "}
-                <span style={{ color: "#888", fontWeight: 400 }}>
-                  ({user.id})
-                </span>
+                <span className="font-normal text-slate-500">({user.id})</span>
               </span>
               {localNombre && (
                 <span className="text-red-600 font-medium">
@@ -930,12 +954,12 @@ export default function Sales() {
               <ActionButton
                 label="Apertura/Cierre"
                 onClick={() => navigate("/apertura-cierre-caja")}
-                className="bg-blue-500 hover:bg-blue-700 text-white"
+                variant="primary"
               />
               <ActionButton
                 label="Pagos"
                 onClick={() => setShowPagoModal(true)}
-                className="bg-green-500 hover:bg-green-700 text-white"
+                variant="success"
               />
             </div>
           )}

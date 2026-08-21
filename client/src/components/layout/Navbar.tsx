@@ -1,17 +1,23 @@
-import {
-  Disclosure,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
-} from "@headlessui/react";
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { Bars3Icon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
+import { EMPRESA } from "../../config/empresa";
 
 function classNames(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(" ");
+}
+
+/** Iniciales del usuario, hasta dos. */
+function iniciales(nombre?: string) {
+  if (!nombre) return "?";
+  return nombre
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 interface NavbarProps {
@@ -21,6 +27,7 @@ interface NavbarProps {
 export default function Navbar({ setMobileOpen }: NavbarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -36,107 +43,117 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   ];
 
   return (
-    <Disclosure as="nav" className="bg-gray-800">
-      <div className="sticky top-0 z-30 bg-gray-800">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+    <nav className="sticky top-0 z-30 bg-slate-900">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             {/* Botón para abrir sidebar en móvil */}
             <button
               type="button"
-              className="rounded-md text-gray-400 hover:text-white focus:outline-none lg:hidden"
+              className="-ml-1 inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-300 transition-colors duration-200 hover:bg-slate-800 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
-              <span className="sr-only">Abrir sidebar</span>
-              <Bars3Icon className="h-6 w-6" />
+              <span className="sr-only">Abrir menú de navegación</span>
+              <Bars3Icon aria-hidden="true" className="h-6 w-6" />
             </button>
 
-            {/* //*******************************  */}
-            <div className="flex items-center">
-              {/* Menú de navegación (visible en desktop) */}
-              <div className="hidden sm:ml-6 sm:block">
-                <div className="flex space-x-4">
-                  {navigation.map((item) => (
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white"
+              >
+                {EMPRESA.inicial}
+              </span>
+              <span className="hidden text-sm font-semibold text-white sm:block">
+                {EMPRESA.nombre}
+              </span>
+            </Link>
+
+            {/* Menú de navegación (visible en desktop) */}
+            <div className="hidden sm:ml-3 sm:block">
+              <div className="flex space-x-1">
+                {navigation.map((item) => {
+                  const activo = location.pathname === item.href;
+                  return (
                     <Link
                       key={item.name}
                       to={item.href}
+                      // aria-current marca en qué sección estás parado
+                      aria-current={activo ? "page" : undefined}
                       className={classNames(
-                        "text-gray-300 hover:bg-gray-700 hover:text-white",
-                        "rounded-md px-3 py-2 text-sm font-medium"
+                        "rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200",
+                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+                        activo
+                          ? "bg-slate-800 text-white"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       )}
                     >
                       {item.name}
                     </Link>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
-            {/* Resto de tu Navbar (sin cambios) */}
-            <div className="flex items-center">
-              {/* Menú de perfil */}
-              <Menu as="div" className="relative ml-3">
-                <div className="flex items-center">
-                  <MenuButton className="relative flex items-center gap-2 rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 cursor-pointer">
-                    <span className="text-white">
-                      Hola, {user?.nombre ?? "Usuario"}
-                    </span>
-                    <img
-                      className="h-8 w-8 rounded-full object-cover"
-                      src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&h=80&q=80"
-                      alt="User profile"
-                    />
-                  </MenuButton>
-                </div>
-                <MenuItems
-                  transition
-                  className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none"
-                >
-                  <MenuItem>
-                    {({ focus }: { focus: boolean }) => (
-                      <a
-                        href="/profile"
-                        className={classNames(
-                          focus ? "bg-gray-100" : "",
-                          "block px-4 py-2 text-sm text-gray-700"
-                        )}
-                      >
-                        Tu Perfil
-                      </a>
-                    )}
-                  </MenuItem>
-                  <MenuItem>
-                    {({ focus }: { focus: boolean }) => (
-                      <a
-                        href="/configuraciones"
-                        className={classNames(
-                          focus ? "bg-gray-100" : "",
-                          "block px-4 py-2 text-sm text-gray-700"
-                        )}
-                      >
-                        Configuración
-                      </a>
-                    )}
-                  </MenuItem>
-                  <MenuItem>
-                    {({ focus }: { focus: boolean }) => (
-                      <button
-                        onClick={handleLogout}
-                        className={classNames(
-                          focus ? "bg-gray-100" : "",
-                          "block w-full text-left px-4 py-2 text-sm text-gray-700 cursor-pointer"
-                        )}
-                      >
-                        Cerrar sesión
-                      </button>
-                    )}
-                  </MenuItem>
-                </MenuItems>
-              </Menu>
-            </div>
-
-            {/* //****************************************  */}
           </div>
+
+          {/* Menú de perfil */}
+          <Menu as="div" className="relative shrink-0">
+            <MenuButton className="relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-200 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+              {/* Avatar con iniciales: antes se cargaba una foto de stock de
+                  Unsplash para todos los usuarios, con pedido a un host externo */}
+              <span
+                aria-hidden="true"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-white"
+              >
+                {iniciales(user?.nombre)}
+              </span>
+              <span className="hidden text-white sm:block">
+                {user?.nombre ?? "Usuario"}
+              </span>
+              <ChevronDownIcon
+                aria-hidden="true"
+                className="h-4 w-4 text-slate-400"
+              />
+              <span className="sr-only">Abrir menú de usuario</span>
+            </MenuButton>
+            <MenuItems
+              transition
+              className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none"
+            >
+              <div className="border-b border-slate-200 px-4 py-2">
+                <p className="truncate text-sm font-medium text-slate-900">
+                  {user?.nombre ?? "Usuario"}
+                </p>
+                {user?.LocalNombre && (
+                  <p className="truncate text-xs text-slate-500">
+                    {user.LocalNombre}
+                  </p>
+                )}
+              </div>
+              {/* Se quitaron "Tu Perfil" y "Configuración": apuntaban a /profile
+                  y /configuraciones, rutas que no existen en App.tsx, y además
+                  eran <a> que recargaban toda la SPA */}
+              <MenuItem>
+                {({ focus }: { focus: boolean }) => (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={classNames(
+                      focus ? "bg-slate-100" : "",
+                      "block w-full cursor-pointer px-4 py-2 text-left text-sm text-slate-700"
+                    )}
+                  >
+                    Cerrar sesión
+                  </button>
+                )}
+              </MenuItem>
+            </MenuItems>
+          </Menu>
         </div>
       </div>
-    </Disclosure>
+    </nav>
   );
 }

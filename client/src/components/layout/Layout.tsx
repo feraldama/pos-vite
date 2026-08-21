@@ -9,7 +9,7 @@ export default function Layout() {
   const ocultarLayout = location.pathname === "/ventas";
 
   return (
-    <div className="flex flex-col h-screen font-baloo">
+    <div className="flex flex-col h-screen">
       {/* Navbar con altura fija */}
       {!ocultarLayout && (
         <div className="flex-shrink-0">

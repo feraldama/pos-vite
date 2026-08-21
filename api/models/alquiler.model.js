@@ -13,8 +13,8 @@ const Alquiler = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
       db.query(
-        `SELECT a.*, 
-          c.ClienteNombre, c.ClienteApellido
+        `SELECT a.*,
+          c.ClienteNombre, c.ClienteApellido, c.ClienteRUC
         FROM alquiler a
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
         WHERE a.AlquilerId = ?`,

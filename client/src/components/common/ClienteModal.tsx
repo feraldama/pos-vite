@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
+import { activarConTeclado } from "../../utils/teclado";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import ActionButton from "./Button/ActionButton";
+import Modal from "./Modal";
 
 // Definir la interfaz Cliente localmente para evitar error de importación
 interface Cliente {
@@ -102,45 +105,34 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      setShowCreateModal(false);
-    }
-  };
-
-  if (!show) return null;
+  // handleBackdropClick ya no hace falta: el cierre por clic en el fondo, por
+  // Escape y la devolución del foco los maneja el componente Modal
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] p-6 relative flex flex-col">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer z-10"
-          onClick={onClose}
-        >
-          &times;
-        </button>
-        <div className="flex justify-between items-center mb-4 pr-8 flex-shrink-0">
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Buscar Cliente
-          </h2>
+    <Modal
+      open={show}
+      onClose={onClose}
+      title="Buscar Cliente"
+      maxWidth="max-w-4xl"
+    >
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
           {onCreateCliente && (
-            <button
+            <ActionButton
+              icon={PlusIcon}
+              label="Nuevo Cliente"
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Nuevo Cliente
-            </button>
+            />
           )}
         </div>
         <div className="bg-gray-50 rounded-lg p-4 mb-4 flex-shrink-0">
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="clientemodal-ruc" className="block text-xs font-semibold text-gray-500 mb-1">
                 RUC
               </label>
               <input
+                id="clientemodal-ruc"
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
                 placeholder="Buscar"
                 value={filtros.ruc}
@@ -150,10 +142,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="clientemodal-nombre" className="block text-xs font-semibold text-gray-500 mb-1">
                 Nombre
               </label>
               <input
+                id="clientemodal-nombre"
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
                 placeholder="Buscar"
                 value={filtros.nombre}
@@ -163,10 +157,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="clientemodal-apellido" className="block text-xs font-semibold text-gray-500 mb-1">
                 Apellido
               </label>
               <input
+                id="clientemodal-apellido"
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
                 placeholder="Buscar"
                 value={filtros.apellido}
@@ -176,10 +172,12 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="clientemodal-telefono" className="block text-xs font-semibold text-gray-500 mb-1">
                 Teléfono
               </label>
               <input
+                id="clientemodal-telefono"
                 className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
                 placeholder="Buscar"
                 value={filtros.telefono}
@@ -204,7 +202,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             <tbody>
               {paginatedClientes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-400">
+                  <td colSpan={5} className="text-center py-4 text-slate-500">
                     No hay clientes
                   </td>
                 </tr>
@@ -212,8 +210,16 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
               {paginatedClientes.map((c) => (
                 <tr
                   key={c.ClienteId}
-                  className="hover:bg-blue-50 cursor-pointer transition"
+                  // Fila seleccionable: no se puede envolver en <button> sin
+                  // romper la tabla, así que se le da rol y foco propios
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Seleccionar cliente ${c.ClienteNombre} ${
+                    c.ClienteApellido || ""
+                  }`.trim()}
+                  className="cursor-pointer transition-colors duration-200 hover:bg-blue-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
                   onClick={() => onSelect(c)}
+                  onKeyDown={activarConTeclado(() => onSelect(c))}
                 >
                   <td className="py-2 px-4">{c.ClienteRUC || ""}</td>
                   <td className="py-2 px-4">{c.ClienteNombre}</td>
@@ -276,45 +282,15 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
           </div>
         </div>
 
-        {/* Modal para crear cliente */}
-        {showCreateModal && (
-          <div
-            className="fixed inset-0 z-60 flex items-center justify-center"
-            onClick={handleBackdropClick}
-          >
-            <div className="absolute inset-0 bg-black opacity-50" />
-            <div className="relative w-full max-w-2xl max-h-full z-10">
-              <form
-                onSubmit={handleCreateSubmit}
-                className="relative bg-white rounded-lg shadow max-h-[90vh] overflow-y-auto"
-              >
-                <div className="flex items-start justify-between p-4 border-b rounded-t">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    Crear nuevo cliente
-                  </h3>
-                  <button
-                    type="button"
-                    className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center"
-                    onClick={() => setShowCreateModal(false)}
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <div className="p-6 space-y-6">
+        {/* Modal para crear cliente: z-60 para quedar sobre el modal de búsqueda */}
+        <Modal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title="Crear nuevo cliente"
+          zIndex="z-60"
+        >
+              <form onSubmit={handleCreateSubmit}>
+                <div className="space-y-6">
                   <div className="grid grid-cols-6 gap-6">
                     <div className="col-span-6 sm:col-span-3">
                       <label
@@ -329,7 +305,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteRUC"
                         value={formData.ClienteRUC}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-3">
@@ -345,7 +321,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteNombre"
                         value={formData.ClienteNombre}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                         required
                       />
                     </div>
@@ -362,7 +338,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteApellido"
                         value={formData.ClienteApellido}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-3">
@@ -378,7 +354,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteDireccion"
                         value={formData.ClienteDireccion}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-3">
@@ -394,7 +370,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteTelefono"
                         value={formData.ClienteTelefono}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                       />
                     </div>
                     <div className="col-span-6 sm:col-span-3 hidden">
@@ -409,7 +385,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                         id="ClienteTipo"
                         value={formData.ClienteTipo}
                         onChange={handleInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                         required
                       >
                         <option value="MI">Minorista</option>
@@ -435,27 +411,21 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
-                  <button
+                <div className="-mx-6 mt-6 flex flex-wrap items-center gap-2 border-t border-slate-200 px-6 pt-5">
+                  <ActionButton
                     type="submit"
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center cursor-pointer"
-                  >
-                    Crear Cliente
-                  </button>
-                  <button
+                    label="Crear Cliente"
+                  />
+                  <ActionButton
                     type="button"
-                    className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 cursor-pointer"
+                    variant="secondary"
+                    label="Cancelar"
                     onClick={() => setShowCreateModal(false)}
-                  >
-                    Cancelar
-                  </button>
+                  />
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        </Modal>
+    </Modal>
   );
 };
 

@@ -13,7 +13,7 @@ import { getProductoById } from "../../services/productos.service";
 import { getAlmacenById } from "../../services/almacenes.service";
 import ComprasList from "../../components/compras/ComprasList";
 import Pagination from "../../components/common/Pagination";
-import { formatCurrency } from "../../utils/utils";
+import { formatCurrency } from "../../utils/formato";
 import Swal from "sweetalert2";
 import { borrarRegistroDiario } from "../../services/pos.service";
 

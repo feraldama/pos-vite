@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Modal from "./Modal";
+import ActionButton from "./Button/ActionButton";
 import { createRegistroDiarioCaja } from "../../services/registros.service";
 import { getTiposGasto } from "../../services/tipogasto.service";
 import { getTiposGastoGrupo } from "../../services/tipogastogrupo.service";
@@ -6,7 +8,7 @@ import { updateCajaMonto } from "../../services/cajas.service";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import Swal from "sweetalert2";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 
 interface TipoGasto {
   TipoGastoId: number;
@@ -104,28 +106,22 @@ const PagoModal: React.FC<PagoModalProps> = ({
     }
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
-          onClick={handleClose}
-        >
-          &times;
-        </button>
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-          Nuevo Pago
-        </h2>
-        <form onSubmit={handleSubmit}>
+    <Modal
+      open={show}
+      onClose={handleClose}
+      title="Nuevo Pago"
+      maxWidth="max-w-md"
+    >
+      <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="pagomodal-fecha" className="block text-xs font-semibold text-gray-500 mb-1">
                 Fecha
               </label>
               <input
+                id="pagomodal-fecha"
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
@@ -134,10 +130,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="pagomodal-tipo-de-gasto" className="block text-xs font-semibold text-gray-500 mb-1">
                 Tipo de Gasto
               </label>
               <select
+                id="pagomodal-tipo-de-gasto"
                 value={tipoGastoId}
                 onChange={(e) => setTipoGastoId(Number(e.target.value))}
                 required
@@ -152,10 +150,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="pagomodal-grupo-de-gasto" className="block text-xs font-semibold text-gray-500 mb-1">
                 Grupo de Gasto
               </label>
               <select
+                id="pagomodal-grupo-de-gasto"
                 value={tipoGastoGrupoId}
                 onChange={(e) => setTipoGastoGrupoId(Number(e.target.value))}
                 required
@@ -170,10 +170,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="pagomodal-descripcion" className="block text-xs font-semibold text-gray-500 mb-1">
                 Descripción
               </label>
               <input
+                id="pagomodal-descripcion"
                 type="text"
                 value={detalle}
                 onChange={(e) => setDetalle(e.target.value)}
@@ -182,10 +184,12 @@ const PagoModal: React.FC<PagoModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
+              <label
+                htmlFor="pagomodal-monto" className="block text-xs font-semibold text-gray-500 mb-1">
                 Monto
               </label>
               <input
+                id="pagomodal-monto"
                 type="text"
                 value={monto !== "" ? formatMiles(monto) : ""}
                 onChange={(e) => {
@@ -204,23 +208,16 @@ const PagoModal: React.FC<PagoModalProps> = ({
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            >
-              Guardar
-            </button>
-            <button
+            <ActionButton type="submit" label="Guardar" />
+            <ActionButton
               type="button"
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition"
+              variant="secondary"
+              label="Cancelar"
               onClick={handleClose}
-            >
-              Cancelar
-            </button>
+            />
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

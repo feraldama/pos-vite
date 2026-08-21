@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import api from "../../services/api";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 
 interface DeudaCliente {
@@ -119,6 +117,10 @@ const ReportesPage: React.FC = () => {
     try {
       const res = await api.get("/alquiler/pendientes");
       const deudas: DeudaCliente[] = res.data.data || [];
+      // jspdf pesa ~350 KB y sólo hace falta acá: se carga al generar
+      // el PDF, no al abrir la pantalla.
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
       const doc = new jsPDF();
       doc.setFontSize(18);
       doc.text("Alquileres Pendientes a Cobrar", 14, 18);
@@ -184,6 +186,8 @@ const ReportesPage: React.FC = () => {
       const reporte: ReporteData = res.data.data;
       const esTodos = !reporte.cliente;
 
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
       const doc = new jsPDF();
       let y = 20;
 
@@ -370,6 +374,8 @@ const ReportesPage: React.FC = () => {
       const res = await api.get("/alquilerprendas/prendas-alquiladas-actuales");
       const prendas: PrendaAlquilada[] = res.data.data || [];
 
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
       const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
       let y = 18;
 
@@ -523,7 +529,7 @@ const ReportesPage: React.FC = () => {
             Alquileres Pendientes a Cobrar
           </h2>
           <button
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
+            className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
             onClick={handleGenerarPDF}
             disabled={loading}
           >
@@ -538,10 +544,12 @@ const ReportesPage: React.FC = () => {
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="reportespage-cliente" className="block text-sm font-medium text-gray-700 mb-2">
                 Cliente
               </label>
               <select
+                id="reportespage-cliente"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 value={clienteSeleccionado}
                 onChange={(e) => setClienteSeleccionado(e.target.value)}
@@ -559,10 +567,12 @@ const ReportesPage: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                htmlFor="reportespage-fecha-desde" className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha Desde
                 </label>
                 <input
+                id="reportespage-fecha-desde"
                   type="date"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   value={fechaDesde}
@@ -572,10 +582,12 @@ const ReportesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                htmlFor="reportespage-fecha-hasta" className="block text-sm font-medium text-gray-700 mb-2">
                   Fecha Hasta
                 </label>
                 <input
+                id="reportespage-fecha-hasta"
                   type="date"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   value={fechaHasta}
@@ -606,7 +618,7 @@ const ReportesPage: React.FC = () => {
             producto, cliente, alquiler y fechas.
           </p>
           <button
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
+            className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-4 rounded-lg text-lg shadow transition disabled:opacity-50"
             onClick={handleGenerarReportePrendasAlquiladas}
             disabled={loading}
           >

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 
 interface PaymentModalProps {
   show: boolean;
@@ -50,6 +50,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     "E" | "B" | "D" | "CR" | "C" | "V"
   >("E");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Al enfocar un medio de pago el campo se autocompleta con el saldo y se
+  // selecciona, que es la señal de "escribí para reemplazar". Con el teclado
+  // físico eso funciona solo, pero el teclado en pantalla escribía sobre el
+  // state y concatenaba: enfocar Débito (103.000) y tocar "1" daba 1.030.001.
+  // Esta bandera hace que la primera tecla reemplace, igual que el físico.
+  const [reemplazarAlTeclear, setReemplazarAlTeclear] = useState(true);
 
   useEffect(() => {
     if (show) {
@@ -77,133 +83,105 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     totalCost,
   ]);
 
-  const onNumberClickModal = (label: string | number) => {
-    let efe = efectivo;
-    let ban = banco;
-    let deb = bancoDebito;
-    let cred = bancoCredito;
-    let cuentaCli = cuentaCliente;
-    let vou = voucher;
-    let totalResto = 0;
+  // Recargo que paga el cliente por pagar con tarjeta. Sólo afecta lo que se
+  // cobra y lo que se imprime, no cuánto cubre de la venta.
+  const RECARGO_DEBITO = 1.03;
+  const RECARGO_CREDITO = 1.05;
 
-    const append = (val: number, label: string | number) => {
-      if (val === 0) return Number(label);
-      return Number(`${val}${label}`);
-    };
+  /** Lo que hay que pasar por el posnet: el importe base más el recargo. */
+  const conRecargo = (base: number, recargo: number) =>
+    Math.round(base * recargo);
 
-    if (pagoTipo === "E") {
-      efe = append(efectivo, label);
-      totalResto =
-        totalCost -
-        efe -
-        banco -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente -
-        vou;
-      setEfectivo(efe);
-    } else if (pagoTipo === "B") {
-      ban = append(banco, label);
-      totalResto =
-        totalCost -
-        efectivo -
-        ban -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente -
-        vou;
-      setBanco(ban);
-    } else if (pagoTipo === "D") {
-      deb = append(bancoDebito, label);
-      totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoCredito -
-        cuentaCliente -
-        deb * 1.03 -
-        vou;
-      setBancoDebito(deb);
-    } else if (pagoTipo === "CR") {
-      cred = append(bancoCredito, label);
-      totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoDebito -
-        cuentaCliente -
-        cred * 1.05 -
-        vou;
-      setBancoCredito(cred);
-    } else if (pagoTipo === "C") {
-      cuentaCli = append(cuentaCliente, label);
-      totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoDebito -
-        bancoCredito -
-        cuentaCli -
-        vou;
-      setCuentaCliente(cuentaCli);
-    } else if (pagoTipo === "V") {
-      vou = append(voucher, label);
-      totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente -
-        vou;
-      setVoucher(vou);
-    }
-    setTotalRest(totalResto);
+  /**
+   * Saldo pendiente de la venta. Única fórmula del componente: antes cada
+   * medio de pago recalculaba el saldo por su cuenta y sólo las ramas de
+   * débito y crédito aplicaban el recargo, así que el saldo cambiaba según qué
+   * campo estuviera seleccionado (con débito 50.000 sobre 100.000 decía 48.500
+   * parado en Débito y 50.000 parado en Efectivo).
+   *
+   * El monto que se carga en Tarjeta Débito/Crédito es el importe BASE, que es
+   * lo que cubre de la venta. El 3% / 5% es un recargo que paga el cliente por
+   * encima y que imprime el ticket (ver `ticketAlquiler.ts`, que muestra
+   * `base * 1,03`), así que no entra en este cálculo: si entrara, la venta se
+   * daría por saldada cobrando menos de lo que vale.
+   */
+  const calcularResto = (cambios: {
+    efectivo?: number;
+    banco?: number;
+    bancoDebito?: number;
+    bancoCredito?: number;
+    cuentaCliente?: number;
+    voucher?: number;
+  } = {}) => {
+    const e = cambios.efectivo ?? efectivo;
+    const b = cambios.banco ?? banco;
+    const d = cambios.bancoDebito ?? bancoDebito;
+    const c = cambios.bancoCredito ?? bancoCredito;
+    const cc = cambios.cuentaCliente ?? cuentaCliente;
+    const v = cambios.voucher ?? voucher;
+    const resto = totalCost - e - b - d - c - cc - v;
+    // El guaraní no tiene centavos: un residuo menor a 1 Gs es la venta saldada
+    return Math.abs(resto) < 1 ? 0 : Math.round(resto);
   };
 
-  const cerarCantidadModal = () => {
-    let totalResto = 0;
+  const onNumberClickModal = (label: string | number) => {
+    const append = (val: number) => {
+      // Primera tecla despues de enfocar: reemplaza en vez de concatenar
+      const base = reemplazarAlTeclear ? 0 : val;
+      if (base === 0) return Number(label);
+      return Number(`${base}${label}`);
+    };
+    setReemplazarAlTeclear(false);
+
     if (pagoTipo === "E") {
-      totalResto =
-        totalCost -
-        banco -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente -
-        voucher;
-      setEfectivo(0);
+      const v = append(efectivo);
+      setEfectivo(v);
+      setTotalRest(calcularResto({ efectivo: v }));
     } else if (pagoTipo === "B") {
-      totalResto =
-        totalCost -
-        efectivo -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente -
-        voucher;
-      setBanco(0);
+      const v = append(banco);
+      setBanco(v);
+      setTotalRest(calcularResto({ banco: v }));
     } else if (pagoTipo === "D") {
-      totalResto =
-        totalCost - efectivo - banco - bancoCredito - cuentaCliente - voucher;
-      setBancoDebito(0);
+      const v = append(bancoDebito);
+      setBancoDebito(v);
+      setTotalRest(calcularResto({ bancoDebito: v }));
     } else if (pagoTipo === "CR") {
-      totalResto =
-        totalCost - efectivo - banco - bancoDebito - cuentaCliente - voucher;
-      setBancoCredito(0);
+      const v = append(bancoCredito);
+      setBancoCredito(v);
+      setTotalRest(calcularResto({ bancoCredito: v }));
     } else if (pagoTipo === "C") {
-      totalResto =
-        totalCost - efectivo - banco - bancoDebito - bancoCredito - voucher;
-      setCuentaCliente(0);
+      const v = append(cuentaCliente);
+      setCuentaCliente(v);
+      setTotalRest(calcularResto({ cuentaCliente: v }));
     } else if (pagoTipo === "V") {
-      totalResto =
-        totalCost -
-        efectivo -
-        banco -
-        bancoDebito -
-        bancoCredito -
-        cuentaCliente;
-      setVoucher(0);
+      const v = append(voucher);
+      setVoucher(v);
+      setTotalRest(calcularResto({ voucher: v }));
     }
-    setTotalRest(totalResto);
+  };
+
+  /** Borra el monto del medio de pago seleccionado. */
+  const cerarCantidadModal = () => {
+    setReemplazarAlTeclear(true);
+    if (pagoTipo === "E") {
+      setEfectivo(0);
+      setTotalRest(calcularResto({ efectivo: 0 }));
+    } else if (pagoTipo === "B") {
+      setBanco(0);
+      setTotalRest(calcularResto({ banco: 0 }));
+    } else if (pagoTipo === "D") {
+      setBancoDebito(0);
+      setTotalRest(calcularResto({ bancoDebito: 0 }));
+    } else if (pagoTipo === "CR") {
+      setBancoCredito(0);
+      setTotalRest(calcularResto({ bancoCredito: 0 }));
+    } else if (pagoTipo === "C") {
+      setCuentaCliente(0);
+      setTotalRest(calcularResto({ cuentaCliente: 0 }));
+    } else if (pagoTipo === "V") {
+      setVoucher(0);
+      setTotalRest(calcularResto({ voucher: 0 }));
+    }
   };
 
   const handleSendRequest = async () => {
@@ -215,9 +193,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  // onKeyDown en vez del onKeyPress deprecado, y Escape para cerrar
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !isSubmitting && totalRest <= 0) {
       handleSendRequest();
+    }
+    if (e.key === "Escape" && !isSubmitting) {
+      handleClose();
     }
   };
 
@@ -238,14 +220,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(0,0,0,0.15)",
+        background: "rgba(15,23,42,0.6)",
         zIndex: 1000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
-      onKeyPress={handleKeyPress}
+      onKeyDown={handleKeyPress}
       tabIndex={0}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cobro"
     >
       <div
         style={{
@@ -260,15 +245,19 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       >
         <button
           onClick={handleClose}
+          aria-label="Cerrar"
           style={{
             position: "absolute",
             top: 16,
             right: 20,
             fontSize: 28,
-            color: "#888",
+            lineHeight: 1,
+            color: "#475569",
             background: "none",
             border: "none",
             cursor: "pointer",
+            minWidth: 44,
+            minHeight: 44,
           }}
         >
           ×
@@ -329,6 +318,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="efectivo-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -345,6 +335,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 value={formatMiles(efectivo)}
                 onFocus={(e) => {
                   setPagoTipoLocal("E");
+                  setReemplazarAlTeclear(true);
                   // if (efectivo == 0) {
                   //   setEfectivo(totalRest);
                   // setTotalRest(0);
@@ -354,15 +345,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setEfectivo(newValue);
-                  const totalResto =
-                    totalCost -
-                    newValue -
-                    banco -
-                    bancoDebito -
-                    bancoCredito -
-                    cuentaCliente -
-                    voucher;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ efectivo: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -388,6 +371,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="banco-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -399,28 +383,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Transferencia:
               </label>
               <input
+                id="banco-input"
                 type="text"
                 value={formatMiles(banco)}
                 onFocus={(e) => {
                   setPagoTipoLocal("B");
-                  if (banco === 0) {
+                  setReemplazarAlTeclear(true);
+                  if (banco === 0 && totalRest > 0) {
                     setBanco(totalRest);
-                    setTotalRest(0);
+                    setTotalRest(calcularResto({ banco: totalRest }));
                   }
                   e.target.select();
                 }}
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setBanco(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    newValue -
-                    bancoDebito -
-                    bancoCredito -
-                    cuentaCliente -
-                    voucher;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ banco: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -446,6 +424,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="debito-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -457,28 +436,27 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Tarjeta Débito (3% adicional):
               </label>
               <input
+                id="debito-input"
+                aria-describedby={
+                  bancoDebito > 0 ? "debito-recargo" : undefined
+                }
                 type="text"
                 value={formatMiles(bancoDebito)}
                 onFocus={(e) => {
                   setPagoTipoLocal("D");
-                  if (bancoDebito === 0) {
-                    setBancoDebito(Number((totalRest * 1.03).toFixed(0)));
-                    setTotalRest(0);
+                  setReemplazarAlTeclear(true);
+                  if (bancoDebito === 0 && totalRest > 0) {
+                    // La base que cubre el saldo es el saldo mismo; el 3% se le
+                    // suma al cliente en el ticket
+                    setBancoDebito(totalRest);
+                    setTotalRest(calcularResto({ bancoDebito: totalRest }));
                   }
                   e.target.select();
                 }}
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setBancoDebito(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoCredito -
-                    cuentaCliente -
-                    newValue * 1.03 -
-                    voucher;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ bancoDebito: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -495,6 +473,19 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
+            {bancoDebito > 0 && (
+              <p id="debito-recargo" style={{
+                margin: "-4px 0 10px",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#b45309",
+                textAlign: "right",
+              }}>
+                Se cobra Gs.{" "}
+                {formatMiles(conRecargo(bancoDebito, RECARGO_DEBITO))} con el 3%
+                adicional
+              </p>
+            )}
             {/* Tarjeta Crédito */}
             <div
               style={{
@@ -504,6 +495,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="credito-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -515,28 +507,25 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Tarjeta Crédito (5% adicional):
               </label>
               <input
+                id="credito-input"
+                aria-describedby={
+                  bancoCredito > 0 ? "credito-recargo" : undefined
+                }
                 type="text"
                 value={formatMiles(bancoCredito)}
                 onFocus={(e) => {
                   setPagoTipoLocal("CR");
-                  if (bancoCredito === 0) {
-                    setBancoCredito(Number((totalRest * 1.05).toFixed(0)));
-                    setTotalRest(0);
+                  setReemplazarAlTeclear(true);
+                  if (bancoCredito === 0 && totalRest > 0) {
+                    setBancoCredito(totalRest);
+                    setTotalRest(calcularResto({ bancoCredito: totalRest }));
                   }
                   e.target.select();
                 }}
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setBancoCredito(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoDebito -
-                    cuentaCliente -
-                    newValue * 1.05 -
-                    voucher;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ bancoCredito: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -553,6 +542,19 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
+            {bancoCredito > 0 && (
+              <p id="credito-recargo" style={{
+                margin: "-4px 0 10px",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#b45309",
+                textAlign: "right",
+              }}>
+                Se cobra Gs.{" "}
+                {formatMiles(conRecargo(bancoCredito, RECARGO_CREDITO))} con el
+                5% adicional
+              </p>
+            )}
             {/* Cuenta Cliente */}
             <div
               style={{
@@ -562,6 +564,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="cuenta-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -573,28 +576,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Cuenta de cliente:
               </label>
               <input
+                id="cuenta-input"
                 type="text"
                 value={formatMiles(cuentaCliente)}
                 onFocus={(e) => {
                   setPagoTipoLocal("C");
-                  if (cuentaCliente === 0) {
+                  setReemplazarAlTeclear(true);
+                  if (cuentaCliente === 0 && totalRest > 0) {
                     setCuentaCliente(totalRest);
-                    setTotalRest(0);
+                    setTotalRest(calcularResto({ cuentaCliente: totalRest }));
                   }
                   e.target.select();
                 }}
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setCuentaCliente(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoDebito -
-                    bancoCredito -
-                    newValue -
-                    voucher;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ cuentaCliente: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -620,6 +617,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
             >
               <label
+                htmlFor="voucher-input"
                 style={{
                   flex: 1,
                   fontSize: 16,
@@ -631,28 +629,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Voucher:
               </label>
               <input
+                id="voucher-input"
                 type="text"
                 value={formatMiles(voucher)}
                 onFocus={(e) => {
                   setPagoTipoLocal("V");
-                  if (voucher === 0) {
+                  setReemplazarAlTeclear(true);
+                  if (voucher === 0 && totalRest > 0) {
                     setVoucher(totalRest);
-                    setTotalRest(0);
+                    setTotalRest(calcularResto({ voucher: totalRest }));
                   }
                   e.target.select();
                 }}
                 onChange={(e) => {
                   const newValue = Number(e.target.value.replace(/\D/g, ""));
                   setVoucher(newValue);
-                  const totalResto =
-                    totalCost -
-                    efectivo -
-                    banco -
-                    bancoDebito -
-                    bancoCredito -
-                    cuentaCliente -
-                    newValue;
-                  setTotalRest(totalResto);
+                  setTotalRest(calcularResto({ voucher: newValue }));
                 }}
                 style={{
                   width: 120,
@@ -669,6 +661,30 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
+            {/* Total a cobrar por posnet, que es lo que el cajero tiene que
+                tipear en la terminal */}
+            {(bancoDebito > 0 || bancoCredito > 0) && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "8px 12px",
+                  border: "1px solid #fcd34d",
+                  background: "#fffbeb",
+                  borderRadius: 8,
+                  fontSize: 15,
+                  color: "#92400e",
+                }}
+              >
+                A pasar por posnet:{" "}
+                <b>
+                  Gs.{" "}
+                  {formatMiles(
+                    conRecargo(bancoDebito, RECARGO_DEBITO) +
+                      conRecargo(bancoCredito, RECARGO_CREDITO)
+                  )}
+                </b>
+              </div>
+            )}
             {/* Vuelto */}
             <div
               style={{
@@ -752,7 +768,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
               onClick={cerarCantidadModal}
             >
-              Cerar
+              Borrar
             </button>
           </div>
         </div>

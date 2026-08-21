@@ -6,7 +6,7 @@ import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { confirmarCompra } from "../../services/pos.service";
-import logo from "../../assets/img/logo.jpg";
+import logo from "../../assets/placeholderPrenda";
 import {
   getAllProveedoresSinPaginacion,
   createProveedor,
@@ -14,7 +14,7 @@ import {
 import ProveedorModal from "../../components/common/ProveedorModal";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
@@ -459,15 +459,17 @@ export default function Compras() {
                           <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
-                          <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                          <button
+                            type="button"
+                            aria-label={`Eliminar ${p.nombre} del carrito`}
+                            className="mt-1 -mx-1 cursor-pointer rounded px-1 text-sm text-red-700 transition-colors duration-200 hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               quitarProducto(p.cartItemId);
                             }}
                           >
                             Eliminar
-                          </div>
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -590,7 +592,7 @@ export default function Compras() {
           {/* Total */}
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
-            <span className="font-semibold text-lg text-green-500">
+            <span className="font-semibold text-lg tabular-nums text-green-700">
               Gs. {formatMiles(total)}
             </span>
           </div>
@@ -598,10 +600,12 @@ export default function Compras() {
           {/* Información de la compra */}
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="compras-numero-de-factura" className="block text-sm font-medium text-gray-700 mb-1">
                 Número de Factura
               </label>
               <input
+                id="compras-numero-de-factura"
                 type="text"
                 value={compraFactura}
                 onChange={(e) => setCompraFactura(e.target.value)}
@@ -610,10 +614,12 @@ export default function Compras() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="compras-tipo-de-compra" className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Compra
               </label>
               <select
+                id="compras-tipo-de-compra"
                 value={compraTipo}
                 onChange={(e) => setCompraTipo(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-lg"
@@ -626,10 +632,12 @@ export default function Compras() {
 
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="compras-monto-entregado" className="block text-sm font-medium text-gray-700 mb-1">
                 Monto Entregado
               </label>
               <input
+                id="compras-monto-entregado"
                 type="text"
                 value={compraEntrega > 0 ? formatMiles(compraEntrega) : ""}
                 onChange={(e) => {
@@ -641,10 +649,12 @@ export default function Compras() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="compras-fecha-de-compra" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha de Compra
               </label>
               <input
+                id="compras-fecha-de-compra"
                 type="date"
                 value={compraFecha}
                 onChange={(e) => setCompraFecha(e.target.value)}
@@ -656,7 +666,7 @@ export default function Compras() {
           {/* Botón Comprar */}
           <div className="mb-3">
             <button
-              className="w-full bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center hover:bg-green-600 transition"
+              className="flex h-[60px] w-full cursor-pointer items-center justify-center rounded-lg border border-green-700 bg-green-700 text-lg font-medium text-white transition-colors duration-200 hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
               onClick={sendRequest}
             >
               Comprar
@@ -721,7 +731,7 @@ export default function Compras() {
               <ActionButton
                 label="Volver"
                 onClick={() => navigate(-1)}
-                className="bg-gray-500 hover:bg-gray-700 text-white"
+                variant="neutral"
               />
             </div>
           )}

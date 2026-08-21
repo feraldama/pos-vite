@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../common/Table/DataTable";
 import type { Venta, VentaCreditoPago } from "../../services/venta.service";
-import { formatCurrency } from "../../utils/utils";
+import { formatCurrency } from "../../utils/formato";
 import { getAlmacenById } from "../../services/almacenes.service";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";

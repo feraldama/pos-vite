@@ -6,7 +6,7 @@ import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { actualizarInventario } from "../../services/pos.service";
-import logo from "../../assets/img/logo.jpg";
+import logo from "../../assets/placeholderPrenda";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import { getLocalById } from "../../services/locales.service";
@@ -356,15 +356,17 @@ export default function Inventario() {
                             {p.nombre}
                           </div>
                           {puedeEliminar && (
-                            <div
-                              className="text-red-600 text-sm mt-1 cursor-pointer"
+                            <button
+                              type="button"
+                              aria-label={`Eliminar ${p.nombre} del carrito`}
+                              className="mt-1 -mx-1 cursor-pointer rounded px-1 text-sm text-red-700 transition-colors duration-200 hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 quitarProducto(p.cartItemId);
                               }}
                             >
                               Eliminar
-                            </div>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -458,10 +460,12 @@ export default function Inventario() {
         <div className="bg-white rounded-xl shadow p-4">
           {/* Tipo de Inventario */}
           <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+                htmlFor="inventario-tipo-de-modificacion" className="block text-sm font-medium text-gray-700 mb-1">
               Tipo de Modificación
             </label>
             <select
+                id="inventario-tipo-de-modificacion"
               value={tipoInventario}
               onChange={(e) => setTipoInventario(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-lg"
@@ -476,7 +480,7 @@ export default function Inventario() {
             <button
               className={`w-full border rounded-lg text-white font-medium text-lg h-[60px] flex items-center justify-center transition ${
                 puedeCrear || puedeEditar
-                  ? "bg-green-500 border-green-500 hover:bg-green-600"
+                  ? "border-green-700 bg-green-700 hover:bg-green-800"
                   : "bg-gray-400 border-gray-400 cursor-not-allowed"
               }`}
               onClick={sendRequest}
@@ -524,7 +528,7 @@ export default function Inventario() {
               <ActionButton
                 label="Volver"
                 onClick={() => navigate(-1)}
-                className="bg-gray-500 hover:bg-gray-700 text-white"
+                variant="neutral"
               />
             </div>
           )}

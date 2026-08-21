@@ -1,5 +1,6 @@
-import React from "react";
-import ActionButton from "../Button/ActionButton"; // Ajustá la ruta si es distinta
+import React, { useId } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import ActionButton from "../Button/ActionButton";
 
 interface SearchButtonProps {
   searchTerm: string;
@@ -10,6 +11,8 @@ interface SearchButtonProps {
   className?: string;
   hideButton?: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  /** Etiqueta accesible del campo. Por defecto usa el placeholder. */
+  label?: string;
 }
 
 export default function SearchButton({
@@ -20,31 +23,30 @@ export default function SearchButton({
   placeholder = "Buscar...",
   hideButton = false,
   inputRef,
+  label,
 }: SearchButtonProps) {
+  // El id era fijo ("table-search-users"), así que dos buscadores en la misma
+  // pantalla generaban ids duplicados y la etiqueta apuntaba al campo equivocado.
+  const inputId = useId();
+
   return (
     <div className="flex items-center flex-row flex-wrap py-4 bg-white sm:max-w-full lg:max-w-xl gap-2">
       <div className="relative flex-1 min-w-0">
-        <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
-          <svg
-            className="w-4 h-4 text-gray-500"
+        {/* Etiqueta real: antes el campo sólo tenía placeholder, que no sirve
+            como nombre accesible y desaparece al escribir */}
+        <label htmlFor={inputId} className="sr-only">
+          {label ?? placeholder}
+        </label>
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <MagnifyingGlassIcon
             aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 20 20"
-          >
-            <path
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-            />
-          </svg>
+            className="w-4 h-4 text-slate-500"
+          />
         </div>
         <input
-          type="text"
-          id="table-search-users"
-          className="block w-full pl-8 pr-4 py-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+          type="search"
+          id={inputId}
+          className="block w-full min-h-11 pl-9 pr-4 py-2 text-sm text-slate-900 border border-slate-300 rounded-lg bg-white placeholder:text-slate-500 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => {
@@ -74,7 +76,7 @@ export default function SearchButton({
         <ActionButton
           label="Buscar"
           onClick={() => onSearchSubmit()}
-          className="text-white rounded-lg flex-shrink-0"
+          className="flex-shrink-0"
         />
       )}
     </div>

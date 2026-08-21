@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { activarConTeclado } from "../../utils/teclado";
+import Modal from "./Modal";
 import Swal from "sweetalert2";
 import {
   getVentasPaginated,
@@ -717,24 +719,13 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
     return numero.toLocaleString("es-PY") + " GUARANÍES";
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-6xl p-6 relative max-h-[90vh] overflow-y-auto">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
-          onClick={onClose}
-        >
-          &times;
-        </button>
-
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Imprimir Factura
-          </h2>
-        </div>
+    <Modal
+      open={show}
+      onClose={onClose}
+      title="Imprimir Factura"
+      maxWidth="max-w-6xl"
+    >
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Panel izquierdo - Búsqueda y lista de ventas */}
@@ -751,7 +742,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 />
                 <button
                   onClick={handleSearch}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   Buscar
                 </button>
@@ -771,12 +762,17 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
                 ventas.map((venta) => (
                   <div
                     key={venta.VentaId}
-                    className={`p-3 border rounded-lg cursor-pointer transition ${
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={ventaSeleccionada?.VentaId === venta.VentaId}
+                    aria-label={`Seleccionar venta ${venta.VentaId}`}
+                    className={`cursor-pointer rounded-lg border p-3 transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${
                       ventaSeleccionada?.VentaId === venta.VentaId
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-blue-600 bg-blue-50"
+                        : "border-slate-200 hover:border-slate-300"
                     }`}
                     onClick={() => cargarProductosVenta(venta)}
+                    onKeyDown={activarConTeclado(() => cargarProductosVenta(venta))}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -925,8 +921,7 @@ const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({
             Imprimir Factura
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 
 export interface RangoAlquilado {
   desde: string; // ISO date
@@ -41,29 +41,51 @@ const ProductCard: React.FC<ProductCardProps> = ({
     clienteTipo === "MA" && precioMayorista !== undefined
       ? precioMayorista
       : precio;
+  const sinStock = stock <= 0;
+
   return (
-    <div
-      className="w-full bg-white border border-gray-200 rounded-lg shadow-md cursor-pointer p-0 flex flex-col items-center transition hover:shadow-lg"
+    // <button> en vez de un <div> con onClick: la tarjeta es la acción principal
+    // de la pantalla y así se puede recorrer y activar con el teclado
+    <button
+      type="button"
       onClick={onAdd}
+      aria-label={`Agregar ${nombre}, Gs. ${formatMiles(mostrarPrecio)}`}
+      className="flex w-full cursor-pointer flex-col items-center rounded-lg border border-slate-200 bg-white p-0 text-center shadow-sm transition-shadow duration-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
     >
-      <div className="w-full flex justify-center items-center p-4">
+      <div className="flex w-full items-center justify-center p-4">
         <img
-          className="h-32 object-contain bg-white"
+          // w-full además de la altura, para que la caja de la imagen no mida
+          // 0px de ancho antes de cargar y todas las tarjetas queden parejas
+          className="h-32 w-full object-contain bg-white"
           src={imagen}
-          alt={nombre}
-          loading="lazy"
+          // El nombre va como texto justo debajo, repetirlo en el alt haría que
+          // el lector de pantalla lo anuncie dos veces
+          alt=""
+          // Sin loading="lazy": acá todas las imágenes son data URI (base64 que
+          // ya viene en la respuesta, o el SVG de placeholder), así que no hay
+          // ningún pedido de red que diferir y con el placeholder impedía que
+          // la imagen llegara a cargarse
           decoding="async"
         />
       </div>
-      <div className="w-full px-4 pb-2 text-center">
-        <div className="font-bold text-base text-gray-800 uppercase leading-tight min-h-[44px] flex items-center justify-center">
+      <div className="w-full px-4 pb-3">
+        <div className="flex min-h-[44px] items-center justify-center text-base font-bold uppercase leading-tight text-slate-800">
           {nombre}
         </div>
-        <div className="font-bold text-2xl text-orange-500 mb-0">
+        {/* orange-700 (5.18:1) en vez de orange-500 (2.80:1): el precio es el
+            dato que más se mira y era el texto con menos contraste de la pantalla */}
+        <div className="text-2xl font-bold tabular-nums text-orange-700">
           Gs. {formatMiles(mostrarPrecio)}
         </div>
-        <div className="text-sm text-gray-500 mt-1">
-          Stock: <span className="text-green-600 font-semibold">{stock}</span>
+        <div className="mt-1 text-sm text-slate-500">
+          Stock:{" "}
+          <span
+            className={`font-semibold tabular-nums ${
+              sinStock ? "text-red-700" : "text-green-700"
+            }`}
+          >
+            {stock}
+          </span>
         </div>
         {fechasAlquiladas && fechasAlquiladas.length > 0 && (
           <div className="mt-2 mb-1 flex flex-col gap-1">
@@ -72,15 +94,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
               .map((rango, idx) => (
                 <div
                   key={idx}
-                  className="text-xs bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5 font-semibold"
-                  title={rango.cliente ? `Alquilado por ${rango.cliente}` : "Alquilado"}
+                  className="rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700"
+                  title={
+                    rango.cliente ? `Alquilado por ${rango.cliente}` : "Alquilado"
+                  }
                 >
                   Alquilado: {formatFecha(rango.desde)} al{" "}
                   {formatFecha(rango.hasta)}
                 </div>
               ))}
             {fechasAlquiladas.length > MAX_RANGOS_VISIBLES && (
-              <div className="text-xs text-red-500 font-medium">
+              <div className="text-xs font-medium text-red-700">
                 +{fechasAlquiladas.length - MAX_RANGOS_VISIBLES} alquiler
                 {fechasAlquiladas.length - MAX_RANGOS_VISIBLES > 1 ? "es" : ""}{" "}
                 más
@@ -89,7 +113,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </button>
   );
 };
 

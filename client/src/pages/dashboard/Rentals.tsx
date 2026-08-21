@@ -13,14 +13,12 @@ import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
 import { createAlquiler } from "../../services/alquiler.service";
-import logo from "../../assets/img/logo.jpg";
+import logo from "../../assets/placeholderPrenda";
 import {
   getAllClientesSinPaginacion,
   createCliente,
 } from "../../services/clientes.service";
 import ClienteModal from "../../components/common/ClienteModal";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
@@ -28,7 +26,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import Pagination from "../../components/common/Pagination";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 
 interface Cliente {
   ClienteId: number;
@@ -487,7 +485,7 @@ export default function Rentals() {
       // Las prendas ya fueron creadas por el controlador cuando se enviaron en el body
 
       if (printTicket) {
-        generateTicketPDF();
+        generateTicketPDF(alquilerId);
       }
 
       Swal.fire({
@@ -623,253 +621,38 @@ export default function Rentals() {
     }
   };
 
-  const generateTicketPDF = () => {
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: [80, 297],
-    });
-
-    // Función para formatear fecha de ISO (aaaa-mm-dd) a dd/mm/aaaa
-    const formatearFecha = (fechaISO: string) => {
-      if (!fechaISO) return "";
-      const [año, mes, dia] = fechaISO.split("-");
-      return `${dia}/${mes}/${año}`;
-    };
-
-    const fechaActual = new Date();
-    const dia = String(fechaActual.getDate()).padStart(2, "0");
-    const mes = String(fechaActual.getMonth() + 1).padStart(2, "0");
-    const año = fechaActual.getFullYear().toString().slice(-2);
-    const horas = String(fechaActual.getHours()).padStart(2, "0");
-    const minutos = String(fechaActual.getMinutes()).padStart(2, "0");
-    const segundos = String(fechaActual.getSeconds()).padStart(2, "0");
-
-    const fechaFormateada = `${dia}/${mes}/${año}`;
-    const horaFormateada = `${horas}:${minutos}:${segundos}`;
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-
-    doc.text("Auto Shop Alonso", 0, 15);
-    doc.text("BODEGA", 0, 20);
-    doc.text("Bernardino Caballero c/ Antequera, Ypacaraí", 0, 25);
-    doc.text("Teléfono: +595 892 784989", 0, 30);
-    doc.text(`Fecha: ${fechaFormateada} - Hora: ${horaFormateada}`, 0, 35);
-    doc.text(
-      clienteSeleccionado?.ClienteRUC
-        ? "RUC: " + clienteSeleccionado.ClienteRUC
-        : "RUC: SIN RUC",
-      0,
-      40
+  // El generador de tickets arrastra jspdf (~350 KB): se carga al imprimir
+  const generateTicketPDF = async (alquilerId?: number) => {
+    const { generarTicketAlquiler } = await import(
+      "../../utils/ticketAlquiler"
     );
-    doc.text(
-      "Cliente: " +
-        (clienteSeleccionado?.ClienteNombre +
-          " " +
-          clienteSeleccionado?.ClienteApellido || ""),
-      0,
-      45
-    );
-    doc.text(`Fecha Alquiler: ${formatearFecha(fechaAlquiler)}`, 0, 50);
-    doc.text(`Fecha Entrega: ${formatearFecha(fechaEntrega)}`, 0, 55);
-    doc.text(`Fecha Devolución: ${formatearFecha(fechaDevolucion)}`, 0, 60);
-
-    doc.setLineWidth(0.2);
-    doc.line(0, 63, 75, 63);
-
-    const headers = [["Desc.", "Cant", "Precio", "Total"]];
-
-    const tableData = carrito.map((p) => {
-      return [
-        p.observacion.trim()
-          ? `${p.nombre}\nAjuste: ${p.observacion.trim()}`
-          : p.nombre,
-        p.cantidad,
-        `Gs. ${p.precioAlquiler.toLocaleString("es-ES")}`,
-        `Gs. ${obtenerTotal(p).toLocaleString("es-ES")}`,
-      ];
-    });
-
-    autoTable(doc, {
-      head: headers,
-      body: tableData,
-      startY: 65,
-      theme: "plain",
-      styles: {
-        fontSize: 7,
-        textColor: [0, 0, 0],
-        fillColor: [255, 255, 255],
+    generarTicketAlquiler({
+      alquilerId,
+      cliente: {
+        nombre: clienteSeleccionado?.ClienteNombre || "",
+        apellido: clienteSeleccionado?.ClienteApellido || "",
+        ruc: clienteSeleccionado?.ClienteRUC || "",
       },
-      columnStyles: {
-        0: { cellWidth: 30 },
-        1: { cellWidth: 9 },
-        2: { cellWidth: 14 },
-        3: { cellWidth: 20 },
+      fechaAlquiler,
+      fechaEntrega,
+      fechaDevolucion,
+      prendas: carrito.map((p) => ({
+        nombre: p.nombre,
+        cantidad: p.cantidad,
+        precio: p.precioAlquiler,
+        ajuste: p.observacion,
+      })),
+      total,
+      entregado: efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05,
+      pagos: {
+        efectivo,
+        transferencia: banco,
+        tarjetaDebito: bancoDebito,
+        tarjetaCredito: bancoCredito,
+        cuentaCliente,
+        voucher,
       },
-      margin: { left: 0 },
     });
-
-    const totalCost = carrito.reduce(
-      (sum, item) => sum + obtenerTotal(item),
-      0
-    );
-    const lastAutoTable = (
-      doc as unknown as { lastAutoTable: { finalY: number } }
-    ).lastAutoTable;
-
-    let yPosition = lastAutoTable.finalY + 5;
-
-    // Línea separadora
-    doc.setLineWidth(0.2);
-    doc.line(0, yPosition, 75, yPosition);
-    yPosition += 5;
-
-    // Información de pagos
-    doc.setFontSize(7);
-
-    // Efectivo
-    if (efectivo > 0) {
-      doc.text(
-        `Efectivo: Gs. ${efectivo.toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-
-    // Transferencia
-    if (banco > 0) {
-      doc.text(
-        `Transferencia: Gs. ${banco.toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-
-    // Tarjeta Débito (con 3% adicional)
-    if (bancoDebito > 0) {
-      const debitoConAdicional = bancoDebito * 1.03;
-      doc.text(
-        `Tarjeta Débito (3% adicional): Gs. ${Math.round(
-          debitoConAdicional
-        ).toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-
-    // Tarjeta Crédito (con 5% adicional)
-    if (bancoCredito > 0) {
-      const creditoConAdicional = bancoCredito * 1.05;
-      doc.text(
-        `Tarjeta Crédito (5% adicional): Gs. ${Math.round(
-          creditoConAdicional
-        ).toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-
-    // Cuenta de cliente
-    if (cuentaCliente > 0) {
-      doc.text(
-        `Cuenta de cliente: Gs. ${cuentaCliente.toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-
-    // Voucher (descuento)
-    if (voucher > 0) {
-      doc.text(`Voucher: Gs. ${voucher.toLocaleString("es-ES")}`, 0, yPosition);
-      yPosition += 4;
-    }
-
-    // Línea separadora
-    yPosition += 2;
-    doc.line(0, yPosition, 75, yPosition);
-    yPosition += 5;
-
-    // Calcular total entregado (suma de todo menos voucher y cuenta cliente)
-    const totalEntregado =
-      efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
-
-    // Total con descuento de voucher
-    const totalConDescuento = totalCost - voucher;
-
-    // Saldo que falta
-    const saldoFalta = totalConDescuento - totalEntregado;
-
-    // Total entregado
-    doc.setFontSize(8);
-    doc.text(
-      `Total Entregado: Gs. ${Math.round(totalEntregado).toLocaleString(
-        "es-ES"
-      )}`,
-      0,
-      yPosition
-    );
-    yPosition += 5;
-
-    // Saldo que falta
-    if (saldoFalta > 0) {
-      doc.text(
-        `Saldo que falta: Gs. ${Math.round(saldoFalta).toLocaleString(
-          "es-ES"
-        )}`,
-        0,
-        yPosition
-      );
-      yPosition += 5;
-    } else if (saldoFalta < 0) {
-      doc.text(
-        `Vuelto: Gs. ${Math.round(Math.abs(saldoFalta)).toLocaleString(
-          "es-ES"
-        )}`,
-        0,
-        yPosition
-      );
-      yPosition += 5;
-    }
-
-    // Línea separadora
-    doc.line(0, yPosition, 75, yPosition);
-    yPosition += 5;
-
-    // Total a Pagar (con descuento si hay voucher)
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    if (voucher > 0) {
-      doc.text(
-        `Subtotal: Gs. ${totalCost.toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-      doc.text(
-        `Descuento (Voucher): Gs. ${voucher.toLocaleString("es-ES")}`,
-        0,
-        yPosition
-      );
-      yPosition += 4;
-    }
-    doc.text(
-      `Total a Pagar: Gs. ${totalConDescuento.toLocaleString("es-ES")}`,
-      0,
-      yPosition
-    );
-    yPosition += 8;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, yPosition);
-
-    doc.save("ticket_alquiler.pdf");
   };
 
   useEffect(() => {
@@ -1018,15 +801,17 @@ export default function Rentals() {
                           <div className="font-bold text-[17px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
-                          <div
-                            className="text-red-600 text-sm mt-1 cursor-pointer"
+                          <button
+                            type="button"
+                            aria-label={`Eliminar ${p.nombre} del carrito`}
+                            className="mt-1 -mx-1 cursor-pointer rounded px-1 text-sm text-red-700 transition-colors duration-200 hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               quitarProducto(p.cartItemId);
                             }}
                           >
                             Eliminar
-                          </div>
+                          </button>
                           <input
                             type="text"
                             value={p.observacion}
@@ -1114,10 +899,12 @@ export default function Rentals() {
           {/* Fechas */}
           <div className="grid grid-cols-3 gap-4 mb-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="rentals-fecha-alquiler" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Alquiler *
               </label>
               <input
+                id="rentals-fecha-alquiler"
                 type="date"
                 value={fechaAlquiler}
                 onChange={(e) => {
@@ -1137,10 +924,12 @@ export default function Rentals() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="rentals-fecha-entrega" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Entrega *
               </label>
               <input
+                id="rentals-fecha-entrega"
                 type="date"
                 value={fechaEntrega}
                 onChange={(e) => {
@@ -1160,10 +949,12 @@ export default function Rentals() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="rentals-fecha-devolucion" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Devolución *
               </label>
               <input
+                id="rentals-fecha-devolucion"
                 type="date"
                 value={fechaDevolucion}
                 onChange={(e) => setFechaDevolucion(e.target.value)}
@@ -1176,7 +967,7 @@ export default function Rentals() {
           {/* Total */}
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-lg">Total</span>
-            <span className="font-semibold text-lg text-blue-500">
+            <span className="font-semibold text-lg tabular-nums text-blue-700">
               Gs. {formatMiles(total)}
             </span>
           </div>
@@ -1184,12 +975,12 @@ export default function Rentals() {
           <div className="grid grid-cols-2 gap-4 mb-3">
             {/* Botón Alquilar grande */}
             <button
-              className={`border-2 text-white font-semibold rounded-lg flex items-center justify-center text-lg h-[100px] transition ${
+              className={`flex h-[100px] items-center justify-center rounded-lg border-2 text-lg font-semibold text-white transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
                 !clienteSeleccionado ||
                 clienteSeleccionado.ClienteNombre === "SIN NOMBRE MINORISTA" ||
                 clienteSeleccionado.ClienteNombre.trim() === ""
-                  ? "bg-gray-400 border-gray-400 cursor-not-allowed"
-                  : "bg-blue-500 border-blue-500 hover:bg-blue-600 cursor-pointer"
+                  ? "cursor-not-allowed border-slate-400 bg-slate-400"
+                  : "cursor-pointer border-blue-600 bg-blue-600 hover:bg-blue-700"
               }`}
               onClick={() => {
                 if (
@@ -1217,8 +1008,8 @@ export default function Rentals() {
             </button>
             {/* Botón Imprimir Ticket */}
             <button
-              className="bg-green-500 border border-green-500 rounded-lg text-white font-medium text-lg h-[100px] flex items-center justify-center hover:bg-green-600 transition"
-              onClick={generateTicketPDF}
+              className="flex h-[100px] cursor-pointer items-center justify-center rounded-lg border border-green-700 bg-green-700 text-lg font-medium text-white transition-colors duration-200 hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
+              onClick={() => generateTicketPDF()}
             >
               Imprimir Ticket
             </button>
@@ -1283,12 +1074,12 @@ export default function Rentals() {
               <ActionButton
                 label="Apertura/Cierre"
                 onClick={() => navigate("/apertura-cierre-caja")}
-                className="bg-blue-500 hover:bg-blue-700 text-white"
+                variant="primary"
               />
               <ActionButton
                 label="Pagos"
                 onClick={() => setShowPagoModal(true)}
-                className="bg-green-500 hover:bg-green-700 text-white"
+                variant="success"
               />
             </div>
           )}

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
-import { formatCurrency, formatMiles } from "../../utils/utils";
+import { formatCurrency, formatMiles } from "../../utils/formato";
 import {
   getAlquileresPendientesPorCliente,
   procesarPagoAlquileres,
@@ -236,10 +236,12 @@ const CreditoPagosPage = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="creditopagospage-cliente" className="block text-sm font-medium text-gray-700">
                 Cliente
               </label>
               <select
+                id="creditopagospage-cliente"
                 value={selectedCliente}
                 onChange={(e) => handleClienteChange(e.target.value)}
                 className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
@@ -254,10 +256,12 @@ const CreditoPagosPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="creditopagospage-fecha" className="block text-sm font-medium text-gray-700">
                 Fecha
               </label>
               <input
+                id="creditopagospage-fecha"
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
@@ -266,10 +270,12 @@ const CreditoPagosPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="creditopagospage-tipo-de-pago" className="block text-sm font-medium text-gray-700">
                 Tipo de Pago
               </label>
               <select
+                id="creditopagospage-tipo-de-pago"
                 value={tipoPago}
                 onChange={(e) => setTipoPago(e.target.value)}
                 className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
@@ -283,10 +289,12 @@ const CreditoPagosPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="creditopagospage-monto-a-cobrar" className="block text-sm font-medium text-gray-700">
                 Monto a Cobrar
               </label>
               <input
+                id="creditopagospage-monto-a-cobrar"
                 type="text"
                 value={montoPago ? formatMiles(montoPago) : ""}
                 onChange={(e) => {
@@ -309,7 +317,7 @@ const CreditoPagosPage = () => {
 
             <button
               type="submit"
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="w-full bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               CARGAR PAGO
             </button>

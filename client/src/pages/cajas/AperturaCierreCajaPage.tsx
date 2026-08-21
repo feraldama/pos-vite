@@ -7,9 +7,8 @@ import {
 } from "../../services/registrodiariocaja.service";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
-import { formatMiles } from "../../utils/utils";
+import { formatMiles } from "../../utils/formato";
 import { useNavigate, useLocation } from "react-router-dom";
-import jsPDF from "jspdf";
 import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
 interface Caja {
@@ -267,6 +266,8 @@ export default function AperturaCierreCajaPage() {
       txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
     }
     // --- Generar PDF ---
+    // jspdf pesa ~350 KB: se carga acá y no al abrir la pantalla
+    const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -408,11 +409,13 @@ export default function AperturaCierreCajaPage() {
       >
         <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-900">
+            <label
+                htmlFor="aperturacierrecajapage-tipo-de-operacion" className="block mb-2 text-sm font-medium text-gray-900">
               Tipo de operación
             </label>
             <select
-              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                id="aperturacierrecajapage-tipo-de-operacion"
+              className={`block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 ${
                 tipoDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={tipo}
@@ -425,11 +428,13 @@ export default function AperturaCierreCajaPage() {
             </select>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-900">
+            <label
+                htmlFor="aperturacierrecajapage-caja" className="block mb-2 text-sm font-medium text-gray-900">
               Caja
             </label>
             <select
-              className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
+                id="aperturacierrecajapage-caja"
+              className={`block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 ${
                 cajaDisabled ? "bg-gray-200 text-gray-500" : ""
               }`}
               value={cajaId}
@@ -446,13 +451,15 @@ export default function AperturaCierreCajaPage() {
             </select>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-900">
+            <label
+                htmlFor="aperturacierrecajapage-monto-de-apertura" className="block mb-2 text-sm font-medium text-gray-900">
               Monto de apertura
             </label>
             <input
+                id="aperturacierrecajapage-monto-de-apertura"
               type="text"
               inputMode="numeric"
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
               value={monto ? formatMiles(monto) : ""}
               onChange={(e) => {
                 const raw = e.target.value

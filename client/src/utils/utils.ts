@@ -1,44 +1,8 @@
-export const formatMiles = (value: number | string): string => {
-  const parseToNumber = (value: number | string): number => {
-    if (typeof value === "string") {
-      return parseFloat(value.replace(/\./g, "").replace(",", "."));
-    }
-    return value;
-  };
-  const commission = parseToNumber(value);
-  const roundedCommission = Math.round(commission);
-  return new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 0,
-    useGrouping: true,
-  }).format(roundedCommission);
-};
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { EMPRESA } from "../config/empresa";
 
-export const formatMilesWithDecimals = (value: number | string): string => {
-  const parseToNumber = (value: number | string): number => {
-    if (typeof value === "string") {
-      // Si el string ya es un número válido, úsalo directamente
-      if (/^\d+\.?\d*$/.test(value) && value.includes(".")) {
-        return parseFloat(value);
-      }
-      // Si tiene formato español con comas como decimales
-      return parseFloat(value.replace(/\./g, "").replace(",", "."));
-    }
-    return value;
-  };
-  const commission = parseToNumber(value);
-  return new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: true,
-  }).format(commission);
-};
-
-export const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("es-PY", {
-    style: "currency",
-    currency: "PYG",
-  }).format(value);
-};
+import Swal from "sweetalert2";
 
 // Interfaz para los items del carrito
 export interface CarritoItem {
@@ -52,11 +16,6 @@ export interface ClientePresupuesto {
   ClienteNombre: string;
   ClienteApellido: string;
 }
-
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-
-import Swal from "sweetalert2";
 
 // Función para generar PDF de presupuesto
 export const generatePresupuestoPDF = async (
@@ -88,10 +47,16 @@ export const generatePresupuestoPDF = async (
     ? `${cliente.ClienteNombre} ${cliente.ClienteApellido}`.trim()
     : "SIN NOMBRE";
 
-  // Agregar logo en la esquina superior derecha
-  const logo = new Image();
-  logo.src = "/src/assets/img/logo.jpg";
-  doc.addImage(logo, "JPEG", 165, 10, 20, 20);
+  // Encabezado de la empresa en la esquina superior derecha.
+  // Antes acá se insertaba un logo con la ruta "/src/assets/img/logo.jpg", que
+  // sólo resuelve con el dev server de Vite y quedaba rota en el build.
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(EMPRESA.nombre, 196, 18, { align: "right" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(EMPRESA.rubro, 196, 24, { align: "right" });
+  doc.text(`Tel: ${EMPRESA.telefono}`, 196, 29, { align: "right" });
 
   // Agregar fecha y hora actual
   const fechaActual = new Date();

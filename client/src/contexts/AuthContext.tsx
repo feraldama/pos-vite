@@ -1,6 +1,7 @@
 import { createContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
+import { API_BASE_URL } from "../services/apiBaseUrl";
 
 interface User {
   // Define aquí las propiedades del usuario según tu modelo, por ejemplo:
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     try {
       const response = await fetch(
-        import.meta.env.VITE_API_URL + "/usuarios/login",
+        API_BASE_URL + "/usuarios/login",
         {
           method: "POST",
           headers: {

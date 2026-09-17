@@ -184,6 +184,16 @@ exports.getAllProductosSinPaginacion = async (req, res) => {
   }
 };
 
+// exportProductos: lista completa (sin imagenes) para descargar en Excel
+exports.exportProductos = async (req, res) => {
+  try {
+    const productos = await Producto.getAllForExport(req.query.q);
+    res.json({ data: productos });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 function convertirImagenes(productos) {
   if (!productos) return productos;
   if (Array.isArray(productos)) {

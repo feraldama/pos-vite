@@ -26,8 +26,27 @@ const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
 const app = express();
 
 // Configuración de CORS
+// Orígenes permitidos: se pueden agregar más desde el .env con
+// CORS_ORIGINS=http://mi-dominio.com,http://otra-ip:5173
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://181.123.61.216:5173",
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
+];
+
 const corsOptions = {
-  origin: "*", // Permite todas las origenes
+  origin: (origin, callback) => {
+    // Permite herramientas sin origin (Postman, curl, health checks)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`CORS: origen no permitido -> ${origin}`);
+    callback(null, false);
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,

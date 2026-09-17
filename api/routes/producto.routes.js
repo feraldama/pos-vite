@@ -14,6 +14,7 @@ router.get(
   productoController.getAllProductosSinPaginacion
 );
 router.get("/search", authMiddleware, productoController.searchProductos);
+router.get("/export", authMiddleware, productoController.exportProductos);
 router.get("/:id", authMiddleware, productoController.getProductoById);
 router.post("/", authMiddleware, productoController.createProducto);
 router.put("/:id", authMiddleware, productoController.updateProducto);

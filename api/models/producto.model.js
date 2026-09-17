@@ -78,6 +78,54 @@ const Producto = {
     });
   },
 
+  // Trae todos los productos (sin paginar) para exportar a Excel.
+  // Excluye las columnas de imagen para no inflar la respuesta.
+  getAllForExport: (term) => {
+    return new Promise((resolve, reject) => {
+      const baseQuery = `
+        SELECT
+          p.ProductoId,
+          p.ProductoCodigo,
+          p.ProductoNombre,
+          p.ProductoPrecioVenta,
+          p.ProductoPrecioVentaMayorista,
+          p.ProductoPrecioUnitario,
+          p.ProductoPrecioPromedio,
+          p.ProductoStock,
+          p.ProductoStockUnitario,
+          p.ProductoCantidadCaja,
+          p.ProductoIVA,
+          p.ProductoStockMinimo,
+          p.LocalId,
+          l.LocalNombre
+        FROM producto p
+        LEFT JOIN local l ON p.LocalId = l.LocalId
+      `;
+
+      if (term && term.trim() !== "") {
+        const searchValue = `%${term}%`;
+        db.query(
+          `${baseQuery}
+            WHERE p.ProductoNombre LIKE ?
+            OR p.ProductoCodigo LIKE ?
+            OR l.LocalNombre LIKE ?
+            ORDER BY p.ProductoNombre ASC`,
+          [searchValue, searchValue, searchValue],
+          (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+          }
+        );
+        return;
+      }
+
+      db.query(`${baseQuery} ORDER BY p.ProductoNombre ASC`, (err, results) => {
+        if (err) return reject(err);
+        resolve(results);
+      });
+    });
+  },
+
   search: (term, limit, offset, sortBy = "ProductoId", sortOrder = "ASC") => {
     return new Promise((resolve, reject) => {
       const allowedSortFields = [

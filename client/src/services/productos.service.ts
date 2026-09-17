@@ -83,6 +83,21 @@ export const deleteProducto = async (id: string | number) => {
   }
 };
 
+// Traer todos los productos (sin imagenes) para exportar a Excel
+export const exportProductos = async (searchTerm?: string) => {
+  const params: { [key: string]: string } = {};
+  if (searchTerm) params.q = searchTerm;
+  try {
+    const response = await api.get("/productos/export", { params });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || { message: "Error al exportar productos" }
+    );
+  }
+};
+
 export const searchProductos = async (
   searchTerm: string,
   page = 1,

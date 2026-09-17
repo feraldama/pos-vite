@@ -5,11 +5,13 @@ import {
   searchProductos,
   createProducto,
   updateProducto,
+  exportProductos,
 } from "../../services/productos.service";
 import ProductsList from "../../components/products/ProductsList";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
+import { exportProductosToExcel } from "../../utils/exportProductosExcel";
 
 // Tipos auxiliares
 interface Producto {
@@ -55,6 +57,7 @@ export default function ProductsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [exporting, setExporting] = useState(false);
 
   const puedeCrear = usePermiso("PRODUCTOS", "crear");
   const puedeEditar = usePermiso("PRODUCTOS", "editar");
@@ -190,6 +193,38 @@ export default function ProductsPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const data = await exportProductos(appliedSearchTerm || undefined);
+      const productos = data?.data ?? [];
+      if (productos.length === 0) {
+        Swal.fire({
+          icon: "info",
+          title: "Sin productos para exportar",
+        });
+        return;
+      }
+      exportProductosToExcel(productos);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: `Se exportaron ${productos.length} productos`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      Swal.fire({
+        icon: "error",
+        title: "No se pudo exportar",
+        text: err?.message || "Error al exportar productos",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -227,6 +262,8 @@ export default function ProductsPage() {
             : undefined
         }
         onCreate={puedeCrear ? handleCreate : undefined}
+        onExport={handleExport}
+        exporting={exporting}
         pagination={productosData.pagination}
         onSearch={handleSearch}
         searchTerm={searchTerm}

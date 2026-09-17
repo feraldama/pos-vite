@@ -2,7 +2,10 @@ import { useEffect, useState, useRef } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  ArrowDownTrayIcon,
+} from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
 import { formatMiles } from "../../utils/utils";
 
@@ -46,6 +49,8 @@ interface ProductsListProps {
   sortKey?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (key: string, order: "asc" | "desc") => void;
+  onExport?: () => void;
+  exporting?: boolean;
 }
 
 export default function ProductsList({
@@ -65,6 +70,8 @@ export default function ProductsList({
   sortKey,
   sortOrder,
   onSort,
+  onExport,
+  exporting = false,
 }: ProductsListProps) {
   const [formData, setFormData] = useState<Producto>({
     ProductoCodigo: "0",
@@ -216,7 +223,15 @@ export default function ProductsList({
             placeholder="Buscar productos"
           />
         </div>
-        <div className="py-4">
+        <div className="py-4 flex gap-2">
+          {onExport && (
+            <ActionButton
+              label={exporting ? "Generando..." : "Exportar Excel"}
+              onClick={onExport}
+              icon={ArrowDownTrayIcon}
+              disabled={exporting}
+            />
+          )}
           {onCreate && (
             <ActionButton
               label="Nuevo Producto"

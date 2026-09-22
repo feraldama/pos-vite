@@ -56,18 +56,21 @@ const Perfil = {
   getAllPaginated: (page = 1, itemsPerPage = 10) => {
     return new Promise((resolve, reject) => {
       const offset = (page - 1) * itemsPerPage;
+      // El total se cuenta con su propia consulta: SQL_CALC_FOUND_ROWS /
+      // FOUND_ROWS() son de MySQL y no existen en PostgreSQL.
       db.query(
-        "SELECT SQL_CALC_FOUND_ROWS * FROM perfil LIMIT ? OFFSET ?",
+        "SELECT * FROM perfil LIMIT ? OFFSET ?",
         [parseInt(itemsPerPage), parseInt(offset)],
         (err, results) => {
           if (err) return reject(err);
-          db.query("SELECT FOUND_ROWS() as total", (err2, totalResult) => {
+          db.query("SELECT COUNT(*) as total FROM perfil", (err2, totalResult) => {
             if (err2) return reject(err2);
+            const total = Number(totalResult[0].total);
             resolve({
               data: results,
               pagination: {
-                totalItems: totalResult[0].total,
-                totalPages: Math.ceil(totalResult[0].total / itemsPerPage),
+                totalItems: total,
+                totalPages: Math.ceil(total / itemsPerPage),
                 currentPage: page,
                 itemsPerPage: itemsPerPage,
               },

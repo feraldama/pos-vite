@@ -159,9 +159,9 @@ const RegistroDiarioCaja = {
             SELECT COUNT(*) as total FROM registrodiariocaja 
             WHERE RegistroDiarioCajaDetalle LIKE ? 
               OR CAST(UsuarioId AS CHAR) LIKE ?
-              OR CAST(CajaId AS INTEGER) LIKE ?
-              OR CAST(TipoGastoId AS INTEGER) LIKE ?
-              OR CAST(TipoGastoGrupoId AS INTEGER) LIKE ?
+              OR CAST(CajaId AS CHAR) LIKE ?
+              OR CAST(TipoGastoId AS CHAR) LIKE ?
+              OR CAST(TipoGastoGrupoId AS CHAR) LIKE ?
               OR CAST(RegistroDiarioCajaMonto AS CHAR) LIKE ?
               OR DATE_FORMAT(RegistroDiarioCajaFecha, '%d/%m/%Y %H:%i:%s') LIKE ?
           `;

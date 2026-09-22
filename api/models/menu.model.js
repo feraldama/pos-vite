@@ -31,28 +31,36 @@ const Menu = {
         where = "WHERE MenuId LIKE ? OR MenuNombre LIKE ?";
         params.push(`%${search}%`, `%${search}%`);
       }
+      // El total se cuenta con su propia consulta: SQL_CALC_FOUND_ROWS /
+      // FOUND_ROWS() son de MySQL y no existen en PostgreSQL.
+      const filtroParams = [...params];
       params.push(parseInt(itemsPerPage), parseInt(offset));
 
       const query = `
-        SELECT SQL_CALC_FOUND_ROWS * FROM menu
+        SELECT * FROM menu
         ${where}
         ORDER BY ${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
       db.query(query, params, (err, results) => {
         if (err) return reject(err);
-        db.query("SELECT FOUND_ROWS() as total", (err2, totalResult) => {
-          if (err2) return reject(err2);
-          resolve({
-            data: results,
-            pagination: {
-              totalItems: totalResult[0].total,
-              totalPages: Math.ceil(totalResult[0].total / itemsPerPage),
-              currentPage: page,
-              itemsPerPage: itemsPerPage,
-            },
-          });
-        });
+        db.query(
+          `SELECT COUNT(*) as total FROM menu ${where}`,
+          filtroParams,
+          (err2, totalResult) => {
+            if (err2) return reject(err2);
+            const total = Number(totalResult[0].total);
+            resolve({
+              data: results,
+              pagination: {
+                totalItems: total,
+                totalPages: Math.ceil(total / itemsPerPage),
+                currentPage: page,
+                itemsPerPage: itemsPerPage,
+              },
+            });
+          }
+        );
       });
     });
   },

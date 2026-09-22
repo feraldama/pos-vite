@@ -1,5 +1,6 @@
 const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
 const db = require("../config/db");
+const { esClaveForanea } = require("../utils/db-errors");
 
 // Obtener todos los registros con paginación
 exports.getAll = async (req, res) => {
@@ -151,11 +152,7 @@ exports.delete = async (req, res) => {
     }
     res.json({ message: "Registro eliminado exitosamente" });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         message:
           "No se puede eliminar el registro porque tiene movimientos asociados.",

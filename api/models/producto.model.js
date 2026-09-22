@@ -270,11 +270,18 @@ const Producto = {
           updateFields.push(`${campo} = ?`);
           values.push(productoData.ProductoImagen_GXI || null);
         } else if (campo === "ProductoImagen") {
-          const imagenBuffer = productoData.ProductoImagen
-            ? Buffer.from(productoData.ProductoImagen, "base64")
-            : null;
-          updateFields.push(`${campo} = ?`);
-          values.push(imagenBuffer);
+          // Solo se toca si el cliente la mandó. Antes se escribía NULL cuando
+          // no venía, lo que en PostgreSQL viola el NOT NULL de la columna (y
+          // en MySQL borraba silenciosamente la imagen en cada edición).
+          // Cadena vacía = "quitar la imagen" -> se guarda un blob vacío.
+          if (productoData.ProductoImagen !== undefined) {
+            updateFields.push(`${campo} = ?`);
+            values.push(
+              productoData.ProductoImagen
+                ? Buffer.from(productoData.ProductoImagen, "base64")
+                : Buffer.alloc(0)
+            );
+          }
         } else if (productoData[campo] !== undefined) {
           updateFields.push(`${campo} = ?`);
           values.push(productoData[campo]);

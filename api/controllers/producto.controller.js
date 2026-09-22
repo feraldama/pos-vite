@@ -1,4 +1,5 @@
 const Producto = require("../models/producto.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 // getAllProductos
 exports.getAllProductos = async (req, res) => {
@@ -165,6 +166,13 @@ exports.deleteProducto = async (req, res) => {
       message: "Producto eliminado exitosamente",
     });
   } catch (error) {
+    if (esClaveForanea(error)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "No se puede eliminar el producto porque tiene ventas, combos o stock asociados.",
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Error al eliminar producto",

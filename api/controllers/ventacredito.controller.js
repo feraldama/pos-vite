@@ -1,4 +1,5 @@
 const VentaCredito = require("../models/ventacredito.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 exports.getAll = async (req, res) => {
   try {
@@ -105,11 +106,7 @@ exports.delete = async (req, res) => {
     }
     res.json({ message: "Crédito de venta eliminado exitosamente" });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         message:
           "No se puede eliminar el crédito porque tiene pagos asociados.",

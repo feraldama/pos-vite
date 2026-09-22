@@ -1,4 +1,5 @@
 const Cliente = require("../models/cliente.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 // getAllClientes
 exports.getAllClientes = async (req, res) => {
@@ -161,11 +162,7 @@ exports.deleteCliente = async (req, res) => {
       message: "Cliente eliminado exitosamente",
     });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         success: false,
         message:

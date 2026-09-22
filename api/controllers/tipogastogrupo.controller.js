@@ -1,5 +1,6 @@
 const TipoGastoGrupo = require("../models/tipogastogrupo.model");
 const TipoGasto = require("../models/tipogasto.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 exports.getAll = async (req, res) => {
   try {
@@ -70,11 +71,7 @@ exports.delete = async (req, res) => {
     if (!tipoGastoId) return res.status(404).json({ message: "No encontrado" });
     res.json({ message: "Eliminado correctamente", TipoGastoCantGastos });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         message:
           "No se puede eliminar el grupo porque tiene movimientos asociados.",

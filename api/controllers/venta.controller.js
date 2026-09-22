@@ -1,4 +1,5 @@
 const Venta = require("../models/venta.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 exports.getAll = async (req, res) => {
   try {
@@ -85,11 +86,7 @@ exports.delete = async (req, res) => {
     }
     res.json({ message: "Venta eliminada exitosamente" });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         message:
           "No se puede eliminar la venta porque tiene registros asociados.",

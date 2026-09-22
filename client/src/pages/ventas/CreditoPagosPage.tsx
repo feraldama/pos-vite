@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { js2xml } from "xml-js";
 import Swal from "sweetalert2";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 import { formatCurrency, formatMiles } from "../../utils/utils";
@@ -9,7 +7,7 @@ import { getVentasPendientesPorCliente } from "../../services/venta.service";
 import { useAuth } from "../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
-import { genexusUrl } from "../../services/genexusBaseUrl";
+import { cobrarCredito, mensajeDeError } from "../../services/pos.service";
 
 interface Cliente {
   ClienteId: number;
@@ -168,46 +166,15 @@ const CreditoPagosPage = () => {
       return;
     }
 
-    const fechaDate = new Date(fecha + "T00:00:00");
-    const dia = fechaDate.getDate();
-    const mes = fechaDate.getMonth() + 1;
-    const año = fechaDate.getFullYear() % 100;
-    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-    const añoStr = año < 10 ? `0${año}` : año.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-    const json = {
-      Envelope: {
-        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
-        Body: {
-          "PCreditoWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "DecorparPintureria" },
-            Tipo: "V",
-            Clienteid: Number(selectedCliente),
-            Montorecibido: montoPago,
-            Cajaid: cajaAperturada.CajaId,
-            Usuarioid: user?.id,
-            Fechastring: fechaFormateada,
-            Ventapagotipo: tipoPago,
-          },
-        },
-      },
-    };
-
-    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    };
-
     try {
-      await axios.post(
-        genexusUrl("apcreditows"),
-        xml,
-        config
-      );
+      await cobrarCredito({
+        fecha,
+        clienteId: Number(selectedCliente),
+        montoRecibido: montoPago,
+        cajaId: Number(cajaAperturada.CajaId),
+        usuarioId: String(user?.id ?? ""),
+        ventaPagoTipo: tipoPago,
+      });
 
       let timerInterval: ReturnType<typeof setInterval>;
       Swal.fire({
@@ -243,7 +210,11 @@ const CreditoPagosPage = () => {
       });
     } catch (error) {
       console.error("Error al procesar el pago:", error);
-      Swal.fire("Error", "Hubo un problema al procesar el pago.", "error");
+      Swal.fire(
+        "Error",
+        mensajeDeError(error, "Hubo un problema al procesar el pago."),
+        "error"
+      );
     }
   };
 

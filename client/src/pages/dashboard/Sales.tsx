@@ -6,8 +6,6 @@ import ProductCard from "../../components/products/ProductCard";
 import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
 import logo from "../../assets/img/logo.jpg";
 import {
   getAllClientesSinPaginacion,
@@ -23,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
-import { genexusUrl } from "../../services/genexusBaseUrl";
+import { confirmarVenta, mensajeDeError } from "../../services/pos.service";
 import {
   formatMiles,
   generatePresupuestoPDF,
@@ -347,86 +345,43 @@ export default function Sales() {
   }
 
   const sendRequest = async () => {
-    const fecha = new Date();
-    const dia = fecha.getDate();
-    const mes = fecha.getMonth() + 1;
-    const año = fecha.getFullYear() % 100;
-    const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-    const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-    const añoStr = año < 10 ? `0${año}` : año.toString();
-    const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
+    const hoy = new Date();
+    const fechaISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(hoy.getDate()).padStart(2, "0")}`;
 
-    const SDTProductoItem = cartItems.map((producto) => {
-      const combo = combos.find(
-        (c) => Number(c.ProductoId) === Number(producto.id)
-      );
-      const productoOriginal = productos.find(
-        (p) => p.ProductoId === producto.id
-      );
-      const precioUnitario = productosPrecioEditable.includes(producto.id)
-        ? producto.price
-        : productoOriginal?.ProductoPrecioVenta ?? producto.price;
-      const comboCantidad = combo ? Number(combo.ComboCantidad) : 0;
-      const totalCombo = calcularPrecioConCombo(
-        producto.id,
-        producto.quantity,
-        precioUnitario
-      );
-      const esCombo = combo && producto.quantity >= comboCantidad;
-      return {
-        ClienteId: clienteSeleccionado?.ClienteId,
-        Producto: {
-          ProductoId: producto.id,
-          VentaProductoCantidad: producto.quantity,
-          ProductoPrecioVenta: producto.salePrice,
-          ProductoUnidad: producto.unidad,
-          VentaProductoPrecioTotal: producto.totalPrice,
-          Combo: esCombo ? "S" : "N",
-          ComboPrecio: esCombo ? totalCombo : 0,
-        },
-      };
-    });
+    // El precio de combo ya viene resuelto en totalPrice del carrito
+    const items = cartItems.map((producto) => ({
+      productoId: producto.id,
+      cantidad: producto.quantity,
+      precio: producto.salePrice,
+      precioTotal: producto.totalPrice,
+      unidad: producto.unidad,
+    }));
 
-    const json = {
-      Envelope: {
-        _attributes: { xmlns: "http://schemas.xmlsoap.org/soap/envelope/" },
-        Body: {
-          "PVentaConfirmarWS.VENTACONFIRMAR": {
-            _attributes: { xmlns: "DecorparPintureria" },
-            Sdtproducto: {
-              SDTProductoItem: SDTProductoItem,
-            },
-            Ventafechastring: fechaFormateada,
-            Almacenorigenid: user?.LocalId,
-            Clientetipo: clienteSeleccionado?.ClienteTipo,
-            Cajaid: cajaAperturada?.CajaId,
-            Usuarioid: user?.id,
-            Efectivo: efectivo,
-            Total2: getSubtotal(cartItems),
-            Ventatipo: "CO",
-            Pagotipo: "E",
-            Clienteid: clienteSeleccionado?.ClienteId,
-            Efectivoreact: Number(efectivo) + Number(totalRest),
-            Bancoreact: Number(bancoDebito) + Number(bancoCredito),
-            Clientecuentareact: cuentaCliente,
-            Voucherreact: voucher,
-            Transferreact: Number(banco),
-          },
-        },
-      },
-    };
-    const xml = js2xml(json, { compact: true, ignoreComment: true, spaces: 4 });
-    const config = {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    };
+    const total = getSubtotal(cartItems);
+    const aCuenta = Number(cuentaCliente) || 0;
+
     try {
-      await axios.post(
-        genexusUrl("apventaconfirmarws"),
-        xml,
-        config
-      );
+      await confirmarVenta({
+        fecha: fechaISO,
+        clienteId: Number(clienteSeleccionado?.ClienteId),
+        almacenId: Number(user?.LocalId),
+        cajaId: Number(cajaAperturada?.CajaId),
+        usuarioId: String(user?.id ?? ""),
+        ventaTipo: aCuenta > 0 ? "CR" : "CO",
+        pagoTipo: "E",
+        total,
+        pagos: {
+          efectivo: Number(efectivo) + Number(totalRest),
+          pos: Number(bancoDebito) + Number(bancoCredito),
+          transferencia: Number(banco),
+          voucher: Number(voucher),
+          cuentaCliente: aCuenta,
+        },
+        items,
+      });
       if (printTicket) {
         generateTicketPDF();
       }
@@ -467,7 +422,10 @@ export default function Sales() {
       Swal.fire({
         icon: "error",
         title: "Error al realizar la venta",
-        text: "No se pudo completar la venta. Por favor, contacte con el administrador.",
+        text: mensajeDeError(
+          error,
+          "No se pudo completar la venta. Por favor, contacte con el administrador."
+        ),
         confirmButtonColor: "#2563eb",
       });
     }

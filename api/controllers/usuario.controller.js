@@ -2,6 +2,7 @@ const Usuario = require("../models/usuario.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const PerfilMenu = require("../models/perfilmenu.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 // getAllUsuarios
 exports.getAllUsuarios = async (req, res) => {
@@ -324,11 +325,7 @@ exports.deleteUsuario = async (req, res) => {
       message: "Usuario eliminado exitosamente",
     });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         success: false,
         message:

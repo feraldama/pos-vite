@@ -6,7 +6,6 @@ import {
   type Venta,
   getProductosByVentaId,
   type VentaProducto,
-  deleteVenta,
 } from "../../services/venta.service";
 import { getClienteById } from "../../services/clientes.service";
 import { getProductoById } from "../../services/productos.service";
@@ -15,9 +14,7 @@ import VentasList from "../../components/ventas/VentasList";
 import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
-import axios from "axios";
-import { js2xml } from "xml-js";
-import { genexusUrl } from "../../services/genexusBaseUrl";
+import { anularVenta, mensajeDeError } from "../../services/pos.service";
 
 interface Pagination {
   totalItems: number;
@@ -267,52 +264,9 @@ export default function VentasPage() {
       if (result.isConfirmed) {
         try {
           // Preparar fecha para el webservice
-          const fechaDate = new Date();
-          const dia = fechaDate.getDate();
-          const mes = fechaDate.getMonth() + 1;
-          const año = fechaDate.getFullYear() % 100;
-          const diaStr = dia < 10 ? `0${dia}` : dia.toString();
-          const mesStr = mes < 10 ? `0${mes}` : mes.toString();
-          const añoStr = año < 10 ? `0${año}` : año.toString();
-          const fechaFormateada = `${diaStr}/${mesStr}/${añoStr}`;
-
-          // Preparar datos para el webservice
-          const json = {
-            Envelope: {
-              _attributes: {
-                xmlns: "http://schemas.xmlsoap.org/soap/envelope/",
-              },
-              Body: {
-                "PBorrarRegistoDiarioWS.VENTACONFIRMAR": {
-                  _attributes: { xmlns: "Decorpar" },
-                  Ventaid: venta.VentaId,
-                  Fechastring: fechaFormateada,
-                  Regla: 1, // Valor por defecto para Regla
-                },
-              },
-            },
-          };
-
-          const xml = js2xml(json, {
-            compact: true,
-            ignoreComment: true,
-            spaces: 4,
-          });
-          const config = {
-            headers: {
-              "Content-Type": "text/xml",
-            },
-          };
-
-          // PRIMERO: Llamar al webservice
-          await axios.post(
-            genexusUrl("apborrarregistodiariows"),
-            xml,
-            config
-          );
-
-          // SEGUNDO: Solo si el webservice fue exitoso, eliminar la venta
-          await deleteVenta(venta.VentaId);
+          // Una sola operación atómica: repone stock, devuelve el dinero a la
+          // caja y elimina la venta.
+          await anularVenta(venta.VentaId);
 
           let timerInterval: ReturnType<typeof setInterval>;
           Swal.fire({
@@ -348,12 +302,11 @@ export default function VentasPage() {
             }
           });
         } catch (error: unknown) {
-          const err = error as { message?: string };
-          const msg = err?.message || "No se pudo eliminar la venta";
+          console.error("Error al anular la venta:", error);
           Swal.fire({
             icon: "warning",
             title: "No permitido",
-            text: msg,
+            text: mensajeDeError(error, "No se pudo anular la venta"),
           });
         }
       }

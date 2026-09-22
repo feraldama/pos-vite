@@ -1,5 +1,6 @@
 const Caja = require("../models/caja.model");
 const db = require("../config/db");
+const { esClaveForanea } = require("../utils/db-errors");
 
 exports.getAll = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
@@ -64,11 +65,7 @@ exports.delete = async (req, res) => {
     }
     res.json({ message: "Caja eliminada exitosamente" });
   } catch (error) {
-    if (
-      error &&
-      error.message &&
-      error.message.includes("a foreign key constraint fails")
-    ) {
+    if (esClaveForanea(error)) {
       return res.status(400).json({
         message:
           "No se puede eliminar la caja porque tiene movimientos asociados.",

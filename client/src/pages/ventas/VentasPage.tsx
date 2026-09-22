@@ -17,6 +17,7 @@ import { formatCurrency } from "../../utils/utils";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { js2xml } from "xml-js";
+import { genexusUrl } from "../../services/genexusBaseUrl";
 
 interface Pagination {
   totalItems: number;
@@ -305,9 +306,7 @@ export default function VentasPage() {
 
           // PRIMERO: Llamar al webservice
           await axios.post(
-            `${import.meta.env.VITE_APP_URL}${
-              import.meta.env.VITE_APP_URL_GENEXUS
-            }apborrarregistodiariows`,
+            genexusUrl("apborrarregistodiariows"),
             xml,
             config
           );

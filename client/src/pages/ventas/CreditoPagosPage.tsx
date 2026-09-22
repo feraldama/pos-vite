@@ -9,6 +9,7 @@ import { getVentasPendientesPorCliente } from "../../services/venta.service";
 import { useAuth } from "../../contexts/useAuth";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
+import { genexusUrl } from "../../services/genexusBaseUrl";
 
 interface Cliente {
   ClienteId: number;
@@ -203,9 +204,7 @@ const CreditoPagosPage = () => {
 
     try {
       await axios.post(
-        `${import.meta.env.VITE_APP_URL}${
-          import.meta.env.VITE_APP_URL_GENEXUS
-        }apcreditows`,
+        genexusUrl("apcreditows"),
         xml,
         config
       );

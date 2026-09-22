@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
+import { genexusUrl } from "../../services/genexusBaseUrl";
 import {
   formatMiles,
   generatePresupuestoPDF,
@@ -422,9 +423,7 @@ export default function Sales() {
     };
     try {
       await axios.post(
-        import.meta.env.VITE_APP_URL +
-          import.meta.env.VITE_APP_URL_GENEXUS +
-          "apventaconfirmarws",
+        genexusUrl("apventaconfirmarws"),
         xml,
         config
       );

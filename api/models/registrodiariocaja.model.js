@@ -287,18 +287,45 @@ const RegistroDiarioCaja = {
     });
   },
 
-  delete: (id) => {
-    return new Promise((resolve, reject) => {
-      db.query(
-        "DELETE FROM registrodiariocaja WHERE RegistroDiarioCajaId = ?",
-        [id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.affectedRows > 0);
-        }
+  // Alquileres a los que un movimiento aplicó un cobro (tabla alquilerpago).
+  // Vacío para movimientos que no son cobros de alquiler o son anteriores
+  getPagosAlquiler: (id) =>
+    db.query(
+      "SELECT AlquilerId, AlquilerPagoMonto FROM alquilerpago WHERE RegistroDiarioCajaId = ?",
+      [id]
+    ),
+
+  // Borra el movimiento. Si era un cobro de alquiler, en la misma transacción
+  // descuenta de cada alquiler lo que le había aplicado: si no, el alquiler
+  // seguiría contando como entregada plata que ya no figura en caja.
+  // Devuelve null si no existe, o { alquileres: [{ AlquilerId, monto }] }
+  delete: (id) =>
+    db.withTransaction(async (client) => {
+      const { rows: pagos } = await client.q(
+        `SELECT AlquilerId, AlquilerPagoMonto FROM alquilerpago
+         WHERE RegistroDiarioCajaId = ? ORDER BY AlquilerId FOR UPDATE`,
+        [id]
       );
-    });
-  },
+      for (const pago of pagos) {
+        await client.q(
+          `UPDATE alquiler SET AlquilerEntrega = GREATEST(AlquilerEntrega - ?, 0)
+           WHERE AlquilerId = ?`,
+          [pago.AlquilerPagoMonto, pago.AlquilerId]
+        );
+      }
+      // alquilerpago se borra en cascada
+      const { rowCount } = await client.q(
+        "DELETE FROM registrodiariocaja WHERE RegistroDiarioCajaId = ?",
+        [id]
+      );
+      if (rowCount === 0) return null;
+      return {
+        alquileres: pagos.map((p) => ({
+          AlquilerId: p.AlquilerId,
+          monto: Number(p.AlquilerPagoMonto),
+        })),
+      };
+    }),
 
   getUltimaApertura: (cajaId) => {
     return new Promise((resolve, reject) => {

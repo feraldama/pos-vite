@@ -41,7 +41,7 @@ const AUTO_PK = {
 
 // Nombres de tablas (en MySQL/Windows eran case-insensitive; en PG son minúsculas)
 const TABLE_NAMES = new Set([
-  "almacen", "alquiler", "alquilerprendas", "caja", "clientes", "combo", "compra",
+  "almacen", "alquiler", "alquilerpago", "alquilerprendas", "caja", "clientes", "combo", "compra",
   "compraproducto", "factura", "facturacredito", "facturacreditopago", "local", "menu",
   "perfil", "perfilmenu", "producto", "productoalmacen", "proveedor", "registrodiariocaja",
   "tipogasto", "tipogastogrupo", "tipoprenda", "traslado", "usuario", "usuarioperfil",

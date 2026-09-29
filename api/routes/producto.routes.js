@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const productoController = require("../controllers/producto.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 // Rutas públicas (si necesitas alguna, por ejemplo para obtener productos sin login)
 // router.get("/public", productoController.getAllProductos);
@@ -16,8 +17,18 @@ router.get(
 router.get("/search", authMiddleware, productoController.searchProductos);
 router.get("/:id", authMiddleware, productoController.getProductoById);
 router.post("/", authMiddleware, productoController.createProducto);
-router.put("/:id", authMiddleware, productoController.updateProducto);
-router.delete("/:id", authMiddleware, productoController.deleteProducto);
+router.put(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("PRODUCTOS", "editar"),
+  productoController.updateProducto
+);
+router.delete(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("PRODUCTOS", "eliminar"),
+  productoController.deleteProducto
+);
 
 // Ruta pública para traer todos los productos sin paginación
 

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const ventaProductoController = require("../controllers/ventaproducto.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 router.use(authMiddleware);
 
@@ -30,11 +31,13 @@ router.post("/", authMiddleware, ventaProductoController.create);
 router.put(
   "/:ventaId/:productoId",
   authMiddleware,
+  verificarPermiso("VENTAS", "editar"),
   ventaProductoController.update
 );
 router.delete(
   "/:ventaId/:productoId",
   authMiddleware,
+  verificarPermiso("VENTAS", "eliminar"),
   ventaProductoController.delete
 );
 

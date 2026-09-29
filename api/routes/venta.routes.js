@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const ventaController = require("../controllers/venta.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 router.use(authMiddleware);
 
@@ -25,7 +26,17 @@ router.get("/", authMiddleware, ventaController.getAll);
 router.get("/paginated", authMiddleware, ventaController.getAllPaginated);
 router.get("/:id", authMiddleware, ventaController.getById);
 router.post("/", authMiddleware, ventaController.create);
-router.put("/:id", authMiddleware, ventaController.update);
-router.delete("/:id", authMiddleware, ventaController.delete);
+router.put(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("VENTAS", "editar"),
+  ventaController.update
+);
+router.delete(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("VENTAS", "eliminar"),
+  ventaController.delete
+);
 
 module.exports = router;

@@ -53,6 +53,37 @@ const AlquilerPrendas = {
     });
   },
 
+  // Prendas de varios alquileres en una sola consulta
+  getByAlquilerIds: (alquilerIds) => {
+    if (!alquilerIds.length) return Promise.resolve([]);
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          ap.*,
+          p.ProductoNombre,
+          p.ProductoCodigo,
+          p.ProductoPrecioVenta,
+          p.ProductoImagen,
+          tp.TipoPrendaNombre
+        FROM alquilerprendas ap
+        LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
+        LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId
+        WHERE ap.AlquilerId IN (${alquilerIds.map(() => "?").join(", ")})
+      `;
+
+      db.query(query, alquilerIds, (err, results) => {
+        if (err) return reject(err);
+        const processedResults = results.map((row) => {
+          if (row.ProductoImagen && Buffer.isBuffer(row.ProductoImagen)) {
+            row.ProductoImagen = row.ProductoImagen.toString("base64");
+          }
+          return row;
+        });
+        resolve(processedResults);
+      });
+    });
+  },
+
   create: (data) => {
     return new Promise((resolve, reject) => {
       const attemptInsert = (retries = 10) => {

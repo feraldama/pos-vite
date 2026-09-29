@@ -86,6 +86,17 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Servidor backend corriendo en puerto ${PORT}`);
-});
+
+// Primero las migraciones pendientes: sin ellas las consultas fallan (p.ej.
+// falta una columna), así que si no se pueden aplicar la API no arranca
+const { aplicarMigraciones } = require("./db/migrate");
+aplicarMigraciones()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor backend corriendo en puerto ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("No se pudieron aplicar las migraciones:", error.message);
+    process.exit(1);
+  });

@@ -680,10 +680,10 @@ export default function Rentals() {
     }
 
     try {
-      // Calcular el monto de entrega desde los métodos de pago
-      // AlquilerEntrega = Efectivo + Transferencia + Tarjeta Débito (con 3%) + Tarjeta Crédito (con 5%)
-      const montoEntrega =
-        efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
+      // Lo que cubre del alquiler: los importes BASE. El recargo de tarjeta
+      // (3% / 5%) lo paga el cliente por encima y entra a caja, pero no reduce
+      // la deuda (mismo criterio que el saldo del PaymentModal)
+      const montoEntrega = efectivo + banco + bancoDebito + bancoCredito;
 
       const prendas = armarPrendas();
 
@@ -797,9 +797,9 @@ export default function Rentals() {
         AlquilerFechaAlquiler: fechaAlquiler,
         AlquilerFechaEntrega: fechaEntrega,
         AlquilerFechaDevolucion: fechaDevolucion,
-        AlquilerEstado: alquilerEditado.AlquilerEstado,
         AlquilerTotal: total,
-        AlquilerEntrega: entregado,
+        // Sin estado ni entrega: el servidor conserva los actuales, así no se
+        // pisa un pago registrado mientras se editaba
         prendas,
       });
       await Swal.fire({
@@ -825,8 +825,9 @@ export default function Rentals() {
         ? { pagos: { voucher: alquilerEditado.AlquilerDescuento } }
         : {}
       : {
-          entregado:
-            efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05,
+          // Base, como AlquilerEntrega; el ticket ya detalla cada tarjeta con
+          // su recargo
+          entregado: efectivo + banco + bancoDebito + bancoCredito,
           pagos: {
             efectivo,
             transferencia: banco,

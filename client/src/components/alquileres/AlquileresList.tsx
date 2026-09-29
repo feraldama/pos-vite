@@ -331,6 +331,18 @@ export default function AlquileresList({
       });
       return;
     }
+    // Al editar, la entrega se manda solo si se cambió a mano: si no, el
+    // servidor conserva la actual y no se pisa un cobro registrado mientras el
+    // formulario estaba abierto. Si se cambió, queda como ajuste en los pagos
+    if (
+      currentAlquiler &&
+      Number(formData.AlquilerEntrega) === Number(currentAlquiler.AlquilerEntrega)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { AlquilerEntrega, ...sinEntrega } = formData;
+      onSubmit(sinEntrega as typeof formData);
+      return;
+    }
     onSubmit(formData);
   };
 

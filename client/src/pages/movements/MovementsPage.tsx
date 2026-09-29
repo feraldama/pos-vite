@@ -122,10 +122,14 @@ export default function MovementsPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await deleteRegistroDiarioCaja(movimiento.RegistroDiarioCajaId);
+          const respuesta = await deleteRegistroDiarioCaja(
+            movimiento.RegistroDiarioCajaId
+          );
+          // Si era un cobro de alquiler, el mensaje dice qué alquiler se ajustó
           Swal.fire({
             icon: "success",
-            title: "Registro eliminado exitosamente",
+            title: "Registro eliminado",
+            text: respuesta?.message,
           });
           fetchMovimientos();
         } catch (error: unknown) {
@@ -175,11 +179,13 @@ export default function MovementsPage() {
       });
       fetchMovimientos();
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Error desconocido");
-      }
+      // El servicio lanza el cuerpo de la respuesta ({ message }), no un
+      // Error: se avisa sin reemplazar toda la pantalla (p.ej. al rechazar el
+      // cambio de monto de un cobro de alquiler)
+      const msg =
+        (error as { message?: string })?.message ||
+        "No se pudo guardar el registro";
+      Swal.fire({ icon: "warning", title: "No se guardó", text: msg });
     }
   };
 

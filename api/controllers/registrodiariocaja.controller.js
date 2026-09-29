@@ -89,6 +89,22 @@ exports.create = async (req, res) => {
 // Actualizar un registro
 exports.update = async (req, res) => {
   try {
+    // Un cobro de alquiler no cambia de monto: no hay forma correcta de
+    // repartir el nuevo entre los alquileres ni de saber cuánto es recargo
+    const montoNuevo = req.body.RegistroDiarioCajaMonto;
+    if (montoNuevo !== undefined && montoNuevo !== null) {
+      const pagos = await RegistroDiarioCaja.getPagosAlquiler(req.params.id);
+      const actual = pagos.length
+        ? await RegistroDiarioCaja.getById(req.params.id)
+        : null;
+      if (actual && Number(actual.RegistroDiarioCajaMonto) !== Number(montoNuevo)) {
+        const numeros = pagos.map((p) => `#${p.AlquilerId}`).join(", ");
+        return res.status(400).json({
+          message: `Este movimiento es un cobro del alquiler ${numeros}: no se puede cambiar su monto. Eliminalo (se descuenta del alquiler) y volvé a registrar el cobro.`,
+        });
+      }
+    }
+
     const registro = await RegistroDiarioCaja.update(req.params.id, req.body);
     if (!registro) {
       return res.status(404).json({ message: "Registro no encontrado" });
@@ -105,11 +121,19 @@ exports.update = async (req, res) => {
 // Eliminar un registro
 exports.delete = async (req, res) => {
   try {
-    const success = await RegistroDiarioCaja.delete(req.params.id);
-    if (!success) {
+    const resultado = await RegistroDiarioCaja.delete(req.params.id);
+    if (!resultado) {
       return res.status(404).json({ message: "Registro no encontrado" });
     }
-    res.json({ message: "Registro eliminado exitosamente" });
+    const ajustados = resultado.alquileres;
+    res.json({
+      message: ajustados.length
+        ? `Registro eliminado. Se descontó el cobro de ${ajustados
+            .map((a) => `alquiler #${a.AlquilerId} (Gs. ${a.monto.toLocaleString("es-PY")})`)
+            .join(", ")}`
+        : "Registro eliminado exitosamente",
+      alquileresAjustados: ajustados,
+    });
   } catch (error) {
     if (
       error &&

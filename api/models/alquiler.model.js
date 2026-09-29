@@ -1,5 +1,20 @@
 const db = require("../config/db");
 
+// Condición SQL para filtrar una columna de fecha por rango.
+// rango: { desde, hasta } (YYYY-MM-DD, ya validados) o { dias } desde hoy
+function condicionRangoFecha(columna, rango) {
+  if (rango.desde && rango.hasta) {
+    return {
+      sql: `(DATE(${columna}) BETWEEN ? AND ?)`,
+      params: [rango.desde, rango.hasta],
+    };
+  }
+  return {
+    sql: `(DATE(${columna}) >= CURDATE() AND DATE(${columna}) <= DATE_ADD(CURDATE(), INTERVAL ? DAY))`,
+    params: [rango.dias],
+  };
+}
+
 const Alquiler = {
   getAll: () => {
     return new Promise((resolve, reject) => {
@@ -222,21 +237,22 @@ const Alquiler = {
         AlquilerFechaAlquiler = ?,
         AlquilerFechaEntrega = ?,
         AlquilerFechaDevolucion = ?,
-        AlquilerEstado = ?,
-        AlquilerTotal = ?,
-        AlquilerEntrega = ?,
+        AlquilerEstado = COALESCE(?, AlquilerEstado),
+        AlquilerTotal = COALESCE(?, AlquilerTotal),
+        AlquilerEntrega = COALESCE(?, AlquilerEntrega),
         AlquilerDescuento = COALESCE(?, AlquilerDescuento)
         WHERE AlquilerId = ?`;
 
+      // Estado y montos que no vienen se conservan: una pantalla con datos
+      // viejos no pisa un pago o una edición hecha mientras tanto
       const values = [
         data.ClienteId,
         data.AlquilerFechaAlquiler,
         data.AlquilerFechaEntrega || null,
         data.AlquilerFechaDevolucion || null,
-        data.AlquilerEstado,
-        data.AlquilerTotal,
-        data.AlquilerEntrega || 0,
-        // Si no viene (p.ej. cambio de estado o cobro de saldo) se conserva
+        data.AlquilerEstado ?? null,
+        data.AlquilerTotal ?? null,
+        data.AlquilerEntrega ?? null,
         data.AlquilerDescuento ?? null,
         id,
       ];
@@ -248,6 +264,20 @@ const Alquiler = {
           .then((alquiler) => resolve(alquiler))
           .catch((error) => reject(error));
       });
+    });
+  },
+
+  updateEstado: (id, estado) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        "UPDATE alquiler SET AlquilerEstado = ? WHERE AlquilerId = ?",
+        [estado, id],
+        (err, result) => {
+          if (err) return reject(err);
+          if (result.affectedRows === 0) return resolve(null);
+          Alquiler.getById(id).then(resolve).catch(reject);
+        }
+      );
     });
   },
 
@@ -296,6 +326,8 @@ const Alquiler = {
           CAST((a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) AS DECIMAL(10,2)) as Saldo
         FROM alquiler a
         WHERE a.ClienteId = ?
+          -- Un alquiler cancelado no es deuda (mismo criterio que el cobro)
+          AND a.AlquilerEstado <> 'Cancelado'
       `;
 
       const params = [clienteId];
@@ -340,6 +372,8 @@ const Alquiler = {
           SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) AS Saldo
         FROM alquiler a
         JOIN clientes c ON a.ClienteId = c.ClienteId
+        -- Un alquiler cancelado no es deuda
+        WHERE a.AlquilerEstado <> 'Cancelado'
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
         HAVING SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) > 0
         ORDER BY Cliente
@@ -352,6 +386,63 @@ const Alquiler = {
         resolve(results);
       });
     });
+  },
+
+  // Pagos de cada alquiler para los reportes: Map AlquilerId -> pagos.
+  // - Registrados en alquilerpago (desde que existe): monto aplicado exacto.
+  // - Anteriores: se deducen del texto del movimiento de caja, pero solo en
+  //   movimientos de alquiler ("Alquiler #N - ..." o "Pago de alquileres #N,
+  //   #M ..."), con el número completo (#12 no toma #120; antes también se
+  //   colaban movimientos de ventas "Venta #12"). En un cobro compartido
+  //   figura el monto completo en cada alquiler: el reparto no quedó guardado
+  getPagosReporte: async (alquilerIds) => {
+    const porAlquiler = new Map();
+    if (!alquilerIds.length) return porAlquiler;
+    const rows = await db.query(
+      `SELECT
+        ap.AlquilerId,
+        ap.RegistroDiarioCajaId,
+        ap.AlquilerPagoFecha AS RegistroDiarioCajaFecha,
+        ap.AlquilerPagoMonto AS RegistroDiarioCajaMonto,
+        COALESCE(
+          r.RegistroDiarioCajaDetalle,
+          CASE WHEN ap.AlquilerPagoTipo = 'AJUSTE'
+            THEN 'Ajuste manual de la entrega'
+            ELSE 'Pago sin movimiento de caja' END
+        ) AS RegistroDiarioCajaDetalle
+      FROM alquilerpago ap
+      LEFT JOIN registrodiariocaja r ON r.RegistroDiarioCajaId = ap.RegistroDiarioCajaId
+      WHERE ap.AlquilerId = ANY(?)
+      UNION ALL
+      SELECT
+        ids.id,
+        r.RegistroDiarioCajaId,
+        r.RegistroDiarioCajaFecha,
+        r.RegistroDiarioCajaMonto,
+        r.RegistroDiarioCajaDetalle
+      FROM unnest(?::int[]) AS ids(id)
+      JOIN registrodiariocaja r
+        ON (r.RegistroDiarioCajaDetalle LIKE 'Alquiler #%'
+          OR r.RegistroDiarioCajaDetalle LIKE 'Pago de alquileres %')
+        AND r.RegistroDiarioCajaDetalle ~ ('#' || ids.id || '([^0-9]|$)')
+      WHERE NOT EXISTS (
+        SELECT 1 FROM alquilerpago ap2
+        WHERE ap2.RegistroDiarioCajaId = r.RegistroDiarioCajaId
+      )
+      ORDER BY 3, 2`,
+      [alquilerIds, alquilerIds]
+    );
+    for (const row of rows) {
+      const pagos = porAlquiler.get(row.AlquilerId) || [];
+      pagos.push({
+        RegistroDiarioCajaId: row.RegistroDiarioCajaId,
+        RegistroDiarioCajaFecha: row.RegistroDiarioCajaFecha,
+        RegistroDiarioCajaMonto: Number(row.RegistroDiarioCajaMonto),
+        RegistroDiarioCajaDetalle: row.RegistroDiarioCajaDetalle,
+      });
+      porAlquiler.set(row.AlquilerId, pagos);
+    }
+    return porAlquiler;
   },
 
   // Obtener reporte de todos los alquileres en rango de fechas (sin filtrar por cliente)
@@ -375,70 +466,32 @@ const Alquiler = {
         async (err, alquileresResults) => {
           if (err) return reject(err);
 
-          const alquileresConDetalle = await Promise.all(
-            alquileresResults.map(async (alquiler) => {
+          try {
+            const pagosPorAlquiler = await Alquiler.getPagosReporte(
+              alquileresResults.map((a) => a.AlquilerId)
+            );
+            const alquileresConDetalle = alquileresResults.map((alquiler) => {
               const total = Number(alquiler.AlquilerTotal) || 0;
               const entrega = Number(alquiler.AlquilerEntrega) || 0;
               const descuento = Number(alquiler.AlquilerDescuento) || 0;
-              const saldoPendiente = total - entrega - descuento;
-
-              const pagosQuery = `
-                SELECT 
-                  r.RegistroDiarioCajaId,
-                  r.RegistroDiarioCajaFecha,
-                  r.RegistroDiarioCajaMonto,
-                  r.RegistroDiarioCajaDetalle
-                FROM registrodiariocaja r
-                WHERE (
-                  r.RegistroDiarioCajaDetalle LIKE ?
-                  OR r.RegistroDiarioCajaDetalle LIKE ?
-                )
-                ORDER BY r.RegistroDiarioCajaFecha ASC, r.RegistroDiarioCajaId ASC
-              `;
-
-              const pagos = await new Promise((resolvePagos, rejectPagos) => {
-                db.query(
-                  pagosQuery,
-                  [
-                    `%Alquiler #${alquiler.AlquilerId}%`,
-                    `%#${alquiler.AlquilerId}%`,
-                  ],
-                  (err, pagosResults) => {
-                    if (err) return rejectPagos(err);
-                    resolvePagos(
-                      pagosResults.map((pago) => ({
-                        RegistroDiarioCajaId: pago.RegistroDiarioCajaId,
-                        RegistroDiarioCajaFecha: pago.RegistroDiarioCajaFecha,
-                        RegistroDiarioCajaMonto: Number(
-                          pago.RegistroDiarioCajaMonto
-                        ),
-                        RegistroDiarioCajaDetalle:
-                          pago.RegistroDiarioCajaDetalle,
-                      }))
-                    );
-                  }
-                );
-              });
-
               return {
                 ...alquiler,
-                AlquilerId: alquiler.AlquilerId,
-                AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
                 AlquilerTotal: total,
                 AlquilerEntrega: entrega,
                 AlquilerDescuento: descuento,
-                SaldoPendiente: saldoPendiente,
-                Pagos: pagos || [],
+                SaldoPendiente: total - entrega - descuento,
+                Pagos: pagosPorAlquiler.get(alquiler.AlquilerId) || [],
               };
-            })
-          );
-
-          resolve({
-            cliente: null,
-            fechaDesde,
-            fechaHasta,
-            alquileres: alquileresConDetalle,
-          });
+            });
+            resolve({
+              cliente: null,
+              fechaDesde,
+              fechaHasta,
+              alquileres: alquileresConDetalle,
+            });
+          } catch (error) {
+            reject(error);
+          }
         }
       );
     });
@@ -479,79 +532,37 @@ const Alquiler = {
           async (err, alquileresResults) => {
             if (err) return reject(err);
 
-            // Para cada alquiler, calcular saldo pendiente y obtener pagos desde RegistroDiarioCaja
-            const alquileresConDetalle = await Promise.all(
-              alquileresResults.map(async (alquiler) => {
+            try {
+              const pagosPorAlquiler = await Alquiler.getPagosReporte(
+                alquileresResults.map((a) => a.AlquilerId)
+              );
+              const alquileresConDetalle = alquileresResults.map((alquiler) => {
                 const total = Number(alquiler.AlquilerTotal) || 0;
                 const entrega = Number(alquiler.AlquilerEntrega) || 0;
                 const descuento = Number(alquiler.AlquilerDescuento) || 0;
-                const saldoPendiente = total - entrega - descuento;
-
-                // Obtener pagos desde RegistroDiarioCaja que mencionen este alquiler
-                // Busca tanto "Alquiler #X" como "Pago de alquileres #X" o "Pago de alquileres #X, #Y"
-                // No filtramos por fecha para mostrar todos los pagos del alquiler
-                const pagosQuery = `
-                  SELECT 
-                    r.RegistroDiarioCajaId,
-                    r.RegistroDiarioCajaFecha,
-                    r.RegistroDiarioCajaMonto,
-                    r.RegistroDiarioCajaDetalle
-                  FROM registrodiariocaja r
-                  WHERE (
-                    r.RegistroDiarioCajaDetalle LIKE ?
-                    OR r.RegistroDiarioCajaDetalle LIKE ?
-                  )
-                  ORDER BY r.RegistroDiarioCajaFecha ASC, r.RegistroDiarioCajaId ASC
-                `;
-
-                const pagos = await new Promise((resolvePagos, rejectPagos) => {
-                  db.query(
-                    pagosQuery,
-                    [
-                      `%Alquiler #${alquiler.AlquilerId}%`,
-                      `%#${alquiler.AlquilerId}%`,
-                    ],
-                    (err, pagosResults) => {
-                      if (err) return rejectPagos(err);
-                      resolvePagos(
-                        pagosResults.map((pago) => ({
-                          RegistroDiarioCajaId: pago.RegistroDiarioCajaId,
-                          RegistroDiarioCajaFecha: pago.RegistroDiarioCajaFecha,
-                          RegistroDiarioCajaMonto: Number(
-                            pago.RegistroDiarioCajaMonto
-                          ),
-                          RegistroDiarioCajaDetalle:
-                            pago.RegistroDiarioCajaDetalle,
-                        }))
-                      );
-                    }
-                  );
-                });
-
                 return {
                   ...alquiler,
-                  AlquilerId: alquiler.AlquilerId,
-                  AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
                   AlquilerTotal: total,
                   AlquilerEntrega: entrega,
                   AlquilerDescuento: descuento,
-                  SaldoPendiente: saldoPendiente,
-                  Pagos: pagos || [],
+                  SaldoPendiente: total - entrega - descuento,
+                  Pagos: pagosPorAlquiler.get(alquiler.AlquilerId) || [],
                 };
-              })
-            );
-
-            resolve({
-              cliente: {
-                ClienteId: cliente.ClienteId,
-                ClienteNombre: cliente.ClienteNombre,
-                ClienteApellido: cliente.ClienteApellido,
-                ClienteRUC: cliente.ClienteRUC,
-              },
-              fechaDesde,
-              fechaHasta,
-              alquileres: alquileresConDetalle,
-            });
+              });
+              resolve({
+                cliente: {
+                  ClienteId: cliente.ClienteId,
+                  ClienteNombre: cliente.ClienteNombre,
+                  ClienteApellido: cliente.ClienteApellido,
+                  ClienteRUC: cliente.ClienteRUC,
+                },
+                fechaDesde,
+                fechaHasta,
+                alquileres: alquileresConDetalle,
+              });
+            } catch (error) {
+              reject(error);
+            }
           }
         );
       });
@@ -560,7 +571,8 @@ const Alquiler = {
 
   // Obtener alquileres próximos a fecha de entrega (hoy y próximos días)
   // Solo incluye alquileres en estado Pendiente
-  getAlquileresProximosEntrega: (dias = 7) => {
+  getAlquileresProximosEntrega: (rango = { dias: 7 }) => {
+    const filtro = condicionRangoFecha("a.AlquilerFechaEntrega", rango);
     return new Promise((resolve, reject) => {
       const query = `
         SELECT 
@@ -572,14 +584,11 @@ const Alquiler = {
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
         WHERE a.AlquilerFechaEntrega IS NOT NULL
         AND a.AlquilerEstado = 'Pendiente'
-        AND (
-          DATE(a.AlquilerFechaEntrega) >= CURDATE()
-          AND DATE(a.AlquilerFechaEntrega) <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-        )
+        AND ${filtro.sql}
         ORDER BY a.AlquilerFechaEntrega ASC
       `;
 
-      db.query(query, [dias], (err, results) => {
+      db.query(query, filtro.params, (err, results) => {
         if (err) {
           console.error("Error en getAlquileresProximosEntrega:", err);
           return reject(err);
@@ -591,7 +600,8 @@ const Alquiler = {
 
   // Obtener alquileres próximos a fecha de devolución (hoy y próximos días)
   // También incluye alquileres con fecha pasada que siguen en estado Pendiente o Entregado
-  getAlquileresProximosDevolucion: (dias = 7) => {
+  getAlquileresProximosDevolucion: (rango = { dias: 7 }) => {
+    const filtro = condicionRangoFecha("a.AlquilerFechaDevolucion", rango);
     return new Promise((resolve, reject) => {
       const query = `
         SELECT 
@@ -603,8 +613,7 @@ const Alquiler = {
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
         WHERE a.AlquilerFechaDevolucion IS NOT NULL
         AND (
-          (DATE(a.AlquilerFechaDevolucion) >= CURDATE()
-          AND DATE(a.AlquilerFechaDevolucion) <= DATE_ADD(CURDATE(), INTERVAL ? DAY))
+          ${filtro.sql}
           OR (DATE(a.AlquilerFechaDevolucion) < CURDATE() 
           AND (a.AlquilerEstado = 'Pendiente' OR a.AlquilerEstado = 'Entregado'))
         )
@@ -613,7 +622,7 @@ const Alquiler = {
         ORDER BY a.AlquilerFechaDevolucion ASC
       `;
 
-      db.query(query, [dias], (err, results) => {
+      db.query(query, filtro.params, (err, results) => {
         if (err) {
           console.error("Error en getAlquileresProximosDevolucion:", err);
           return reject(err);

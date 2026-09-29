@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const registroDiarioCajaController = require("../controllers/registrodiariocaja.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 // Aplicar middleware de autenticación a todas las rutas
 router.use(authMiddleware);
@@ -20,7 +21,17 @@ router.post(
   authMiddleware,
   registroDiarioCajaController.aperturaCierreCaja
 );
-router.put("/:id", authMiddleware, registroDiarioCajaController.update);
-router.delete("/:id", authMiddleware, registroDiarioCajaController.delete);
+router.put(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("REGISTRODIARIOCAJA", "editar"),
+  registroDiarioCajaController.update
+);
+router.delete(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("REGISTRODIARIOCAJA", "eliminar"),
+  registroDiarioCajaController.delete
+);
 
 module.exports = router;

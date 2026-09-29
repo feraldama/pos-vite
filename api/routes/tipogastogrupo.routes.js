@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const tipogastoGrupoController = require("../controllers/tipogastogrupo.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 router.use(authMiddleware);
 
@@ -16,11 +17,13 @@ router.post("/", authMiddleware, tipogastoGrupoController.create);
 router.put(
   "/:tipoGastoId/:grupoId",
   authMiddleware,
+  verificarPermiso("TIPOSGASTO", "editar"),
   tipogastoGrupoController.update
 );
 router.delete(
   "/:tipoGastoId/:grupoId",
   authMiddleware,
+  verificarPermiso("TIPOSGASTO", "eliminar"),
   tipogastoGrupoController.delete
 );
 

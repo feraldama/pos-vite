@@ -8,10 +8,15 @@ import { useAuth } from "../../contexts/useAuth";
 import {
   getAlquileresProximosEntrega,
   getAlquileresProximosDevolucion,
-  updateAlquiler,
+  updateEstadoAlquiler,
   getAlquilerById,
 } from "../../services/alquiler.service";
 import { formatCurrency } from "../../utils/formato";
+import {
+  describirFiltro,
+  useFiltroGuardado,
+} from "../../utils/filtroFechas";
+import FiltroRangoFechas from "../../components/alquileres/FiltroRangoFechas";
 import Swal from "sweetalert2";
 
 interface AlquilerPrenda {
@@ -47,30 +52,49 @@ function Dashboard() {
   const [alquileresDevolucion, setAlquileresDevolucion] = useState<Alquiler[]>(
     []
   );
-  const [loading, setLoading] = useState(true);
+  const [filtroEntrega, setFiltroEntrega] = useFiltroGuardado(
+    "dashboard.filtroEntrega"
+  );
+  const [filtroDevolucion, setFiltroDevolucion] = useFiltroGuardado(
+    "dashboard.filtroDevolucion"
+  );
+  const [loadingEntrega, setLoadingEntrega] = useState(true);
+  const [loadingDevolucion, setLoadingDevolucion] = useState(true);
+  // Se incrementa para forzar la recarga de ambas secciones
+  const [recarga, setRecarga] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAlquiler, setCurrentAlquiler] = useState<Alquiler | null>(null);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
 
+  // Cada sección se recarga sola al cambiar su filtro. "vigente" descarta
+  // respuestas viejas si el usuario cambia de filtro antes de que lleguen.
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        const [entregaRes, devolucionRes] = await Promise.all([
-          getAlquileresProximosEntrega(7),
-          getAlquileresProximosDevolucion(7),
-        ]);
-        setAlquileresEntrega(entregaRes.data || []);
-        setAlquileresDevolucion(devolucionRes.data || []);
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-      } finally {
-        setLoading(false);
-      }
+    let vigente = true;
+    setLoadingEntrega(true);
+    getAlquileresProximosEntrega(filtroEntrega)
+      .then((res) => vigente && setAlquileresEntrega(res.data || []))
+      .catch((error) =>
+        console.error("Error al cargar alquileres a entregar:", error)
+      )
+      .finally(() => vigente && setLoadingEntrega(false));
+    return () => {
+      vigente = false;
     };
+  }, [filtroEntrega, recarga]);
 
-    cargarDatos();
-  }, []);
+  useEffect(() => {
+    let vigente = true;
+    setLoadingDevolucion(true);
+    getAlquileresProximosDevolucion(filtroDevolucion)
+      .then((res) => vigente && setAlquileresDevolucion(res.data || []))
+      .catch((error) =>
+        console.error("Error al cargar alquileres a devolver:", error)
+      )
+      .finally(() => vigente && setLoadingDevolucion(false));
+    return () => {
+      vigente = false;
+    };
+  }, [filtroDevolucion, recarga]);
 
   // El voucher es descuento: no suma a lo entregado pero reduce el saldo
   const calcularSaldo = (alquiler: Alquiler) =>
@@ -152,15 +176,10 @@ function Dashboard() {
     if (!currentAlquiler) return;
 
     try {
-      await updateAlquiler(currentAlquiler.AlquilerId, {
-        ClienteId: currentAlquiler.ClienteId,
-        AlquilerFechaAlquiler: currentAlquiler.AlquilerFechaAlquiler,
-        AlquilerFechaEntrega: currentAlquiler.AlquilerFechaEntrega,
-        AlquilerFechaDevolucion: currentAlquiler.AlquilerFechaDevolucion,
-        AlquilerEstado: estadoSeleccionado,
-        AlquilerTotal: currentAlquiler.AlquilerTotal,
-        AlquilerEntrega: currentAlquiler.AlquilerEntrega,
-      });
+      await updateEstadoAlquiler(
+        currentAlquiler.AlquilerId,
+        estadoSeleccionado
+      );
 
       Swal.fire({
         icon: "success",
@@ -171,13 +190,7 @@ function Dashboard() {
       });
 
       handleCloseModal();
-      // Recargar los datos
-      const [entregaRes, devolucionRes] = await Promise.all([
-        getAlquileresProximosEntrega(7),
-        getAlquileresProximosDevolucion(7),
-      ]);
-      setAlquileresEntrega(entregaRes.data || []);
-      setAlquileresDevolucion(devolucionRes.data || []);
+      setRecarga((n) => n + 1);
     } catch (error) {
       console.error("Error al actualizar alquiler:", error);
       Swal.fire({
@@ -207,10 +220,17 @@ function Dashboard() {
 
       {/* Sección de Alquileres Próximos a Entrega */}
       <section className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Alquileres Próximos a Entrega (Próximos 7 días)
-        </h2>
-        {loading ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <h2 className="text-xl font-bold text-gray-800">
+            Alquileres Próximos a Entrega ({describirFiltro(filtroEntrega)})
+          </h2>
+          <FiltroRangoFechas
+            id="filtro-entrega"
+            filtro={filtroEntrega}
+            onChange={setFiltroEntrega}
+          />
+        </div>
+        {loadingEntrega ? (
           <p className="text-gray-600">Cargando...</p>
         ) : alquileresEntrega.length === 0 ? (
           <p className="text-gray-600">No hay alquileres próximos a entrega</p>
@@ -355,10 +375,22 @@ function Dashboard() {
 
       {/* Sección de Alquileres Próximos a Devolución */}
       <section className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Alquileres Próximos a Devolución (Próximos 7 días)
-        </h2>
-        {loading ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">
+              Alquileres Próximos a Devolución ({describirFiltro(filtroDevolucion)})
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Incluye siempre los atrasados sin devolver
+            </p>
+          </div>
+          <FiltroRangoFechas
+            id="filtro-devolucion"
+            filtro={filtroDevolucion}
+            onChange={setFiltroDevolucion}
+          />
+        </div>
+        {loadingDevolucion ? (
           <p className="text-gray-600">Cargando...</p>
         ) : alquileresDevolucion.length === 0 ? (
           <p className="text-gray-600">

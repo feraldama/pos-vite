@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const alquilerprendasController = require("../controllers/alquilerprendas.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 // Rutas protegidas (requieren autenticación)
 router.get(
@@ -42,11 +43,13 @@ router.post(
 router.put(
   "/:alquilerId/:alquilerPrendasId",
   authMiddleware,
+  verificarPermiso("ALQUILER", "editar"),
   alquilerprendasController.updateAlquilerPrendas
 );
 router.delete(
   "/:alquilerId/:alquilerPrendasId",
   authMiddleware,
+  verificarPermiso("ALQUILER", "eliminar"),
   alquilerprendasController.deleteAlquilerPrendas
 );
 

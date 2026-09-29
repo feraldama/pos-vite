@@ -44,6 +44,26 @@ export const createAlquiler = async (alquilerData: Record<string, unknown>) => {
   }
 };
 
+// Cambia solo el estado (no reenvía montos que pudieron cambiar mientras tanto)
+export const updateEstadoAlquiler = async (
+  id: string | number,
+  estado: string
+) => {
+  try {
+    const response = await api.patch(`/alquiler/${id}/estado`, {
+      AlquilerEstado: estado,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al actualizar el estado del alquiler",
+      }
+    );
+  }
+};
+
 export const updateAlquiler = async (
   id: string | number,
   alquilerData: Record<string, unknown>
@@ -137,10 +157,17 @@ export const procesarPagoAlquileres = async (pagoData: {
   }
 };
 
-export const getAlquileresProximosEntrega = async (dias = 7) => {
+// Próximos N días desde hoy, o un rango de fechas (YYYY-MM-DD)
+export type FiltroFechasAlquiler =
+  | { dias: number }
+  | { desde: string; hasta: string };
+
+export const getAlquileresProximosEntrega = async (
+  filtro: FiltroFechasAlquiler = { dias: 7 }
+) => {
   try {
     const response = await api.get("/alquiler/proximos-entrega", {
-      params: { dias },
+      params: filtro,
     });
     return response.data;
   } catch (error) {
@@ -153,10 +180,12 @@ export const getAlquileresProximosEntrega = async (dias = 7) => {
   }
 };
 
-export const getAlquileresProximosDevolucion = async (dias = 7) => {
+export const getAlquileresProximosDevolucion = async (
+  filtro: FiltroFechasAlquiler = { dias: 7 }
+) => {
   try {
     const response = await api.get("/alquiler/proximos-devolucion", {
-      params: { dias },
+      params: filtro,
     });
     return response.data;
   } catch (error) {

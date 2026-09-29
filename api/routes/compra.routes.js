@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const compraController = require("../controllers/compra.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 // Rutas protegidas (requieren autenticación)
 router.get("/", authMiddleware, compraController.getAllCompras);
@@ -14,7 +15,17 @@ router.get(
   compraController.getProductosByCompraId
 );
 router.post("/", authMiddleware, compraController.createCompra);
-router.put("/:id", authMiddleware, compraController.updateCompra);
-router.delete("/:id", authMiddleware, compraController.deleteCompra);
+router.put(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("COMPRAS", "editar"),
+  compraController.updateCompra
+);
+router.delete(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("COMPRAS", "eliminar"),
+  compraController.deleteCompra
+);
 
 module.exports = router;

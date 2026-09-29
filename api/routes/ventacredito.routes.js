@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const ventaCreditoController = require("../controllers/ventacredito.controller");
 const authMiddleware = require("../middlewares/auth");
+const verificarPermiso = require("../middlewares/permiso");
 
 router.use(authMiddleware);
 
@@ -23,7 +24,17 @@ router.get(
 );
 router.get("/:id", authMiddleware, ventaCreditoController.getById);
 router.post("/", authMiddleware, ventaCreditoController.create);
-router.put("/:id", authMiddleware, ventaCreditoController.update);
-router.delete("/:id", authMiddleware, ventaCreditoController.delete);
+router.put(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("VENTAS", "editar"),
+  ventaCreditoController.update
+);
+router.delete(
+  "/:id",
+  authMiddleware,
+  verificarPermiso("VENTAS", "eliminar"),
+  ventaCreditoController.delete
+);
 
 module.exports = router;

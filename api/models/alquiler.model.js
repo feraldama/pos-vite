@@ -43,6 +43,7 @@ const Alquiler = {
         "AlquilerEstado",
         "AlquilerTotal",
         "AlquilerEntrega",
+        "AlquilerDescuento",
       ];
 
       const allowedSortOrders = ["ASC", "DESC"];
@@ -90,6 +91,7 @@ const Alquiler = {
         "AlquilerEstado",
         "AlquilerTotal",
         "AlquilerEntrega",
+        "AlquilerDescuento",
       ];
 
       const allowedSortOrders = ["ASC", "DESC"];
@@ -189,8 +191,9 @@ const Alquiler = {
         AlquilerFechaDevolucion,
         AlquilerEstado,
         AlquilerTotal,
-        AlquilerEntrega
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        AlquilerEntrega,
+        AlquilerDescuento
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
       const values = [
         data.ClienteId,
@@ -200,6 +203,7 @@ const Alquiler = {
         data.AlquilerEstado || "Pendiente",
         data.AlquilerTotal || 0,
         data.AlquilerEntrega || 0,
+        data.AlquilerDescuento || 0,
       ];
 
       db.query(query, values, (err, result) => {
@@ -220,7 +224,8 @@ const Alquiler = {
         AlquilerFechaDevolucion = ?,
         AlquilerEstado = ?,
         AlquilerTotal = ?,
-        AlquilerEntrega = ?
+        AlquilerEntrega = ?,
+        AlquilerDescuento = COALESCE(?, AlquilerDescuento)
         WHERE AlquilerId = ?`;
 
       const values = [
@@ -231,6 +236,8 @@ const Alquiler = {
         data.AlquilerEstado,
         data.AlquilerTotal,
         data.AlquilerEntrega || 0,
+        // Si no viene (p.ej. cambio de estado o cobro de saldo) se conserva
+        data.AlquilerDescuento ?? null,
         id,
       ];
 
@@ -285,7 +292,8 @@ const Alquiler = {
           a.AlquilerEstado,
           CAST(a.AlquilerTotal AS DECIMAL(10,2)) as AlquilerTotal,
           CAST(COALESCE(a.AlquilerEntrega, 0) AS DECIMAL(10,2)) as AlquilerEntrega,
-          CAST((a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) AS DECIMAL(10,2)) as Saldo
+          CAST(COALESCE(a.AlquilerDescuento, 0) AS DECIMAL(10,2)) as AlquilerDescuento,
+          CAST((a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) AS DECIMAL(10,2)) as Saldo
         FROM alquiler a
         WHERE a.ClienteId = ?
       `;
@@ -299,7 +307,7 @@ const Alquiler = {
       //   params.push(localId);
       // }
 
-      query += ` AND (a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) > 0 ORDER BY a.AlquilerFechaAlquiler ASC`;
+      query += ` AND (a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) > 0 ORDER BY a.AlquilerFechaAlquiler ASC`;
 
       db.query(query, params, (err, results) => {
         if (err) {
@@ -311,6 +319,7 @@ const Alquiler = {
           ...row,
           AlquilerTotal: Number(row.AlquilerTotal),
           AlquilerEntrega: Number(row.AlquilerEntrega),
+          AlquilerDescuento: Number(row.AlquilerDescuento),
           Saldo: Number(row.Saldo),
         }));
         resolve(processedResults);
@@ -327,11 +336,12 @@ const Alquiler = {
           CONCAT(TRIM(c.ClienteNombre), ' ', TRIM(c.ClienteApellido)) AS Cliente,
           SUM(a.AlquilerTotal) AS TotalVentas,
           SUM(COALESCE(a.AlquilerEntrega, 0)) AS TotalEntregado,
-          SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) AS Saldo
+          SUM(COALESCE(a.AlquilerDescuento, 0)) AS TotalDescuento,
+          SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) AS Saldo
         FROM alquiler a
         JOIN clientes c ON a.ClienteId = c.ClienteId
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
-        HAVING SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0)) > 0
+        HAVING SUM(a.AlquilerTotal - COALESCE(a.AlquilerEntrega, 0) - COALESCE(a.AlquilerDescuento, 0)) > 0
         ORDER BY Cliente
       `;
       db.query(query, (err, results) => {
@@ -369,7 +379,8 @@ const Alquiler = {
             alquileresResults.map(async (alquiler) => {
               const total = Number(alquiler.AlquilerTotal) || 0;
               const entrega = Number(alquiler.AlquilerEntrega) || 0;
-              const saldoPendiente = total - entrega;
+              const descuento = Number(alquiler.AlquilerDescuento) || 0;
+              const saldoPendiente = total - entrega - descuento;
 
               const pagosQuery = `
                 SELECT 
@@ -415,6 +426,7 @@ const Alquiler = {
                 AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
                 AlquilerTotal: total,
                 AlquilerEntrega: entrega,
+                AlquilerDescuento: descuento,
                 SaldoPendiente: saldoPendiente,
                 Pagos: pagos || [],
               };
@@ -472,7 +484,8 @@ const Alquiler = {
               alquileresResults.map(async (alquiler) => {
                 const total = Number(alquiler.AlquilerTotal) || 0;
                 const entrega = Number(alquiler.AlquilerEntrega) || 0;
-                const saldoPendiente = total - entrega;
+                const descuento = Number(alquiler.AlquilerDescuento) || 0;
+                const saldoPendiente = total - entrega - descuento;
 
                 // Obtener pagos desde RegistroDiarioCaja que mencionen este alquiler
                 // Busca tanto "Alquiler #X" como "Pago de alquileres #X" o "Pago de alquileres #X, #Y"
@@ -521,6 +534,7 @@ const Alquiler = {
                   AlquilerFechaAlquiler: alquiler.AlquilerFechaAlquiler,
                   AlquilerTotal: total,
                   AlquilerEntrega: entrega,
+                  AlquilerDescuento: descuento,
                   SaldoPendiente: saldoPendiente,
                   Pagos: pagos || [],
                 };

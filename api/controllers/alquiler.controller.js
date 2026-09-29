@@ -1,6 +1,129 @@
 const Alquiler = require("../models/alquiler.model");
 const AlquilerPrendas = require("../models/alquilerprendas.model");
 const RegistroDiarioCaja = require("../models/registrodiariocaja.model");
+const Producto = require("../models/producto.model");
+const { withTransaction } = require("../config/db");
+
+// Verifica que haya stock libre para cada prenda en el rango de fechas.
+// Devuelve null si todo está disponible, o el cuerpo del error 400.
+// excluirAlquilerId: al editar, las prendas del propio alquiler no cuentan como ocupadas
+async function validarStockPrendas(
+  prendas,
+  fechaEntrega,
+  fechaDevolucion,
+  excluirAlquilerId = null
+) {
+  // Agrupar prendas por ProductoId y contar la cantidad total solicitada de cada producto
+  const prendasPorProducto = {};
+  for (const prenda of prendas) {
+    if (!prenda.ProductoId) {
+      continue; // Saltar si no tiene ProductoId
+    }
+    if (!prendasPorProducto[prenda.ProductoId]) {
+      prendasPorProducto[prenda.ProductoId] = 0;
+    }
+    // Cada prenda en el array representa 1 unidad
+    prendasPorProducto[prenda.ProductoId] += 1;
+  }
+
+  // Verificar disponibilidad y stock de cada producto
+  const prendasNoDisponibles = [];
+
+  for (const [productoId, cantidadSolicitada] of Object.entries(
+    prendasPorProducto
+  )) {
+    const productoIdNum = parseInt(productoId);
+
+    // Obtener información del producto
+    const producto = await Producto.getById(productoIdNum);
+    if (!producto) {
+      continue; // Saltar si el producto no existe
+    }
+
+    const stockDisponible = producto.ProductoStock || 0;
+
+    // Contar cuántas prendas están alquiladas en el rango de fechas
+    const prendasAlquiladas = await AlquilerPrendas.contarPrendasAlquiladas(
+      productoIdNum,
+      fechaEntrega,
+      fechaDevolucion,
+      excluirAlquilerId
+    );
+
+    // Calcular stock disponible (stock total - prendas ya alquiladas)
+    const stockRealDisponible = stockDisponible - prendasAlquiladas;
+
+    // Verificar si hay suficiente stock disponible
+    if (cantidadSolicitada > stockRealDisponible) {
+      // Obtener conflictos para mostrar información detallada
+      const conflictos = await AlquilerPrendas.verificarDisponibilidad(
+        productoIdNum,
+        fechaEntrega,
+        fechaDevolucion,
+        excluirAlquilerId
+      );
+
+      const nombreProducto = producto
+        ? `${producto.ProductoCodigo || ""} - ${
+            producto.ProductoNombre || "Producto"
+          }`
+        : `Producto ID: ${productoIdNum}`;
+
+      // Formatear fechas para mostrar
+      const formatearFecha = (fecha) => {
+        if (!fecha) return "";
+        const date = new Date(fecha);
+        const dia = String(date.getDate()).padStart(2, "0");
+        const mes = String(date.getMonth() + 1).padStart(2, "0");
+        const año = date.getFullYear();
+        return `${dia}/${mes}/${año}`;
+      };
+
+      prendasNoDisponibles.push({
+        ProductoId: productoIdNum,
+        ProductoNombre: nombreProducto,
+        ProductoCodigo: producto?.ProductoCodigo || "",
+        ProductoImagen: producto?.ProductoImagen
+          ? producto.ProductoImagen.toString("base64")
+          : null,
+        cantidadSolicitada: cantidadSolicitada,
+        stockDisponible: stockDisponible,
+        prendasAlquiladas: prendasAlquiladas,
+        stockRealDisponible: stockRealDisponible,
+        conflictos: conflictos.map((c) => ({
+          AlquilerId: c.AlquilerId,
+          AlquilerFechaEntrega: c.AlquilerFechaEntrega,
+          AlquilerFechaDevolucion: c.AlquilerFechaDevolucion,
+          FechaEntregaFormateada: formatearFecha(c.AlquilerFechaEntrega),
+          FechaDevolucionFormateada: formatearFecha(
+            c.AlquilerFechaDevolucion
+          ),
+        })),
+      });
+    }
+  }
+
+  // Si hay prendas no disponibles, retornar error con detalles
+  if (prendasNoDisponibles.length > 0) {
+    const mensajes = prendasNoDisponibles.map((p) => {
+      if (p.conflictos && p.conflictos.length > 0) {
+        const conflicto = p.conflictos[0];
+        return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible}, Alquiladas: ${p.prendasAlquiladas})`;
+      } else {
+        return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible})`;
+      }
+    });
+
+    return {
+      success: false,
+      message:
+        "No hay suficiente stock disponible para una o más prendas en el rango de fechas seleccionado",
+      prendasNoDisponibles: prendasNoDisponibles,
+      detalles: mensajes,
+    };
+  }
+  return null;
+}
 
 // getAllAlquileres
 exports.getAllAlquileres = async (req, res) => {
@@ -114,117 +237,22 @@ exports.createAlquiler = async (req, res) => {
         });
       }
 
-      // Agrupar prendas por ProductoId y contar la cantidad total solicitada de cada producto
-      const prendasPorProducto = {};
-      for (const prenda of req.body.prendas) {
-        if (!prenda.ProductoId) {
-          continue; // Saltar si no tiene ProductoId
-        }
-        if (!prendasPorProducto[prenda.ProductoId]) {
-          prendasPorProducto[prenda.ProductoId] = 0;
-        }
-        // Cada prenda en el array representa 1 unidad
-        prendasPorProducto[prenda.ProductoId] += 1;
-      }
-
-      // Verificar disponibilidad y stock de cada producto
-      const prendasNoDisponibles = [];
-      const Producto = require("../models/producto.model");
-
-      for (const [productoId, cantidadSolicitada] of Object.entries(
-        prendasPorProducto
-      )) {
-        const productoIdNum = parseInt(productoId);
-
-        // Obtener información del producto
-        const producto = await Producto.getById(productoIdNum);
-        if (!producto) {
-          continue; // Saltar si el producto no existe
-        }
-
-        const stockDisponible = producto.ProductoStock || 0;
-
-        // Contar cuántas prendas están alquiladas en el rango de fechas
-        const prendasAlquiladas = await AlquilerPrendas.contarPrendasAlquiladas(
-          productoIdNum,
-          req.body.AlquilerFechaEntrega,
-          req.body.AlquilerFechaDevolucion
-        );
-
-        // Calcular stock disponible (stock total - prendas ya alquiladas)
-        const stockRealDisponible = stockDisponible - prendasAlquiladas;
-
-        // Verificar si hay suficiente stock disponible
-        if (cantidadSolicitada > stockRealDisponible) {
-          // Obtener conflictos para mostrar información detallada
-          const conflictos = await AlquilerPrendas.verificarDisponibilidad(
-            productoIdNum,
-            req.body.AlquilerFechaEntrega,
-            req.body.AlquilerFechaDevolucion
-          );
-
-          const nombreProducto = producto
-            ? `${producto.ProductoCodigo || ""} - ${
-                producto.ProductoNombre || "Producto"
-              }`
-            : `Producto ID: ${productoIdNum}`;
-
-          // Formatear fechas para mostrar
-          const formatearFecha = (fecha) => {
-            if (!fecha) return "";
-            const date = new Date(fecha);
-            const dia = String(date.getDate()).padStart(2, "0");
-            const mes = String(date.getMonth() + 1).padStart(2, "0");
-            const año = date.getFullYear();
-            return `${dia}/${mes}/${año}`;
-          };
-
-          prendasNoDisponibles.push({
-            ProductoId: productoIdNum,
-            ProductoNombre: nombreProducto,
-            ProductoCodigo: producto?.ProductoCodigo || "",
-            ProductoImagen: producto?.ProductoImagen
-              ? producto.ProductoImagen.toString("base64")
-              : null,
-            cantidadSolicitada: cantidadSolicitada,
-            stockDisponible: stockDisponible,
-            prendasAlquiladas: prendasAlquiladas,
-            stockRealDisponible: stockRealDisponible,
-            conflictos: conflictos.map((c) => ({
-              AlquilerId: c.AlquilerId,
-              AlquilerFechaEntrega: c.AlquilerFechaEntrega,
-              AlquilerFechaDevolucion: c.AlquilerFechaDevolucion,
-              FechaEntregaFormateada: formatearFecha(c.AlquilerFechaEntrega),
-              FechaDevolucionFormateada: formatearFecha(
-                c.AlquilerFechaDevolucion
-              ),
-            })),
-          });
-        }
-      }
-
-      // Si hay prendas no disponibles, retornar error con detalles
-      if (prendasNoDisponibles.length > 0) {
-        const mensajes = prendasNoDisponibles.map((p) => {
-          if (p.conflictos && p.conflictos.length > 0) {
-            const conflicto = p.conflictos[0];
-            return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible}, Alquiladas: ${p.prendasAlquiladas})`;
-          } else {
-            return `${p.ProductoNombre}: Se solicitaron ${p.cantidadSolicitada} prenda(s), pero solo hay ${p.stockRealDisponible} disponible(s) (Stock: ${p.stockDisponible})`;
-          }
-        });
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "No hay suficiente stock disponible para una o más prendas en el rango de fechas seleccionado",
-          prendasNoDisponibles: prendasNoDisponibles,
-          detalles: mensajes,
-        });
+      const errorStock = await validarStockPrendas(
+        req.body.prendas,
+        req.body.AlquilerFechaEntrega,
+        req.body.AlquilerFechaDevolucion
+      );
+      if (errorStock) {
+        return res.status(400).json(errorStock);
       }
     }
 
-    const nuevoAlquiler = await Alquiler.create(req.body);
+    // El voucher es un descuento: no entra a caja pero reduce el saldo
+    const nuevoAlquiler = await Alquiler.create({
+      ...req.body,
+      AlquilerDescuento:
+        req.body.AlquilerDescuento ?? req.body.pagos?.voucher ?? 0,
+    });
 
     // Si se proporcionan prendas, crearlas
     if (req.body.prendas && Array.isArray(req.body.prendas)) {
@@ -345,31 +373,104 @@ exports.updateAlquiler = async (req, res) => {
   try {
     const { id } = req.params;
     const alquilerData = req.body;
+    const prendas = Array.isArray(alquilerData.prendas)
+      ? alquilerData.prendas
+      : null;
 
-    const updatedAlquiler = await Alquiler.update(id, alquilerData);
-    if (!updatedAlquiler) {
+    // Sin prendas: solo se actualiza la cabecera (p.ej. cambio de estado)
+    if (!prendas) {
+      const updatedAlquiler = await Alquiler.update(id, alquilerData);
+      if (!updatedAlquiler) {
+        return res.status(404).json({
+          success: false,
+          message: "Alquiler no encontrado",
+        });
+      }
+      return res.json({
+        success: true,
+        data: updatedAlquiler,
+        message: "Alquiler actualizado exitosamente",
+      });
+    }
+
+    const existente = await Alquiler.getById(id);
+    if (!existente) {
       return res.status(404).json({
         success: false,
         message: "Alquiler no encontrado",
       });
     }
 
-    // Si se proporcionan prendas, actualizarlas
-    if (req.body.prendas && Array.isArray(req.body.prendas)) {
-      // Eliminar prendas existentes
-      await AlquilerPrendas.deleteByAlquilerId(id);
-      // Crear nuevas prendas
-      for (const prenda of req.body.prendas) {
-        await AlquilerPrendas.create({
-          AlquilerId: id,
-          AlquilerPrendasId: prenda.AlquilerPrendasId,
-          ProductoId: prenda.ProductoId,
-          AlquilerPrendasPrecio: prenda.AlquilerPrendasPrecio,
-          AlquilerPrendasObservacion: prenda.AlquilerPrendasObservacion,
-        });
+    // Las prendas agregadas o cambiadas tienen que estar libres en las fechas
+    // del alquiler; las que ya tenía este mismo alquiler no cuentan como ocupadas
+    const estadoActivo = !["Devuelto", "Cancelado"].includes(
+      alquilerData.AlquilerEstado
+    );
+    if (
+      estadoActivo &&
+      prendas.length > 0 &&
+      alquilerData.AlquilerFechaEntrega &&
+      alquilerData.AlquilerFechaDevolucion
+    ) {
+      const errorStock = await validarStockPrendas(
+        prendas,
+        alquilerData.AlquilerFechaEntrega,
+        alquilerData.AlquilerFechaDevolucion,
+        Number(id)
+      );
+      if (errorStock) {
+        return res.status(400).json(errorStock);
       }
     }
 
+    // Cabecera y detalle se reemplazan juntos: si algo falla no queda el
+    // alquiler sin prendas
+    await withTransaction(async (client) => {
+      await client.q(
+        `UPDATE alquiler SET
+          ClienteId = ?,
+          AlquilerFechaAlquiler = ?,
+          AlquilerFechaEntrega = ?,
+          AlquilerFechaDevolucion = ?,
+          AlquilerEstado = ?,
+          AlquilerTotal = ?,
+          AlquilerEntrega = ?,
+          AlquilerDescuento = COALESCE(?, AlquilerDescuento)
+          WHERE AlquilerId = ?`,
+        [
+          alquilerData.ClienteId,
+          alquilerData.AlquilerFechaAlquiler,
+          alquilerData.AlquilerFechaEntrega || null,
+          alquilerData.AlquilerFechaDevolucion || null,
+          alquilerData.AlquilerEstado,
+          alquilerData.AlquilerTotal,
+          alquilerData.AlquilerEntrega || 0,
+          alquilerData.AlquilerDescuento ?? null,
+          id,
+        ]
+      );
+      await client.q("DELETE FROM alquilerprendas WHERE AlquilerId = ?", [id]);
+      for (const [index, prenda] of prendas.entries()) {
+        await client.q(
+          `INSERT INTO alquilerprendas (
+            AlquilerId,
+            AlquilerPrendasId,
+            ProductoId,
+            AlquilerPrendasPrecio,
+            AlquilerPrendasObservacion
+          ) VALUES (?, ?, ?, ?, ?)`,
+          [
+            id,
+            index + 1,
+            prenda.ProductoId,
+            prenda.AlquilerPrendasPrecio || 0,
+            prenda.AlquilerPrendasObservacion || "",
+          ]
+        );
+      }
+    });
+
+    const updatedAlquiler = await Alquiler.getById(id);
     res.json({
       success: true,
       data: updatedAlquiler,
@@ -621,7 +722,10 @@ exports.procesarPagoAlquileres = async (req, res) => {
       const totalAlquiler = Number(
         alquilerCompleto.AlquilerTotal || alquiler.AlquilerTotal
       );
-      const nuevoSaldo = totalAlquiler - nuevaEntrega;
+      const nuevoSaldo =
+        totalAlquiler -
+        nuevaEntrega -
+        Number(alquilerCompleto.AlquilerDescuento || 0);
 
       // Si el saldo queda en cero, cambiar el estado a "Entregado"
       const nuevoEstado =

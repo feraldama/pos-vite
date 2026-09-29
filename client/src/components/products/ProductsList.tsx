@@ -256,10 +256,17 @@ export default function ProductsList({
       label: "Nombre",
     },
     {
+      // ProductoPrecioVenta se usa como precio de alquiler (ver formulario)
       key: "ProductoPrecioVenta",
+      label: "Precio Alquiler",
+      render: (item: Producto) =>
+        `Gs. ${formatMiles(item.ProductoPrecioVenta || 0)}`,
+    },
+    {
+      key: "ProductoPrecioVentaMayorista",
       label: "Precio Venta",
       render: (item: Producto) =>
-        `Gs. ${item.ProductoPrecioVenta?.toLocaleString()}`,
+        `Gs. ${formatMiles(item.ProductoPrecioVentaMayorista || 0)}`,
     },
     {
       key: "ProductoStock",

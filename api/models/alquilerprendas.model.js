@@ -320,7 +320,13 @@ const AlquilerPrendas = {
 
   // Verificar si una prenda está alquilada en un rango de fechas
   // Retorna los alquileres que tienen conflicto con el rango de fechas especificado
-  verificarDisponibilidad: (productoId, fechaEntrega, fechaDevolucion) => {
+  // excluirAlquilerId: al editar un alquiler, no contar sus propias prendas
+  verificarDisponibilidad: (
+    productoId,
+    fechaEntrega,
+    fechaDevolucion,
+    excluirAlquilerId = null
+  ) => {
     return new Promise((resolve, reject) => {
       // Verificar si hay alquileres existentes con el mismo ProductoId
       // donde el rango de fechas se solape y el estado no sea "Devuelto" o "Cancelado"
@@ -347,11 +353,12 @@ const AlquilerPrendas = {
           (DATE(?) <= DATE(a.AlquilerFechaDevolucion)
           AND DATE(?) >= DATE(a.AlquilerFechaEntrega))
         )
+        AND a.AlquilerId <> ?
       `;
 
       db.query(
         query,
-        [productoId, fechaEntrega, fechaDevolucion],
+        [productoId, fechaEntrega, fechaDevolucion, excluirAlquilerId || 0],
         (err, results) => {
           if (err) {
             console.error("Error en verificarDisponibilidad:", err);
@@ -449,7 +456,12 @@ const AlquilerPrendas = {
 
   // Contar cuántas prendas del mismo producto están alquiladas en un rango de fechas
   // Retorna el número total de prendas alquiladas (COUNT)
-  contarPrendasAlquiladas: (productoId, fechaEntrega, fechaDevolucion) => {
+  contarPrendasAlquiladas: (
+    productoId,
+    fechaEntrega,
+    fechaDevolucion,
+    excluirAlquilerId = null
+  ) => {
     return new Promise((resolve, reject) => {
       const query = `
         SELECT COUNT(*) as cantidadAlquilada
@@ -466,11 +478,12 @@ const AlquilerPrendas = {
           (DATE(?) <= DATE(a.AlquilerFechaDevolucion)
           AND DATE(?) >= DATE(a.AlquilerFechaEntrega))
         )
+        AND a.AlquilerId <> ?
       `;
 
       db.query(
         query,
-        [productoId, fechaEntrega, fechaDevolucion],
+        [productoId, fechaEntrega, fechaDevolucion, excluirAlquilerId || 0],
         (err, results) => {
           if (err) {
             console.error("Error en contarPrendasAlquiladas:", err);

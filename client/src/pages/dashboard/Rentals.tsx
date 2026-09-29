@@ -12,7 +12,11 @@ import { getFechasOcupadas } from "../../services/alquilerprendas.service";
 import { useAuth } from "../../contexts/useAuth";
 import PaymentModal from "../../components/common/PaymentModal";
 import Swal from "sweetalert2";
-import { createAlquiler } from "../../services/alquiler.service";
+import {
+  createAlquiler,
+  getAlquilerById,
+  updateAlquiler,
+} from "../../services/alquiler.service";
 import logo from "../../assets/placeholderPrenda";
 import {
   getAllClientesSinPaginacion,
@@ -22,7 +26,7 @@ import ClienteModal from "../../components/common/ClienteModal";
 import { getEstadoAperturaPorUsuario } from "../../services/registrodiariocaja.service";
 import { getCajaById } from "../../services/cajas.service";
 import { getLocalById } from "../../services/locales.service";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import Pagination from "../../components/common/Pagination";
@@ -47,7 +51,44 @@ interface Caja {
   [key: string]: unknown;
 }
 
+// Alquiler que se está editando (se abre con /alquileres-venta?editar=ID)
+interface AlquilerEnEdicion {
+  AlquilerId: number;
+  ClienteId: number;
+  AlquilerFechaAlquiler: string;
+  AlquilerFechaEntrega?: string;
+  AlquilerFechaDevolucion?: string;
+  AlquilerEstado: string;
+  AlquilerEntrega: number;
+  AlquilerDescuento?: number;
+  ClienteNombre?: string;
+  ClienteApellido?: string;
+  ClienteRUC?: string;
+  ClienteTelefono?: string;
+  prendas: {
+    ProductoId: number;
+    ProductoNombre: string;
+    ProductoImagen?: string;
+    AlquilerPrendasPrecio: number;
+    AlquilerPrendasObservacion?: string;
+  }[];
+}
+
+// Fecha de la API (ISO) -> "YYYY-MM-DD" en hora local, para los <input type="date">
+const aFechaInput = (fecha?: string | null) => {
+  if (!fecha) return "";
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return "";
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+};
+
 export default function Rentals() {
+  const [searchParams] = useSearchParams();
+  const editarId = Number(searchParams.get("editar")) || null;
+  const [alquilerEditado, setAlquilerEditado] =
+    useState<AlquilerEnEdicion | null>(null);
   const [carrito, setCarrito] = useState<
     {
       id: number;
@@ -87,6 +128,8 @@ export default function Rentals() {
       const rows = await getFechasOcupadas();
       const map: Record<number, RangoAlquilado[]> = {};
       for (const r of rows) {
+        // Al editar, las prendas del propio alquiler no se muestran como ocupadas
+        if (editarId && Number(r.AlquilerId) === editarId) continue;
         if (!map[r.ProductoId]) map[r.ProductoId] = [];
         map[r.ProductoId].push({
           desde: r.AlquilerFechaEntrega,
@@ -100,7 +143,7 @@ export default function Rentals() {
     } catch (error) {
       console.error("Error al cargar fechas ocupadas:", error);
     }
-  }, []);
+  }, [editarId]);
 
   useEffect(() => {
     cargarFechasOcupadas();
@@ -153,6 +196,74 @@ export default function Rentals() {
       searchInputRef.current.focus();
     }
   }, []);
+
+  // Modo edición: cargar el alquiler con sus prendas en el carrito
+  useEffect(() => {
+    if (!editarId) {
+      setAlquilerEditado(null);
+      return;
+    }
+    let cancelado = false;
+    getAlquilerById(editarId)
+      .then((res) => {
+        if (cancelado) return;
+        const alquiler = ((res as { data?: AlquilerEnEdicion }).data ||
+          res) as AlquilerEnEdicion;
+        setAlquilerEditado(alquiler);
+        setFechaAlquiler(aFechaInput(alquiler.AlquilerFechaAlquiler));
+        setFechaEntrega(aFechaInput(alquiler.AlquilerFechaEntrega));
+        setFechaDevolucion(aFechaInput(alquiler.AlquilerFechaDevolucion));
+        setClienteSeleccionado({
+          ClienteId: alquiler.ClienteId,
+          ClienteRUC: alquiler.ClienteRUC || "",
+          ClienteNombre: alquiler.ClienteNombre || "",
+          ClienteApellido: alquiler.ClienteApellido || "",
+          ClienteDireccion: "",
+          ClienteTelefono: alquiler.ClienteTelefono || "",
+          ClienteTipo: "",
+          UsuarioId: "",
+        });
+        // Cada fila de alquilerprendas es una unidad: se agrupan las iguales
+        // (mismo producto, precio y ajuste) en un solo renglón con cantidad
+        const agrupadas = new Map<string, (typeof carrito)[0]>();
+        (alquiler.prendas || []).forEach((p, idx) => {
+          const observacion = (p.AlquilerPrendasObservacion || "").trim();
+          const clave = `${p.ProductoId}|${p.AlquilerPrendasPrecio}|${observacion}`;
+          const existente = agrupadas.get(clave);
+          if (existente) {
+            existente.cantidad += 1;
+            return;
+          }
+          agrupadas.set(clave, {
+            id: p.ProductoId,
+            nombre: p.ProductoNombre,
+            precio: p.AlquilerPrendasPrecio,
+            imagen: p.ProductoImagen
+              ? `data:image/jpeg;base64,${p.ProductoImagen}`
+              : logo,
+            stock: 0,
+            cantidad: 1,
+            cartItemId: Date.now() + idx,
+            precioAlquiler: p.AlquilerPrendasPrecio,
+            observacion,
+          });
+        });
+        setCarrito(Array.from(agrupadas.values()));
+      })
+      .catch((error) => {
+        if (cancelado) return;
+        console.error("Error al cargar el alquiler:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: `No se pudo cargar el alquiler #${editarId}`,
+        }).then(() => navigate("/dashboard"));
+      });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarId]);
 
   const agregarProducto = (producto: {
     id: number;
@@ -207,6 +318,12 @@ export default function Rentals() {
   };
 
   const total = carrito.reduce((acc, p) => acc + obtenerTotal(p), 0);
+  // Al editar: lo que falta cobrar con el total nuevo
+  const saldoEdicion = alquilerEditado
+    ? total -
+      (alquilerEditado.AlquilerEntrega || 0) -
+      (alquilerEditado.AlquilerDescuento || 0)
+    : 0;
 
   // Función para cargar productos con paginación
   const fetchProductos = useCallback(async () => {
@@ -337,14 +454,123 @@ export default function Rentals() {
     }
   };
 
-  const sendRequest = async () => {
+  // Muestra el error de crear/editar; si faltan prendas en esas fechas,
+  // detalla cuáles y con qué alquiler chocan
+  const mostrarErrorAlquiler = (error: unknown, mensajePorDefecto: string) => {
+    console.error(error);
+
+    // El servicio lanza axiosError.response?.data directamente, que es un objeto
+    // Verificar si es un error de disponibilidad de prendas
+    if (
+      error &&
+      typeof error === "object" &&
+      "success" in error &&
+      error.success === false &&
+      "prendasNoDisponibles" in error
+    ) {
+      const errorData = error as {
+        message?: string;
+        prendasNoDisponibles?: Array<{
+          ProductoId: number;
+          ProductoNombre: string;
+          ProductoCodigo?: string;
+          ProductoImagen?: string | null;
+          cantidadSolicitada?: number;
+          stockDisponible?: number;
+          prendasAlquiladas?: number;
+          stockRealDisponible?: number;
+          conflictos?: Array<{
+            AlquilerId: number;
+            FechaEntregaFormateada: string;
+            FechaDevolucionFormateada: string;
+          }>;
+        }>;
+        detalles?: string[];
+      };
+      const prendasNoDisponibles = errorData.prendasNoDisponibles || [];
+      const mensajePrincipal =
+        errorData.message || "Una o más prendas no están disponibles";
+
+      // Construir HTML detallado con imágenes, fechas e información de stock
+      let htmlContent = `<div style="text-align: left; max-width: 600px;">`;
+      htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${mensajePrincipal}:</p>`;
+
+      prendasNoDisponibles.forEach((prenda, index) => {
+        const conflicto =
+          prenda.conflictos && prenda.conflictos.length > 0
+            ? prenda.conflictos[0]
+            : null;
+        const imagenSrc = prenda.ProductoImagen
+          ? `data:image/jpeg;base64,${prenda.ProductoImagen}`
+          : logo;
+
+        htmlContent += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
+        htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
+        htmlContent += `<div style="flex: 1;">`;
+        htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
+          index + 1
+        }. ${prenda.ProductoNombre}</div>`;
+
+        // Mostrar información de stock
+        if (
+          prenda.cantidadSolicitada !== undefined &&
+          prenda.stockRealDisponible !== undefined
+        ) {
+          htmlContent += `<div style="font-size: 13px; color: #d32f2f; margin-bottom: 4px; font-weight: 500;">⚠️ Stock insuficiente</div>`;
+          htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📦 Solicitadas: <strong>${prenda.cantidadSolicitada}</strong> prenda(s)</div>`;
+          htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📊 Disponibles: <strong>${
+            prenda.stockRealDisponible
+          }</strong> de <strong>${prenda.stockDisponible || 0}</strong> (${
+            prenda.prendasAlquiladas || 0
+          } alquiladas)</div>`;
+        }
+
+        // Mostrar información de conflicto si existe
+        if (conflicto) {
+          htmlContent += `<div style="font-size: 12px; color: #666; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">📅 Ya alquilada del <strong>${conflicto.FechaEntregaFormateada}</strong> al <strong>${conflicto.FechaDevolucionFormateada}</strong> (Alquiler #${conflicto.AlquilerId})</div>`;
+        }
+
+        htmlContent += `</div>`;
+        htmlContent += `</div>`;
+      });
+
+      htmlContent += `</div>`;
+
+      Swal.fire({
+        icon: "warning",
+        title: "Prendas no disponibles",
+        html: htmlContent,
+        confirmButtonText: "Entendido",
+        confirmButtonColor: "#2563eb",
+        width: "600px",
+      });
+      return;
+    }
+
+    // Manejar otros errores - el servicio lanza el objeto de respuesta directamente
+    let mensajeError = mensajePorDefecto;
+    if (error && typeof error === "object" && "message" in error) {
+      mensajeError = String(error.message);
+    } else if (error instanceof Error) {
+      mensajeError = error.message;
+    }
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: mensajeError,
+    });
+  };
+
+  // Validaciones comunes a crear y editar un alquiler
+  const validarFormulario = (): boolean => {
     if (!clienteSeleccionado) {
       Swal.fire({
         icon: "warning",
         title: "Cliente requerido",
         text: "Debes seleccionar un cliente para realizar el alquiler",
       });
-      return;
+      return false;
     }
 
     if (
@@ -356,7 +582,7 @@ export default function Rentals() {
         title: "Cliente inválido",
         text: "No puedes realizar un alquiler con el cliente 'SIN NOMBRE MINORISTA'. Por favor, selecciona un cliente válido.",
       });
-      return;
+      return false;
     }
 
     if (carrito.length === 0) {
@@ -365,7 +591,7 @@ export default function Rentals() {
         title: "Carrito vacío",
         text: "Debes agregar al menos una prenda al carrito",
       });
-      return;
+      return false;
     }
 
     if (!fechaEntrega) {
@@ -374,7 +600,7 @@ export default function Rentals() {
         title: "Fecha de entrega requerida",
         text: "Debes especificar la fecha de entrega",
       });
-      return;
+      return false;
     }
 
     if (!fechaDevolucion) {
@@ -383,7 +609,7 @@ export default function Rentals() {
         title: "Fecha de devolución requerida",
         text: "Debes especificar la fecha de devolución",
       });
-      return;
+      return false;
     }
 
     // Validar que fecha de entrega no sea anterior a fecha de alquiler
@@ -393,7 +619,7 @@ export default function Rentals() {
         title: "Fecha de entrega inválida",
         text: "La fecha de entrega no puede ser anterior a la fecha de alquiler",
       });
-      return;
+      return false;
     }
 
     // Validar que fecha de devolución no sea anterior a fecha de entrega
@@ -403,8 +629,32 @@ export default function Rentals() {
         title: "Fecha de devolución inválida",
         text: "La fecha de devolución no puede ser anterior a la fecha de entrega",
       });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  // Una fila de alquilerprendas por unidad (según la cantidad del carrito)
+  const armarPrendas = () => {
+    const prendas: Array<{
+      ProductoId: number;
+      AlquilerPrendasPrecio: number;
+      AlquilerPrendasObservacion: string;
+    }> = [];
+    carrito.forEach((item) => {
+      for (let i = 0; i < item.cantidad; i++) {
+        prendas.push({
+          ProductoId: item.id,
+          AlquilerPrendasPrecio: item.precioAlquiler,
+          AlquilerPrendasObservacion: item.observacion.trim(),
+        });
+      }
+    });
+    return prendas;
+  };
+
+  const sendRequest = async () => {
+    if (!validarFormulario() || !clienteSeleccionado) return;
 
     // Validar que haya una caja aperturada
     if (!cajaAperturada || !cajaAperturada.CajaId) {
@@ -435,23 +685,7 @@ export default function Rentals() {
       const montoEntrega =
         efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05;
 
-      // Preparar las prendas para enviar en el body del alquiler
-      // Crear un objeto por cada unidad (según la cantidad en el carrito)
-      const prendas: Array<{
-        ProductoId: number;
-        AlquilerPrendasPrecio: number;
-        AlquilerPrendasObservacion: string;
-      }> = [];
-      carrito.forEach((item) => {
-        // Agregar tantas prendas como indique la cantidad
-        for (let i = 0; i < item.cantidad; i++) {
-          prendas.push({
-            ProductoId: item.id,
-            AlquilerPrendasPrecio: item.precioAlquiler,
-            AlquilerPrendasObservacion: item.observacion.trim(),
-          });
-        }
-      });
+      const prendas = armarPrendas();
 
       // Crear el alquiler con las prendas incluidas para validación
       const alquilerData = {
@@ -462,6 +696,8 @@ export default function Rentals() {
         AlquilerEstado: "Pendiente",
         AlquilerTotal: total,
         AlquilerEntrega: Math.round(montoEntrega),
+        // El voucher descuenta del saldo (no es ingreso de caja)
+        AlquilerDescuento: voucher,
         prendas: prendas,
         // Datos de pago para registro en caja
         pagos: {
@@ -515,109 +751,66 @@ export default function Rentals() {
         setClienteSeleccionado(null);
       });
     } catch (error: unknown) {
-      console.error(error);
+      mostrarErrorAlquiler(error, "Error al realizar el alquiler");
+    }
+  };
 
-      // El servicio lanza axiosError.response?.data directamente, que es un objeto
-      // Verificar si es un error de disponibilidad de prendas
-      if (
-        error &&
-        typeof error === "object" &&
-        "success" in error &&
-        error.success === false &&
-        "prendasNoDisponibles" in error
-      ) {
-        const errorData = error as {
-          message?: string;
-          prendasNoDisponibles?: Array<{
-            ProductoId: number;
-            ProductoNombre: string;
-            ProductoCodigo?: string;
-            ProductoImagen?: string | null;
-            cantidadSolicitada?: number;
-            stockDisponible?: number;
-            prendasAlquiladas?: number;
-            stockRealDisponible?: number;
-            conflictos?: Array<{
-              AlquilerId: number;
-              FechaEntregaFormateada: string;
-              FechaDevolucionFormateada: string;
-            }>;
-          }>;
-          detalles?: string[];
-        };
-        const prendasNoDisponibles = errorData.prendasNoDisponibles || [];
-        const mensajePrincipal =
-          errorData.message || "Una o más prendas no están disponibles";
+  // Guarda los cambios de un alquiler existente (prendas, ajustes, fechas).
+  // No toca los pagos: lo ya entregado se conserva y la diferencia queda como
+  // saldo, que se cobra desde "Pagos"
+  const guardarEdicion = async () => {
+    if (!alquilerEditado || !validarFormulario() || !clienteSeleccionado)
+      return;
 
-        // Construir HTML detallado con imágenes, fechas e información de stock
-        let htmlContent = `<div style="text-align: left; max-width: 600px;">`;
-        htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${mensajePrincipal}:</p>`;
-
-        prendasNoDisponibles.forEach((prenda, index) => {
-          const conflicto =
-            prenda.conflictos && prenda.conflictos.length > 0
-              ? prenda.conflictos[0]
-              : null;
-          const imagenSrc = prenda.ProductoImagen
-            ? `data:image/jpeg;base64,${prenda.ProductoImagen}`
-            : logo;
-
-          htmlContent += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
-          htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
-          htmlContent += `<div style="flex: 1;">`;
-          htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
-            index + 1
-          }. ${prenda.ProductoNombre}</div>`;
-
-          // Mostrar información de stock
-          if (
-            prenda.cantidadSolicitada !== undefined &&
-            prenda.stockRealDisponible !== undefined
-          ) {
-            htmlContent += `<div style="font-size: 13px; color: #d32f2f; margin-bottom: 4px; font-weight: 500;">⚠️ Stock insuficiente</div>`;
-            htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📦 Solicitadas: <strong>${prenda.cantidadSolicitada}</strong> prenda(s)</div>`;
-            htmlContent += `<div style="font-size: 12px; color: #666; margin-bottom: 2px;">📊 Disponibles: <strong>${
-              prenda.stockRealDisponible
-            }</strong> de <strong>${prenda.stockDisponible || 0}</strong> (${
-              prenda.prendasAlquiladas || 0
-            } alquiladas)</div>`;
-          }
-
-          // Mostrar información de conflicto si existe
-          if (conflicto) {
-            htmlContent += `<div style="font-size: 12px; color: #666; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">📅 Ya alquilada del <strong>${conflicto.FechaEntregaFormateada}</strong> al <strong>${conflicto.FechaDevolucionFormateada}</strong> (Alquiler #${conflicto.AlquilerId})</div>`;
-          }
-
-          htmlContent += `</div>`;
-          htmlContent += `</div>`;
-        });
-
-        htmlContent += `</div>`;
-
-        Swal.fire({
-          icon: "warning",
-          title: "Prendas no disponibles",
-          html: htmlContent,
-          confirmButtonText: "Entendido",
-          confirmButtonColor: "#2563eb",
-          width: "600px",
-        });
-        return;
-      }
-
-      // Manejar otros errores - el servicio lanza el objeto de respuesta directamente
-      let mensajeError = "Error al realizar el alquiler";
-      if (error && typeof error === "object" && "message" in error) {
-        mensajeError = String(error.message);
-      } else if (error instanceof Error) {
-        mensajeError = error.message;
-      }
-
+    const prendas = armarPrendas();
+    if (prendas.length === 0) {
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: mensajeError,
+        icon: "warning",
+        title: "Sin prendas",
+        text: "El alquiler debe tener al menos una prenda",
       });
+      return;
+    }
+
+    const entregado = alquilerEditado.AlquilerEntrega || 0;
+    const descuento = alquilerEditado.AlquilerDescuento || 0;
+    const saldo = total - entregado - descuento;
+    const confirmacion = await Swal.fire({
+      icon: "question",
+      title: `¿Guardar cambios del alquiler #${alquilerEditado.AlquilerId}?`,
+      html: `<div style="text-align:left">
+        <p>Total: <strong>Gs. ${formatMiles(total)}</strong></p>
+        <p>Entregado: <strong>Gs. ${formatMiles(entregado)}</strong></p>
+        ${descuento > 0 ? `<p>Descuento (voucher): <strong>Gs. ${formatMiles(descuento)}</strong></p>` : ""}
+        <p>${saldo >= 0 ? "Saldo" : "Saldo a favor del cliente"}: <strong>Gs. ${formatMiles(Math.abs(saldo))}</strong></p>
+      </div>`,
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#2563eb",
+    });
+    if (!confirmacion.isConfirmed) return;
+
+    try {
+      await updateAlquiler(alquilerEditado.AlquilerId, {
+        ClienteId: clienteSeleccionado.ClienteId,
+        AlquilerFechaAlquiler: fechaAlquiler,
+        AlquilerFechaEntrega: fechaEntrega,
+        AlquilerFechaDevolucion: fechaDevolucion,
+        AlquilerEstado: alquilerEditado.AlquilerEstado,
+        AlquilerTotal: total,
+        AlquilerEntrega: entregado,
+        prendas,
+      });
+      await Swal.fire({
+        title: "Alquiler actualizado",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      navigate("/dashboard");
+    } catch (error: unknown) {
+      mostrarErrorAlquiler(error, "Error al actualizar el alquiler");
     }
   };
 
@@ -626,8 +819,25 @@ export default function Rentals() {
     const { generarTicketAlquiler } = await import(
       "../../utils/ticketAlquiler"
     );
+    // Al editar no hay desglose de pagos nuevos: se imprime lo ya entregado
+    const pagosTicket = alquilerEditado
+      ? alquilerEditado.AlquilerDescuento
+        ? { pagos: { voucher: alquilerEditado.AlquilerDescuento } }
+        : {}
+      : {
+          entregado:
+            efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05,
+          pagos: {
+            efectivo,
+            transferencia: banco,
+            tarjetaDebito: bancoDebito,
+            tarjetaCredito: bancoCredito,
+            cuentaCliente,
+            voucher,
+          },
+        };
     generarTicketAlquiler({
-      alquilerId,
+      alquilerId: alquilerId ?? alquilerEditado?.AlquilerId,
       cliente: {
         nombre: clienteSeleccionado?.ClienteNombre || "",
         apellido: clienteSeleccionado?.ClienteApellido || "",
@@ -643,15 +853,8 @@ export default function Rentals() {
         ajuste: p.observacion,
       })),
       total,
-      entregado: efectivo + banco + bancoDebito * 1.03 + bancoCredito * 1.05,
-      pagos: {
-        efectivo,
-        transferencia: banco,
-        tarjetaDebito: bancoDebito,
-        tarjetaCredito: bancoCredito,
-        cuentaCliente,
-        voucher,
-      },
+      entregado: alquilerEditado?.AlquilerEntrega || 0,
+      ...pagosTicket,
     });
   };
 
@@ -756,20 +959,40 @@ export default function Rentals() {
   return (
     <div className="flex h-screen bg-[#f5f8ff]">
       {/* Lado Izquierdo */}
-      <div className="flex-1 bg-[#f5f8ff] p-4 flex flex-col justify-between">
-        <div className="bg-white rounded-xl shadow-lg p-0 mb-4 flex flex-col max-h-[80vh] overflow-hidden">
+      <div className="flex-1 min-w-0 bg-[#f5f8ff] p-4 flex flex-col gap-3 min-h-0">
+        {editarId && (
+          <div className="flex shrink-0 items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            <span>
+              Editando alquiler{" "}
+              <span className="font-semibold">#{editarId}</span>
+              {alquilerEditado && (
+                <> · Estado: {alquilerEditado.AlquilerEstado}</>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="cursor-pointer rounded px-2 py-1 font-medium text-amber-900 transition-colors duration-200 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-600"
+            >
+              Cancelar edición
+            </button>
+          </div>
+        )}
+        <div className="bg-white rounded-xl shadow-lg p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
-                <tr className="text-left bg-[#f5f8ff]">
-                  <th className="py-4 pl-6 font-semibold text-[15px]">
-                    Nombre
+                <tr className="sticky top-0 z-10 text-left bg-[#f5f8ff] text-sm">
+                  <th className="py-3 pl-4 pr-2 font-semibold">Nombre</th>
+                  <th className="py-3 px-2 text-center font-semibold">
+                    Cantidad
                   </th>
-                  <th className="py-4 font-semibold text-[15px]">Cantidad</th>
-                  <th className="py-4 font-semibold text-[15px]">
-                    Precio Alquiler
+                  <th className="py-3 px-2 text-right font-semibold whitespace-nowrap">
+                    Precio
                   </th>
-                  <th className="py-4 pr-6 font-semibold text-[15px]">Total</th>
+                  <th className="py-3 pl-2 pr-4 text-right font-semibold">
+                    Total
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -790,15 +1013,15 @@ export default function Rentals() {
                       }, 0);
                     }}
                   >
-                    <td className="py-3 pl-6 align-middle">
-                      <div className="flex items-center gap-4">
+                    <td className="py-3 pl-4 pr-2 align-middle">
+                      <div className="flex items-center gap-3">
                         <img
                           src={p.imagen}
                           alt={p.nombre}
-                          className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
+                          className="w-12 h-12 shrink-0 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
-                        <div className="flex-1">
-                          <div className="font-bold text-[17px] text-[#222] leading-tight">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-[15px] text-[#222] leading-tight">
                             {p.nombre}
                           </div>
                           <button
@@ -825,7 +1048,7 @@ export default function Rentals() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 align-middle">
+                    <td className="py-3 px-2 align-middle">
                       <div className="flex flex-col items-center gap-1">
                         <div className="flex items-center gap-1">
                           <button
@@ -842,7 +1065,7 @@ export default function Rentals() {
                             type="number"
                             value={p.cantidad}
                             min={0}
-                            className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222] mx-1"
+                            className="w-10 h-8 text-center border border-gray-300 rounded bg-gray-50 text-base font-semibold text-[#222]"
                             readOnly
                             ref={(el) => {
                               cantidadRefs.current[p.cartItemId] = el || null;
@@ -882,20 +1105,25 @@ export default function Rentals() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 align-middle text-right font-medium text-[17px] text-gray-700">
-                      <>Gs. {formatMiles(obtenerPrecio(p))}</>
+                    <td className="py-3 px-2 align-middle text-right font-medium text-[15px] text-gray-700 whitespace-nowrap tabular-nums">
+                      Gs. {formatMiles(obtenerPrecio(p))}
                     </td>
-                    <td className="py-3 pr-6 align-middle text-right font-medium text-[17px] text-gray-700">
+                    <td className="py-3 pl-2 pr-4 align-middle text-right font-semibold text-[15px] text-gray-800 whitespace-nowrap tabular-nums">
                       Gs. {formatMiles(obtenerTotal(p))}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {carrito.length === 0 && (
+              <p className="px-6 py-10 text-center text-sm text-gray-500">
+                Agregá prendas desde el catálogo o buscá por nombre o código
+              </p>
+            )}
           </div>
         </div>
         {/* Panel inferior con fechas y botones */}
-        <div className="bg-white rounded-xl shadow p-4">
+        <div className="shrink-0 bg-white rounded-xl shadow p-4">
           {/* Fechas */}
           <div className="grid grid-cols-3 gap-4 mb-3">
             <div>
@@ -971,6 +1199,24 @@ export default function Rentals() {
               Gs. {formatMiles(total)}
             </span>
           </div>
+          {alquilerEditado && (
+            <div className="-mt-2 mb-3 flex justify-between text-sm text-gray-600 tabular-nums">
+              <span>
+                Entregado: Gs. {formatMiles(alquilerEditado.AlquilerEntrega || 0)}
+                {(alquilerEditado.AlquilerDescuento || 0) > 0 && (
+                  <>
+                    {" "}
+                    · Descuento: Gs.{" "}
+                    {formatMiles(alquilerEditado.AlquilerDescuento || 0)}
+                  </>
+                )}
+              </span>
+              <span>
+                {saldoEdicion >= 0 ? "Saldo" : "Saldo a favor"}: Gs.{" "}
+                {formatMiles(Math.abs(saldoEdicion))}
+              </span>
+            </div>
+          )}
           {/* Grid de botones */}
           <div className="grid grid-cols-2 gap-4 mb-3">
             {/* Botón Alquilar grande */}
@@ -996,6 +1242,10 @@ export default function Rentals() {
                   });
                   return;
                 }
+                if (editarId) {
+                  guardarEdicion();
+                  return;
+                }
                 setShowModal(true);
               }}
               disabled={
@@ -1004,7 +1254,7 @@ export default function Rentals() {
                 clienteSeleccionado.ClienteNombre.trim() === ""
               }
             >
-              Alquilar
+              {editarId ? "Guardar cambios" : "Alquilar"}
             </button>
             {/* Botón Imprimir Ticket */}
             <button

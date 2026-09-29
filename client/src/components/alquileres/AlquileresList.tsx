@@ -33,6 +33,7 @@ interface Alquiler {
   AlquilerEstado: string;
   AlquilerTotal: number;
   AlquilerEntrega: number;
+  AlquilerDescuento?: number;
   ClienteNombre?: string;
   ClienteApellido?: string;
   prendas?: AlquilerPrenda[];
@@ -100,6 +101,7 @@ export default function AlquileresList({
     AlquilerEstado: "Pendiente",
     AlquilerTotal: 0,
     AlquilerEntrega: 0,
+    AlquilerDescuento: 0,
     prendas: [],
   });
   const [clientes, setClientes] = useState<
@@ -186,6 +188,7 @@ export default function AlquileresList({
         AlquilerEstado: "Pendiente",
         AlquilerTotal: 0,
         AlquilerEntrega: 0,
+        AlquilerDescuento: 0,
         prendas: [],
       });
       setClienteSeleccionado(null);
@@ -348,6 +351,9 @@ export default function AlquileresList({
         prendas: agruparPrendasTicket(alquiler.prendas || []),
         total: alquiler.AlquilerTotal || 0,
         entregado: alquiler.AlquilerEntrega || 0,
+        pagos: alquiler.AlquilerDescuento
+          ? { voucher: Number(alquiler.AlquilerDescuento) }
+          : undefined,
         esReimpresion: true,
       });
     } catch {
@@ -366,6 +372,7 @@ export default function AlquileresList({
     { key: "AlquilerFechaEntrega", label: "Fecha Entrega" },
     { key: "AlquilerTotal", label: "Total" },
     { key: "AlquilerEntrega", label: "Entrega" },
+    { key: "AlquilerDescuento", label: "Descuento" },
     { key: "Saldo", label: "Saldo" },
     { key: "AlquilerEstado", label: "Estado" },
   ];
@@ -421,8 +428,11 @@ export default function AlquileresList({
               : "",
             AlquilerTotal: formatCurrency(a.AlquilerTotal || 0),
             AlquilerEntrega: formatCurrency(a.AlquilerEntrega || 0),
+            AlquilerDescuento: formatCurrency(Number(a.AlquilerDescuento) || 0),
             Saldo: formatCurrency(
-              (a.AlquilerTotal || 0) - (a.AlquilerEntrega || 0)
+              (a.AlquilerTotal || 0) -
+                (a.AlquilerEntrega || 0) -
+                (Number(a.AlquilerDescuento) || 0)
             ),
           })) as unknown as (Alquiler & { id: number; Saldo: string })[]
         }
@@ -588,6 +598,31 @@ export default function AlquileresList({
                       step="0.01"
                       className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
                     />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="AlquilerDescuento"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Descuento (voucher)
+                    </label>
+                    <input
+                      type="number"
+                      name="AlquilerDescuento"
+                      id="AlquilerDescuento"
+                      min={0}
+                      value={formData.AlquilerDescuento ?? 0}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          AlquilerDescuento: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition-colors duration-200 hover:border-slate-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Reduce el saldo; no es un ingreso de caja
+                    </p>
                   </div>
                 </div>
 

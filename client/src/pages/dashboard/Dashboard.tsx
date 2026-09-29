@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { activarConTeclado } from "../../utils/teclado";
 import Modal from "../../components/common/Modal";
 import ActionButton from "../../components/common/Button/ActionButton";
-import { ScissorsIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, ScissorsIcon } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/useAuth";
 import {
   getAlquileresProximosEntrega,
@@ -31,6 +32,7 @@ interface Alquiler {
   AlquilerEstado: string;
   AlquilerTotal: number;
   AlquilerEntrega: number;
+  AlquilerDescuento?: number;
   ClienteNombre?: string;
   ClienteApellido?: string;
   ClienteTelefono?: string;
@@ -40,6 +42,7 @@ interface Alquiler {
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [alquileresEntrega, setAlquileresEntrega] = useState<Alquiler[]>([]);
   const [alquileresDevolucion, setAlquileresDevolucion] = useState<Alquiler[]>(
     []
@@ -69,6 +72,12 @@ function Dashboard() {
     cargarDatos();
   }, []);
 
+  // El voucher es descuento: no suma a lo entregado pero reduce el saldo
+  const calcularSaldo = (alquiler: Alquiler) =>
+    (alquiler.AlquilerTotal || 0) -
+    (alquiler.AlquilerEntrega || 0) -
+    (alquiler.AlquilerDescuento || 0);
+
   const formatearFecha = (fecha: string | null | undefined) => {
     if (!fecha) return "-";
     return new Date(fecha).toLocaleDateString("es-PY");
@@ -96,6 +105,16 @@ function Dashboard() {
     }
   };
 
+  // Abre la pantalla de alquiler con el carrito cargado para agregar,
+  // quitar o ajustar prendas
+  const editarPrendas = (alquilerId: number) => {
+    navigate(`/alquileres-venta?editar=${alquilerId}`);
+  };
+
+  // Devueltos/cancelados ya no se modifican
+  const esEditable = (alquiler: Alquiler) =>
+    !["Devuelto", "Cancelado"].includes(alquiler.AlquilerEstado);
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentAlquiler(null);
@@ -122,6 +141,9 @@ function Dashboard() {
       prendas: agruparPrendasTicket(currentAlquiler.prendas || []),
       total: currentAlquiler.AlquilerTotal || 0,
       entregado: currentAlquiler.AlquilerEntrega || 0,
+      pagos: currentAlquiler.AlquilerDescuento
+        ? { voucher: currentAlquiler.AlquilerDescuento }
+        : undefined,
       esReimpresion: true,
     });
   };
@@ -218,6 +240,9 @@ function Dashboard() {
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Saldo
                   </th>
+                  <th className="px-4 py-3">
+                    <span className="sr-only">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -300,9 +325,24 @@ function Dashboard() {
                       {formatCurrency(alquiler.AlquilerEntrega || 0)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(
-                        (alquiler.AlquilerTotal || 0) -
-                          (alquiler.AlquilerEntrega || 0)
+                      {formatCurrency(calcularSaldo(alquiler))}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-right">
+                      {esEditable(alquiler) && (
+                        <button
+                          type="button"
+                          aria-label={`Editar prendas del alquiler ${alquiler.AlquilerId}`}
+                          title="Editar prendas"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editarPrendas(alquiler.AlquilerId);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors duration-200 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        >
+                          <PencilSquareIcon aria-hidden="true" className="h-4 w-4" />
+                          Editar
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -434,10 +474,7 @@ function Dashboard() {
                       {formatCurrency(alquiler.AlquilerEntrega || 0)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(
-                        (alquiler.AlquilerTotal || 0) -
-                          (alquiler.AlquilerEntrega || 0)
-                      )}
+                      {formatCurrency(calcularSaldo(alquiler))}
                     </td>
                   </tr>
                 ))}
@@ -456,11 +493,21 @@ function Dashboard() {
           maxWidth="max-w-md"
           footer={
             <div className="flex w-full flex-wrap items-center justify-between gap-3">
-              <ActionButton
-                variant="success"
-                label="Reimprimir ticket"
-                onClick={handlePrintTicket}
-              />
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  variant="success"
+                  label="Reimprimir ticket"
+                  onClick={handlePrintTicket}
+                />
+                {esEditable(currentAlquiler) && (
+                  <ActionButton
+                    variant="neutral"
+                    label="Editar prendas"
+                    icon={PencilSquareIcon}
+                    onClick={() => editarPrendas(currentAlquiler.AlquilerId)}
+                  />
+                )}
+              </div>
               <div className="flex gap-2">
                 <ActionButton
                   variant="secondary"

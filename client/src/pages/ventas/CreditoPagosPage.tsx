@@ -25,6 +25,7 @@ interface AlquilerPendiente {
   AlquilerEstado: string;
   AlquilerTotal: number;
   AlquilerEntrega: number;
+  AlquilerDescuento?: number;
   Saldo: number;
 }
 
@@ -342,6 +343,9 @@ const CreditoPagosPage = () => {
                   Entrega
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Descuento
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Saldo
                 </th>
               </tr>
@@ -362,6 +366,9 @@ const CreditoPagosPage = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                     {formatCurrency(alquiler.AlquilerEntrega)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {formatCurrency(alquiler.AlquilerDescuento || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                     {formatCurrency(alquiler.Saldo)}

@@ -383,6 +383,8 @@ export default function Sales() {
       ventaTipo: "CO",
       pagoTipo: "E",
       total: getSubtotal(cartItems),
+      // El voucher se guarda como descuento de la venta (no entra a caja)
+      descuento: isDevolucionMode ? 0 : Number(voucher),
       pagos: isDevolucionMode
         ? {
             efectivo: Number(efectivo),
@@ -545,14 +547,23 @@ export default function Sales() {
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
+    // Con voucher: total, descuento y lo que efectivamente se paga
+    const descuentoTicket = isDevolucion ? 0 : Number(voucher) || 0;
+    let y = lastAutoTable.finalY + 5;
+    if (descuentoTicket > 0) {
+      doc.text(`Total Gs. ${totalCost.toLocaleString("es-ES")}`, 0, y);
+      y += 5;
+      doc.text(`Voucher Gs. -${descuentoTicket.toLocaleString("es-ES")}`, 0, y);
+      y += 5;
+    }
     doc.text(
-      `Total a Pagar Gs. ${totalCost.toLocaleString("es-ES")}`,
+      `Total a Pagar Gs. ${(totalCost - descuentoTicket).toLocaleString("es-ES")}`,
       0,
-      lastAutoTable.finalY + 5
+      y
     );
 
     // Pie de página
-    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, lastAutoTable.finalY + 10);
+    doc.text("--GRACIAS POR SU PREFERENCIA--", 0, y + 5);
 
     // Guardar el PDF
     doc.save("ticket_venta.pdf");
@@ -1066,6 +1077,10 @@ export default function Sales() {
         sendRequest={sendRequest}
         voucher={voucher}
         setVoucher={setVoucher}
+        // En ventas no se cobra recargo por tarjeta, y no hay pantalla para
+        // cobrar una venta a cuenta del cliente
+        recargoTarjeta={false}
+        permitirCuentaCliente={false}
       />
     </div>
   );

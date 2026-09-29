@@ -16,6 +16,7 @@ import Pagination from "../../components/common/Pagination";
 import { formatCurrency } from "../../utils/formato";
 import Swal from "sweetalert2";
 import { borrarRegistroDiario } from "../../services/pos.service";
+import { escaparHtml } from "../../utils/html";
 
 interface Pagination {
   totalItems: number;
@@ -203,7 +204,7 @@ export default function ComprasPage() {
               .map(
                 (prod) => `
               <tr class="border-b hover:bg-gray-50">
-                <td class="py-2 px-4">${prod.ProductoNombre}</td>
+                <td class="py-2 px-4">${escaparHtml(prod.ProductoNombre)}</td>
                 <td class="text-right py-2 px-4">${
                   prod.CompraProductoCantidad
                 }</td>
@@ -228,15 +229,15 @@ export default function ComprasPage() {
         title: `Compra #${compra.CompraId}`,
         html: `
           <div class="text-left" style="overflow-x: auto;">
-            <p><strong>Proveedor:</strong> ${proveedorInfo}</p>
+            <p><strong>Proveedor:</strong> ${escaparHtml(proveedorInfo)}</p>
             <p><strong>Fecha:</strong> ${new Date(
               compra.CompraFecha
             ).toLocaleString()}</p>
             <p><strong>Tipo:</strong> ${getTipoCompraText(
               compra.CompraTipo
             )}</p>
-            <p><strong>Almacén:</strong> ${almacen.AlmacenNombre}</p>
-            <p><strong>Factura:</strong> ${compra.CompraFactura}</p>
+            <p><strong>Almacén:</strong> ${escaparHtml(almacen.AlmacenNombre)}</p>
+            <p><strong>Factura:</strong> ${escaparHtml(compra.CompraFactura)}</p>
             <div class="mt-4">
               <h3 class="font-bold mb-2">Detalle de Productos</h3>
               ${productosTable}

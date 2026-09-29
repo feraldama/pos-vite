@@ -358,7 +358,7 @@ const Venta = {
           v.VentaFecha,
           CAST(v.Total AS DECIMAL(10,2)) as Total,
           CAST(COALESCE(v.VentaEntrega, 0) AS DECIMAL(10,2)) as VentaEntrega,
-          CAST((v.Total - COALESCE(v.VentaEntrega, 0)) AS DECIMAL(10,2)) as Saldo
+          CAST((v.Total - COALESCE(v.VentaEntrega, 0) - COALESCE(v.VentaDescuento, 0)) AS DECIMAL(10,2)) as Saldo
         FROM venta v
         JOIN usuario u ON v.VentaUsuario = u.UsuarioId
         WHERE v.ClienteId = ? 
@@ -373,7 +373,7 @@ const Venta = {
         params.push(localId);
       }
 
-      query += ` AND (v.Total - COALESCE(v.VentaEntrega, 0)) > 0 ORDER BY v.VentaFecha ASC`;
+      query += ` AND (v.Total - COALESCE(v.VentaEntrega, 0) - COALESCE(v.VentaDescuento, 0)) > 0 ORDER BY v.VentaFecha ASC`;
 
       db.query(query, params, (err, results) => {
         if (err) {
@@ -401,12 +401,12 @@ const Venta = {
           CONCAT(TRIM(c.ClienteNombre), ' ', TRIM(c.ClienteApellido)) AS Cliente,
           SUM(v.Total) AS TotalVentas,
           SUM(COALESCE(v.VentaEntrega,0)) AS TotalEntregado,
-          SUM(v.Total - COALESCE(v.VentaEntrega,0)) AS Saldo
+          SUM(v.Total - COALESCE(v.VentaEntrega,0) - COALESCE(v.VentaDescuento,0)) AS Saldo
         FROM venta v
         JOIN clientes c ON v.ClienteId = c.ClienteId
         WHERE v.VentaTipo = 'CR'
         GROUP BY c.ClienteId, c.ClienteNombre, c.ClienteApellido
-        HAVING SUM(v.Total - COALESCE(v.VentaEntrega, 0)) > 0
+        HAVING SUM(v.Total - COALESCE(v.VentaEntrega, 0) - COALESCE(v.VentaDescuento, 0)) > 0
         ORDER BY Cliente
       `;
       db.query(query, (err, results) => {
@@ -469,7 +469,8 @@ const Venta = {
                   // Calcular saldo pendiente
                   const total = Number(venta.Total) || 0;
                   const entrega = Number(venta.VentaEntrega) || 0;
-                  ventaDetalle.SaldoPendiente = total - entrega;
+                  ventaDetalle.SaldoPendiente =
+                    total - entrega - (Number(venta.VentaDescuento) || 0);
 
                   // Obtener información de crédito
                   const creditoQuery =

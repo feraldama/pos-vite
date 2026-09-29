@@ -90,17 +90,30 @@ exports.confirmarVenta = async (req, res) => {
       pagoTipo = "E",
       total,
       entrega,
+      // Voucher: descuento sobre el total. No entra a caja
+      descuento = 0,
       pagos = {},
       items,
     } = req.body;
     validarItems(items);
+    const montoDescuento = Number(descuento);
+    if (
+      !Number.isFinite(montoDescuento) ||
+      montoDescuento < 0 ||
+      montoDescuento > Number(total)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "El descuento debe estar entre 0 y el total de la venta",
+      });
+    }
 
     const resultado = await withTransaction(async (client) => {
       const ins = await client.q(
         `INSERT INTO venta
           (VentaFecha, ClienteId, AlmacenId, VentaTipo, VentaPagoTipo, VentaCantidadProductos,
-           VentaUsuario, VentaNroFactura, VentaTimbrado, Total, VentaEntrega)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?) RETURNING "VentaId"`,
+           VentaUsuario, VentaNroFactura, VentaTimbrado, Total, VentaEntrega, VentaDescuento)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?) RETURNING "VentaId"`,
         [
           fecha,
           clienteId,
@@ -110,7 +123,9 @@ exports.confirmarVenta = async (req, res) => {
           items.length,
           usuarioId,
           Math.round(total),
-          Math.round(entrega !== undefined ? entrega : total),
+          // Lo que cubren los pagos: el total menos el voucher
+          Math.round(entrega !== undefined ? entrega : total - montoDescuento),
+          Math.round(montoDescuento),
         ]
       );
       const ventaId = ins.rows[0].VentaId;

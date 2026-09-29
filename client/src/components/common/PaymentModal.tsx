@@ -22,6 +22,10 @@ interface PaymentModalProps {
   printTicket: boolean;
   voucher: number;
   setVoucher: (v: number) => void;
+  /** Se cobra 3% / 5% adicional por tarjeta (alquileres sí, ventas no) */
+  recargoTarjeta?: boolean;
+  /** Se puede dejar parte a cuenta del cliente (solo donde hay cómo cobrarla) */
+  permitirCuentaCliente?: boolean;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -45,6 +49,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   printTicket,
   voucher,
   setVoucher,
+  recargoTarjeta = true,
+  permitirCuentaCliente = true,
 }) => {
   const [pagoTipo, setPagoTipoLocal] = useState<
     "E" | "B" | "D" | "CR" | "C" | "V"
@@ -85,8 +91,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   // Recargo que paga el cliente por pagar con tarjeta. Sólo afecta lo que se
   // cobra y lo que se imprime, no cuánto cubre de la venta.
-  const RECARGO_DEBITO = 1.03;
-  const RECARGO_CREDITO = 1.05;
+  const RECARGO_DEBITO = recargoTarjeta ? 1.03 : 1;
+  const RECARGO_CREDITO = recargoTarjeta ? 1.05 : 1;
 
   /** Lo que hay que pasar por el posnet: el importe base más el recargo. */
   const conRecargo = (base: number, recargo: number) =>
@@ -433,12 +439,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   marginRight: 8,
                 }}
               >
-                Tarjeta Débito (3% adicional):
+                Tarjeta Débito{recargoTarjeta ? " (3% adicional)" : ""}:
               </label>
               <input
                 id="debito-input"
                 aria-describedby={
-                  bancoDebito > 0 ? "debito-recargo" : undefined
+                  recargoTarjeta && bancoDebito > 0 ? "debito-recargo" : undefined
                 }
                 type="text"
                 value={formatMiles(bancoDebito)}
@@ -473,7 +479,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
-            {bancoDebito > 0 && (
+            {recargoTarjeta && bancoDebito > 0 && (
               <p id="debito-recargo" style={{
                 margin: "-4px 0 10px",
                 fontSize: 13,
@@ -504,12 +510,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   marginRight: 8,
                 }}
               >
-                Tarjeta Crédito (5% adicional):
+                Tarjeta Crédito{recargoTarjeta ? " (5% adicional)" : ""}:
               </label>
               <input
                 id="credito-input"
                 aria-describedby={
-                  bancoCredito > 0 ? "credito-recargo" : undefined
+                  recargoTarjeta && bancoCredito > 0 ? "credito-recargo" : undefined
                 }
                 type="text"
                 value={formatMiles(bancoCredito)}
@@ -542,7 +548,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 }}
               />
             </div>
-            {bancoCredito > 0 && (
+            {recargoTarjeta && bancoCredito > 0 && (
               <p id="credito-recargo" style={{
                 margin: "-4px 0 10px",
                 fontSize: 13,
@@ -556,58 +562,60 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </p>
             )}
             {/* Cuenta Cliente */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <label
-                htmlFor="cuenta-input"
+            {permitirCuentaCliente && (
+              <div
                 style={{
-                  flex: 1,
-                  fontSize: 16,
-                  color: "#444",
-                  textAlign: "right",
-                  marginRight: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 10,
                 }}
               >
-                Cuenta de cliente:
-              </label>
-              <input
-                id="cuenta-input"
-                type="text"
-                value={formatMiles(cuentaCliente)}
-                onFocus={(e) => {
-                  setPagoTipoLocal("C");
-                  setReemplazarAlTeclear(true);
-                  if (cuentaCliente === 0 && totalRest > 0) {
-                    setCuentaCliente(totalRest);
-                    setTotalRest(calcularResto({ cuentaCliente: totalRest }));
-                  }
-                  e.target.select();
-                }}
-                onChange={(e) => {
-                  const newValue = Number(e.target.value.replace(/\D/g, ""));
-                  setCuentaCliente(newValue);
-                  setTotalRest(calcularResto({ cuentaCliente: newValue }));
-                }}
-                style={{
-                  width: 120,
-                  padding: "6px 10px",
-                  border:
-                    pagoTipo === "C"
-                      ? "2px solid #a5b4fc"
-                      : "1px solid #cbd5e1",
-                  borderRadius: 6,
-                  fontSize: 16,
-                  textAlign: "right",
-                  background: pagoTipo === "C" ? "#f0f6ff" : "#f9fafb",
-                  outline: "none",
-                }}
-              />
-            </div>
+                <label
+                  htmlFor="cuenta-input"
+                  style={{
+                    flex: 1,
+                    fontSize: 16,
+                    color: "#444",
+                    textAlign: "right",
+                    marginRight: 8,
+                  }}
+                >
+                  Cuenta de cliente:
+                </label>
+                <input
+                  id="cuenta-input"
+                  type="text"
+                  value={formatMiles(cuentaCliente)}
+                  onFocus={(e) => {
+                    setPagoTipoLocal("C");
+                    setReemplazarAlTeclear(true);
+                    if (cuentaCliente === 0 && totalRest > 0) {
+                      setCuentaCliente(totalRest);
+                      setTotalRest(calcularResto({ cuentaCliente: totalRest }));
+                    }
+                    e.target.select();
+                  }}
+                  onChange={(e) => {
+                    const newValue = Number(e.target.value.replace(/\D/g, ""));
+                    setCuentaCliente(newValue);
+                    setTotalRest(calcularResto({ cuentaCliente: newValue }));
+                  }}
+                  style={{
+                    width: 120,
+                    padding: "6px 10px",
+                    border:
+                      pagoTipo === "C"
+                        ? "2px solid #a5b4fc"
+                        : "1px solid #cbd5e1",
+                    borderRadius: 6,
+                    fontSize: 16,
+                    textAlign: "right",
+                    background: pagoTipo === "C" ? "#f0f6ff" : "#f9fafb",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            )}
             {/* Voucher */}
             <div
               style={{
@@ -663,7 +671,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
             {/* Total a cobrar por posnet, que es lo que el cajero tiene que
                 tipear en la terminal */}
-            {(bancoDebito > 0 || bancoCredito > 0) && (
+            {recargoTarjeta && (bancoDebito > 0 || bancoCredito > 0) && (
               <div
                 style={{
                   marginTop: 16,

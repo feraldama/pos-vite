@@ -31,6 +31,7 @@ import ActionButton from "../../components/common/Button/ActionButton";
 import PagoModal from "../../components/common/PagoModal";
 import Pagination from "../../components/common/Pagination";
 import { formatMiles } from "../../utils/formato";
+import { escaparHtml } from "../../utils/html";
 
 interface Cliente {
   ClienteId: number;
@@ -493,7 +494,7 @@ export default function Rentals() {
 
       // Construir HTML detallado con imágenes, fechas e información de stock
       let htmlContent = `<div style="text-align: left; max-width: 600px;">`;
-      htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${mensajePrincipal}:</p>`;
+      htmlContent += `<p style="margin-bottom: 15px; font-weight: 500;">${escaparHtml(mensajePrincipal)}:</p>`;
 
       prendasNoDisponibles.forEach((prenda, index) => {
         const conflicto =
@@ -505,11 +506,11 @@ export default function Rentals() {
           : logo;
 
         htmlContent += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
-        htmlContent += `<img src="${imagenSrc}" alt="${prenda.ProductoNombre}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
+        htmlContent += `<img src="${escaparHtml(imagenSrc)}" alt="${escaparHtml(prenda.ProductoNombre)}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
         htmlContent += `<div style="flex: 1;">`;
         htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
           index + 1
-        }. ${prenda.ProductoNombre}</div>`;
+        }. ${escaparHtml(prenda.ProductoNombre)}</div>`;
 
         // Mostrar información de stock
         if (
@@ -585,7 +586,8 @@ export default function Rentals() {
       return false;
     }
 
-    if (carrito.length === 0) {
+    // Cuenta unidades, no renglones: un renglón en cantidad 0 no se guarda
+    if (!carrito.some((p) => p.cantidad > 0)) {
       Swal.fire({
         icon: "warning",
         title: "Carrito vacío",
@@ -847,12 +849,15 @@ export default function Rentals() {
       fechaAlquiler,
       fechaEntrega,
       fechaDevolucion,
-      prendas: carrito.map((p) => ({
-        nombre: p.nombre,
-        cantidad: p.cantidad,
-        precio: p.precioAlquiler,
-        ajuste: p.observacion,
-      })),
+      // Mismo criterio que lo que se guarda: sin renglones en cantidad 0
+      prendas: carrito
+        .filter((p) => p.cantidad > 0)
+        .map((p) => ({
+          nombre: p.nombre,
+          cantidad: p.cantidad,
+          precio: p.precioAlquiler,
+          ajuste: p.observacion,
+        })),
       total,
       entregado: alquilerEditado?.AlquilerEntrega || 0,
       ...pagosTicket,

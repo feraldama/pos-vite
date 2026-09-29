@@ -11,6 +11,7 @@ import {
   getVentaCreditoByVentaId,
   getPagosByVentaCreditoId,
 } from "../../services/venta.service";
+import { escaparHtml } from "../../utils/html";
 
 interface VentasListProps {
   ventas: Venta[];
@@ -148,7 +149,7 @@ const VentasList = ({
           <div class="text-left">
             <p><strong>Cliente:</strong> ${
               venta.ClienteNombre
-                ? `${venta.ClienteNombre} ${venta.ClienteApellido}`
+                ? escaparHtml(`${venta.ClienteNombre} ${venta.ClienteApellido}`)
                 : `Cliente #${venta.ClienteId}`
             }</p>
             <p><strong>Fecha de Venta:</strong> ${new Date(

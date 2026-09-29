@@ -101,6 +101,13 @@ async function crearEntorno({ stock = 2 } = {}) {
     await q(`DELETE FROM alquilerprendas WHERE "AlquilerId" = ANY($1)`, [ids]);
     await q(`DELETE FROM alquiler WHERE "AlquilerId" = ANY($1)`, [ids]);
     await q(`DELETE FROM registrodiariocaja WHERE "CajaId" = $1`, [cajaId]);
+    // Ventas del cliente (tests del POS) y el stock por almacén del producto
+    const ventas = (
+      await q(`SELECT "VentaId" FROM venta WHERE "ClienteId" = $1`, [clienteId])
+    ).rows.map((r) => r.VentaId);
+    await q(`DELETE FROM ventaproducto WHERE "VentaId" = ANY($1)`, [ventas]);
+    await q(`DELETE FROM venta WHERE "VentaId" = ANY($1)`, [ventas]);
+    await q(`DELETE FROM productoalmacen WHERE "ProductoId" = $1`, [productoId]);
     await q(`DELETE FROM producto WHERE "ProductoId" = $1`, [productoId]);
     await q(`DELETE FROM clientes WHERE "ClienteId" = $1`, [clienteId]);
     await q(`DELETE FROM caja WHERE "CajaId" = $1`, [cajaId]);

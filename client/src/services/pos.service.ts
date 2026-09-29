@@ -20,6 +20,8 @@ export interface PosVentaPayload {
   pagoTipo?: string;
   total: number;
   entrega?: number;
+  /** Voucher: descuento sobre el total, no entra a caja */
+  descuento?: number;
   pagos: {
     efectivo?: number;
     pos?: number;

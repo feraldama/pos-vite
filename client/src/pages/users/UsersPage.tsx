@@ -15,6 +15,7 @@ import {
   getPerfilesByUsuario,
   deleteUsuarioPerfil,
 } from "../../services/usuarioperfil.service";
+import { escaparHtml } from "../../utils/html";
 
 // Tipos auxiliares
 interface Usuario {
@@ -168,9 +169,9 @@ export default function UsuariosPage() {
               icon: "warning",
               title: "No se puede eliminar",
               html: `<div style="text-align: left;">
-                <p><strong>${msg}</strong></p>
+                <p><strong>${escaparHtml(msg)}</strong></p>
                 <p style="margin-top: 10px;">Tablas con registros asociados:</p>
-                <pre style="text-align: left; margin-top: 5px; font-size: 12px;">${detallesTablas}</pre>
+                <pre style="text-align: left; margin-top: 5px; font-size: 12px;">${escaparHtml(detallesTablas)}</pre>
               </div>`,
               width: "600px",
             });

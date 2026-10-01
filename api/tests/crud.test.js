@@ -120,6 +120,39 @@ test("editar un producto sin imagen no rompe ni borra la que tenía", async () =
   await llamar(producto.deleteProducto, { params: { id } });
 });
 
+test("la imagen de un producto sobrevive el ida y vuelta", async () => {
+  // PostgreSQL devuelve bytea como Buffer; la API lo reconvierte a base64
+  // (convertirImagenes). Si eso se rompe, el formulario reenvía un objeto
+  // Buffer serializado y la imagen se corrompe.
+  const PNG =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  const base = {
+    ProductoCodigo: "IMG-1", ProductoNombre: "CON IMAGEN",
+    ProductoPrecioVenta: 1000, ProductoPrecioVentaMayorista: 1000,
+    ProductoPrecioUnitario: 0, ProductoPrecioPromedio: 0,
+    ProductoStock: 0, ProductoStockUnitario: 0, ProductoCantidadCaja: 1,
+    ProductoIVA: 10, ProductoStockMinimo: 0, LocalId: 2,
+  };
+
+  const creado = await llamar(producto.createProducto, {
+    body: { ...base, ProductoImagen: PNG },
+  });
+  const id = dato(creado).ProductoId;
+
+  const leido = await llamar(producto.getProductoById, { params: { id } });
+  assert.strictEqual(dato(leido).ProductoImagen, PNG, "debe volver como base64");
+
+  // Editar sin mandar la imagen no debe borrarla
+  await llamar(producto.updateProducto, {
+    params: { id },
+    body: { ...base, ProductoNombre: "EDITADO" },
+  });
+  const tras = await llamar(producto.getProductoById, { params: { id } });
+  assert.strictEqual(dato(tras).ProductoImagen, PNG, "no debe perderse al editar");
+
+  await llamar(producto.deleteProducto, { params: { id } });
+});
+
 test("borrar un producto referenciado avisa en vez de tirar un 500", async () => {
   const creado = await llamar(producto.createProducto, {
     body: {

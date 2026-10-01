@@ -27,22 +27,40 @@ const posRoutes = require("./routes/pos.routes");
 const app = express();
 
 // Configuración de CORS
-// Orígenes permitidos: se pueden agregar más desde el .env con
-// CORS_ORIGINS=http://mi-dominio.com,http://otra-ip:5173
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://181.123.61.216:5173",
-  ...(process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean),
-];
+// Se permite cualquier puerto de los hosts conocidos (la app puede servirse en
+// 5173 con `vite dev`, en 4173 con `vite preview` o detrás de Apache en el 80).
+// Con CORS_ORIGINS del .env se agregan orígenes extra:
+//   CORS_ORIGINS=http://mi-dominio.com,http://otra-ip:8080
+// y CORS_ORIGINS=* desactiva la lista blanca (la API usa tokens Bearer, no cookies).
+const extraOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const permitirTodos = extraOrigins.includes("*");
+
+// Hosts propios: cualquier puerto de estos hosts queda habilitado
+const allowedHosts = new Set([
+  "localhost",
+  "127.0.0.1",
+  "181.123.61.216",
+  "192.168.0.127",
+]);
+
+const esOrigenPermitido = (origin) => {
+  if (permitirTodos) return true;
+  if (extraOrigins.includes(origin)) return true;
+  try {
+    return allowedHosts.has(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+};
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Permite herramientas sin origin (Postman, curl, health checks)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || esOrigenPermitido(origin)) {
       return callback(null, true);
     }
     console.warn(`CORS: origen no permitido -> ${origin}`);

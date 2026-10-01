@@ -113,7 +113,7 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-50" />
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl p-6 relative">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl h-[calc(100dvh-2rem)] p-6 relative flex flex-col">
         <button
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl cursor-pointer"
           onClick={onClose}
@@ -190,9 +190,9 @@ const ClienteModal: React.FC<ClienteModalProps> = ({
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto rounded-lg">
           <table className="min-w-full bg-white">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-gray-50 text-gray-600 text-sm">
                 <th className="py-2 px-4 text-left">RUC</th>
                 <th className="py-2 px-4 text-left">Nombre</th>

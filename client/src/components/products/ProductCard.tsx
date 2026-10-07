@@ -8,7 +8,6 @@ interface ProductCardProps {
   precioMayorista?: number;
   clienteTipo?: string;
   imagen: string;
-  stock: number;
   onAdd: () => void;
 }
 
@@ -19,7 +18,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   precioMayorista,
   clienteTipo,
   imagen,
-  stock,
   onAdd,
 }) => {
   const mostrarPrecio =
@@ -96,10 +94,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           }}
         >
           Gs. {formatMiles(mostrarPrecio)}
-        </div>
-        <div style={{ fontSize: 15, color: "#888", marginTop: 4 }}>
-          Stock:{" "}
-          <span style={{ color: "#43a047", fontWeight: 600 }}>{stock}</span>
         </div>
       </div>
     </div>

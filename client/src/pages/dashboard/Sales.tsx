@@ -1118,7 +1118,6 @@ export default function Sales() {
                         ? `data:image/jpeg;base64,${p.ProductoImagen}`
                         : logo //"https://via.placeholder.com/80x120?text=Sin+Imagen"
                     }
-                    stock={p.ProductoStock}
                     onAdd={() =>
                       agregarProducto({
                         id: p.ProductoId,

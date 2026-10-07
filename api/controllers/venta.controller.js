@@ -164,6 +164,34 @@ exports.getVentasPendientesPorCliente = async (req, res) => {
   }
 };
 
+// Servicios realizados por producto entre dos fechas (YYYY-MM-DD, inclusive)
+exports.getServiciosResumen = async (req, res) => {
+  const { desde, hasta } = req.query;
+  const fechaValida = (f) => /^\d{4}-\d{2}-\d{2}$/.test(f || "");
+  if (!fechaValida(desde) || !fechaValida(hasta)) {
+    return res.status(400).json({
+      success: false,
+      message: "Las fechas desde y hasta son requeridas (AAAA-MM-DD)",
+    });
+  }
+  if (desde > hasta) {
+    return res.status(400).json({
+      success: false,
+      message: "La fecha desde no puede ser posterior a la fecha hasta",
+    });
+  }
+  try {
+    const servicios = await Venta.getServiciosResumen(desde, hasta);
+    res.json({ success: true, data: servicios });
+  } catch (error) {
+    console.error("Error al obtener el resumen de servicios:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener el resumen de servicios",
+    });
+  }
+};
+
 // Obtener deudas pendientes agrupadas por cliente
 exports.getDeudasPendientesPorCliente = async (req, res) => {
   try {

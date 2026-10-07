@@ -8,6 +8,7 @@ import {
   getRegistrosDiariosCajaPorRango,
   type RegistroDiarioCajaRow,
 } from "../../services/registros.service";
+import ServiciosRealizadosReport from "../../components/reportes/ServiciosRealizadosReport";
 
 interface DeudaCliente {
   ClienteId: number;
@@ -412,6 +413,8 @@ const ReportesPage: React.FC = () => {
       <h1 className="text-4xl font-bold mb-8 text-center">Reportes</h1>
 
       <div className="flex flex-col gap-10">
+        <ServiciosRealizadosReport />
+
         <section className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">
             Créditos pendientes a cobrar

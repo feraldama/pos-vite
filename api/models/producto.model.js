@@ -1,5 +1,19 @@
 const db = require("../config/db");
 
+// Cantidad vendida en el mes en curso. En Decorpar los productos son
+// servicios: esto reemplaza al stock, que las ventas ya no modifican.
+const VENDIDOS_MES = `(
+  SELECT COALESCE(SUM(vp.VentaProductoCantidad), 0)
+    FROM ventaproducto vp
+    JOIN venta v ON v.VentaId = vp.VentaId
+   WHERE vp.ProductoId = p.ProductoId
+     AND v.VentaFecha >= date_trunc('month', CURRENT_DATE)
+) AS VendidosMes`;
+
+// Columna para ORDER BY: las calculadas o de otra tabla van sin el alias p.
+const columnaOrden = (campo) =>
+  campo === "VendidosMes" ? "VendidosMes" : campo === "LocalNombre" ? "l.LocalNombre" : `p.${campo}`;
+
 const Producto = {
   getAll: () => {
     return new Promise((resolve, reject) => {
@@ -47,6 +61,7 @@ const Producto = {
         "ProductoImagen_GXI",
         "LocalId",
         "LocalNombre",
+        "VendidosMes",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -57,7 +72,7 @@ const Producto = {
         : "ASC";
 
       db.query(
-        `SELECT p.*, l.LocalNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId ORDER BY p.${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT p.*, l.LocalNombre, ${VENDIDOS_MES} FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId ORDER BY ${columnaOrden(sortField)} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -91,13 +106,11 @@ const Producto = {
           p.ProductoPrecioVentaMayorista,
           p.ProductoPrecioUnitario,
           p.ProductoPrecioPromedio,
-          p.ProductoStock,
-          p.ProductoStockUnitario,
           p.ProductoCantidadCaja,
           p.ProductoIVA,
-          p.ProductoStockMinimo,
           p.LocalId,
-          l.LocalNombre
+          l.LocalNombre,
+          ${VENDIDOS_MES}
         FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
       `;
@@ -145,6 +158,7 @@ const Producto = {
         "ProductoImagen_GXI",
         "LocalId",
         "LocalNombre",
+        "VendidosMes",
       ];
       const allowedSortOrders = ["ASC", "DESC"];
       const sortField = allowedSortFields.includes(sortBy)
@@ -155,12 +169,12 @@ const Producto = {
         : "ASC";
 
       const searchQuery = `
-        SELECT p.*, l.LocalNombre FROM producto p
+        SELECT p.*, l.LocalNombre, ${VENDIDOS_MES} FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
         WHERE p.ProductoNombre LIKE ? 
         OR p.ProductoCodigo LIKE ? 
         OR l.LocalNombre LIKE ?
-        ORDER BY p.${sortField} ${order}
+        ORDER BY ${columnaOrden(sortField)} ${order}
         LIMIT ? OFFSET ?
       `;
       const searchValue = `%${term}%`;

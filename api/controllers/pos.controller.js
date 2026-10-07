@@ -9,8 +9,9 @@
  * medias ni un movimiento de caja huérfano.
  *
  * Comportamiento replicado del GeneXus original (verificado contra la base):
- *  - El stock se descuenta de producto.ProductoStock. La tabla productoalmacen
- *    no se usa en esta instalación (siempre estuvo vacía).
+ *  - Las ventas NO tocan el stock: en Decorpar todos los artículos son
+ *    servicios (lavados, pulidas, delivery). La cantidad de servicios
+ *    realizados se obtiene de ventaproducto (ver /api/venta/servicios-resumen).
  *  - caja.CajaMonto se ajusta con cada movimiento, igual que hace
  *    registrodiariocaja.controller.js en la apertura/cierre.
  *  - Los textos de RegistroDiarioCajaDetalle respetan el formato histórico
@@ -109,14 +110,6 @@ async function registrarCaja(client, { cajaId, fecha, tipoGastoId, grupoId, deta
   );
   const signo = tipoGastoId === INGRESO ? 1 : -1;
   await client.q(`UPDATE caja SET CajaMonto = CajaMonto + ? WHERE CajaId = ?`, [signo * importe, cajaId]);
-}
-
-/** Ajusta producto.ProductoStock. `delta` negativo descuenta. */
-async function ajustarStock(client, productoId, delta) {
-  await client.q(`UPDATE producto SET ProductoStock = ProductoStock + ? WHERE ProductoId = ?`, [
-    Math.round(delta),
-    productoId,
-  ]);
 }
 
 function validarItems(items) {
@@ -234,7 +227,6 @@ exports.confirmarVenta = async (req, res) => {
             it.unidad || "N",
           ]
         );
-        await ajustarStock(client, it.productoId, -Math.abs(it.cantidad));
       }
 
       // Venta a crédito: se abre el crédito. Si el cliente entrega algo en el
@@ -386,8 +378,8 @@ exports.cobrarCredito = async (req, res) => {
 /**
  * POST /api/pos/anular-venta
  *
- * Anula una venta por completo y en una sola transacción: repone el stock,
- * devuelve el dinero a la caja, borra los movimientos y el crédito asociado, y
+ * Anula una venta por completo y en una sola transacción: devuelve el dinero
+ * a la caja, borra los movimientos y el crédito asociado, y
  * elimina la venta.
  *
  * Antes esto eran dos llamadas HTTP (deshacer efectos + DELETE /api/venta/:id).
@@ -410,15 +402,6 @@ exports.anularVenta = async (req, res) => {
         [id]
       );
       if (!venta.rows.length) throw error("La venta no existe o ya fue anulada", 404);
-
-      // Reponer el stock de cada producto de la venta
-      const productos = await client.q(
-        `SELECT ProductoId, VentaProductoCantidad FROM ventaproducto WHERE VentaId = ?`,
-        [id]
-      );
-      for (const vp of productos.rows) {
-        await ajustarStock(client, vp.ProductoId, Math.abs(vp.VentaProductoCantidad));
-      }
 
       // Devolver a la caja lo que había ingresado y borrar los movimientos.
       // Se filtra por VentaId, no por el texto del detalle: los movimientos

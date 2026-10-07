@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import SearchButton from "../common/Input/SearchButton";
 import ActionButton from "../common/Button/ActionButton";
 import DataTable from "../common/Table/DataTable";
-import { PlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import PasswordInput from "../common/Input/PasswordInput";
 import { getLocales } from "../../services/locales.service";
 import { getPerfiles } from "../../services/perfiles.service";
 import { getPerfilesByUsuario } from "../../services/usuarioperfil.service";
@@ -76,7 +77,6 @@ export default function UsuariosList({
     UsuarioEstado: "A" as "A" | "I",
     LocalId: 1,
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [locales, setLocales] = useState<
     { LocalId: number; LocalNombre: string }[]
   >([]);
@@ -473,31 +473,17 @@ export default function UsuariosList({
                           </span>
                         )}
                       </label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="UsuarioContrasena"
-                          id="UsuarioContrasena"
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 pr-10"
-                          value={formData.UsuarioContrasena}
-                          onChange={handleInputChange}
-                          required={!currentUser}
-                          placeholder={
-                            currentUser ? "Nueva contraseña" : "Contraseña"
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
-                        >
-                          {showPassword ? (
-                            <EyeSlashIcon className="h-5 w-5" />
-                          ) : (
-                            <EyeIcon className="h-5 w-5" />
-                          )}
-                        </button>
-                      </div>
+                      <PasswordInput
+                        name="UsuarioContrasena"
+                        id="UsuarioContrasena"
+                        className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5"
+                        value={formData.UsuarioContrasena}
+                        onChange={handleInputChange}
+                        required={!currentUser}
+                        placeholder={
+                          currentUser ? "Nueva contraseña" : "Contraseña"
+                        }
+                      />
                     </div>
                   )}
                   <div className="col-span-6">

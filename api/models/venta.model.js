@@ -415,6 +415,37 @@ const Venta = {
       });
     });
   },
+
+  // Servicios realizados (cantidad e importe por producto) en un rango de
+  // fechas. Las ventas anuladas se borran, así que no hace falta filtrarlas.
+  getServiciosResumen: (desde, hasta) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT
+          p.ProductoId,
+          p.ProductoCodigo,
+          p.ProductoNombre,
+          SUM(vp.VentaProductoCantidad) AS Cantidad,
+          SUM(vp.VentaProductoPrecioTotal) AS Total
+        FROM ventaproducto vp
+        JOIN venta v ON v.VentaId = vp.VentaId
+        JOIN producto p ON p.ProductoId = vp.ProductoId
+        WHERE v.VentaFecha BETWEEN ? AND ?
+        GROUP BY p.ProductoId, p.ProductoCodigo, p.ProductoNombre
+        ORDER BY Cantidad DESC, p.ProductoNombre ASC
+      `;
+      db.query(query, [desde, hasta], (err, results) => {
+        if (err) return reject(err);
+        resolve(
+          results.map((row) => ({
+            ...row,
+            Cantidad: Number(row.Cantidad),
+            Total: Number(row.Total),
+          }))
+        );
+      });
+    });
+  },
 };
 
 module.exports = Venta;

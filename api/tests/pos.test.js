@@ -15,6 +15,7 @@ const assert = require("node:assert");
 process.env.DB_NAME = `${process.env.DB_NAME || "decorpar"}_test`;
 
 const pos = require("../controllers/pos.controller");
+const Venta = require("../models/venta.model");
 const { pool } = require("../config/db");
 
 const HOY = new Date().toISOString().slice(0, 10);
@@ -63,7 +64,7 @@ const ventaContado = (total = 50000, cantidad = 1) => ({
 
 test.after(() => pool.end());
 
-test("una venta al contado graba la venta, descuenta stock y suma a la caja", async () => {
+test("una venta al contado graba la venta, no toca el stock y suma a la caja", async () => {
   const stock0 = await stock();
   const caja0 = await caja();
 
@@ -76,7 +77,7 @@ test("una venta al contado graba la venta, descuenta stock y suma a la caja", as
   assert.strictEqual(Number(v.Total), 50000);
   assert.strictEqual(Number(v.VentaEntrega), 50000, "al contado se entrega todo");
 
-  assert.strictEqual(await stock(), stock0 - 2, "descuenta la cantidad vendida");
+  assert.strictEqual(await stock(), stock0, "los servicios no llevan stock");
   assert.strictEqual(await caja(), caja0 + 50000, "el efectivo entra a la caja");
 
   const mov = await uno('SELECT * FROM registrodiariocaja WHERE "VentaId" = $1', [r.body.ventaId]);
@@ -187,7 +188,7 @@ test("el cobro de crédito imputa el saldo y lo registra en la caja", async () =
   await llamar(pos.anularVenta, { id });
 });
 
-test("anular deja stock y caja como estaban, y borra todo el rastro", async () => {
+test("anular deja la caja como estaba, no toca el stock y borra todo el rastro", async () => {
   const stock0 = await stock();
   const caja0 = await caja();
   const movs0 = await contar("registrodiariocaja");
@@ -209,7 +210,7 @@ test("anular deja stock y caja como estaban, y borra todo el rastro", async () =
   const r = await llamar(pos.anularVenta, { id });
   assert.strictEqual(r.status, 200);
 
-  assert.strictEqual(await stock(), stock0, "el stock vuelve al valor previo");
+  assert.strictEqual(await stock(), stock0, "el stock no cambia");
   assert.strictEqual(await caja(), caja0, "la caja vuelve al saldo previo");
   assert.strictEqual(await contar("registrodiariocaja"), movs0, "no quedan movimientos sueltos");
   assert.strictEqual(
@@ -221,7 +222,7 @@ test("anular deja stock y caja como estaban, y borra todo el rastro", async () =
   assert.strictEqual(await contar("ventacreditopago"), 0);
 });
 
-test("anular dos veces no repone el stock de nuevo", async () => {
+test("anular dos veces rechaza la segunda sin tocar el stock", async () => {
   const stock0 = await stock();
   const venta = await llamar(pos.confirmarVenta, ventaContado(50000, 3));
   const id = venta.body.ventaId;
@@ -232,11 +233,31 @@ test("anular dos veces no repone el stock de nuevo", async () => {
 
   const segunda = await llamar(pos.anularVenta, { id });
   assert.strictEqual(segunda.status, 404, "la segunda anulación se rechaza");
-  assert.strictEqual(await stock(), stock0, "el stock no se infla");
+  assert.strictEqual(await stock(), stock0, "el stock no cambia");
 
   const tercera = await llamar(pos.anularVenta, { id });
   assert.strictEqual(tercera.status, 404);
   assert.strictEqual(await stock(), stock0);
+});
+
+test("el resumen de servicios cuenta lo vendido en el rango y excluye lo anulado", async () => {
+  const AYER = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const delProducto = async (desde = HOY, hasta = HOY) =>
+    (await Venta.getServiciosResumen(desde, hasta)).find((s) => s.ProductoId === PRODUCTO) || {
+      Cantidad: 0,
+      Total: 0,
+    };
+  const antes = await delProducto();
+  const ayerAntes = await delProducto(AYER, AYER);
+
+  const r = await llamar(pos.confirmarVenta, ventaContado(60000, 3));
+  const despues = await delProducto();
+  assert.strictEqual(despues.Cantidad, antes.Cantidad + 3);
+  assert.strictEqual(despues.Total, antes.Total + 60000);
+  assert.deepStrictEqual(await delProducto(AYER, AYER), ayerAntes, "respeta el rango de fechas");
+
+  await llamar(pos.anularVenta, { id: r.body.ventaId });
+  assert.strictEqual((await delProducto()).Cantidad, antes.Cantidad, "lo anulado no cuenta");
 });
 
 test("anular no toca los movimientos históricos con el mismo texto", async () => {

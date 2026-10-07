@@ -22,6 +22,7 @@ interface Producto {
   ProductoCantidadCaja?: number;
   ProductoIVA?: number;
   ProductoStockMinimo?: number;
+  VendidosMes?: number;
   ProductoImagen?: string;
   ProductoImagen_GXI?: string;
   LocalId: number;
@@ -199,8 +200,9 @@ export default function ProductsList({
         `Gs. ${item.ProductoPrecioVenta?.toLocaleString()}`,
     },
     {
-      key: "ProductoStock",
-      label: "Stock",
+      key: "VendidosMes",
+      label: "Vendidos (mes)",
+      render: (item: Producto) => String(item.VendidosMes ?? 0),
     },
     {
       key: "LocalId",
@@ -409,39 +411,6 @@ export default function ProductsList({
                           ProductoPrecioPromedio: Number(raw),
                         }));
                       }}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStock"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStock"
-                      id="ProductoStock"
-                      value={formData.ProductoStock}
-                      onChange={handleInputChange}
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      required
-                    />
-                  </div>
-                  <div className="col-span-6 sm:col-span-3">
-                    <label
-                      htmlFor="ProductoStockMinimo"
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Stock Mínimo
-                    </label>
-                    <input
-                      type="number"
-                      name="ProductoStockMinimo"
-                      id="ProductoStockMinimo"
-                      value={formData.ProductoStockMinimo}
-                      onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />
                   </div>

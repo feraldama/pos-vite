@@ -11,5 +11,10 @@
   --color-senary: #0f172a;
   --color-septenary: #0f172a;
 
+  /* Colores de marca Decorpar (tomados del logo) */
+  --color-brand: #2e4934;
+  --color-brand-hover: #243a29;
+  --color-brand-accent: #fbb040;
+
   --font-baloo: "Baloo 2", sans-serif;
 }

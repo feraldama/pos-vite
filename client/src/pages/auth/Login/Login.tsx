@@ -1,12 +1,22 @@
-import { useState, useEffect, useRef } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import { useState, useRef } from "react";
+import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 import { useAuth } from "../../../contexts/useAuth";
 import { useNavigate } from "react-router-dom";
+import {
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import PasswordInput from "../../../components/common/Input/PasswordInput";
+import logo from "../../../assets/img/logo.jpg";
 
 interface Credentials {
   email: string;
   password: string;
 }
+
+const inputClass =
+  "block h-11 w-full rounded-md bg-white px-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-brand";
 
 function Login() {
   const [credentials, setCredentials] = useState<Credentials>({
@@ -14,77 +24,107 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [capsLock, setCapsLock] = useState(false);
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
-  const emailInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (emailInputRef.current) {
-      emailInputRef.current.focus();
-    }
-  }, []);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setCredentials({
-      ...credentials,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setCredentials((prev) => ({ ...prev, [name]: value }));
+    if (error) setError("");
+  };
+
+  const handlePasswordKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    setCapsLock(e.getModifierState("CapsLock"));
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     try {
       await login(credentials);
       navigate("/dashboard");
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message || "Credenciales incorrectas");
+      if (error instanceof TypeError) {
+        // fetch lanza TypeError cuando no hay conexión con el servidor
+        setError("No se pudo conectar con el servidor. Intente nuevamente.");
+      } else if (error instanceof Error && error.message) {
+        setError(error.message);
       } else {
         setError("Credenciales incorrectas");
       }
-      setTimeout(() => setError(""), 5000);
+      passwordInputRef.current?.select();
     }
   };
 
   return (
-    <div className="login-container">
-      {/* <form onSubmit={handleSubmit}> */}
-      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+    <div className="flex min-h-dvh bg-gray-50">
+      {/* Panel de marca (solo escritorio) */}
+      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-brand p-12 text-white lg:flex">
+        <div
+          className="absolute -right-24 -bottom-24 h-96 w-96 rounded-full bg-brand-accent/15"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-white/5"
+          aria-hidden="true"
+        />
+        <span className="relative text-sm font-semibold tracking-widest text-brand-accent uppercase">
+          Decorpar
+        </span>
+        <div className="relative max-w-md">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Gestión de ventas y caja
+          </h1>
+          <p className="mt-4 text-lg text-white/80">
+            Ventas, créditos, cajas y reportes en un solo lugar.
+          </p>
+        </div>
+        <p className="relative text-sm text-white/60">
+          © {new Date().getFullYear()} Decorpar
+        </p>
+      </aside>
+
+      {/* Formulario */}
+      <main className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:max-w-xl lg:px-16">
+        <div className="mx-auto w-full max-w-sm">
           <img
-            alt="Your Company"
-            src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-            className="mx-auto h-10 w-auto"
+            alt="Decorpar"
+            src={logo}
+            width={64}
+            height={64}
+            className="h-16 w-16 object-contain"
           />
-          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
+          <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">
             Iniciar sesión
           </h2>
-        </div>
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+          <p className="mt-1 text-sm text-gray-600">
+            Ingrese su usuario y contraseña para continuar.
+          </p>
+
           {error && (
             <div
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              className="mt-6 flex items-start gap-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800"
               role="alert"
             >
-              <strong className="font-bold">¡Atención! </strong>
-              <span className="block sm:inline">{error}</span>
-              <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                <svg
-                  className="fill-current h-6 w-6 text-red-500 cursor-pointer"
-                  role="button"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  onClick={() => setError("")}
-                >
-                  <title>Cerrar</title>
-                  <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
-                </svg>
-              </span>
+              <ExclamationCircleIcon
+                className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
+                aria-hidden="true"
+              />
+              <p className="flex-1">{error}</p>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                className="-m-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-red-700 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-red-700"
+                aria-label="Cerrar mensaje"
+              >
+                <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+              </button>
             </div>
           )}
-          {/* <div className="alert error">{error}</div> */}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div>
               <label
                 htmlFor="email"
@@ -94,53 +134,98 @@ function Login() {
               </label>
               <div className="mt-2">
                 <input
-                  ref={emailInputRef}
+                  autoFocus
                   id="email"
                   name="email"
                   type="text"
                   value={credentials.email}
                   onChange={handleChange}
                   required
-                  autoComplete="email"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-invalid={error ? true : undefined}
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Contraseña
-                </label>
-              </div>
+              <label
+                htmlFor="password"
+                className="block text-sm/6 font-medium text-gray-900"
+              >
+                Contraseña
+              </label>
               <div className="mt-2">
-                <input
+                <PasswordInput
+                  ref={passwordInputRef}
                   id="password"
                   name="password"
-                  type="password"
                   value={credentials.password}
                   onChange={handleChange}
+                  onKeyDown={handlePasswordKey}
+                  onKeyUp={handlePasswordKey}
+                  onBlur={() => setCapsLock(false)}
                   required
                   autoComplete="current-password"
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={capsLock ? "caps-lock-warning" : undefined}
+                  className={inputClass}
                 />
               </div>
+              {capsLock && (
+                <p
+                  id="caps-lock-warning"
+                  className="mt-2 flex items-center gap-1.5 text-sm text-amber-800"
+                >
+                  <ExclamationTriangleIcon
+                    className="h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  Bloq Mayús está activado
+                </p>
+              )}
             </div>
 
-            <div>
-              <button
-                type="submit"
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Ingresar
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-base font-semibold text-white shadow-xs transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading && (
+                <svg
+                  className="h-5 w-5 motion-safe:animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    className="opacity-25"
+                  />
+                  <path
+                    d="M4 12a8 8 0 0 1 8-8"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
+              {loading ? "Ingresando…" : "Ingresar"}
+            </button>
           </form>
+
+          <p className="mt-10 text-center text-xs text-gray-500 lg:hidden">
+            © {new Date().getFullYear()} Decorpar
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

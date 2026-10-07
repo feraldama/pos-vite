@@ -8,11 +8,9 @@ export interface ProductoExport {
   ProductoPrecioVentaMayorista?: number;
   ProductoPrecioUnitario?: number;
   ProductoPrecioPromedio?: number;
-  ProductoStock?: number;
-  ProductoStockUnitario?: number;
   ProductoCantidadCaja?: number;
   ProductoIVA?: number;
-  ProductoStockMinimo?: number;
+  VendidosMes?: number;
   LocalId?: number;
   LocalNombre?: string;
   [key: string]: unknown;
@@ -57,13 +55,6 @@ const COLUMNAS: {
     numero: true,
     moneda: true,
   },
-  { header: "Stock", key: "ProductoStock", width: 12, numero: true },
-  {
-    header: "Stock Unitario",
-    key: "ProductoStockUnitario",
-    width: 15,
-    numero: true,
-  },
   {
     header: "Cantidad por Caja",
     key: "ProductoCantidadCaja",
@@ -72,9 +63,9 @@ const COLUMNAS: {
   },
   { header: "IVA", key: "ProductoIVA", width: 8, numero: true },
   {
-    header: "Stock Mínimo",
-    key: "ProductoStockMinimo",
-    width: 14,
+    header: "Vendidos (mes)",
+    key: "VendidosMes",
+    width: 16,
     numero: true,
   },
   { header: "Local", key: "LocalNombre", width: 25 },

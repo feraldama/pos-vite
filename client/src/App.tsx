@@ -27,6 +27,7 @@ import ProductsPage from "./pages/products/ProductsPage";
 import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
+import PromocionesPage from "./pages/promociones/PromocionesPage";
 import SystemBlocked from "./components/common/SystemBlocked";
 
 function App() {
@@ -73,6 +74,7 @@ function App() {
             <Route path="/modifications/ventas" element={<VentasPage />} />
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/promociones" element={<PromocionesPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

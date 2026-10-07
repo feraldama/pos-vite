@@ -1,6 +1,6 @@
 /**
  * Crea (o recrea) la base de pruebas `<DB_NAME>_test` con el esquema de
- * db/postgres/01_schema.sql y un juego mínimo de datos.
+ * db/postgres/*.sql (en orden) y un juego mínimo de datos.
  *
  *   node api/scripts/setup-test-db.cjs
  *
@@ -13,7 +13,13 @@ const { Client } = require("pg");
 const { resincronizarSecuencias, secuenciasDesincronizadas } = require("./lib/sequences.cjs");
 
 const BASE_TEST = `${process.env.DB_NAME || "decorpar"}_test`;
-const ESQUEMA = path.join(__dirname, "..", "..", "db", "postgres", "01_schema.sql");
+// 01_schema.sql y luego las migraciones (02_..., 03_...) en orden de nombre
+const DIR_ESQUEMA = path.join(__dirname, "..", "..", "db", "postgres");
+const ESQUEMAS = fs
+  .readdirSync(DIR_ESQUEMA)
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .map((f) => path.join(DIR_ESQUEMA, f));
 
 const conexion = (database) => ({
   host: process.env.DB_HOST || "localhost",
@@ -40,7 +46,8 @@ INSERT INTO tipogastogrupo ("TipoGastoId","TipoGastoGrupoId","TipoGastoGrupoDesc
   (2,1,'VENTA'),(2,2,'APERTURA DE CAJA'),(2,3,'VENTA CREDITO'),
   (2,4,'VENTA POS'),(2,5,'VOUCHER'),(2,6,'TRANSFER');
 INSERT INTO producto ("ProductoId","ProductoCodigo","ProductoNombre","ProductoPrecioVenta","ProductoPrecioVentaMayorista","ProductoPrecioUnitario","ProductoPrecioPromedio","ProductoStock","ProductoStockUnitario","ProductoCantidadCaja","ProductoIVA","ProductoStockMinimo","LocalId")
-  VALUES (1,'SRV-1','SERVICIO DE PRUEBA',50000,50000,0,0,0,0,1,10,0,2);
+  VALUES (1,'SRV-1','SERVICIO DE PRUEBA',50000,50000,0,0,0,0,1,10,0,2),
+         (2,'SRV-2','OTRO SERVICIO',30000,30000,0,0,0,0,1,10,0,2);
 -- Un movimiento histórico con el mismo texto que generaría la venta nro 1:
 -- sirve para comprobar que anular la venta 1 no lo toca.
 INSERT INTO registrodiariocaja ("RegistroDiarioCajaId","CajaId","RegistroDiarioCajaFecha","TipoGastoId","TipoGastoGrupoId","RegistroDiarioCajaDetalle","RegistroDiarioCajaMonto","UsuarioId","VentaId")
@@ -57,7 +64,9 @@ async function main() {
 
   const test = new Client(conexion(BASE_TEST));
   await test.connect();
-  await test.query(fs.readFileSync(ESQUEMA, "utf8"));
+  for (const archivo of ESQUEMAS) {
+    await test.query(fs.readFileSync(archivo, "utf8"));
+  }
   console.log("Esquema cargado.");
   await test.query(SEMILLA);
   console.log("Datos de prueba cargados.");

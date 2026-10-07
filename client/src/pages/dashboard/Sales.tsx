@@ -23,6 +23,10 @@ import PagoModal from "../../components/common/PagoModal";
 import { getCombos } from "../../services/combos.service";
 import { confirmarVenta, mensajeDeError } from "../../services/pos.service";
 import {
+  getEstadoPromocionesCliente,
+  type EstadoPromocion,
+} from "../../services/promociones.service";
+import {
   formatMiles,
   generatePresupuestoPDF,
   type CarritoItem,
@@ -37,6 +41,8 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
+  ClienteFechaNacimiento?: string | null;
+  ClienteVehiculo?: string;
 }
 
 interface Caja {
@@ -66,6 +72,8 @@ export default function Sales() {
       imagen: string;
       stock: number;
       cantidad: number;
+      /** Línea que es el beneficio de una promoción: precio fijo, cantidad 1 */
+      promocionId?: number;
     }[]
   >([]);
   const [busqueda, setBusqueda] = useState("");
@@ -111,6 +119,7 @@ export default function Sales() {
   const navigate = useNavigate();
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [combos, setCombos] = useState<Combo[]>([]);
+  const [promosCliente, setPromosCliente] = useState<EstadoPromocion[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
@@ -172,11 +181,11 @@ export default function Sales() {
     }
 
     // Para productos normales, verificar si ya existe en el carrito
-    const existe = carrito.find((p) => p.id === producto.id);
+    const existe = carrito.find((p) => p.id === producto.id && !p.promocionId);
     if (existe) {
       setCarrito(
         carrito.map((p) =>
-          p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
+          p.carritoId === existe.carritoId ? { ...p, cantidad: p.cantidad + 1 } : p
         )
       );
       setSelectedProductId(producto.id);
@@ -201,7 +210,7 @@ export default function Sales() {
   const cambiarCantidad = (carritoId: string, cantidad: number) => {
     setCarrito(
       carrito.map((p) =>
-        p.carritoId === carritoId
+        p.carritoId === carritoId && !p.promocionId
           ? { ...p, cantidad: Math.max(1, cantidad) }
           : p
       )
@@ -216,13 +225,18 @@ export default function Sales() {
     );
   };
 
-  const total = carrito.reduce((acc, p) => {
+  /** Precio unitario y total de una línea del carrito. */
+  const precioLinea = (p: (typeof carrito)[number]) => {
+    // El beneficio de una promoción tiene precio fijo (ya validado por la API)
+    if (p.promocionId) return { unitario: p.precio, total: p.precio * p.cantidad };
     const productoOriginal = productos.find((prod) => prod.ProductoId === p.id);
-    const precioUnitario = productosPrecioEditable.includes(p.id)
+    const unitario = productosPrecioEditable.includes(p.id)
       ? p.precio
       : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-    return acc + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
-  }, 0);
+    return { unitario, total: calcularPrecioConCombo(p.id, p.cantidad, unitario) };
+  };
+
+  const total = carrito.reduce((acc, p) => acc + precioLinea(p).total, 0);
 
   useEffect(() => {
     setLoading(true);
@@ -265,6 +279,8 @@ export default function Sales() {
         ClienteTelefono: clienteData.ClienteTelefono,
         ClienteTipo: clienteData.ClienteTipo,
         UsuarioId: clienteData.UsuarioId,
+        ClienteFechaNacimiento: clienteData.ClienteFechaNacimiento,
+        ClienteVehiculo: clienteData.ClienteVehiculo,
       });
       // Recargar la lista de clientes
       const response = await getAllClientesSinPaginacion();
@@ -291,8 +307,9 @@ export default function Sales() {
 
   useEffect(() => {
     if (!clienteSeleccionado) return;
+    // Los beneficios son del cliente anterior: se quitan al cambiar de cliente
     setCarrito((carritoActual) =>
-      carritoActual.map((item) => {
+      carritoActual.filter((item) => !item.promocionId).map((item) => {
         const productoOriginal = productos.find(
           (p) => p.ProductoId === item.id
         );
@@ -307,6 +324,129 @@ export default function Sales() {
     );
   }, [clienteSeleccionado, productos]);
 
+  // Promociones del cliente: se consultan al elegirlo y se avisa al cajero
+  useEffect(() => {
+    const clienteId = Number(clienteSeleccionado?.ClienteId);
+    if (!clienteId || clienteId === 1) {
+      setPromosCliente([]);
+      return;
+    }
+    let cancelado = false;
+    const hoy = new Date();
+    const fecha = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(hoy.getDate()).padStart(2, "0")}`;
+    getEstadoPromocionesCliente(clienteId, fecha)
+      .then((estado) => {
+        if (cancelado) return;
+        setPromosCliente(estado);
+        const disponibles = estado.filter((e) => e.disponible);
+        if (!disponibles.length) return;
+        const lista = document.createElement("div");
+        for (const d of disponibles) {
+          const item = document.createElement("p");
+          const titulo = document.createElement("b");
+          titulo.textContent = `${d.PromocionTipo === "CU" ? "🎂" : "🎁"} ${
+            d.PromocionNombre
+          }`;
+          item.appendChild(titulo);
+          if (d.PromocionMensaje) {
+            item.appendChild(document.createElement("br"));
+            const msj = document.createElement("small");
+            msj.textContent = d.PromocionMensaje;
+            item.appendChild(msj);
+          }
+          lista.appendChild(item);
+        }
+        Swal.fire({
+          icon: "info",
+          title: "¡El cliente tiene un beneficio!",
+          html: lista,
+          footer: "Aplicalo desde el recuadro de promociones, debajo del total.",
+          confirmButtonColor: "#2563eb",
+        });
+      })
+      .catch(() => {
+        if (!cancelado) setPromosCliente([]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [clienteSeleccionado]);
+
+  const aplicarPromocion = async (promo: EstadoPromocion) => {
+    const tipoCliente = clienteSeleccionado?.ClienteTipo || "MI";
+    const precioConBeneficio = (lista: number) =>
+      promo.PromocionBeneficio === "R"
+        ? 0
+        : Math.round(lista * (1 - promo.PromocionDescuento / 100));
+    // Sin productos configurados: vale para cualquiera
+    const opciones = promo.productosBeneficio.length
+      ? promo.productosBeneficio
+      : productos.map((p) => {
+          const lista =
+            (tipoCliente === "MA"
+              ? p.ProductoPrecioVentaMayorista
+              : p.ProductoPrecioVenta) || 0;
+          return {
+            ProductoId: p.ProductoId,
+            ProductoNombre: p.ProductoNombre,
+            precioLista: lista,
+            precio: precioConBeneficio(lista),
+          };
+        });
+    if (!opciones.length) return;
+
+    let elegido = opciones[0];
+    if (opciones.length > 1) {
+      const { value } = await Swal.fire({
+        title: promo.PromocionNombre,
+        text:
+          promo.PromocionBeneficio === "R"
+            ? "¿Qué se le regala?"
+            : `¿A qué producto se aplica el ${promo.PromocionDescuento}% de descuento?`,
+        input: "select",
+        inputOptions: Object.fromEntries(
+          opciones.map((o) => [
+            String(o.ProductoId),
+            `${o.ProductoNombre} — Gs. ${formatMiles(o.precio)}${
+              o.precioLista !== o.precio
+                ? ` (antes ${formatMiles(o.precioLista)})`
+                : ""
+            }`,
+          ])
+        ),
+        inputPlaceholder: "Elegí un producto",
+        showCancelButton: true,
+        confirmButtonText: "Aplicar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#16a34a",
+        inputValidator: (v) => (v ? undefined : "Elegí un producto"),
+      });
+      if (!value) return;
+      elegido =
+        opciones.find((o) => String(o.ProductoId) === value) || opciones[0];
+    }
+
+    const producto = productos.find((p) => p.ProductoId === elegido.ProductoId);
+    setCarrito((actual) => [
+      ...actual.filter((item) => item.promocionId !== promo.PromocionId),
+      {
+        id: elegido.ProductoId,
+        carritoId: `promo-${promo.PromocionId}-${Date.now()}`,
+        nombre: `${elegido.ProductoNombre} (${promo.PromocionNombre})`,
+        precio: elegido.precio,
+        imagen: producto?.ProductoImagen
+          ? `data:image/jpeg;base64,${producto.ProductoImagen}`
+          : logo,
+        stock: 0,
+        cantidad: 1,
+        promocionId: promo.PromocionId,
+      },
+    ]);
+  };
+
   // Simulación de items y cliente seleccionados (ajusta según tu lógica real)
   const cartItems = carrito.map((p) => ({
     id: p.id,
@@ -316,6 +456,7 @@ export default function Sales() {
     price: p.precio,
     unidad: "U",
     totalPrice: p.precio * p.cantidad,
+    promocionId: p.promocionId,
   }));
 
   function getSubtotal(items: Array<{ totalPrice: number }>): number {
@@ -358,6 +499,7 @@ export default function Sales() {
       precio: producto.salePrice,
       precioTotal: producto.totalPrice,
       unidad: producto.unidad,
+      promocionId: producto.promocionId,
     }));
 
     const total = getSubtotal(cartItems);
@@ -499,10 +641,7 @@ export default function Sales() {
         (prod) => prod.ProductoId === p.id
       );
       if (!productoOriginal) return [p.nombre, p.cantidad, "", ""];
-      const precioUnitario = productosPrecioEditable.includes(p.id)
-        ? p.precio
-        : productoOriginal.ProductoPrecioVenta ?? p.precio;
-      const subtotal = calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
+      const { unitario: precioUnitario, total: subtotal } = precioLinea(p);
       return [
         p.nombre,
         p.cantidad,
@@ -533,15 +672,7 @@ export default function Sales() {
     });
 
     // Total de la compra para el PDF
-    const totalCost = carrito.reduce((sum, p) => {
-      const productoOriginal = productos.find(
-        (prod) => prod.ProductoId === p.id
-      );
-      const precioUnitario = productosPrecioEditable.includes(p.id)
-        ? p.precio
-        : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-      return sum + calcularPrecioConCombo(p.id, p.cantidad, precioUnitario);
-    }, 0);
+    const totalCost = carrito.reduce((sum, p) => sum + precioLinea(p).total, 0);
     const lastAutoTable = (
       doc as unknown as { lastAutoTable: { finalY: number } }
     ).lastAutoTable;
@@ -600,7 +731,7 @@ export default function Sales() {
     if (selectedProductId === null) return;
     setCarrito((prev) =>
       prev.map((item) => {
-        if (item.id !== selectedProductId) return item;
+        if (item.id !== selectedProductId || item.promocionId) return item;
         let nuevaCantidad = String(item.cantidad);
         if (valor === "C" || valor === "c") {
           nuevaCantidad = "0";
@@ -698,20 +829,10 @@ export default function Sales() {
               </thead>
               <tbody>
                 {carrito.map((p, idx) => {
-                  const productoOriginal = productos.find(
-                    (prod) => prod.ProductoId === p.id
-                  );
-                  const precioUnitario = productosPrecioEditable.includes(p.id)
-                    ? p.precio
-                    : productoOriginal?.ProductoPrecioVenta ?? p.precio;
-                  const precioTotal = calcularPrecioConCombo(
-                    p.id,
-                    p.cantidad,
-                    precioUnitario
-                  );
+                  const { total: precioTotal } = precioLinea(p);
                   return (
                     <tr
-                      key={p.id}
+                      key={p.carritoId}
                       style={{
                         background: "#fff",
                         borderBottom:
@@ -787,6 +908,11 @@ export default function Sales() {
                                 {p.nombre}
                               </div>
                             )}
+                            {p.promocionId && (
+                              <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                                🎁 Promoción
+                              </span>
+                            )}
                             <div
                               style={{
                                 color: "#e53935",
@@ -807,6 +933,13 @@ export default function Sales() {
                       <td
                         style={{ padding: "20px 0", verticalAlign: "middle" }}
                       >
+                        {p.promocionId ? (
+                          <span
+                            style={{ fontSize: 16, fontWeight: 600, paddingLeft: 38 }}
+                          >
+                            1
+                          </span>
+                        ) : (
                         <div
                           style={{
                             display: "flex",
@@ -897,6 +1030,7 @@ export default function Sales() {
                             +
                           </button>
                         </div>
+                        )}
                       </td>
                       <td
                         style={{
@@ -1012,6 +1146,84 @@ export default function Sales() {
               Presupuesto
             </button>
           </div>
+          {/* Promociones del cliente */}
+          {promosCliente.some(
+            (pr) =>
+              pr.disponible ||
+              (pr.PromocionTipo === "FR" && pr.requerido) ||
+              pr.motivo?.startsWith("Ya usó")
+          ) && (
+            <div className="mt-2 space-y-1">
+              {promosCliente.map((pr) => {
+                const aplicada = carrito.some(
+                  (c) => c.promocionId === pr.PromocionId
+                );
+                if (pr.disponible) {
+                  return (
+                    <div
+                      key={pr.PromocionId}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm"
+                    >
+                      <span className="text-green-900">
+                        {pr.PromocionTipo === "CU" ? "🎂" : "🎁"}{" "}
+                        <b>{pr.PromocionNombre}</b>
+                        {pr.PromocionTipo === "FR" &&
+                          ` (${pr.progreso} de ${pr.requerido})`}
+                      </span>
+                      <button
+                        className="shrink-0 rounded-md bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1 disabled:opacity-50"
+                        disabled={aplicada}
+                        onClick={() => aplicarPromocion(pr)}
+                      >
+                        {aplicada ? "Aplicada" : "Aplicar"}
+                      </button>
+                    </div>
+                  );
+                }
+                if (pr.PromocionTipo === "FR" && pr.requerido) {
+                  return (
+                    <div
+                      key={pr.PromocionId}
+                      className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                    >
+                      🔁 <b>{pr.PromocionNombre}</b>: {pr.progreso} de{" "}
+                      {pr.requerido}
+                      <div className="mt-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{
+                            width: `${Math.round(
+                              ((pr.progreso || 0) / pr.requerido) * 100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+                if (pr.motivo?.startsWith("Ya usó")) {
+                  return (
+                    <div
+                      key={pr.PromocionId}
+                      className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600"
+                    >
+                      🎂 {pr.PromocionNombre}: ya usó el beneficio de este
+                      cumpleaños
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
+          {Number(clienteSeleccionado?.ClienteId) !== 1 &&
+            !clienteSeleccionado?.ClienteFechaNacimiento &&
+            promosCliente.some((pr) => pr.PromocionTipo === "CU") && (
+              <p className="mt-2 text-xs text-amber-700">
+                Este cliente no tiene fecha de nacimiento: cargala en su ficha
+                para que reciba las promociones de cumpleaños.
+              </p>
+            )}
           {/* Recuadro inferior para el nombre del cliente */}
           <div className="mt-2">
             <button

@@ -1,11 +1,25 @@
 const db = require("../config/db");
 
+// pg entrega las columnas date como Date a medianoche local; al pasar a JSON
+// se convertirían a UTC y el cumpleaños podría correrse un día. Se devuelven
+// como texto AAAA-MM-DD.
+const pad = (n) => String(n).padStart(2, "0");
+const fechaTexto = (f) =>
+  f instanceof Date
+    ? `${f.getFullYear()}-${pad(f.getMonth() + 1)}-${pad(f.getDate())}`
+    : f ?? null;
+const normalizar = (c) =>
+  c ? { ...c, ClienteFechaNacimiento: fechaTexto(c.ClienteFechaNacimiento) } : c;
+
+// "" o fecha inválida -> null
+const fechaONull = (f) => (/^\d{4}-\d{2}-\d{2}$/.test(f || "") ? f : null);
+
 const Cliente = {
   getAll: () => {
     return new Promise((resolve, reject) => {
       db.query("SELECT * FROM clientes", (err, results) => {
-        if (err) reject(err);
-        resolve(results);
+        if (err) return reject(err);
+        resolve(results.map(normalizar));
       });
     });
   },
@@ -17,7 +31,7 @@ const Cliente = {
         [id],
         (err, results) => {
           if (err) return reject(err);
-          resolve(results.length > 0 ? results[0] : null);
+          resolve(results.length > 0 ? normalizar(results[0]) : null);
         }
       );
     });
@@ -55,7 +69,7 @@ const Cliente = {
               if (err) return reject(err);
 
               resolve({
-                clientes: results,
+                clientes: results.map(normalizar),
                 total: countResult[0].total,
               });
             }
@@ -115,7 +129,7 @@ const Cliente = {
               if (err) return reject(err);
 
               resolve({
-                clientes: results,
+                clientes: results.map(normalizar),
                 total: countResult[0]?.total || 0,
               });
             }
@@ -135,8 +149,10 @@ const Cliente = {
           ClienteDireccion,
           ClienteTelefono,
           ClienteTipo,
-          UsuarioId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          UsuarioId,
+          ClienteFechaNacimiento,
+          ClienteVehiculo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const values = [
         clienteData.ClienteRUC || "",
@@ -146,10 +162,16 @@ const Cliente = {
         clienteData.ClienteTelefono || "",
         clienteData.ClienteTipo || "",
         clienteData.UsuarioId || "",
+        fechaONull(clienteData.ClienteFechaNacimiento),
+        (clienteData.ClienteVehiculo || "").slice(0, 60),
       ];
       db.query(query, values, (err, result) => {
         if (err) return reject(err);
-        resolve({ ...clienteData, ClienteId: result.insertId });
+        resolve({
+          ...clienteData,
+          ClienteFechaNacimiento: fechaONull(clienteData.ClienteFechaNacimiento),
+          ClienteId: result.insertId,
+        });
       });
     });
   },
@@ -166,6 +188,7 @@ const Cliente = {
         "ClienteTelefono",
         "ClienteTipo",
         "UsuarioId",
+        "ClienteVehiculo",
       ];
       camposActualizables.forEach((campo) => {
         if (clienteData[campo] !== undefined) {
@@ -173,6 +196,10 @@ const Cliente = {
           values.push(clienteData[campo]);
         }
       });
+      if (clienteData.ClienteFechaNacimiento !== undefined) {
+        updateFields.push("ClienteFechaNacimiento = ?");
+        values.push(fechaONull(clienteData.ClienteFechaNacimiento));
+      }
       if (updateFields.length === 0) {
         return resolve(null);
       }
@@ -192,7 +219,7 @@ const Cliente = {
           [id],
           (err, results) => {
             if (err) return reject(err);
-            resolve(results.length > 0 ? results[0] : null);
+            resolve(results.length > 0 ? normalizar(results[0]) : null);
           }
         );
       });

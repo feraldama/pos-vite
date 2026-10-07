@@ -34,6 +34,7 @@ const AUTO_PK = {
   local: "LocalId",
   perfil: "PerfilId",
   producto: "ProductoId",
+  promocion: "PromocionId",
   proveedor: "ProveedorId",
   registrodiariocaja: "RegistroDiarioCajaId",
   tipogasto: "TipoGastoId",
@@ -46,9 +47,9 @@ const AUTO_PK = {
 const TABLE_NAMES = new Set([
   "almacen", "caja", "clientes", "combo", "compra", "compraproducto",
   "facturacredito", "facturacreditopago", "local", "menu", "perfil",
-  "perfilmenu", "producto", "productoalmacen", "proveedor",
+  "perfilmenu", "producto", "productoalmacen", "promocion", "promocionproducto", "proveedor",
   "registrodiariocaja", "tipogasto", "tipogastogrupo", "traslado", "usuario",
-  "usuarioperfil", "venta", "ventacredito", "ventacreditopago", "ventaproducto",
+  "usuarioperfil", "venta", "ventacredito", "ventacreditopago", "ventaproducto", "ventapromocion",
 ]);
 
 const SQL_KEYWORDS = new Set(

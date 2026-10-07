@@ -99,6 +99,8 @@ exports.createCliente = async (req, res) => {
       ClienteTelefono: req.body.ClienteTelefono || null,
       ClienteTipo: req.body.ClienteTipo,
       UsuarioId: req.body.UsuarioId,
+      ClienteFechaNacimiento: req.body.ClienteFechaNacimiento,
+      ClienteVehiculo: req.body.ClienteVehiculo,
     });
     res.status(201).json({
       success: true,

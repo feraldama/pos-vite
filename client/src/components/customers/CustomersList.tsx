@@ -15,6 +15,8 @@ interface Cliente {
   ClienteTelefono: string;
   ClienteTipo: string;
   UsuarioId: string;
+  ClienteFechaNacimiento?: string | null;
+  ClienteVehiculo?: string;
   [key: string]: unknown;
 }
 
@@ -69,13 +71,19 @@ export default function CustomersList({
     ClienteTelefono: "",
     ClienteTipo: "",
     UsuarioId: "",
+    ClienteFechaNacimiento: "",
+    ClienteVehiculo: "",
   });
 
   const { user } = useAuth();
 
   useEffect(() => {
     if (currentCliente) {
-      setFormData({ ...currentCliente });
+      setFormData({
+        ...currentCliente,
+        ClienteFechaNacimiento: currentCliente.ClienteFechaNacimiento || "",
+        ClienteVehiculo: currentCliente.ClienteVehiculo || "",
+      });
     } else {
       setFormData({
         id: "",
@@ -87,6 +95,8 @@ export default function CustomersList({
         ClienteTelefono: "",
         ClienteTipo: "MI",
         UsuarioId: user?.id || "",
+        ClienteFechaNacimiento: "",
+        ClienteVehiculo: "",
       });
     }
   }, [currentCliente, user]);
@@ -119,6 +129,14 @@ export default function CustomersList({
     { key: "ClienteApellido", label: "Apellido" },
     { key: "ClienteDireccion", label: "Dirección" },
     { key: "ClienteTelefono", label: "Teléfono" },
+    {
+      key: "ClienteFechaNacimiento",
+      label: "Cumpleaños",
+      render: (item: Cliente) =>
+        item.ClienteFechaNacimiento
+          ? item.ClienteFechaNacimiento.split("-").reverse().join("/")
+          : "-",
+    },
     { key: "ClienteTipo", label: "Tipo" },
     { key: "UsuarioId", label: "Usuario" },
   ];
@@ -278,6 +296,40 @@ export default function CustomersList({
                       name="ClienteTelefono"
                       id="ClienteTelefono"
                       value={formData.ClienteTelefono}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteFechaNacimiento"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Fecha de nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      name="ClienteFechaNacimiento"
+                      id="ClienteFechaNacimiento"
+                      value={formData.ClienteFechaNacimiento || ""}
+                      onChange={handleInputChange}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    />
+                  </div>
+                  <div className="col-span-6 sm:col-span-3">
+                    <label
+                      htmlFor="ClienteVehiculo"
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Vehículo / chapa
+                    </label>
+                    <input
+                      type="text"
+                      name="ClienteVehiculo"
+                      id="ClienteVehiculo"
+                      maxLength={60}
+                      placeholder="Ej.: Toyota Hilux ABC 123"
+                      value={formData.ClienteVehiculo || ""}
                       onChange={handleInputChange}
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     />

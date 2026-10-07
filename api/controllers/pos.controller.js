@@ -19,6 +19,7 @@
  *    que ya existen.
  */
 const { withTransaction } = require("../config/db");
+const { validarPromocionesVenta } = require("../utils/promociones");
 
 // tipogasto: 1 = EGRESOS, 2 = INGRESOS
 const INGRESO = 2;
@@ -125,7 +126,10 @@ function validarItems(items) {
  *   fecha: "YYYY-MM-DD", clienteId, almacenId, cajaId, usuarioId,
  *   ventaTipo: "CO" | "CR", pagoTipo: "E", total,
  *   pagos: { efectivo, pos, transferencia, voucher, cuentaCliente },
- *   items: [{ productoId, cantidad, precio, precioTotal, unidad }]
+ *   items: [{ productoId, cantidad, precio, precioTotal, unidad, promocionId? }]
+ *
+ * Un ítem con promocionId es el beneficio de una promoción: se valida que el
+ * cliente lo tenga y que el precio sea el correcto, y queda en ventapromocion.
  * }
  */
 exports.confirmarVenta = async (req, res) => {
@@ -169,6 +173,8 @@ exports.confirmarVenta = async (req, res) => {
     }
 
     const resultado = await withTransaction(async (client) => {
+      const promociones = await validarPromocionesVenta(client.q, { clienteId, fecha, items });
+
       // El POS manda como almacén el LocalId del usuario. La convención de esta
       // instalación es que coinciden (verificado sobre 1000 ventas históricas:
       // lavadero/local 2 -> almacén 2, vendedor/local 1 -> almacén 1), pero el
@@ -226,6 +232,15 @@ exports.confirmarVenta = async (req, res) => {
             Math.round(it.precioTotal),
             it.unidad || "N",
           ]
+        );
+      }
+
+      for (const promo of promociones) {
+        await client.q(
+          `INSERT INTO ventapromocion
+             (VentaId, VentaProductoId, PromocionId, ClienteId, VentaPromocionFecha, VentaPromocionDescuento)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [ventaId, promo.indice + 1, promo.promocionId, clienteId, fecha, promo.descuento]
         );
       }
 
@@ -429,6 +444,8 @@ exports.anularVenta = async (req, res) => {
         [id]
       );
       await client.q(`DELETE FROM ventacredito WHERE VentaId = ?`, [id]);
+      // Al borrar el uso de la promoción, el cliente la recupera.
+      await client.q(`DELETE FROM ventapromocion WHERE VentaId = ?`, [id]);
       await client.q(`DELETE FROM ventaproducto WHERE VentaId = ?`, [id]);
       await client.q(`DELETE FROM venta WHERE VentaId = ?`, [id]);
     });

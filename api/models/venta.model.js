@@ -111,7 +111,8 @@ const Venta = {
         "DELETE FROM ventacreditopago WHERE VentaCreditoId IN (SELECT VentaCreditoId FROM ventacredito WHERE VentaId = ?)",
         // 2. Eliminar registros de crédito (ventacredito)
         "DELETE FROM ventacredito WHERE VentaId = ?",
-        // 3. Eliminar productos de la venta (ventaproducto)
+        // 3. Eliminar promociones usadas y productos de la venta
+        "DELETE FROM ventapromocion WHERE VentaId = ?",
         "DELETE FROM ventaproducto WHERE VentaId = ?",
         // 4. Finalmente eliminar la venta
         "DELETE FROM venta WHERE VentaId = ?",

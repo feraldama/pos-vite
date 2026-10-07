@@ -9,6 +9,8 @@ import {
   type RegistroDiarioCajaRow,
 } from "../../services/registros.service";
 import ServiciosRealizadosReport from "../../components/reportes/ServiciosRealizadosReport";
+import CumpleanosReport from "../../components/reportes/CumpleanosReport";
+import PromocionesUsadasReport from "../../components/reportes/PromocionesUsadasReport";
 
 interface DeudaCliente {
   ClienteId: number;
@@ -414,6 +416,10 @@ const ReportesPage: React.FC = () => {
 
       <div className="flex flex-col gap-10">
         <ServiciosRealizadosReport />
+
+        <CumpleanosReport />
+
+        <PromocionesUsadasReport />
 
         <section className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">

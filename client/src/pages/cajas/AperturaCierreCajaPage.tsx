@@ -294,14 +294,14 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     const totalIngresos =
       ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
-    doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
+    doc.text(`Total Ingreso Día: ${formatMiles(totalIngresos)}`, 10, y);
     y += 8;
     // Línea nueva para Total Egresos
-    doc.text(`Total Egresos: ${formatMiles(egresos)}`, 10, y);
+    doc.text(`Total Egreso Día: ${formatMiles(egresos)}`, 10, y);
     y += 8;
     // Línea nueva para Diferencia
     const diferencia = totalIngresos - egresos;
-    doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
+    doc.text(`Total Ingreso Neto: ${formatMiles(diferencia)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
     y += 8;

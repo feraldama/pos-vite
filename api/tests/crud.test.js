@@ -18,6 +18,7 @@ const { secuenciasDesincronizadas } = require("../scripts/lib/sequences.cjs");
 const almacen = require("../controllers/almacen.controller");
 const caja = require("../controllers/caja.controller");
 const cliente = require("../controllers/cliente.controller");
+const local = require("../controllers/local.controller");
 const producto = require("../controllers/producto.controller");
 const tipogasto = require("../controllers/tipogasto.controller");
 const tipogastogrupo = require("../controllers/tipogastogrupo.controller");
@@ -69,6 +70,23 @@ test("alta, edición y baja de almacén", async () => {
 
   const borrado = await llamar(almacen.delete, { params: { id } });
   assert.ok(borrado.status < 400);
+});
+
+test("baja de local: explica qué lo bloquea y borra el que está libre", async () => {
+  // El local 2 de la semilla tiene al usuario lavadero y sus productos
+  const bloqueado = await llamar(local.deleteLocal, { params: { id: 2 } });
+  assert.strictEqual(bloqueado.status, 400);
+  assert.match(bloqueado.body.message, /1 usuario \(lavadero\)/);
+  assert.match(bloqueado.body.message, /\d+ productos/);
+
+  const creado = await llamar(local.createLocal, {
+    body: { LocalNombre: "TEST", LocalTelefono: "", LocalCelular: "", LocalDireccion: "" },
+  });
+  assert.ok(creado.status < 400, JSON.stringify(creado.body));
+  const borrado = await llamar(local.deleteLocal, {
+    params: { id: dato(creado).LocalId },
+  });
+  assert.strictEqual(borrado.status, 200, JSON.stringify(borrado.body));
 });
 
 test("alta y baja de cliente", async () => {

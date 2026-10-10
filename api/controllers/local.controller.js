@@ -1,4 +1,5 @@
 const Local = require("../models/local.model");
+const { esClaveForanea } = require("../utils/db-errors");
 
 exports.getAllLocales = async (req, res) => {
   try {
@@ -142,6 +143,26 @@ exports.updateLocal = async (req, res) => {
 exports.deleteLocal = async (req, res) => {
   try {
     const { id } = req.params;
+    const { usuarios, productos } = await Local.getDependencias(id);
+    if (usuarios.length > 0 || productos > 0) {
+      const partes = [];
+      if (usuarios.length > 0) {
+        partes.push(
+          `${usuarios.length} usuario${usuarios.length > 1 ? "s" : ""} (${usuarios.join(", ")})`
+        );
+      }
+      if (productos > 0) {
+        partes.push(`${productos} producto${productos > 1 ? "s" : ""}`);
+      }
+      return res.status(400).json({
+        success: false,
+        message:
+          `No se puede eliminar el local porque tiene asignado${
+            usuarios.length + productos > 1 ? "s" : ""
+          } ${partes.join(" y ")}. ` +
+          "Cambiales el local desde Usuarios o Productos y volvé a intentar.",
+      });
+    }
     const deleted = await Local.delete(id);
     if (!deleted) {
       return res.status(404).json({
@@ -154,6 +175,14 @@ exports.deleteLocal = async (req, res) => {
       message: "Local eliminado exitosamente",
     });
   } catch (error) {
+    // Por si aparece otra tabla que referencie al local
+    if (esClaveForanea(error)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "No se puede eliminar el local porque tiene registros asociados.",
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Error al eliminar local",

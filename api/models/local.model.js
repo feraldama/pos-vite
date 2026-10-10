@@ -189,6 +189,31 @@ const Local = {
     });
   },
 
+  // Usuarios y productos que apuntan al local: mientras haya alguno, la clave
+  // foránea impide borrarlo.
+  getDependencias: (id) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        "SELECT UsuarioId FROM usuario WHERE LocalId = ? ORDER BY UsuarioId",
+        [id],
+        (err, usuarios) => {
+          if (err) return reject(err);
+          db.query(
+            "SELECT COUNT(*) as total FROM producto WHERE LocalId = ?",
+            [id],
+            (err, countResult) => {
+              if (err) return reject(err);
+              resolve({
+                usuarios: usuarios.map((u) => u.UsuarioId),
+                productos: Number(countResult[0]?.total || 0),
+              });
+            }
+          );
+        }
+      );
+    });
+  },
+
   delete: (id) => {
     return new Promise((resolve, reject) => {
       db.query("DELETE FROM local WHERE LocalId = ?", [id], (err, result) => {

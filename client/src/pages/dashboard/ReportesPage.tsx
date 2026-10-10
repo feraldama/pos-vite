@@ -350,8 +350,8 @@ const ReportesPage: React.FC = () => {
           "POS",
           "Voucher",
           "Transfer",
-          "Total ing.",
-          "Diferencia",
+          "Total Ing. Día",
+          "Total Ing. Neto",
           "S/F",
         ],
       ],
@@ -373,9 +373,9 @@ const ReportesPage: React.FC = () => {
     y += 6;
     doc.setFontSize(10);
     doc.text(
-      `Total registros: ${resumenes.length} | Total ingresos: ${formatMiles(
+      `Total registros: ${resumenes.length} | Total Ingreso Día: ${formatMiles(
         totalesGenerales.totalIngresos
-      )} | Total egresos: ${formatMiles(totalesGenerales.egresos)}`,
+      )} | Total Egreso Día: ${formatMiles(totalesGenerales.egresos)}`,
       14,
       y
     );
@@ -531,10 +531,10 @@ const ReportesPage: React.FC = () => {
                         Transfer
                       </th>
                       <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
-                        Total ing.
+                        Total Ing. Día
                       </th>
                       <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
-                        Diferencia
+                        Total Ing. Neto
                       </th>
                       <th className="text-right py-2 px-2 font-semibold text-slate-800 whitespace-nowrap">
                         Sobrante/Faltante
@@ -649,19 +649,19 @@ const ReportesPage: React.FC = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500">Total ingresos:</span>{" "}
+                    <span className="text-slate-500">Total Ingreso Día:</span>{" "}
                     <span className="font-mono font-medium">
                       {formatMiles(totalesGenerales.totalIngresos)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500">Total egresos:</span>{" "}
+                    <span className="text-slate-500">Total Egreso Día:</span>{" "}
                     <span className="font-mono font-medium">
                       {formatMiles(totalesGenerales.egresos)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500">Diferencia:</span>{" "}
+                    <span className="text-slate-500">Total Ingreso Neto:</span>{" "}
                     <span className="font-mono font-medium">
                       {formatMiles(totalesGenerales.diferencia)}
                     </span>

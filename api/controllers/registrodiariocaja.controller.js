@@ -127,9 +127,21 @@ exports.create = async (req, res) => {
   }
 };
 
+// Los movimientos que genera una venta se manejan desde la venta: si se
+// tocan a mano, el cierre de caja deja de coincidir con lo vendido.
+const MSJ_MOVIMIENTO_DE_VENTA = (ventaId, accion) =>
+  `No se puede ${accion} este movimiento porque corresponde a la venta N° ${ventaId}. ` +
+  "Si la venta no corresponde, anulala desde Ventas.";
+
 // Actualizar un registro
 exports.update = async (req, res) => {
   try {
+    const actual = await RegistroDiarioCaja.getById(req.params.id);
+    if (actual?.VentaId) {
+      return res.status(400).json({
+        message: MSJ_MOVIMIENTO_DE_VENTA(actual.VentaId, "modificar"),
+      });
+    }
     const registro = await RegistroDiarioCaja.update(req.params.id, req.body);
     if (!registro) {
       return res.status(404).json({ message: "Registro no encontrado" });
@@ -146,6 +158,12 @@ exports.update = async (req, res) => {
 // Eliminar un registro
 exports.delete = async (req, res) => {
   try {
+    const actual = await RegistroDiarioCaja.getById(req.params.id);
+    if (actual?.VentaId) {
+      return res.status(400).json({
+        message: MSJ_MOVIMIENTO_DE_VENTA(actual.VentaId, "eliminar"),
+      });
+    }
     const success = await RegistroDiarioCaja.delete(req.params.id);
     if (!success) {
       return res.status(404).json({ message: "Registro no encontrado" });

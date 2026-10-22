@@ -262,3 +262,40 @@ test("alta, edición y baja de un movimiento de caja", async () => {
   const borrado = await llamar(registro.delete, { params: { id } });
   assert.ok(borrado.status < 400);
 });
+
+test("un movimiento generado por una venta no se edita ni se borra a mano", async () => {
+  // VentaId no tiene clave foránea: se usa una venta inexistente para no
+  // correr la numeración que esperan los tests de pos.
+  const monto = 50000;
+  const { rows } = await pool.query(
+    `INSERT INTO registrodiariocaja ("CajaId","RegistroDiarioCajaFecha","TipoGastoId","TipoGastoGrupoId","RegistroDiarioCajaDetalle","RegistroDiarioCajaMonto","UsuarioId","VentaId")
+     VALUES (2, $1, 2, 1, 'Venta N°: 999999', $2, 'lavadero', 999999)
+     RETURNING "RegistroDiarioCajaId" AS id`,
+    [HOY, monto]
+  );
+  const { id } = rows[0];
+
+  try {
+    const editado = await llamar(registro.update, {
+      params: { id },
+      body: { RegistroDiarioCajaMonto: 1 },
+    });
+    assert.strictEqual(editado.status, 400);
+    assert.match(editado.body.message, /venta N° 999999/);
+
+    const borrado = await llamar(registro.delete, { params: { id } });
+    assert.strictEqual(borrado.status, 400);
+    assert.match(borrado.body.message, /anulala desde Ventas/);
+
+    const { rows: despues } = await pool.query(
+      'SELECT "RegistroDiarioCajaMonto" AS monto FROM registrodiariocaja WHERE "RegistroDiarioCajaId" = $1',
+      [id]
+    );
+    assert.strictEqual(Number(despues[0]?.monto), monto);
+  } finally {
+    await pool.query(
+      'DELETE FROM registrodiariocaja WHERE "RegistroDiarioCajaId" = $1',
+      [id]
+    );
+  }
+});

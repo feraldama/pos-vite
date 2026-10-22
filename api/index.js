@@ -23,6 +23,7 @@ const ventaCreditoRoutes = require("./routes/ventacredito.routes");
 const ventaCreditoPagoRoutes = require("./routes/ventacreditopago.routes");
 const posRoutes = require("./routes/pos.routes");
 const promocionRoutes = require("./routes/promocion.routes");
+const pagoTransferenciaRoutes = require("./routes/pagotransferencia.routes");
 // const productoRoutes = require("./routes/producto.routes"); // Ejemplo adicional
 
 const app = express();
@@ -99,6 +100,7 @@ app.use("/api/ventacredito", ventaCreditoRoutes);
 app.use("/api/ventacreditopago", ventaCreditoPagoRoutes);
 app.use("/api/pos", posRoutes);
 app.use("/api/promociones", promocionRoutes);
+app.use("/api/pagos-transferencia", pagoTransferenciaRoutes);
 // app.use("/api/productos", productoRoutes); // Ejemplo adicional
 
 // Ruta de prueba

@@ -20,6 +20,7 @@ import {
   LockClosedIcon,
   ChartBarIcon,
   GiftIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import type { Dispatch, SetStateAction } from "react";
@@ -79,6 +80,11 @@ const navigation: NavigationItem[] = [
     name: "Promociones",
     href: "/promociones",
     icon: <GiftIcon className="h-7 w-6" />,
+  },
+  {
+    name: "Pagos por Transferencia",
+    href: "/pagos-transferencia",
+    icon: <ArrowsRightLeftIcon className="h-7 w-6" />,
   },
   {
     name: "Reportes",

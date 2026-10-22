@@ -32,6 +32,7 @@ const AUTO_PK = {
   compra: "CompraId",
   facturacredito: "FacturaCreditoId",
   local: "LocalId",
+  pagotransferencia: "PagoTransferenciaId",
   perfil: "PerfilId",
   producto: "ProductoId",
   promocion: "PromocionId",
@@ -46,7 +47,7 @@ const AUTO_PK = {
 // Nombres de tablas (en MySQL/Windows eran case-insensitive; en PG son minúsculas)
 const TABLE_NAMES = new Set([
   "almacen", "caja", "clientes", "combo", "compra", "compraproducto",
-  "facturacredito", "facturacreditopago", "local", "menu", "perfil",
+  "facturacredito", "facturacreditopago", "local", "menu", "pagotransferencia", "perfil",
   "perfilmenu", "producto", "productoalmacen", "promocion", "promocionproducto", "proveedor",
   "registrodiariocaja", "tipogasto", "tipogastogrupo", "traslado", "usuario",
   "usuarioperfil", "venta", "ventacredito", "ventacreditopago", "ventaproducto", "ventapromocion",

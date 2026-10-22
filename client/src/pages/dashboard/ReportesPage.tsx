@@ -11,6 +11,7 @@ import {
 import ServiciosRealizadosReport from "../../components/reportes/ServiciosRealizadosReport";
 import CumpleanosReport from "../../components/reportes/CumpleanosReport";
 import PromocionesUsadasReport from "../../components/reportes/PromocionesUsadasReport";
+import PagosTransferenciaReport from "../../components/reportes/PagosTransferenciaReport";
 
 interface DeudaCliente {
   ClienteId: number;
@@ -420,6 +421,8 @@ const ReportesPage: React.FC = () => {
         <CumpleanosReport />
 
         <PromocionesUsadasReport />
+
+        <PagosTransferenciaReport />
 
         <section className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-semibold mb-4">

@@ -28,6 +28,7 @@ import VentasPage from "./pages/ventas/VentasPage";
 import CreditoPagosPage from "./pages/ventas/CreditoPagosPage";
 import ReportesPage from "./pages/dashboard/ReportesPage";
 import PromocionesPage from "./pages/promociones/PromocionesPage";
+import PagosTransferenciaPage from "./pages/pagos/PagosTransferenciaPage";
 import SystemBlocked from "./components/common/SystemBlocked";
 
 function App() {
@@ -75,6 +76,7 @@ function App() {
             <Route path="/credito-pagos" element={<CreditoPagosPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/promociones" element={<PromocionesPage />} />
+            <Route path="/pagos-transferencia" element={<PagosTransferenciaPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

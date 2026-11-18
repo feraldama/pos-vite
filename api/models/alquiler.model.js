@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { condicionBusquedaCliente } = require("../utils/busquedaCliente");
 
 // Condición SQL para filtrar una columna de fecha por rango.
 // rango: { desde, hasta } (YYYY-MM-DD, ya validados) o { dias } desde hoy
@@ -14,6 +15,11 @@ function condicionRangoFecha(columna, rango) {
     params: [rango.dias],
   };
 }
+
+// Con búsqueda se ignora el rango de fechas: se busca en todos los alquileres
+// del estado correspondiente (el cliente puede venir antes o después). Se
+// trae uno de más para saber si la lista quedó recortada.
+const LIMITE_BUSQUEDA = 50;
 
 const Alquiler = {
   getAll: () => {
@@ -571,14 +577,17 @@ const Alquiler = {
 
   // Obtener alquileres próximos a fecha de entrega (hoy y próximos días)
   // Solo incluye alquileres en estado Pendiente
-  getAlquileresProximosEntrega: (rango = { dias: 7 }) => {
-    const filtro = condicionRangoFecha("a.AlquilerFechaEntrega", rango);
+  getAlquileresProximosEntrega: (rango = { dias: 7 }, busqueda = "") => {
+    const filtro = busqueda
+      ? condicionBusquedaCliente(busqueda)
+      : condicionRangoFecha("a.AlquilerFechaEntrega", rango);
     return new Promise((resolve, reject) => {
       const query = `
         SELECT 
           a.*,
           c.ClienteNombre,
           c.ClienteApellido,
+          c.ClienteRUC,
           c.ClienteTelefono
         FROM alquiler a
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
@@ -586,6 +595,7 @@ const Alquiler = {
         AND a.AlquilerEstado = 'Pendiente'
         AND ${filtro.sql}
         ORDER BY a.AlquilerFechaEntrega ASC
+        ${busqueda ? `LIMIT ${LIMITE_BUSQUEDA + 1}` : ""}
       `;
 
       db.query(query, filtro.params, (err, results) => {
@@ -600,29 +610,35 @@ const Alquiler = {
 
   // Obtener alquileres próximos a fecha de devolución (hoy y próximos días)
   // También incluye alquileres con fecha pasada que siguen en estado Pendiente o Entregado
-  getAlquileresProximosDevolucion: (rango = { dias: 7 }) => {
+  getAlquileresProximosDevolucion: (rango = { dias: 7 }, busqueda = "") => {
     const filtro = condicionRangoFecha("a.AlquilerFechaDevolucion", rango);
+    const filtroBusqueda = busqueda ? condicionBusquedaCliente(busqueda) : null;
+    const condicionFechas = filtroBusqueda
+      ? filtroBusqueda.sql
+      : `(
+          ${filtro.sql}
+          OR (DATE(a.AlquilerFechaDevolucion) < CURDATE()
+          AND (a.AlquilerEstado = 'Pendiente' OR a.AlquilerEstado = 'Entregado'))
+        )`;
     return new Promise((resolve, reject) => {
       const query = `
         SELECT 
           a.*,
           c.ClienteNombre,
           c.ClienteApellido,
+          c.ClienteRUC,
           c.ClienteTelefono
         FROM alquiler a
         LEFT JOIN clientes c ON a.ClienteId = c.ClienteId
         WHERE a.AlquilerFechaDevolucion IS NOT NULL
-        AND (
-          ${filtro.sql}
-          OR (DATE(a.AlquilerFechaDevolucion) < CURDATE() 
-          AND (a.AlquilerEstado = 'Pendiente' OR a.AlquilerEstado = 'Entregado'))
-        )
+        AND ${condicionFechas}
         AND a.AlquilerEstado != 'Devuelto'
         AND a.AlquilerEstado != 'Cancelado'
         ORDER BY a.AlquilerFechaDevolucion ASC
+        ${filtroBusqueda ? `LIMIT ${LIMITE_BUSQUEDA + 1}` : ""}
       `;
 
-      db.query(query, filtro.params, (err, results) => {
+      db.query(query, (filtroBusqueda || filtro).params, (err, results) => {
         if (err) {
           console.error("Error en getAlquileresProximosDevolucion:", err);
           return reject(err);
@@ -632,5 +648,8 @@ const Alquiler = {
     });
   },
 };
+
+// Máximo de resultados de una búsqueda (el controlador recorta y avisa)
+Alquiler.LIMITE_BUSQUEDA = LIMITE_BUSQUEDA;
 
 module.exports = Alquiler;

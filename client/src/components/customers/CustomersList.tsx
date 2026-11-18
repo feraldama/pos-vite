@@ -128,7 +128,7 @@ export default function CustomersList({
             onSearch={onSearch}
             onKeyPress={onKeyPress}
             onSearchSubmit={onSearchSubmit}
-            placeholder="Buscar clientes"
+            placeholder="Buscar por nombre, apellido, cédula o teléfono"
           />
         </div>
         <div className="py-4">

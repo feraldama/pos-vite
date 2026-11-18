@@ -163,11 +163,13 @@ export type FiltroFechasAlquiler =
   | { desde: string; hasta: string };
 
 export const getAlquileresProximosEntrega = async (
-  filtro: FiltroFechasAlquiler = { dias: 7 }
+  filtro: FiltroFechasAlquiler = { dias: 7 },
+  // Con búsqueda de cliente la API ignora el filtro de fechas
+  busqueda = ""
 ) => {
   try {
     const response = await api.get("/alquiler/proximos-entrega", {
-      params: filtro,
+      params: busqueda ? { ...filtro, q: busqueda } : filtro,
     });
     return response.data;
   } catch (error) {
@@ -181,11 +183,13 @@ export const getAlquileresProximosEntrega = async (
 };
 
 export const getAlquileresProximosDevolucion = async (
-  filtro: FiltroFechasAlquiler = { dias: 7 }
+  filtro: FiltroFechasAlquiler = { dias: 7 },
+  // Con búsqueda de cliente la API ignora el filtro de fechas
+  busqueda = ""
 ) => {
   try {
     const response = await api.get("/alquiler/proximos-devolucion", {
-      params: filtro,
+      params: busqueda ? { ...filtro, q: busqueda } : filtro,
     });
     return response.data;
   } catch (error) {

@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { condicionBusquedaCliente } = require("../utils/busquedaCliente");
 
 const Cliente = {
   getAll: () => {
@@ -85,32 +86,37 @@ const Cliente = {
         ? sortOrder.toUpperCase()
         : "ASC";
 
+      // Misma búsqueda que el dashboard (nombre, apellido, cédula o teléfono,
+      // sin tildes ni puntos). Un número solo también busca el ID exacto.
+      const filtro = condicionBusquedaCliente(term);
+      const termino = String(term).trim();
+      const porId = /^\d+$/.test(termino) && Number(termino) <= 2147483647;
+      const where = porId ? `(${filtro.sql}) OR c.ClienteId = ?` : filtro.sql;
+      const whereParams = porId
+        ? [...filtro.params, Number(termino)]
+        : filtro.params;
+
       const searchQuery = `
-        SELECT * FROM clientes 
-        WHERE CONCAT(ClienteNombre, ' ', ClienteApellido) LIKE ? 
-        OR ClienteRUC LIKE ? 
-        OR ClienteId LIKE ?
-        ORDER BY ${sortField} ${order}
+        SELECT * FROM clientes c
+        WHERE ${where}
+        ORDER BY c.${sortField} ${order}
         LIMIT ? OFFSET ?
       `;
-      const searchValue = `%${term}%`;
 
       db.query(
         searchQuery,
-        [searchValue, searchValue, searchValue, limit, offset],
+        [...whereParams, limit, offset],
         (err, results) => {
           if (err) return reject(err);
 
           const countQuery = `
-            SELECT COUNT(*) as total FROM clientes 
-            WHERE CONCAT(ClienteNombre, ' ', ClienteApellido) LIKE ? 
-            OR ClienteRUC LIKE ? 
-            OR ClienteId LIKE ?
+            SELECT COUNT(*) as total FROM clientes c
+            WHERE ${where}
           `;
 
           db.query(
             countQuery,
-            [searchValue, searchValue, searchValue],
+            whereParams,
             (err, countResult) => {
               if (err) return reject(err);
 

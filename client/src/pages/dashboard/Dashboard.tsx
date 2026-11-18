@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { activarConTeclado } from "../../utils/teclado";
 import Modal from "../../components/common/Modal";
 import ActionButton from "../../components/common/Button/ActionButton";
@@ -12,11 +12,10 @@ import {
   getAlquilerById,
 } from "../../services/alquiler.service";
 import { formatCurrency } from "../../utils/formato";
-import {
-  describirFiltro,
-  useFiltroGuardado,
-} from "../../utils/filtroFechas";
+import { describirFiltro } from "../../utils/filtroFechas";
 import FiltroRangoFechas from "../../components/alquileres/FiltroRangoFechas";
+import CabeceraSeccionAlquileres from "../../components/alquileres/CabeceraSeccionAlquileres";
+import { useSeccionAlquileres } from "../../hooks/useSeccionAlquileres";
 import Swal from "sweetalert2";
 
 interface AlquilerPrenda {
@@ -45,56 +44,43 @@ interface Alquiler {
   prendas: AlquilerPrenda[];
 }
 
+// Texto breve para lectores de pantalla al cambiar la lista de una sección
+// (en vez de leer la tabla entera): "3 alquileres para "morales""
+function anuncioSeccion(s: {
+  visible: boolean;
+  loading: boolean;
+  busquedaAplicada: string;
+  alquileres: unknown[];
+  recortada: { limite: number } | null;
+}) {
+  if (!s.visible) return "";
+  if (s.loading) return s.busquedaAplicada ? "Buscando..." : "";
+  const n = s.alquileres.length;
+  const cantidad = n === 1 ? "1 alquiler" : `${n} alquileres`;
+  if (!s.busquedaAplicada) return cantidad;
+  return `${cantidad} para "${s.busquedaAplicada}"${
+    s.recortada ? `. Se muestran los primeros ${s.recortada.limite}` : ""
+  }`;
+}
+
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [alquileresEntrega, setAlquileresEntrega] = useState<Alquiler[]>([]);
-  const [alquileresDevolucion, setAlquileresDevolucion] = useState<Alquiler[]>(
-    []
-  );
-  const [filtroEntrega, setFiltroEntrega] = useFiltroGuardado(
-    "dashboard.filtroEntrega"
-  );
-  const [filtroDevolucion, setFiltroDevolucion] = useFiltroGuardado(
-    "dashboard.filtroDevolucion"
-  );
-  const [loadingEntrega, setLoadingEntrega] = useState(true);
-  const [loadingDevolucion, setLoadingDevolucion] = useState(true);
   // Se incrementa para forzar la recarga de ambas secciones
   const [recarga, setRecarga] = useState(0);
+  const entrega = useSeccionAlquileres<Alquiler>(
+    "Entrega",
+    getAlquileresProximosEntrega,
+    recarga
+  );
+  const devolucion = useSeccionAlquileres<Alquiler>(
+    "Devolucion",
+    getAlquileresProximosDevolucion,
+    recarga
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAlquiler, setCurrentAlquiler] = useState<Alquiler | null>(null);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
-
-  // Cada sección se recarga sola al cambiar su filtro. "vigente" descarta
-  // respuestas viejas si el usuario cambia de filtro antes de que lleguen.
-  useEffect(() => {
-    let vigente = true;
-    setLoadingEntrega(true);
-    getAlquileresProximosEntrega(filtroEntrega)
-      .then((res) => vigente && setAlquileresEntrega(res.data || []))
-      .catch((error) =>
-        console.error("Error al cargar alquileres a entregar:", error)
-      )
-      .finally(() => vigente && setLoadingEntrega(false));
-    return () => {
-      vigente = false;
-    };
-  }, [filtroEntrega, recarga]);
-
-  useEffect(() => {
-    let vigente = true;
-    setLoadingDevolucion(true);
-    getAlquileresProximosDevolucion(filtroDevolucion)
-      .then((res) => vigente && setAlquileresDevolucion(res.data || []))
-      .catch((error) =>
-        console.error("Error al cargar alquileres a devolver:", error)
-      )
-      .finally(() => vigente && setLoadingDevolucion(false));
-    return () => {
-      vigente = false;
-    };
-  }, [filtroDevolucion, recarga]);
 
   // El voucher es descuento: no suma a lo entregado pero reduce el saldo
   const calcularSaldo = (alquiler: Alquiler) =>
@@ -220,300 +206,376 @@ function Dashboard() {
 
       {/* Sección de Alquileres Próximos a Entrega */}
       <section className="bg-white rounded-lg shadow-md p-6">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <h2 className="text-xl font-bold text-gray-800">
-            Alquileres Próximos a Entrega ({describirFiltro(filtroEntrega)})
-          </h2>
-          <FiltroRangoFechas
-            id="filtro-entrega"
-            filtro={filtroEntrega}
-            onChange={setFiltroEntrega}
-          />
-        </div>
-        {loadingEntrega ? (
-          <p className="text-gray-600">Cargando...</p>
-        ) : alquileresEntrega.length === 0 ? (
-          <p className="text-gray-600">No hay alquileres próximos a entrega</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Alquiler ID
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Entrega
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Prendas
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entrega
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
-                  </th>
-                  <th className="px-4 py-3">
-                    <span className="sr-only">Acciones</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {alquileresEntrega.map((alquiler) => (
-                  <tr
-                    key={alquiler.AlquilerId}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
-                    onClick={() => handleAlquilerClick(alquiler)}
-                    onKeyDown={activarConTeclado(() =>
-                      handleAlquilerClick(alquiler)
-                    )}
-                    className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
-                  >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {alquiler.AlquilerId}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {alquiler.ClienteNombre} {alquiler.ClienteApellido}
-                      {alquiler.ClienteTelefono && (
-                        <span className="block text-xs text-gray-500">
-                          {alquiler.ClienteTelefono}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>{formatearFecha(alquiler.AlquilerFechaEntrega)}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Estado:{" "}
-                        <span className="font-semibold">
-                          {alquiler.AlquilerEstado}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      <div className="flex flex-wrap gap-2">
-                        {alquiler.prendas.map((prenda, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 border rounded p-2 bg-gray-50"
-                          >
-                            {prenda.ProductoImagen ? (
-                              <img
-                                src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
-                                alt={prenda.ProductoNombre}
-                                className="w-16 h-16 object-contain rounded"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
-                                Sin imagen
-                              </div>
-                            )}
-                            <div className="text-xs">
-                              <div className="font-medium">
-                                {prenda.ProductoNombre}
-                              </div>
-                              <div className="text-gray-500">
-                                {prenda.TipoPrendaNombre}
-                              </div>
-                              {prenda.ProductoCodigo && (
-                                <div className="text-slate-500">
-                                  {prenda.ProductoCodigo}
-                                </div>
-                              )}
-                              {prenda.AlquilerPrendasObservacion && (
-                                <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-                                  ✂ {prenda.AlquilerPrendasObservacion}
-                                </div>
-                              )}
-                            </div>
+        <CabeceraSeccionAlquileres
+          id="entrega"
+          titulo={
+            entrega.busquedaAplicada
+              ? "Alquileres Pendientes de Entrega"
+              : `Alquileres Próximos a Entrega (${describirFiltro(entrega.filtro)})`
+          }
+          subtitulo={
+            entrega.busquedaAplicada &&
+            "Buscando en todos los alquileres pendientes de entrega, sin límite de fechas"
+          }
+          minimizada={entrega.minimizada}
+          onToggleMinimizada={entrega.toggleMinimizada}
+          busqueda={entrega.busqueda}
+          onBusqueda={entrega.setBusqueda}
+          acciones={
+            !entrega.busquedaAplicada && (
+              <FiltroRangoFechas
+                id="filtro-entrega"
+                filtro={entrega.filtro}
+                onChange={entrega.setFiltro}
+              />
+            )
+          }
+        />
+        <p role="status" className="sr-only">
+          {anuncioSeccion(entrega)}
+        </p>
+        <div id="entrega-contenido">
+          {!entrega.visible ? (
+            <p className="text-sm text-gray-500">
+              Lista minimizada. Buscá un cliente o expandila para verla completa.
+            </p>
+          ) : entrega.loading ? (
+            <p className="text-gray-600">Cargando...</p>
+          ) : entrega.alquileres.length === 0 ? (
+            <p className="text-gray-600">
+              {entrega.busquedaAplicada
+                ? `No hay alquileres pendientes de entrega para "${entrega.busquedaAplicada}"`
+                : "No hay alquileres próximos a entrega"}
+            </p>
+          ) : (
+            <>
+              {entrega.recortada && (
+                <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Se muestran los primeros {entrega.recortada.limite} resultados.
+                  Escribí más datos del cliente para acotar la búsqueda.
+                </p>
+              )}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Alquiler ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fecha Entrega
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Prendas
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Entrega
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Saldo
+                      </th>
+                      <th className="px-4 py-3">
+                        <span className="sr-only">Acciones</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {entrega.alquileres.map((alquiler) => (
+                      <tr
+                        key={alquiler.AlquilerId}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
+                        onClick={() => handleAlquilerClick(alquiler)}
+                        onKeyDown={activarConTeclado(() =>
+                          handleAlquilerClick(alquiler)
+                        )}
+                        className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {alquiler.AlquilerId}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {alquiler.ClienteNombre} {alquiler.ClienteApellido}
+                          {alquiler.ClienteRUC && (
+                            <span className="block text-xs text-gray-500">
+                              CI/RUC: {alquiler.ClienteRUC}
+                            </span>
+                          )}
+                          {alquiler.ClienteTelefono && (
+                            <span className="block text-xs text-gray-500">
+                              {alquiler.ClienteTelefono}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>{formatearFecha(alquiler.AlquilerFechaEntrega)}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Estado:{" "}
+                            <span className="font-semibold">
+                              {alquiler.AlquilerEstado}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(alquiler.AlquilerTotal)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(alquiler.AlquilerEntrega || 0)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(calcularSaldo(alquiler))}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right">
-                      {esEditable(alquiler) && (
-                        <button
-                          type="button"
-                          aria-label={`Editar prendas del alquiler ${alquiler.AlquilerId}`}
-                          title="Editar prendas"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            editarPrendas(alquiler.AlquilerId);
-                          }}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors duration-200 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                        >
-                          <PencilSquareIcon aria-hidden="true" className="h-4 w-4" />
-                          Editar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-900">
+                          <div className="flex flex-wrap gap-2">
+                            {alquiler.prendas.map((prenda, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 border rounded p-2 bg-gray-50"
+                              >
+                                {prenda.ProductoImagen ? (
+                                  <img
+                                    src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                    alt={prenda.ProductoNombre}
+                                    className="w-16 h-16 object-contain rounded"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                                    Sin imagen
+                                  </div>
+                                )}
+                                <div className="text-xs">
+                                  <div className="font-medium">
+                                    {prenda.ProductoNombre}
+                                  </div>
+                                  <div className="text-gray-500">
+                                    {prenda.TipoPrendaNombre}
+                                  </div>
+                                  {prenda.ProductoCodigo && (
+                                    <div className="text-slate-500">
+                                      {prenda.ProductoCodigo}
+                                    </div>
+                                  )}
+                                  {prenda.AlquilerPrendasObservacion && (
+                                    <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                      ✂ {prenda.AlquilerPrendasObservacion}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(alquiler.AlquilerTotal)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(alquiler.AlquilerEntrega || 0)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(calcularSaldo(alquiler))}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          {esEditable(alquiler) && (
+                            <button
+                              type="button"
+                              aria-label={`Editar prendas del alquiler ${alquiler.AlquilerId}`}
+                              title="Editar prendas"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                editarPrendas(alquiler.AlquilerId);
+                              }}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors duration-200 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                            >
+                              <PencilSquareIcon aria-hidden="true" className="h-4 w-4" />
+                              Editar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
       {/* Sección de Alquileres Próximos a Devolución */}
       <section className="bg-white rounded-lg shadow-md p-6">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              Alquileres Próximos a Devolución ({describirFiltro(filtroDevolucion)})
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Incluye siempre los atrasados sin devolver
+        <CabeceraSeccionAlquileres
+          id="devolucion"
+          titulo={
+            devolucion.busquedaAplicada
+              ? "Alquileres Pendientes de Devolución"
+              : `Alquileres Próximos a Devolución (${describirFiltro(devolucion.filtro)})`
+          }
+          subtitulo={
+            devolucion.busquedaAplicada
+              ? "Buscando en todos los alquileres sin devolver, sin límite de fechas"
+              : "Incluye siempre los atrasados sin devolver"
+          }
+          minimizada={devolucion.minimizada}
+          onToggleMinimizada={devolucion.toggleMinimizada}
+          busqueda={devolucion.busqueda}
+          onBusqueda={devolucion.setBusqueda}
+          acciones={
+            !devolucion.busquedaAplicada && (
+              <FiltroRangoFechas
+                id="filtro-devolucion"
+                filtro={devolucion.filtro}
+                onChange={devolucion.setFiltro}
+              />
+            )
+          }
+        />
+        <p role="status" className="sr-only">
+          {anuncioSeccion(devolucion)}
+        </p>
+        <div id="devolucion-contenido">
+          {!devolucion.visible ? (
+            <p className="text-sm text-gray-500">
+              Lista minimizada. Buscá un cliente o expandila para verla completa.
             </p>
-          </div>
-          <FiltroRangoFechas
-            id="filtro-devolucion"
-            filtro={filtroDevolucion}
-            onChange={setFiltroDevolucion}
-          />
-        </div>
-        {loadingDevolucion ? (
-          <p className="text-gray-600">Cargando...</p>
-        ) : alquileresDevolucion.length === 0 ? (
-          <p className="text-gray-600">
-            No hay alquileres próximos a devolución
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Alquiler ID
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Devolución
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Prendas
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entrega
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {alquileresDevolucion.map((alquiler) => (
-                  <tr
-                    key={alquiler.AlquilerId}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
-                    onClick={() => handleAlquilerClick(alquiler)}
-                    onKeyDown={activarConTeclado(() =>
-                      handleAlquilerClick(alquiler)
-                    )}
-                    className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
-                  >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {alquiler.AlquilerId}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {alquiler.ClienteNombre} {alquiler.ClienteApellido}
-                      {alquiler.ClienteTelefono && (
-                        <span className="block text-xs text-gray-500">
-                          {alquiler.ClienteTelefono}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>
-                        {formatearFecha(alquiler.AlquilerFechaDevolucion)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Estado:{" "}
-                        <span className="font-semibold">
-                          {alquiler.AlquilerEstado}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      <div className="flex flex-wrap gap-2">
-                        {alquiler.prendas.map((prenda, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 border rounded p-2 bg-gray-50"
-                          >
-                            {prenda.ProductoImagen ? (
-                              <img
-                                src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
-                                alt={prenda.ProductoNombre}
-                                className="w-16 h-16 object-contain rounded"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
-                                Sin imagen
-                              </div>
-                            )}
-                            <div className="text-xs">
-                              <div className="font-medium">
-                                {prenda.ProductoNombre}
-                              </div>
-                              <div className="text-gray-500">
-                                {prenda.TipoPrendaNombre}
-                              </div>
-                              {prenda.ProductoCodigo && (
-                                <div className="text-slate-500">
-                                  {prenda.ProductoCodigo}
-                                </div>
-                              )}
-                              {prenda.AlquilerPrendasObservacion && (
-                                <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-                                  ✂ {prenda.AlquilerPrendasObservacion}
-                                </div>
-                              )}
-                            </div>
+          ) : devolucion.loading ? (
+            <p className="text-gray-600">Cargando...</p>
+          ) : devolucion.alquileres.length === 0 ? (
+            <p className="text-gray-600">
+              {devolucion.busquedaAplicada
+                ? `No hay alquileres sin devolver para "${devolucion.busquedaAplicada}"`
+                : "No hay alquileres próximos a devolución"}
+            </p>
+          ) : (
+            <>
+              {devolucion.recortada && (
+                <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Se muestran los primeros {devolucion.recortada.limite} resultados.
+                  Escribí más datos del cliente para acotar la búsqueda.
+                </p>
+              )}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Alquiler ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fecha Devolución
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Prendas
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Entrega
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Saldo
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {devolucion.alquileres.map((alquiler) => (
+                      <tr
+                        key={alquiler.AlquilerId}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Editar alquiler ${alquiler.AlquilerId} de ${alquiler.ClienteNombre}`}
+                        onClick={() => handleAlquilerClick(alquiler)}
+                        onKeyDown={activarConTeclado(() =>
+                          handleAlquilerClick(alquiler)
+                        )}
+                        className="cursor-pointer transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {alquiler.AlquilerId}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {alquiler.ClienteNombre} {alquiler.ClienteApellido}
+                          {alquiler.ClienteRUC && (
+                            <span className="block text-xs text-gray-500">
+                              CI/RUC: {alquiler.ClienteRUC}
+                            </span>
+                          )}
+                          {alquiler.ClienteTelefono && (
+                            <span className="block text-xs text-gray-500">
+                              {alquiler.ClienteTelefono}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>
+                            {formatearFecha(alquiler.AlquilerFechaDevolucion)}
                           </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(alquiler.AlquilerTotal)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(alquiler.AlquilerEntrega || 0)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      {formatCurrency(calcularSaldo(alquiler))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            Estado:{" "}
+                            <span className="font-semibold">
+                              {alquiler.AlquilerEstado}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-900">
+                          <div className="flex flex-wrap gap-2">
+                            {alquiler.prendas.map((prenda, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 border rounded p-2 bg-gray-50"
+                              >
+                                {prenda.ProductoImagen ? (
+                                  <img
+                                    src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                    alt={prenda.ProductoNombre}
+                                    className="w-16 h-16 object-contain rounded"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                                    Sin imagen
+                                  </div>
+                                )}
+                                <div className="text-xs">
+                                  <div className="font-medium">
+                                    {prenda.ProductoNombre}
+                                  </div>
+                                  <div className="text-gray-500">
+                                    {prenda.TipoPrendaNombre}
+                                  </div>
+                                  {prenda.ProductoCodigo && (
+                                    <div className="text-slate-500">
+                                      {prenda.ProductoCodigo}
+                                    </div>
+                                  )}
+                                  {prenda.AlquilerPrendasObservacion && (
+                                    <div className="mt-1 max-w-[180px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                      ✂ {prenda.AlquilerPrendasObservacion}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(alquiler.AlquilerTotal)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(alquiler.AlquilerEntrega || 0)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(calcularSaldo(alquiler))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
       {/* Modal para editar estado del alquiler */}

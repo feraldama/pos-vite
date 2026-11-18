@@ -760,6 +760,10 @@ function leerRangoFechas(query) {
   return { rango: { dias } };
 }
 
+// ?q= de búsqueda de cliente (recortado, máx. 60 caracteres)
+const leerBusqueda = (query) =>
+  typeof query.q === "string" ? query.q.trim().slice(0, 60) : "";
+
 // Agrega a cada alquiler su lista de prendas (una sola consulta)
 async function adjuntarPrendas(alquileres) {
   const prendas = await AlquilerPrendas.getByAlquilerIds(
@@ -782,10 +786,18 @@ exports.getAlquileresProximosEntrega = async (req, res) => {
     return res.status(400).json({ success: false, message: error });
   }
   try {
-    const alquileres = await Alquiler.getAlquileresProximosEntrega(rango);
+    const busqueda = leerBusqueda(req.query);
+    const alquileres = await Alquiler.getAlquileresProximosEntrega(rango, busqueda);
+    // Con búsqueda la consulta trae uno de más: si llegó, la lista se recorta
+    // y se avisa al cliente para que afine la búsqueda
+    const recortada = busqueda !== "" && alquileres.length > Alquiler.LIMITE_BUSQUEDA;
     res.json({
       success: true,
-      data: await adjuntarPrendas(alquileres),
+      data: await adjuntarPrendas(
+        recortada ? alquileres.slice(0, Alquiler.LIMITE_BUSQUEDA) : alquileres
+      ),
+      recortada,
+      limite: Alquiler.LIMITE_BUSQUEDA,
     });
   } catch (error) {
     console.error("Error al obtener alquileres próximos a entrega:", error);
@@ -804,10 +816,18 @@ exports.getAlquileresProximosDevolucion = async (req, res) => {
     return res.status(400).json({ success: false, message: error });
   }
   try {
-    const alquileres = await Alquiler.getAlquileresProximosDevolucion(rango);
+    const busqueda = leerBusqueda(req.query);
+    const alquileres = await Alquiler.getAlquileresProximosDevolucion(rango, busqueda);
+    // Con búsqueda la consulta trae uno de más: si llegó, la lista se recorta
+    // y se avisa al cliente para que afine la búsqueda
+    const recortada = busqueda !== "" && alquileres.length > Alquiler.LIMITE_BUSQUEDA;
     res.json({
       success: true,
-      data: await adjuntarPrendas(alquileres),
+      data: await adjuntarPrendas(
+        recortada ? alquileres.slice(0, Alquiler.LIMITE_BUSQUEDA) : alquileres
+      ),
+      recortada,
+      limite: Alquiler.LIMITE_BUSQUEDA,
     });
   } catch (error) {
     console.error("Error al obtener alquileres próximos a devolución:", error);

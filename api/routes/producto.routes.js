@@ -16,6 +16,11 @@ router.get(
 );
 router.get("/search", authMiddleware, productoController.searchProductos);
 router.get("/:id", authMiddleware, productoController.getProductoById);
+router.get(
+  "/:id/imagen",
+  authMiddleware,
+  productoController.getProductoImagen
+);
 router.post("/", authMiddleware, productoController.createProducto);
 router.put(
   "/:id",

@@ -1,4 +1,5 @@
-// Tests sin base de datos: armado de la búsqueda de clientes.
+// Tests sin base de datos: armado de la búsqueda de clientes y anchos de las
+// miniaturas de productos.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
@@ -51,4 +52,15 @@ test("condicionBusquedaCliente: usa el alias de tabla indicado", () => {
   const { sql } = condicionBusquedaCliente("perez", "cli");
   assert.match(sql, /cli\.ClienteNombre/);
   assert.doesNotMatch(sql, /\bc\.Cliente/);
+});
+
+const { normalizarAncho } = require("../utils/miniaturaProducto");
+
+test("normalizarAncho: redondea hacia arriba a los anchos permitidos", () => {
+  assert.equal(normalizarAncho(undefined), 320);
+  assert.equal(normalizarAncho("basura"), 320);
+  assert.equal(normalizarAncho(1), 96);
+  assert.equal(normalizarAncho("160"), 160);
+  assert.equal(normalizarAncho(161), 320);
+  assert.equal(normalizarAncho(99999), 1200);
 });

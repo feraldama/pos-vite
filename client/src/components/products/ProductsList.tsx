@@ -7,6 +7,9 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import { getLocales } from "../../services/locales.service";
 import { getAllTiposPrenda } from "../../services/tipoprenda.service";
 import { formatMiles } from "../../utils/formato";
+import ImagenProducto from "../common/ImagenProducto";
+import { prepararImagenParaSubir } from "../../utils/imagen";
+import Swal from "sweetalert2";
 
 interface Producto {
   ProductoId?: number;
@@ -21,8 +24,12 @@ interface Producto {
   ProductoCantidadCaja?: number;
   ProductoIVA?: number;
   ProductoStockMinimo?: number;
+  // Base64 solo cuando se elige una imagen nueva; "" = borrarla;
+  // undefined = no tocar la que ya tiene
   ProductoImagen?: string;
   ProductoImagen_GXI?: string;
+  // La API indica si el producto tiene foto (no la manda en los listados)
+  TieneImagen?: boolean;
   LocalId: number;
   TipoPrendaId?: number;
   TipoPrendaNombre?: string;
@@ -94,15 +101,16 @@ export default function ProductsList({
     { TipoPrendaId: number; TipoPrendaNombre: string }[]
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [procesandoImagen, setProcesandoImagen] = useState(false);
   // Vista ampliada de la imagen al pasar el mouse por la miniatura
   const [imagePreview, setImagePreview] = useState<{
-    src: string;
+    productoId: number;
     x: number;
     y: number;
   } | null>(null);
 
-  const moverPreview = (src: string) => (e: React.MouseEvent) => {
-    setImagePreview({ src, x: e.clientX, y: e.clientY });
+  const moverPreview = (productoId: number) => (e: React.MouseEvent) => {
+    setImagePreview({ productoId, x: e.clientX, y: e.clientY });
   };
 
   useEffect(() => {
@@ -122,7 +130,8 @@ export default function ProductsList({
         ProductoCantidadCaja: 1, // Siempre 1
         ProductoIVA: currentProduct.ProductoIVA || 0,
         ProductoStockMinimo: currentProduct.ProductoStockMinimo || 0,
-        ProductoImagen: currentProduct.ProductoImagen || "",
+        ProductoImagen: undefined, // se conserva la actual salvo que la cambien
+        TieneImagen: !!currentProduct.TieneImagen,
         ProductoImagen_GXI: currentProduct.ProductoImagen_GXI || "",
         LocalId: currentProduct.LocalId,
         TipoPrendaId: currentProduct.TipoPrendaId || undefined,
@@ -180,29 +189,42 @@ export default function ProductsList({
   };
 
   // Manejar cambio de imagen (file input)
+  // La foto se achica en el navegador antes de guardarla: las de celular
+  // pesan varios MB y podían superar el límite de la API
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // permite volver a elegir el mismo archivo
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    setProcesandoImagen(true);
+    try {
+      const base64 = await prepararImagenParaSubir(file);
       setFormData((prev) => ({
         ...prev,
-        ProductoImagen: (reader.result as string).split(",")[1] || "",
+        ProductoImagen: base64,
+        TieneImagen: true,
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Imagen no válida",
+        text:
+          error instanceof Error ? error.message : "No se pudo cargar la imagen",
+      });
+    } finally {
+      setProcesandoImagen(false);
+    }
   };
 
   // Eliminar imagen
   const handleRemoveImage = () => {
-    setFormData((prev) => ({ ...prev, ProductoImagen: "" }));
+    setFormData((prev) => ({ ...prev, ProductoImagen: "", TieneImagen: false }));
   };
 
   // Enviar formulario
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { ProductoImagen_GXI, ...cleanFormData } = formData; // Limpiamos ProductoImagen_GXI antes de enviar
+    const { ProductoImagen_GXI, TieneImagen, ...cleanFormData } = formData; // Campos que no se envían
     // Asegurar valores por defecto para campos ocultos
     const formDataWithDefaults = {
       ...cleanFormData,
@@ -228,21 +250,20 @@ export default function ProductsList({
       key: "ProductoImagen",
       label: "Imagen",
       render: (item: Producto) =>
-        item.ProductoImagen ? (
-          <img
-            src={`data:image/jpeg;base64,${item.ProductoImagen}`}
-            alt={item.ProductoNombre}
-            className="h-12 w-12 object-cover rounded cursor-zoom-in"
-            loading="lazy"
-            decoding="async"
-            onMouseEnter={moverPreview(
-              `data:image/jpeg;base64,${item.ProductoImagen}`
-            )}
-            onMouseMove={moverPreview(
-              `data:image/jpeg;base64,${item.ProductoImagen}`
-            )}
+        item.TieneImagen && item.ProductoId ? (
+          <span
+            className="block h-12 w-12 cursor-zoom-in"
+            onMouseEnter={moverPreview(item.ProductoId)}
+            onMouseMove={moverPreview(item.ProductoId)}
             onMouseLeave={() => setImagePreview(null)}
-          />
+          >
+            <ImagenProducto
+              productoId={item.ProductoId}
+              ancho={96}
+              alt={item.ProductoNombre}
+              className="h-12 w-12 object-cover rounded"
+            />
+          </span>
         ) : (
           "-"
         ),
@@ -342,8 +363,9 @@ export default function ProductsList({
             ),
           }}
         >
-          <img
-            src={imagePreview.src}
+          <ImagenProducto
+            productoId={imagePreview.productoId}
+            ancho={640}
             alt="Vista ampliada"
             className="h-80 w-80 object-contain rounded"
           />
@@ -521,9 +543,12 @@ export default function ProductsList({
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-2 text-sm font-medium cursor-pointer"
+                            disabled={procesandoImagen}
+                            className="w-full text-blue-600 hover:text-blue-800 border border-blue-300 bg-white rounded px-3 py-2 text-sm font-medium cursor-pointer disabled:cursor-wait disabled:opacity-60"
                           >
-                            Seleccionar imagen
+                            {procesandoImagen
+                              ? "Procesando imagen..."
+                              : "Seleccionar imagen"}
                           </button>
                           <input
                             type="file"
@@ -532,7 +557,7 @@ export default function ProductsList({
                             className="hidden"
                             ref={fileInputRef}
                           />
-                          {formData.ProductoImagen && (
+                          {(formData.ProductoImagen || formData.TieneImagen) && (
                             <button
                               type="button"
                               onClick={handleRemoveImage}
@@ -560,6 +585,13 @@ export default function ProductsList({
                           alt="Imagen producto"
                           className="w-full max-w-xs h-auto object-contain border rounded shadow-sm"
                         />
+                      ) : formData.TieneImagen && formData.ProductoId ? (
+                        <ImagenProducto
+                          productoId={formData.ProductoId}
+                          ancho={640}
+                          alt="Imagen producto"
+                          className="w-full max-w-xs h-64 object-contain border rounded shadow-sm"
+                        />
                       ) : (
                         <div className="w-full max-w-xs h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
                           <p className="text-slate-500 text-sm text-center px-4">
@@ -576,6 +608,8 @@ export default function ProductsList({
                 <ActionButton
                   label={currentProduct ? "Actualizar" : "Crear"}
                   type="submit"
+                  // Que no se guarde sin la foto mientras se está achicando
+                  disabled={procesandoImagen}
                 />
                 <ActionButton
                   label="Cancelar"

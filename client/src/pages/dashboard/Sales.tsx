@@ -14,6 +14,7 @@ import {
   confirmarDevolucion,
 } from "../../services/pos.service";
 import logo from "../../assets/placeholderPrenda";
+import ImagenProducto from "../../components/common/ImagenProducto";
 import { EMPRESA } from "../../config/empresa";
 import {
   ArrowUturnLeftIcon,
@@ -63,7 +64,7 @@ export default function Sales() {
       id: number;
       nombre: string;
       precio: number;
-      imagen: string;
+      tieneImagen: boolean;
       stock: number;
       cantidad: number;
       cartItemId: number;
@@ -80,7 +81,7 @@ export default function Sales() {
       ProductoNombre: string;
       ProductoPrecioVenta: number;
       ProductoStock: number;
-      ProductoImagen?: string;
+      TieneImagen?: boolean;
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
       ProductoPrecioUnitario: number;
@@ -153,7 +154,7 @@ export default function Sales() {
     nombre: string;
     precio: number;
     precioMayorista?: number;
-    imagen: string;
+    tieneImagen: boolean;
     stock: number;
     precioUnitario?: number;
   }) => {
@@ -166,7 +167,7 @@ export default function Sales() {
       {
         id: producto.id,
         nombre: producto.nombre,
-        imagen: producto.imagen,
+        tieneImagen: producto.tieneImagen,
         stock: producto.stock,
         cantidad: 1,
         cartItemId: nuevoCartItemId,
@@ -674,9 +675,7 @@ export default function Sales() {
           nombre: primerProducto.ProductoNombre,
           precio: primerProducto.ProductoPrecioVenta,
           precioMayorista: primerProducto.ProductoPrecioVentaMayorista,
-          imagen: primerProducto.ProductoImagen
-            ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
-            : logo,
+          tieneImagen: !!primerProducto.TieneImagen,
           stock: primerProducto.ProductoStock,
           precioUnitario: primerProducto.ProductoPrecioUnitario,
         });
@@ -729,8 +728,11 @@ export default function Sales() {
                   >
                     <td className="py-3 pl-6 align-middle">
                       <div className="flex items-center gap-4">
-                        <img
-                          src={p.imagen}
+                        <ImagenProducto
+                          productoId={p.id}
+                          tieneImagen={p.tieneImagen}
+                          ancho={160}
+                          fallback={logo}
                           alt={p.nombre}
                           className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
@@ -1003,11 +1005,8 @@ export default function Sales() {
                     precio={p.ProductoPrecioVentaMayorista}
                     precioMayorista={p.ProductoPrecioVentaMayorista}
                     clienteTipo={clienteSeleccionado?.ClienteTipo || "MI"}
-                    imagen={
-                      p.ProductoImagen
-                        ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo
-                    }
+                    productoId={p.ProductoId}
+                    tieneImagen={!!p.TieneImagen}
                     stock={p.ProductoStock}
                     onAdd={() =>
                       agregarProducto({
@@ -1015,9 +1014,7 @@ export default function Sales() {
                         nombre: p.ProductoNombre,
                         precio: p.ProductoPrecioVenta,
                         precioMayorista: p.ProductoPrecioVentaMayorista,
-                        imagen: p.ProductoImagen
-                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo,
+                        tieneImagen: !!p.TieneImagen,
                         stock: p.ProductoStock,
                         precioUnitario: p.ProductoPrecioUnitario,
                       })

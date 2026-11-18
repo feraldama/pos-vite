@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { usePermiso } from "../../hooks/usePermiso";
 import api from "../../services/api";
+import { obtenerDataUrlImagenProducto } from "../../services/imagenProducto.service";
 import { formatMiles } from "../../utils/formato";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
 
@@ -56,7 +57,7 @@ interface PrendaAlquilada {
   AlquilerPrendasPrecio: number;
   ProductoNombre: string;
   ProductoCodigo: string;
-  ProductoImagen?: string | null;
+  TieneImagen?: boolean;
   TipoPrendaNombre: string;
   AlquilerFechaAlquiler: string;
   AlquilerFechaEntrega: string;
@@ -373,6 +374,17 @@ const ReportesPage: React.FC = () => {
     try {
       const res = await api.get("/alquilerprendas/prendas-alquiladas-actuales");
       const prendas: PrendaAlquilada[] = res.data.data || [];
+      // Fotos reducidas (una por producto) para la columna de imagen
+      const idsConImagen = [
+        ...new Set(prendas.filter((p) => p.TieneImagen).map((p) => p.ProductoId)),
+      ];
+      const imagenes = new Map(
+        await Promise.all(
+          idsConImagen.map(
+            async (id) => [id, await obtenerDataUrlImagenProducto(id, 320)] as const
+          )
+        )
+      );
 
       const { jsPDF } = await import("jspdf");
       const { default: autoTable } = await import("jspdf-autotable");
@@ -468,14 +480,15 @@ const ReportesPage: React.FC = () => {
             data.row.index < prendas.length
           ) {
             const p = prendas[data.row.index];
-            if (p?.ProductoImagen) {
+            const imagen = p ? imagenes.get(p.ProductoId) : null;
+            if (imagen) {
               try {
                 const imgW = 18;
                 const imgH = 22;
                 const x = data.cell.x + (data.cell.width - imgW) / 2;
                 const yImg = data.cell.y + 2;
                 doc.addImage(
-                  `data:image/jpeg;base64,${p.ProductoImagen}`,
+                  imagen,
                   "JPEG",
                   x,
                   yImg,

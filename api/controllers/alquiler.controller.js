@@ -73,7 +73,7 @@ async function bloquearYValidarStock(
       p.ProductoCodigo,
       p.ProductoNombre,
       p.ProductoStock,
-      p.ProductoImagen,
+      (COALESCE(octet_length(p.ProductoImagen), 0) > 0) AS TieneImagen,
       (SELECT COUNT(*) FROM alquilerprendas ap
         INNER JOIN alquiler a ON ap.AlquilerId = a.AlquilerId
         WHERE ap.ProductoId = p.ProductoId AND ${SOLAPA_RANGO}) AS Alquiladas
@@ -106,10 +106,7 @@ async function bloquearYValidarStock(
         producto.ProductoNombre || "Producto"
       }`,
       ProductoCodigo: producto.ProductoCodigo || "",
-      ProductoImagen:
-        producto.ProductoImagen && producto.ProductoImagen.length
-          ? producto.ProductoImagen.toString("base64")
-          : null,
+      TieneImagen: producto.TieneImagen,
       cantidadSolicitada,
       stockDisponible,
       prendasAlquiladas,

@@ -7,6 +7,7 @@ import {
   updateProducto,
 } from "../../services/productos.service";
 import ProductsList from "../../components/products/ProductsList";
+import { invalidarImagenProducto } from "../../services/imagenProducto.service";
 import Pagination from "../../components/common/Pagination";
 import Swal from "sweetalert2";
 import { usePermiso } from "../../hooks/usePermiso";
@@ -27,6 +28,7 @@ interface Producto {
   ProductoStockMinimo?: number;
   ProductoImagen?: string;
   ProductoImagen_GXI?: string;
+  TieneImagen?: boolean;
   LocalId: number;
   LocalNombre: string;
   [key: string]: unknown;
@@ -167,6 +169,10 @@ export default function ProductsPage() {
     try {
       if (currentProduct) {
         await updateProducto(currentProduct.ProductoId, productData);
+        // Si cambió la foto, que no se siga mostrando la anterior
+        if (productData.ProductoImagen !== undefined) {
+          invalidarImagenProducto(currentProduct.ProductoId);
+        }
         mensaje = "Producto actualizado exitosamente";
       } else {
         const response = await createProducto(productData);

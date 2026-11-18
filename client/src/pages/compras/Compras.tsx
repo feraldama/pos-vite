@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { confirmarCompra } from "../../services/pos.service";
 import logo from "../../assets/placeholderPrenda";
+import ImagenProducto from "../../components/common/ImagenProducto";
 import {
   getAllProveedoresSinPaginacion,
   createProveedor,
@@ -49,7 +50,7 @@ export default function Compras() {
       nombre: string;
       precioTotal: number; // Precio total pagado por el producto
       precioUnitario: number; // Precio unitario calculado
-      imagen: string;
+      tieneImagen: boolean;
       stock: number;
       cantidad: number;
       caja: boolean; // Indica si es caja o unidad
@@ -65,7 +66,7 @@ export default function Compras() {
       ProductoPrecioVenta: number;
       ProductoPrecioPromedio?: string;
       ProductoStock: number;
-      ProductoImagen?: string;
+      TieneImagen?: boolean;
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
       ProductoPrecioUnitario: number;
@@ -115,7 +116,7 @@ export default function Compras() {
     id: number;
     nombre: string;
     precio: number;
-    imagen: string;
+    tieneImagen: boolean;
     stock: number;
   }) => {
     const nuevoCartItemId = Date.now() + Math.random();
@@ -408,9 +409,7 @@ export default function Compras() {
         precio: primerProducto.ProductoPrecioPromedio
           ? Number(primerProducto.ProductoPrecioPromedio)
           : primerProducto.ProductoPrecioVenta,
-        imagen: primerProducto.ProductoImagen
-          ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
-          : logo,
+        tieneImagen: !!primerProducto.TieneImagen,
         stock: primerProducto.ProductoStock,
       });
       setBusqueda("");
@@ -450,8 +449,11 @@ export default function Compras() {
                   >
                     <td className="py-3 pl-6 align-middle">
                       <div className="flex items-center gap-4">
-                        <img
-                          src={p.imagen}
+                        <ImagenProducto
+                          productoId={p.id}
+                          tieneImagen={p.tieneImagen}
+                          ancho={160}
+                          fallback={logo}
                           alt={p.nombre}
                           className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
@@ -775,11 +777,8 @@ export default function Compras() {
                     }
                     precioMayorista={p.ProductoPrecioVentaMayorista}
                     clienteTipo="MI"
-                    imagen={
-                      p.ProductoImagen
-                        ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo
-                    }
+                    productoId={p.ProductoId}
+                    tieneImagen={!!p.TieneImagen}
                     stock={p.ProductoStock}
                     onAdd={() =>
                       agregarProducto({
@@ -788,9 +787,7 @@ export default function Compras() {
                         precio: p.ProductoPrecioPromedio
                           ? Number(p.ProductoPrecioPromedio)
                           : p.ProductoPrecioVenta,
-                        imagen: p.ProductoImagen
-                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo,
+                        tieneImagen: !!p.TieneImagen,
                         stock: p.ProductoStock,
                       })
                     }

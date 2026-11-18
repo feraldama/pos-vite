@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { actualizarInventario } from "../../services/pos.service";
 import logo from "../../assets/placeholderPrenda";
+import ImagenProducto from "../../components/common/ImagenProducto";
 import { useNavigate } from "react-router-dom";
 import ActionButton from "../../components/common/Button/ActionButton";
 import { getLocalById } from "../../services/locales.service";
@@ -17,7 +18,7 @@ export default function Inventario() {
     {
       id: number;
       nombre: string;
-      imagen: string;
+      tieneImagen: boolean;
       stock: number;
       caja: number; // Cantidad en cajas
       cartItemId: number;
@@ -32,7 +33,7 @@ export default function Inventario() {
       ProductoPrecioVenta: number;
       ProductoPrecioPromedio?: string;
       ProductoStock: number;
-      ProductoImagen?: string;
+      TieneImagen?: boolean;
       ProductoPrecioVentaMayorista: number;
       LocalId: string | number;
       ProductoPrecioUnitario: number;
@@ -75,7 +76,7 @@ export default function Inventario() {
   const agregarProducto = (producto: {
     id: number;
     nombre: string;
-    imagen: string;
+    tieneImagen: boolean;
     stock: number;
   }) => {
     if (!puedeCrear) {
@@ -306,9 +307,7 @@ export default function Inventario() {
       agregarProducto({
         id: primerProducto.ProductoId,
         nombre: primerProducto.ProductoNombre,
-        imagen: primerProducto.ProductoImagen
-          ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
-          : logo,
+        tieneImagen: !!primerProducto.TieneImagen,
         stock: primerProducto.ProductoStock,
       });
       setBusqueda("");
@@ -346,8 +345,11 @@ export default function Inventario() {
                   >
                     <td className="py-3 pl-6 align-middle">
                       <div className="flex items-center gap-4">
-                        <img
-                          src={p.imagen}
+                        <ImagenProducto
+                          productoId={p.id}
+                          tieneImagen={p.tieneImagen}
+                          ancho={160}
+                          fallback={logo}
                           alt={p.nombre}
                           className="w-14 h-14 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
@@ -572,20 +574,15 @@ export default function Inventario() {
                     }
                     precioMayorista={p.ProductoPrecioVentaMayorista}
                     clienteTipo="MI"
-                    imagen={
-                      p.ProductoImagen
-                        ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo
-                    }
+                    productoId={p.ProductoId}
+                    tieneImagen={!!p.TieneImagen}
                     stock={p.ProductoStock}
                     onAdd={() => {
                       if (puedeCrear) {
                         agregarProducto({
                           id: p.ProductoId,
                           nombre: p.ProductoNombre,
-                          imagen: p.ProductoImagen
-                            ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                            : logo,
+                          tieneImagen: !!p.TieneImagen,
                           stock: p.ProductoStock,
                         });
                       } else {

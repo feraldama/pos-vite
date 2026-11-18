@@ -31,8 +31,8 @@ const AlquilerPrendas = {
           p.ProductoNombre,
           p.ProductoCodigo,
           p.ProductoPrecioVenta,
-          p.ProductoImagen,
-          tp.TipoPrendaNombre
+          tp.TipoPrendaNombre,
+          (COALESCE(octet_length(p.ProductoImagen), 0) > 0) AS TieneImagen
         FROM alquilerprendas ap
         LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
         LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId
@@ -41,14 +41,7 @@ const AlquilerPrendas = {
 
       db.query(query, [alquilerId], (err, results) => {
         if (err) return reject(err);
-        // Convertir imágenes Buffer a base64
-        const processedResults = results.map((row) => {
-          if (row.ProductoImagen && Buffer.isBuffer(row.ProductoImagen)) {
-            row.ProductoImagen = row.ProductoImagen.toString("base64");
-          }
-          return row;
-        });
-        resolve(processedResults);
+        resolve(results);
       });
     });
   },
@@ -63,23 +56,19 @@ const AlquilerPrendas = {
           p.ProductoNombre,
           p.ProductoCodigo,
           p.ProductoPrecioVenta,
-          p.ProductoImagen,
-          tp.TipoPrendaNombre
+          tp.TipoPrendaNombre,
+          (COALESCE(octet_length(p.ProductoImagen), 0) > 0) AS TieneImagen
         FROM alquilerprendas ap
         LEFT JOIN producto p ON ap.ProductoId = p.ProductoId
         LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId
         WHERE ap.AlquilerId IN (${alquilerIds.map(() => "?").join(", ")})
       `;
 
+      // La imagen no viaja en el listado (pesan varios MB c/u): el cliente
+      // la pide aparte a GET /productos/:id/imagen
       db.query(query, alquilerIds, (err, results) => {
         if (err) return reject(err);
-        const processedResults = results.map((row) => {
-          if (row.ProductoImagen && Buffer.isBuffer(row.ProductoImagen)) {
-            row.ProductoImagen = row.ProductoImagen.toString("base64");
-          }
-          return row;
-        });
-        resolve(processedResults);
+        resolve(results);
       });
     });
   },
@@ -443,7 +432,7 @@ const AlquilerPrendas = {
           ap.AlquilerPrendasObservacion,
           p.ProductoNombre,
           p.ProductoCodigo,
-          p.ProductoImagen,
+          (COALESCE(octet_length(p.ProductoImagen), 0) > 0) AS TieneImagen,
           tp.TipoPrendaNombre,
           a.AlquilerFechaAlquiler,
           a.AlquilerFechaEntrega,
@@ -473,14 +462,7 @@ const AlquilerPrendas = {
           console.error("Error en getPrendasAlquiladasActuales:", err);
           return reject(err);
         }
-        const processedResults = results.map((row) => {
-          const r = { ...row };
-          if (r.ProductoImagen && Buffer.isBuffer(r.ProductoImagen)) {
-            r.ProductoImagen = r.ProductoImagen.toString("base64");
-          }
-          return r;
-        });
-        resolve(processedResults);
+        resolve(results);
       });
     });
   },

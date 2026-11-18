@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { activarConTeclado } from "../../utils/teclado";
 import Modal from "../../components/common/Modal";
+import ImagenProducto from "../../components/common/ImagenProducto";
 import ActionButton from "../../components/common/Button/ActionButton";
 import {
   ChatBubbleBottomCenterTextIcon,
@@ -24,11 +25,12 @@ import { useSeccionAlquileres } from "../../hooks/useSeccionAlquileres";
 import Swal from "sweetalert2";
 
 interface AlquilerPrenda {
+  ProductoId: number;
   ProductoNombre: string;
   ProductoCodigo: string;
   TipoPrendaNombre: string;
   AlquilerPrendasPrecio: number;
-  ProductoImagen?: string;
+  TieneImagen?: boolean;
   AlquilerPrendasObservacion?: string;
 }
 
@@ -358,9 +360,9 @@ function Dashboard() {
                                 key={index}
                                 className="flex items-center gap-2 border rounded p-2 bg-gray-50"
                               >
-                                {prenda.ProductoImagen ? (
-                                  <img
-                                    src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                {prenda.TieneImagen ? (
+                                  <ImagenProducto
+                                    productoId={prenda.ProductoId}
                                     alt={prenda.ProductoNombre}
                                     className="w-16 h-16 object-contain rounded"
                                   />
@@ -572,9 +574,9 @@ function Dashboard() {
                                 key={index}
                                 className="flex items-center gap-2 border rounded p-2 bg-gray-50"
                               >
-                                {prenda.ProductoImagen ? (
-                                  <img
-                                    src={`data:image/jpeg;base64,${prenda.ProductoImagen}`}
+                                {prenda.TieneImagen ? (
+                                  <ImagenProducto
+                                    productoId={prenda.ProductoId}
                                     alt={prenda.ProductoNombre}
                                     className="w-16 h-16 object-contain rounded"
                                   />

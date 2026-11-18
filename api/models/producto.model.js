@@ -1,9 +1,17 @@
 const db = require("../config/db");
 
+// Columnas de producto para listados: la imagen (bytea de varios MB) no se
+// trae; solo se indica si existe. El cliente la pide a /productos/:id/imagen.
+const COLUMNAS = `p.ProductoId, p.ProductoCodigo, p.ProductoNombre, p.ProductoPrecioVenta,
+  p.ProductoPrecioVentaMayorista, p.ProductoPrecioUnitario, p.ProductoPrecioPromedio,
+  p.ProductoStock, p.ProductoStockUnitario, p.ProductoCantidadCaja, p.ProductoIVA,
+  p.ProductoStockMinimo, p.ProductoImagen_GXI, p.LocalId, p.TipoPrendaId,
+  (COALESCE(octet_length(p.ProductoImagen), 0) > 0) AS TieneImagen`;
+
 const Producto = {
   getAll: () => {
     return new Promise((resolve, reject) => {
-      db.query("SELECT * FROM producto", (err, results) => {
+      db.query(`SELECT ${COLUMNAS} FROM producto p`, (err, results) => {
         if (err) reject(err);
         resolve(results);
       });
@@ -13,7 +21,7 @@ const Producto = {
   getById: (id) => {
     return new Promise((resolve, reject) => {
       db.query(
-        "SELECT p.*, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId WHERE p.ProductoId = ?",
+        `SELECT ${COLUMNAS}, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId WHERE p.ProductoId = ?`,
         [id],
         (err, results) => {
           if (err) return reject(err);
@@ -21,6 +29,16 @@ const Producto = {
         }
       );
     });
+  },
+
+  // Solo la imagen (binaria) de un producto, o null si no tiene
+  getImagen: async (id) => {
+    const rows = await db.query(
+      "SELECT ProductoImagen FROM producto WHERE ProductoId = ?",
+      [id]
+    );
+    const imagen = rows[0]?.ProductoImagen;
+    return imagen && imagen.length ? imagen : null;
   },
 
   getAllPaginated: (
@@ -43,7 +61,6 @@ const Producto = {
         "ProductoCantidadCaja",
         "ProductoIVA",
         "ProductoStockMinimo",
-        "ProductoImagen",
         "ProductoImagen_GXI",
         "LocalId",
         "LocalNombre",
@@ -58,7 +75,7 @@ const Producto = {
         : "ASC";
 
       db.query(
-        `SELECT p.*, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId ORDER BY ${sortField === "LocalNombre" ? "l" : sortField === "TipoPrendaNombre" ? "tp" : "p"}.${sortField} ${order} LIMIT ? OFFSET ?`,
+        `SELECT ${COLUMNAS}, l.LocalNombre, tp.TipoPrendaNombre FROM producto p LEFT JOIN local l ON p.LocalId = l.LocalId LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId ORDER BY ${sortField === "LocalNombre" ? "l" : sortField === "TipoPrendaNombre" ? "tp" : "p"}.${sortField} ${order} LIMIT ? OFFSET ?`,
         [limit, offset],
         (err, results) => {
           if (err) return reject(err);
@@ -94,7 +111,6 @@ const Producto = {
         "ProductoCantidadCaja",
         "ProductoIVA",
         "ProductoStockMinimo",
-        "ProductoImagen",
         "ProductoImagen_GXI",
         "LocalId",
         "LocalNombre",
@@ -109,7 +125,7 @@ const Producto = {
         : "ASC";
 
       const searchQuery = `
-        SELECT p.*, l.LocalNombre, tp.TipoPrendaNombre FROM producto p
+        SELECT ${COLUMNAS}, l.LocalNombre, tp.TipoPrendaNombre FROM producto p
         LEFT JOIN local l ON p.LocalId = l.LocalId
         LEFT JOIN tipoprenda tp ON p.TipoPrendaId = tp.TipoPrendaId
         WHERE p.ProductoNombre LIKE ? 

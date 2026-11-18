@@ -18,6 +18,8 @@ import {
   updateAlquiler,
 } from "../../services/alquiler.service";
 import logo from "../../assets/placeholderPrenda";
+import ImagenProducto from "../../components/common/ImagenProducto";
+import { obtenerUrlImagenProducto } from "../../services/imagenProducto.service";
 import {
   getAllClientesSinPaginacion,
   createCliente,
@@ -70,7 +72,7 @@ interface AlquilerEnEdicion {
   prendas: {
     ProductoId: number;
     ProductoNombre: string;
-    ProductoImagen?: string;
+    TieneImagen?: boolean;
     AlquilerPrendasPrecio: number;
     AlquilerPrendasObservacion?: string;
   }[];
@@ -96,7 +98,7 @@ export default function Rentals() {
       id: number;
       nombre: string;
       precio: number;
-      imagen: string;
+      tieneImagen: boolean;
       stock: number;
       cantidad: number;
       cartItemId: number;
@@ -113,7 +115,7 @@ export default function Rentals() {
       ProductoNombre: string;
       ProductoPrecioVenta: number;
       ProductoStock: number;
-      ProductoImagen?: string;
+      TieneImagen?: boolean;
       LocalId: string | number;
     }[]
   >([]);
@@ -243,9 +245,7 @@ export default function Rentals() {
             id: p.ProductoId,
             nombre: p.ProductoNombre,
             precio: p.AlquilerPrendasPrecio,
-            imagen: p.ProductoImagen
-              ? `data:image/jpeg;base64,${p.ProductoImagen}`
-              : logo,
+            tieneImagen: !!p.TieneImagen,
             stock: 0,
             cantidad: 1,
             cartItemId: Date.now() + idx,
@@ -274,7 +274,7 @@ export default function Rentals() {
     id: number;
     nombre: string;
     precio: number;
-    imagen: string;
+    tieneImagen: boolean;
     stock: number;
   }) => {
     const nuevoCartItemId = Date.now() + Math.random();
@@ -479,7 +479,7 @@ export default function Rentals() {
           ProductoId: number;
           ProductoNombre: string;
           ProductoCodigo?: string;
-          ProductoImagen?: string | null;
+          TieneImagen?: boolean;
           cantidadSolicitada?: number;
           stockDisponible?: number;
           prendasAlquiladas?: number;
@@ -505,12 +505,9 @@ export default function Rentals() {
           prenda.conflictos && prenda.conflictos.length > 0
             ? prenda.conflictos[0]
             : null;
-        const imagenSrc = prenda.ProductoImagen
-          ? `data:image/jpeg;base64,${prenda.ProductoImagen}`
-          : logo;
 
         htmlContent += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff9800;">`;
-        htmlContent += `<img src="${escaparHtml(imagenSrc)}" alt="${escaparHtml(prenda.ProductoNombre)}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
+        htmlContent += `<img src="${escaparHtml(logo)}"${prenda.TieneImagen ? ` data-producto-id="${Number(prenda.ProductoId)}"` : ""} alt="${escaparHtml(prenda.ProductoNombre)}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background-color: white; padding: 4px; flex-shrink: 0;" />`;
         htmlContent += `<div style="flex: 1;">`;
         htmlContent += `<div style="font-weight: 600; margin-bottom: 4px; color: #333;">${
           index + 1
@@ -548,6 +545,18 @@ export default function Rentals() {
         confirmButtonText: "Entendido",
         confirmButtonColor: "#2563eb",
         width: "600px",
+        // Las fotos llegan aparte: se muestra el placeholder y se reemplaza
+        didOpen: (popup) => {
+          popup
+            .querySelectorAll<HTMLImageElement>("img[data-producto-id]")
+            .forEach((img) => {
+              obtenerUrlImagenProducto(Number(img.dataset.productoId), 160).then(
+                (url) => {
+                  if (url) img.src = url;
+                }
+              );
+            });
+        },
       });
       return;
     }
@@ -956,9 +965,7 @@ export default function Rentals() {
           id: primerProducto.ProductoId,
           nombre: primerProducto.ProductoNombre,
           precio: primerProducto.ProductoPrecioVenta,
-          imagen: primerProducto.ProductoImagen
-            ? `data:image/jpeg;base64,${primerProducto.ProductoImagen}`
-            : logo,
+          tieneImagen: !!primerProducto.TieneImagen,
           stock: primerProducto.ProductoStock,
         });
 
@@ -1029,8 +1036,11 @@ export default function Rentals() {
                   >
                     <td className="py-3 pl-4 pr-2 align-middle">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={p.imagen}
+                        <ImagenProducto
+                          productoId={p.id}
+                          tieneImagen={p.tieneImagen}
+                          ancho={160}
+                          fallback={logo}
                           alt={p.nombre}
                           className="w-12 h-12 shrink-0 object-contain rounded-lg bg-[#f5f8ff] shadow"
                         />
@@ -1394,11 +1404,8 @@ export default function Rentals() {
                     precio={p.ProductoPrecioVenta}
                     precioMayorista={undefined}
                     clienteTipo="MI"
-                    imagen={
-                      p.ProductoImagen
-                        ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                        : logo
-                    }
+                    productoId={p.ProductoId}
+                    tieneImagen={!!p.TieneImagen}
                     stock={p.ProductoStock}
                     fechasAlquiladas={fechasOcupadas[p.ProductoId]}
                     onAdd={() =>
@@ -1406,9 +1413,7 @@ export default function Rentals() {
                         id: p.ProductoId,
                         nombre: p.ProductoNombre,
                         precio: p.ProductoPrecioVenta,
-                        imagen: p.ProductoImagen
-                          ? `data:image/jpeg;base64,${p.ProductoImagen}`
-                          : logo,
+                        tieneImagen: !!p.TieneImagen,
                         stock: p.ProductoStock,
                       })
                     }

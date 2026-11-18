@@ -1,5 +1,7 @@
 import React from "react";
 import { formatMiles } from "../../utils/formato";
+import ImagenProducto from "../common/ImagenProducto";
+import PLACEHOLDER_PRENDA from "../../assets/placeholderPrenda";
 
 export interface RangoAlquilado {
   desde: string; // ISO date
@@ -12,7 +14,8 @@ interface ProductCardProps {
   precio: number;
   precioMayorista?: number;
   clienteTipo?: string;
-  imagen: string;
+  productoId: number;
+  tieneImagen?: boolean;
   stock: number;
   onAdd: () => void;
   precioUnitario?: number;
@@ -32,7 +35,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   precio,
   precioMayorista,
   clienteTipo,
-  imagen,
+  productoId,
+  tieneImagen,
   stock,
   onAdd,
   fechasAlquiladas,
@@ -53,19 +57,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
       className="flex w-full cursor-pointer flex-col items-center rounded-lg border border-slate-200 bg-white p-0 text-center shadow-sm transition-shadow duration-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
     >
       <div className="flex w-full items-center justify-center p-4">
-        <img
+        <ImagenProducto
+          productoId={productoId}
+          tieneImagen={tieneImagen}
+          ancho={320}
+          fallback={PLACEHOLDER_PRENDA}
           // w-full además de la altura, para que la caja de la imagen no mida
           // 0px de ancho antes de cargar y todas las tarjetas queden parejas
           className="h-32 w-full object-contain bg-white"
-          src={imagen}
           // El nombre va como texto justo debajo, repetirlo en el alt haría que
           // el lector de pantalla lo anuncie dos veces
           alt=""
-          // Sin loading="lazy": acá todas las imágenes son data URI (base64 que
-          // ya viene en la respuesta, o el SVG de placeholder), así que no hay
-          // ningún pedido de red que diferir y con el placeholder impedía que
-          // la imagen llegara a cargarse
-          decoding="async"
         />
       </div>
       <div className="w-full px-4 pb-3">

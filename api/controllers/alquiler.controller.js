@@ -262,6 +262,14 @@ function insertarPagoAlquiler(
 // (formulario de /alquileres), la diferencia queda como AJUSTE en alquilerpago,
 // así los pagos del alquiler siguen sumando lo entregado.
 // Devuelve false si el alquiler no existe
+// Observaciones del alquiler: texto libre, recortado al largo de la columna.
+// undefined/null = "no se envió" (al editar, conserva la actual)
+const LARGO_OBSERVACION = 500;
+const normalizarObservacion = (valor) =>
+  valor === undefined || valor === null
+    ? null
+    : String(valor).trim().slice(0, LARGO_OBSERVACION);
+
 async function actualizarCabecera(client, id, data) {
   const { rows } = await client.q(
     "SELECT AlquilerEntrega FROM alquiler WHERE AlquilerId = ? FOR UPDATE",
@@ -278,7 +286,8 @@ async function actualizarCabecera(client, id, data) {
       AlquilerEstado = COALESCE(?, AlquilerEstado),
       AlquilerTotal = COALESCE(?, AlquilerTotal),
       AlquilerEntrega = COALESCE(?, AlquilerEntrega),
-      AlquilerDescuento = COALESCE(?, AlquilerDescuento)
+      AlquilerDescuento = COALESCE(?, AlquilerDescuento),
+      AlquilerObservacion = COALESCE(?, AlquilerObservacion)
       WHERE AlquilerId = ?`,
     [
       data.ClienteId ?? null,
@@ -289,6 +298,7 @@ async function actualizarCabecera(client, id, data) {
       data.AlquilerTotal ?? null,
       data.AlquilerEntrega ?? null,
       data.AlquilerDescuento ?? null,
+      normalizarObservacion(data.AlquilerObservacion),
       id,
     ]
   );
@@ -466,8 +476,9 @@ exports.createAlquiler = async (req, res) => {
           AlquilerEstado,
           AlquilerTotal,
           AlquilerEntrega,
-          AlquilerDescuento
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          AlquilerDescuento,
+          AlquilerObservacion
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING AlquilerId`,
         [
           req.body.ClienteId,
@@ -483,6 +494,7 @@ exports.createAlquiler = async (req, res) => {
             : req.body.AlquilerEntrega || 0,
           // El voucher es un descuento: no entra a caja pero reduce el saldo
           req.body.AlquilerDescuento ?? req.body.pagos?.voucher ?? 0,
+          normalizarObservacion(req.body.AlquilerObservacion) ?? "",
         ]
       );
       const alquilerId = rows[0].AlquilerId;
@@ -653,6 +665,40 @@ exports.updateEstadoAlquiler = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error al actualizar el estado del alquiler",
+      error: error.message,
+    });
+  }
+};
+
+// PATCH /:id/observacion — cambia solo las observaciones (desde el dashboard)
+exports.updateObservacionAlquiler = async (req, res) => {
+  try {
+    const { AlquilerObservacion } = req.body;
+    if (typeof AlquilerObservacion !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "AlquilerObservacion debe ser un texto",
+      });
+    }
+    const alquiler = await Alquiler.updateObservacion(
+      req.params.id,
+      normalizarObservacion(AlquilerObservacion)
+    );
+    if (!alquiler) {
+      return res.status(404).json({
+        success: false,
+        message: "Alquiler no encontrado",
+      });
+    }
+    res.json({
+      success: true,
+      data: alquiler,
+      message: "Observaciones del alquiler actualizadas",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error al actualizar las observaciones del alquiler",
       error: error.message,
     });
   }

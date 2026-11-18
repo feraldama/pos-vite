@@ -64,6 +64,26 @@ export const updateEstadoAlquiler = async (
   }
 };
 
+// Cambia solo las observaciones del alquiler (pedidos específicos del cliente)
+export const updateObservacionAlquiler = async (
+  id: string | number,
+  observacion: string
+) => {
+  try {
+    const response = await api.patch(`/alquiler/${id}/observacion`, {
+      AlquilerObservacion: observacion,
+    });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al actualizar las observaciones del alquiler",
+      }
+    );
+  }
+};
+
 export const updateAlquiler = async (
   id: string | number,
   alquilerData: Record<string, unknown>

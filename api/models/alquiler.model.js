@@ -287,6 +287,15 @@ const Alquiler = {
     });
   },
 
+  updateObservacion: async (id, observacion) => {
+    const result = await db.query(
+      "UPDATE alquiler SET AlquilerObservacion = ? WHERE AlquilerId = ?",
+      [observacion, id]
+    );
+    if (result.affectedRows === 0) return null;
+    return Alquiler.getById(id);
+  },
+
   delete: (id) => {
     return new Promise((resolve, reject) => {
       // Primero eliminar registros asociados en alquilerprendas

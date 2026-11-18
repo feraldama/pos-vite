@@ -62,6 +62,7 @@ interface AlquilerEnEdicion {
   AlquilerEstado: string;
   AlquilerEntrega: number;
   AlquilerDescuento?: number;
+  AlquilerObservacion?: string;
   ClienteNombre?: string;
   ClienteApellido?: string;
   ClienteRUC?: string;
@@ -181,6 +182,8 @@ export default function Rentals() {
   );
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [fechaDevolucion, setFechaDevolucion] = useState("");
+  // Pedidos específicos del cliente ("agregar corbata y cinto")
+  const [observacion, setObservacion] = useState("");
   const cantidadRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,6 +217,7 @@ export default function Rentals() {
         setFechaAlquiler(aFechaInput(alquiler.AlquilerFechaAlquiler));
         setFechaEntrega(aFechaInput(alquiler.AlquilerFechaEntrega));
         setFechaDevolucion(aFechaInput(alquiler.AlquilerFechaDevolucion));
+        setObservacion(alquiler.AlquilerObservacion || "");
         setClienteSeleccionado({
           ClienteId: alquiler.ClienteId,
           ClienteRUC: alquiler.ClienteRUC || "",
@@ -700,6 +704,7 @@ export default function Rentals() {
         AlquilerEntrega: Math.round(montoEntrega),
         // El voucher descuenta del saldo (no es ingreso de caja)
         AlquilerDescuento: voucher,
+        AlquilerObservacion: observacion,
         prendas: prendas,
         // Datos de pago para registro en caja
         pagos: {
@@ -750,6 +755,7 @@ export default function Rentals() {
         setFechaAlquiler(new Date().toISOString().split("T")[0]);
         setFechaEntrega("");
         setFechaDevolucion("");
+        setObservacion("");
         setClienteSeleccionado(null);
       });
     } catch (error: unknown) {
@@ -800,6 +806,7 @@ export default function Rentals() {
         AlquilerFechaEntrega: fechaEntrega,
         AlquilerFechaDevolucion: fechaDevolucion,
         AlquilerTotal: total,
+        AlquilerObservacion: observacion,
         // Sin estado ni entrega: el servidor conserva los actuales, así no se
         // pisa un pago registrado mientras se editaba
         prendas,
@@ -841,6 +848,7 @@ export default function Rentals() {
         };
     generarTicketAlquiler({
       alquilerId: alquilerId ?? alquilerEditado?.AlquilerId,
+      observacion,
       cliente: {
         nombre: clienteSeleccionado?.ClienteNombre || "",
         apellido: clienteSeleccionado?.ClienteApellido || "",
@@ -1197,6 +1205,24 @@ export default function Rentals() {
                 required
               />
             </div>
+          </div>
+          {/* Observaciones del alquiler (se ven en el dashboard y en el ticket) */}
+          <div className="mb-3">
+            <label
+              htmlFor="rentals-observacion"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Observaciones
+            </label>
+            <textarea
+              id="rentals-observacion"
+              value={observacion}
+              onChange={(e) => setObservacion(e.target.value)}
+              maxLength={500}
+              rows={2}
+              placeholder="Pedidos específicos del cliente. Ej.: agregar corbata y cinto"
+              className="w-full resize-y border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
           </div>
           {/* Total */}
           <div className="flex justify-between items-center mb-3">

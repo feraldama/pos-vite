@@ -46,6 +46,12 @@ router.put(
   alquilerController.updateAlquiler
 );
 router.patch(
+  "/:id/observacion",
+  authMiddleware,
+  verificarPermiso("ALQUILER", "editar"),
+  alquilerController.updateObservacionAlquiler
+);
+router.patch(
   "/:id/estado",
   authMiddleware,
   verificarPermiso("ALQUILER", "editar"),

@@ -30,6 +30,8 @@ export interface TicketAlquilerData {
   entregado: number;
   pagos?: TicketPagos;
   esReimpresion?: boolean;
+  /** Observaciones del alquiler (pedidos específicos del cliente). */
+  observacion?: string;
 }
 
 // Filas de alquilerprendas tal como llegan de la API (una fila por unidad)
@@ -179,6 +181,23 @@ export function generarTicketAlquiler(data: TicketAlquilerData) {
       yPosition += lineas.length * 3.5;
     });
     yPosition += 2;
+  }
+
+  // Observaciones del alquiler (pedidos específicos del cliente)
+  const observacion = (data.observacion || "").trim();
+  if (observacion) {
+    doc.setLineWidth(0.2);
+    doc.line(0, yPosition, 75, yPosition);
+    yPosition += 4;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("OBSERVACIONES:", 0, yPosition);
+    yPosition += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const lineas = doc.splitTextToSize(observacion, 73);
+    doc.text(lineas, 0, yPosition);
+    yPosition += lineas.length * 3.5 + 2;
   }
 
   // Línea separadora

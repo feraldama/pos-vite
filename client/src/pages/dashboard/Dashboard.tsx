@@ -2,13 +2,18 @@ import { useState } from "react";
 import { activarConTeclado } from "../../utils/teclado";
 import Modal from "../../components/common/Modal";
 import ActionButton from "../../components/common/Button/ActionButton";
-import { PencilSquareIcon, ScissorsIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleBottomCenterTextIcon,
+  PencilSquareIcon,
+  ScissorsIcon,
+} from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/useAuth";
 import {
   getAlquileresProximosEntrega,
   getAlquileresProximosDevolucion,
   updateEstadoAlquiler,
+  updateObservacionAlquiler,
   getAlquilerById,
 } from "../../services/alquiler.service";
 import { formatCurrency } from "../../utils/formato";
@@ -41,6 +46,7 @@ interface Alquiler {
   ClienteApellido?: string;
   ClienteTelefono?: string;
   ClienteRUC?: string;
+  AlquilerObservacion?: string;
   prendas: AlquilerPrenda[];
 }
 
@@ -81,6 +87,7 @@ function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAlquiler, setCurrentAlquiler] = useState<Alquiler | null>(null);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
+  const [observacionEditada, setObservacionEditada] = useState("");
 
   // El voucher es descuento: no suma a lo entregado pero reduce el saldo
   const calcularSaldo = (alquiler: Alquiler) =>
@@ -104,6 +111,7 @@ function Dashboard() {
       setEstadoSeleccionado(
         (alquilerData as Alquiler).AlquilerEstado || "Pendiente"
       );
+      setObservacionEditada((alquilerData as Alquiler).AlquilerObservacion || "");
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error al cargar alquiler:", error);
@@ -129,6 +137,7 @@ function Dashboard() {
     setIsModalOpen(false);
     setCurrentAlquiler(null);
     setEstadoSeleccionado("");
+    setObservacionEditada("");
   };
 
   // El generador de tickets arrastra jspdf (~350 KB). Se carga recién al
@@ -149,6 +158,7 @@ function Dashboard() {
       fechaEntrega: currentAlquiler.AlquilerFechaEntrega,
       fechaDevolucion: currentAlquiler.AlquilerFechaDevolucion,
       prendas: agruparPrendasTicket(currentAlquiler.prendas || []),
+      observacion: currentAlquiler.AlquilerObservacion,
       total: currentAlquiler.AlquilerTotal || 0,
       entregado: currentAlquiler.AlquilerEntrega || 0,
       pagos: currentAlquiler.AlquilerDescuento
@@ -158,19 +168,34 @@ function Dashboard() {
     });
   };
 
-  const handleUpdateEstado = async () => {
+  const handleGuardar = async () => {
     if (!currentAlquiler) return;
+    const cambioEstado = estadoSeleccionado !== currentAlquiler.AlquilerEstado;
+    const cambioObservacion =
+      observacionEditada.trim() !== (currentAlquiler.AlquilerObservacion || "");
+    if (!cambioEstado && !cambioObservacion) {
+      handleCloseModal();
+      return;
+    }
 
     try {
-      await updateEstadoAlquiler(
-        currentAlquiler.AlquilerId,
-        estadoSeleccionado
-      );
+      if (cambioObservacion) {
+        await updateObservacionAlquiler(
+          currentAlquiler.AlquilerId,
+          observacionEditada
+        );
+      }
+      if (cambioEstado) {
+        await updateEstadoAlquiler(
+          currentAlquiler.AlquilerId,
+          estadoSeleccionado
+        );
+      }
 
       Swal.fire({
         icon: "success",
         title: "Éxito",
-        text: "Estado del alquiler actualizado correctamente",
+        text: "Alquiler actualizado correctamente",
         timer: 2000,
         showConfirmButton: false,
       });
@@ -182,7 +207,7 @@ function Dashboard() {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudo actualizar el estado del alquiler",
+        text: "No se pudo actualizar el alquiler",
       });
     }
   };
@@ -270,6 +295,9 @@ function Dashboard() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Prendas
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Observaciones
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total
@@ -362,6 +390,21 @@ function Dashboard() {
                               </div>
                             ))}
                           </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm align-middle">
+                          {alquiler.AlquilerObservacion ? (
+                            <div className="flex max-w-[220px] gap-1.5 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                              <ChatBubbleBottomCenterTextIcon
+                                aria-hidden="true"
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                              />
+                              <span className="whitespace-pre-line break-words">
+                                {alquiler.AlquilerObservacion}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                           {formatCurrency(alquiler.AlquilerTotal)}
@@ -468,6 +511,9 @@ function Dashboard() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Prendas
                       </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Observaciones
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total
                       </th>
@@ -559,6 +605,21 @@ function Dashboard() {
                             ))}
                           </div>
                         </td>
+                        <td className="px-4 py-4 text-sm align-middle">
+                          {alquiler.AlquilerObservacion ? (
+                            <div className="flex max-w-[220px] gap-1.5 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                              <ChatBubbleBottomCenterTextIcon
+                                aria-hidden="true"
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                              />
+                              <span className="whitespace-pre-line break-words">
+                                {alquiler.AlquilerObservacion}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                           {formatCurrency(alquiler.AlquilerTotal)}
                         </td>
@@ -583,7 +644,7 @@ function Dashboard() {
         <Modal
           open={isModalOpen}
           onClose={handleCloseModal}
-          title={`Editar estado del alquiler #${currentAlquiler.AlquilerId}`}
+          title={`Alquiler #${currentAlquiler.AlquilerId}`}
           maxWidth="max-w-md"
           footer={
             <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -608,7 +669,7 @@ function Dashboard() {
                   label="Cancelar"
                   onClick={handleCloseModal}
                 />
-                <ActionButton label="Guardar" onClick={handleUpdateEstado} />
+                <ActionButton label="Guardar" onClick={handleGuardar} />
               </div>
             </div>
           }
@@ -667,6 +728,21 @@ function Dashboard() {
                 <option value="Devuelto">Devuelto</option>
                 <option value="Cancelado">Cancelado</option>
               </select>
+              <label
+                htmlFor="alquiler-observacion"
+                className="mt-4 block text-sm font-medium text-gray-700 mb-2"
+              >
+                Observaciones
+              </label>
+              <textarea
+                id="alquiler-observacion"
+                value={observacionEditada}
+                onChange={(e) => setObservacionEditada(e.target.value)}
+                maxLength={500}
+                rows={3}
+                placeholder="Pedidos específicos del cliente. Ej.: agregar corbata y cinto"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              />
             </div>
         </Modal>
       )}

@@ -24,12 +24,16 @@ export default function Layout() {
           <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
         )}
 
-        {/* Contenido principal con scroll */}
+        {/* Contenido principal con scroll. "relative" hace que los elementos
+            con position:absolute de las pantallas (p. ej. los textos sr-only
+            para lectores de pantalla) se ubiquen dentro de este contenedor;
+            sin eso se ubicaban respecto de la página, la estiraban más allá
+            de la ventana y aparecía un segundo scroll en el navegador */}
         <main
           className={
             ocultarLayout
-              ? "flex-1 overflow-y-auto p-0 m-0"
-              : "flex-1 overflow-y-auto p-4 lg:ml-64"
+              ? "relative flex-1 overflow-y-auto p-0 m-0"
+              : "relative flex-1 overflow-y-auto p-4 lg:ml-64"
           }
         >
           <Outlet />

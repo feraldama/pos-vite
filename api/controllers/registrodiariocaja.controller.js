@@ -149,6 +149,35 @@ exports.delete = async (req, res) => {
   }
 };
 
+// Reporte detallado de cierres (solo administrador, ver la ruta).
+// Query: desde y hasta (aaaa-mm-dd, obligatorias), usuarioId y cajaId
+exports.getCierres = async (req, res) => {
+  try {
+    const { desde, hasta, usuarioId, cajaId } = req.query;
+    const fechaValida = (f) => /^\d{4}-\d{2}-\d{2}$/.test(String(f || ""));
+    if (!fechaValida(desde) || !fechaValida(hasta)) {
+      return res.status(400).json({
+        success: false,
+        message: "Las fechas desde y hasta son obligatorias (aaaa-mm-dd)",
+      });
+    }
+    if (cajaId && !/^\d+$/.test(String(cajaId))) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Caja inválida" });
+    }
+    const data = await RegistroDiarioCaja.getCierresDetallados({
+      desde,
+      hasta,
+      usuarioId: usuarioId ? String(usuarioId) : null,
+      cajaId: cajaId ? Number(cajaId) : null,
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.aperturaCierreCaja = async (req, res) => {
   try {
     const { apertura, CajaId, Monto } = req.body;

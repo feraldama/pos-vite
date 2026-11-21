@@ -383,6 +383,150 @@ const RegistroDiarioCaja = {
       );
     });
   },
+
+  // Reporte de cierres: los cierres (TipoGasto 1, grupo 2) con fecha entre
+  // desde y hasta (aaaa-mm-dd), opcionalmente de un usuario o una caja, del
+  // más nuevo al más viejo
+  getCierresDetallados: async ({ desde, hasta, usuarioId, cajaId }) => {
+    const filtros = [
+      "r.TipoGastoId = 1",
+      "r.TipoGastoGrupoId = 2",
+      "r.RegistroDiarioCajaFecha >= ?",
+      "r.RegistroDiarioCajaFecha <= ?",
+    ];
+    const params = [desde, hasta];
+    if (usuarioId) {
+      filtros.push("r.UsuarioId = ?");
+      params.push(usuarioId);
+    }
+    if (cajaId) {
+      filtros.push("r.CajaId = ?");
+      params.push(cajaId);
+    }
+    const cierres = await db.query(
+      `SELECT r.*, c.CajaDescripcion, u.UsuarioNombre, u.UsuarioApellido
+       FROM registrodiariocaja r
+       LEFT JOIN caja c ON c.CajaId = r.CajaId
+       LEFT JOIN usuario u ON u.UsuarioId = r.UsuarioId
+       WHERE ${filtros.join(" AND ")}
+       ORDER BY r.RegistroDiarioCajaId`,
+      params
+    );
+
+    // Por usuario: se traen sus registros desde la apertura de su primer
+    // cierre hasta el último, y se arman las sesiones en memoria
+    const porUsuario = new Map();
+    for (const cierre of cierres) {
+      const lista = porUsuario.get(cierre.UsuarioId) || [];
+      lista.push(cierre);
+      porUsuario.set(cierre.UsuarioId, lista);
+    }
+    const resultado = [];
+    for (const [uid, lista] of porUsuario) {
+      const primero = lista[0].RegistroDiarioCajaId;
+      const ultimo = lista[lista.length - 1].RegistroDiarioCajaId;
+      const [apertura] = await db.query(
+        `SELECT MAX(RegistroDiarioCajaId) AS desdeid FROM registrodiariocaja
+         WHERE UsuarioId = ? AND TipoGastoId = 2 AND TipoGastoGrupoId = 2
+           AND RegistroDiarioCajaId < ?`,
+        [uid, primero]
+      );
+      const registros = await db.query(
+        `SELECT * FROM registrodiariocaja
+         WHERE UsuarioId = ? AND RegistroDiarioCajaId BETWEEN ? AND ?
+         ORDER BY RegistroDiarioCajaId`,
+        [uid, apertura?.desdeid ?? primero, ultimo]
+      );
+      resultado.push(...armarCierres(lista, registros));
+    }
+    return resultado.sort((a, b) => b.CierreId - a.CierreId);
+  },
 };
+
+// aaaa-mm-dd de una columna DATE (pg la entrega como Date a medianoche local)
+function fechaISO(valor) {
+  if (!(valor instanceof Date)) return valor ? String(valor).slice(0, 10) : null;
+  const dos = (n) => String(n).padStart(2, "0");
+  return `${valor.getFullYear()}-${dos(valor.getMonth() + 1)}-${dos(valor.getDate())}`;
+}
+
+const esApertura = (r) => r.TipoGastoId === 2 && r.TipoGastoGrupoId === 2;
+const esCierre = (r) => r.TipoGastoId === 1 && r.TipoGastoGrupoId === 2;
+
+// Arma cada cierre con la última apertura del mismo usuario anterior a él y
+// los movimientos entre ambos. Misma cuenta que el PDF de cierre de
+// AperturaCierreCajaPage. Si entre esa apertura y el cierre hay otro cierre,
+// la apertura ya era de ese otro: el cierre queda sin apertura
+function armarCierres(cierres, registros) {
+  return cierres.map((cierre) => {
+    const anteriores = registros.filter(
+      (r) => r.RegistroDiarioCajaId < cierre.RegistroDiarioCajaId
+    );
+    let apertura = null;
+    for (let i = anteriores.length - 1; i >= 0; i--) {
+      if (esCierre(anteriores[i])) break;
+      if (esApertura(anteriores[i])) {
+        apertura = anteriores[i];
+        break;
+      }
+    }
+    const movimientos = apertura
+      ? anteriores.filter(
+          (r) => r.RegistroDiarioCajaId > apertura.RegistroDiarioCajaId
+        )
+      : [];
+
+    let efectivo = 0;
+    let pos = 0;
+    let transfer = 0;
+    let egresos = 0;
+    for (const m of movimientos) {
+      const monto = Number(m.RegistroDiarioCajaMonto) || 0;
+      if (m.TipoGastoId === 2) {
+        if (m.TipoGastoGrupoId === 4) pos += monto;
+        else if (m.TipoGastoGrupoId === 6) transfer += monto;
+        else if (m.TipoGastoGrupoId !== 2 && m.TipoGastoGrupoId !== 5)
+          efectivo += monto;
+      } else if (m.TipoGastoId === 1 && m.TipoGastoGrupoId !== 2) {
+        egresos += monto;
+      }
+    }
+
+    const montoCierre = Number(cierre.RegistroDiarioCajaMonto) || 0;
+    const montoApertura = apertura
+      ? Number(apertura.RegistroDiarioCajaMonto) || 0
+      : null;
+    const esperado = apertura ? montoApertura + efectivo - egresos : null;
+    return {
+      CierreId: cierre.RegistroDiarioCajaId,
+      AperturaId: apertura ? apertura.RegistroDiarioCajaId : null,
+      Fecha: fechaISO(cierre.RegistroDiarioCajaFecha),
+      AperturaFecha: apertura ? fechaISO(apertura.RegistroDiarioCajaFecha) : null,
+      UsuarioId: cierre.UsuarioId,
+      UsuarioNombre: [cierre.UsuarioNombre, cierre.UsuarioApellido]
+        .filter(Boolean)
+        .join(" "),
+      CajaId: cierre.CajaId,
+      CajaDescripcion: cierre.CajaDescripcion || "",
+      Apertura: montoApertura,
+      Cierre: montoCierre,
+      IngresosEfectivo: efectivo,
+      IngresosPOS: pos,
+      IngresosTransfer: transfer,
+      Egresos: egresos,
+      EfectivoEsperado: esperado,
+      // Negativa = faltante, positiva = sobrante
+      Diferencia: apertura ? montoCierre - esperado : null,
+      Movimientos: movimientos.map((m) => ({
+        RegistroDiarioCajaId: m.RegistroDiarioCajaId,
+        Fecha: fechaISO(m.RegistroDiarioCajaFecha),
+        TipoGastoId: m.TipoGastoId,
+        TipoGastoGrupoId: m.TipoGastoGrupoId,
+        RegistroDiarioCajaDetalle: m.RegistroDiarioCajaDetalle,
+        RegistroDiarioCajaMonto: Number(m.RegistroDiarioCajaMonto) || 0,
+      })),
+    };
+  });
+}
 
 module.exports = RegistroDiarioCaja;

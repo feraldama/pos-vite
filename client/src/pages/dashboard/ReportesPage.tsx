@@ -4,6 +4,8 @@ import api from "../../services/api";
 import { obtenerDataUrlImagenProducto } from "../../services/imagenProducto.service";
 import { formatMiles } from "../../utils/formato";
 import { getAllClientesSinPaginacion } from "../../services/clientes.service";
+import { useAuth } from "../../contexts/useAuth";
+import ReporteCierres from "../../components/cajas/ReporteCierres";
 
 interface DeudaCliente {
   ClienteId: number;
@@ -73,6 +75,8 @@ interface PrendaAlquilada {
 
 const ReportesPage: React.FC = () => {
   const puedeLeer = usePermiso("REPORTES", "leer");
+  // El reporte de cierres de caja es solo para el administrador
+  const esAdmin = useAuth().user?.isAdmin === "S";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -648,6 +652,12 @@ const ReportesPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {esAdmin && (
+        <div className="max-w-6xl mx-auto mt-8">
+          <ReporteCierres />
+        </div>
+      )}
     </div>
   );
 };

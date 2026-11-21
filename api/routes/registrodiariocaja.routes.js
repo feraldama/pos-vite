@@ -3,6 +3,7 @@ const router = express.Router();
 const registroDiarioCajaController = require("../controllers/registrodiariocaja.controller");
 const authMiddleware = require("../middlewares/auth");
 const verificarPermiso = require("../middlewares/permiso");
+const soloAdmin = require("../middlewares/soloAdmin");
 
 // Aplicar middleware de autenticación a todas las rutas
 router.use(authMiddleware);
@@ -10,6 +11,8 @@ router.use(authMiddleware);
 // Rutas para registros diarios de caja
 router.get("/", authMiddleware, registroDiarioCajaController.getAll);
 router.get("/search", authMiddleware, registroDiarioCajaController.search);
+// Reporte detallado de cierres: solo administrador. Va antes de "/:id"
+router.get("/cierres", soloAdmin, registroDiarioCajaController.getCierres);
 router.get(
   "/estado-apertura",
   registroDiarioCajaController.estadoAperturaPorUsuario

@@ -38,6 +38,8 @@ describe("reporte de cierres de caja (integración)", { skip: saltear }, () => {
     await registro("2040-01-10", 2, 4, 30000, "Venta POS");
     await registro("2040-01-10", 2, 6, 20000, "Transferencia");
     await registro("2040-01-10", 1, 1, 10000, "Compra insumos");
+    // Devolución por transferencia: egreso que no sale del cajón
+    await registro("2040-01-10", 1, 6, 15000, "Devolución Venta #1 - Transferencia");
     ids.cierre1 = await registro("2040-01-10", 1, 2, 130000, "CIERRE");
     // Sesión 2 (2040-01-11): cuadra
     ids.apertura2 = await registro("2040-01-11", 2, 2, 50000, "APERTURA");
@@ -46,8 +48,8 @@ describe("reporte de cierres de caja (integración)", { skip: saltear }, () => {
     // Cierre sin apertura propia (el anterior ya cerró la sesión 2)
     ids.cierre3 = await registro("2040-01-12", 1, 2, 1000, "CIERRE");
     // Fuera del rango de fechas pedido
-    await registro("2040-02-01", 2, 2, 1, "APERTURA");
-    await registro("2040-02-01", 1, 2, 1, "CIERRE");
+    ids.apertura4 = await registro("2040-02-01", 2, 2, 1, "APERTURA");
+    ids.cierre4 = await registro("2040-02-01", 1, 2, 1, "CIERRE");
   });
   after(async () => {
     await e?.limpiar();
@@ -75,7 +77,10 @@ describe("reporte de cierres de caja (integración)", { skip: saltear }, () => {
     assert.equal(s1.IngresosEfectivo, 50000);
     assert.equal(s1.IngresosPOS, 30000);
     assert.equal(s1.IngresosTransfer, 20000);
+    // Egresos en efectivo; la devolución por transferencia va aparte
     assert.equal(s1.Egresos, 10000);
+    assert.equal(s1.EgresosTransfer, 15000);
+    assert.equal(s1.IngresosVoucher, 0);
     // Efectivo esperado = apertura + ingresos en efectivo - egresos
     assert.equal(s1.EfectivoEsperado, 140000);
     // Diferencia = cierre - esperado: negativa es faltante
@@ -88,6 +93,7 @@ describe("reporte de cierres de caja (integración)", { skip: saltear }, () => {
         [2, 4, 30000],
         [2, 6, 20000],
         [1, 1, 10000],
+        [1, 6, 15000],
       ]
     );
 
@@ -119,6 +125,26 @@ describe("reporte de cierres de caja (integración)", { skip: saltear }, () => {
     assert.equal(r.status, 400);
     r = await llamar(C.getCierres, { query: { desde: "10/01/2040", hasta: "2040-01-31" } });
     assert.equal(r.status, 400);
+  });
+
+  test("mi último cierre: el del usuario logueado, sin ser admin", async () => {
+    const r = await llamar(C.getMiUltimoCierre, {
+      user: { id: e.usuarioId },
+      // Un usuarioId en la query no cambia de quién es el cierre
+      query: { usuarioId: "administrador" },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.data.CierreId, ids.cierre4);
+    assert.equal(r.body.data.AperturaId, ids.apertura4);
+    assert.equal(r.body.data.UsuarioId, e.usuarioId);
+    assert.equal(r.body.data.Diferencia, 0);
+  });
+
+  test("mi último cierre: 401 sin usuario y 404 si no tiene cierres", async () => {
+    let r = await llamar(C.getMiUltimoCierre, {});
+    assert.equal(r.status, 401);
+    r = await llamar(C.getMiUltimoCierre, { user: { id: "no-existe-usuario" } });
+    assert.equal(r.status, 404);
   });
 
   describe("soloAdmin", () => {

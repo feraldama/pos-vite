@@ -404,44 +404,64 @@ const RegistroDiarioCaja = {
       params.push(cajaId);
     }
     const cierres = await db.query(
-      `SELECT r.*, c.CajaDescripcion, u.UsuarioNombre, u.UsuarioApellido
-       FROM registrodiariocaja r
-       LEFT JOIN caja c ON c.CajaId = r.CajaId
-       LEFT JOIN usuario u ON u.UsuarioId = r.UsuarioId
-       WHERE ${filtros.join(" AND ")}
+      `${SELECT_CIERRES} WHERE ${filtros.join(" AND ")}
        ORDER BY r.RegistroDiarioCajaId`,
       params
     );
+    return detallarCierres(cierres);
+  },
 
-    // Por usuario: se traen sus registros desde la apertura de su primer
-    // cierre hasta el último, y se arman las sesiones en memoria
-    const porUsuario = new Map();
-    for (const cierre of cierres) {
-      const lista = porUsuario.get(cierre.UsuarioId) || [];
-      lista.push(cierre);
-      porUsuario.set(cierre.UsuarioId, lista);
-    }
-    const resultado = [];
-    for (const [uid, lista] of porUsuario) {
-      const primero = lista[0].RegistroDiarioCajaId;
-      const ultimo = lista[lista.length - 1].RegistroDiarioCajaId;
-      const [apertura] = await db.query(
-        `SELECT MAX(RegistroDiarioCajaId) AS desdeid FROM registrodiariocaja
-         WHERE UsuarioId = ? AND TipoGastoId = 2 AND TipoGastoGrupoId = 2
-           AND RegistroDiarioCajaId < ?`,
-        [uid, primero]
-      );
-      const registros = await db.query(
-        `SELECT * FROM registrodiariocaja
-         WHERE UsuarioId = ? AND RegistroDiarioCajaId BETWEEN ? AND ?
-         ORDER BY RegistroDiarioCajaId`,
-        [uid, apertura?.desdeid ?? primero, ultimo]
-      );
-      resultado.push(...armarCierres(lista, registros));
-    }
-    return resultado.sort((a, b) => b.CierreId - a.CierreId);
+  // Último cierre del usuario, con el mismo detalle que el reporte. Es lo
+  // que imprime el resumen de cierre del cajero. null si no tiene cierres
+  getUltimoCierreDeUsuario: async (usuarioId) => {
+    const cierres = await db.query(
+      `${SELECT_CIERRES}
+       WHERE r.TipoGastoId = 1 AND r.TipoGastoGrupoId = 2 AND r.UsuarioId = ?
+       ORDER BY r.RegistroDiarioCajaId DESC
+       LIMIT 1`,
+      [usuarioId]
+    );
+    const [cierre] = await detallarCierres(cierres);
+    return cierre || null;
   },
 };
+
+const SELECT_CIERRES = `SELECT r.*, c.CajaDescripcion, u.UsuarioNombre, u.UsuarioApellido
+       FROM registrodiariocaja r
+       LEFT JOIN caja c ON c.CajaId = r.CajaId
+       LEFT JOIN usuario u ON u.UsuarioId = r.UsuarioId`;
+
+// Recibe cierres ordenados por id ascendente y los devuelve armados, del más
+// nuevo al más viejo
+async function detallarCierres(cierres) {
+  // Por usuario: se traen sus registros desde la apertura de su primer
+  // cierre hasta el último, y se arman las sesiones en memoria
+  const porUsuario = new Map();
+  for (const cierre of cierres) {
+    const lista = porUsuario.get(cierre.UsuarioId) || [];
+    lista.push(cierre);
+    porUsuario.set(cierre.UsuarioId, lista);
+  }
+  const resultado = [];
+  for (const [uid, lista] of porUsuario) {
+    const primero = lista[0].RegistroDiarioCajaId;
+    const ultimo = lista[lista.length - 1].RegistroDiarioCajaId;
+    const [apertura] = await db.query(
+      `SELECT MAX(RegistroDiarioCajaId) AS desdeid FROM registrodiariocaja
+       WHERE UsuarioId = ? AND TipoGastoId = 2 AND TipoGastoGrupoId = 2
+         AND RegistroDiarioCajaId < ?`,
+      [uid, primero]
+    );
+    const registros = await db.query(
+      `SELECT * FROM registrodiariocaja
+       WHERE UsuarioId = ? AND RegistroDiarioCajaId BETWEEN ? AND ?
+       ORDER BY RegistroDiarioCajaId`,
+      [uid, apertura?.desdeid ?? primero, ultimo]
+    );
+    resultado.push(...armarCierres(lista, registros));
+  }
+  return resultado.sort((a, b) => b.CierreId - a.CierreId);
+}
 
 // aaaa-mm-dd de una columna DATE (pg la entrega como Date a medianoche local)
 function fechaISO(valor) {
@@ -454,8 +474,8 @@ const esApertura = (r) => r.TipoGastoId === 2 && r.TipoGastoGrupoId === 2;
 const esCierre = (r) => r.TipoGastoId === 1 && r.TipoGastoGrupoId === 2;
 
 // Arma cada cierre con la última apertura del mismo usuario anterior a él y
-// los movimientos entre ambos. Misma cuenta que el PDF de cierre de
-// AperturaCierreCajaPage. Si entre esa apertura y el cierre hay otro cierre,
+// los movimientos entre ambos. Es la única cuenta del cierre: la usan este
+// reporte y el resumen PDF de AperturaCierreCajaPage. Si entre esa apertura y el cierre hay otro cierre,
 // la apertura ya era de ese otro: el cierre queda sin apertura
 function armarCierres(cierres, registros) {
   return cierres.map((cierre) => {
@@ -479,16 +499,21 @@ function armarCierres(cierres, registros) {
     let efectivo = 0;
     let pos = 0;
     let transfer = 0;
+    let voucher = 0;
     let egresos = 0;
+    let egresosTransfer = 0;
     for (const m of movimientos) {
       const monto = Number(m.RegistroDiarioCajaMonto) || 0;
       if (m.TipoGastoId === 2) {
         if (m.TipoGastoGrupoId === 4) pos += monto;
         else if (m.TipoGastoGrupoId === 6) transfer += monto;
-        else if (m.TipoGastoGrupoId !== 2 && m.TipoGastoGrupoId !== 5)
-          efectivo += monto;
-      } else if (m.TipoGastoId === 1 && m.TipoGastoGrupoId !== 2) {
-        egresos += monto;
+        // (2, 5) DESCUENTO: solo se carga a mano, no es efectivo
+        else if (m.TipoGastoGrupoId === 5) voucher += monto;
+        else if (m.TipoGastoGrupoId !== 2) efectivo += monto;
+      } else if (m.TipoGastoId === 1) {
+        // (1, 6) DEVOLUCIÓN TRANSFER no sale del cajón
+        if (m.TipoGastoGrupoId === 6) egresosTransfer += monto;
+        else if (m.TipoGastoGrupoId !== 2) egresos += monto;
       }
     }
 
@@ -513,7 +538,10 @@ function armarCierres(cierres, registros) {
       IngresosEfectivo: efectivo,
       IngresosPOS: pos,
       IngresosTransfer: transfer,
+      IngresosVoucher: voucher,
+      // Egresos en efectivo (los que se restan del cajón)
       Egresos: egresos,
+      EgresosTransfer: egresosTransfer,
       EfectivoEsperado: esperado,
       // Negativa = faltante, positiva = sobrante
       Diferencia: apertura ? montoCierre - esperado : null,

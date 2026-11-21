@@ -19,6 +19,8 @@ const GRUPO_COMPRA_CREDITO = 3; // (1,3) COMPRA CRÉDITO
 const GRUPO_VENTA_POS = 4; // (2,4) VENTA POS
 const GRUPO_DEVOLUCION = 5; // (1,5) DEVOLUCIÓN
 const GRUPO_TRANSFER = 6; // (2,6) TRANSFER
+// (1,6) DEVOLUCIÓN TRANSFER: no sale del cajón, el cierre no la resta del efectivo
+const GRUPO_DEVOLUCION_TRANSFER = 6;
 
 async function registrarCaja(client, { cajaId, fecha, tipoGastoId, grupoId, detalle, monto, usuarioId }) {
   await client.q(
@@ -211,8 +213,8 @@ exports.confirmarDevolucion = async (req, res) => {
       }
 
       const movimientos = [
-        { monto: pagos.efectivo, det: "Efectivo" },
-        { monto: pagos.transferencia, det: "Transferencia" },
+        { monto: pagos.efectivo, grupo: GRUPO_DEVOLUCION, det: "Efectivo" },
+        { monto: pagos.transferencia, grupo: GRUPO_DEVOLUCION_TRANSFER, det: "Transferencia" },
       ];
       for (const mov of movimientos) {
         if (Number(mov.monto) > 0) {
@@ -220,7 +222,7 @@ exports.confirmarDevolucion = async (req, res) => {
             cajaId,
             fecha,
             tipoGastoId: EGRESO,
-            grupoId: GRUPO_DEVOLUCION,
+            grupoId: mov.grupo,
             detalle: `Devolución Venta #${ventaId} - ${mov.det}`,
             monto: Number(mov.monto),
             usuarioId,

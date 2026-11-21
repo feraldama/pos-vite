@@ -42,7 +42,8 @@ const textoDiferencia = (dif: number | null) => {
 };
 
 const medioMovimiento = (m: MovimientoCierre) => {
-  if (m.TipoGastoId === 1) return "Egreso";
+  if (m.TipoGastoId === 1)
+    return m.TipoGastoGrupoId === 6 ? "Egreso Transfer" : "Egreso";
   if (m.TipoGastoGrupoId === 4) return "Ingreso POS";
   if (m.TipoGastoGrupoId === 6) return "Ingreso Transfer";
   // No suma al efectivo, igual que en el PDF de cierre
@@ -147,6 +148,7 @@ const ReporteCierres: React.FC = () => {
           "POS",
           "TRANSFER",
           "EGRESOS",
+          "EGR. TRANSF.",
           "ESPERADO",
           "CIERRE",
           "DIFERENCIA",
@@ -161,6 +163,7 @@ const ReporteCierres: React.FC = () => {
         formatMiles(c.IngresosPOS),
         formatMiles(c.IngresosTransfer),
         formatMiles(c.Egresos),
+        formatMiles(c.EgresosTransfer),
         montoONada(c.EfectivoEsperado),
         formatMiles(c.Cierre),
         textoDiferencia(c.Diferencia),
@@ -171,7 +174,7 @@ const ReporteCierres: React.FC = () => {
       styles: { fontSize: 8 },
       margin: { left: 14, right: 14 },
       didParseCell: (data) => {
-        if (data.section !== "body" || data.column.index !== 10) return;
+        if (data.section !== "body" || data.column.index !== 11) return;
         const dif = lista[data.row.index].Diferencia;
         if (dif !== null && dif < 0) {
           data.cell.styles.textColor = [185, 28, 28];
@@ -360,6 +363,7 @@ const ReporteCierres: React.FC = () => {
                     <th className="px-2 py-2 text-right">POS</th>
                     <th className="px-2 py-2 text-right">Transfer</th>
                     <th className="px-2 py-2 text-right">Egresos</th>
+                    <th className="px-2 py-2 text-right">Egr. Transfer</th>
                     <th className="px-2 py-2 text-right">Esperado</th>
                     <th className="px-2 py-2 text-right">Cierre</th>
                     <th className="px-2 py-2 text-right">Diferencia</th>
@@ -398,6 +402,7 @@ const ReporteCierres: React.FC = () => {
                           <td className="px-2 py-2 text-right">{formatMiles(c.IngresosPOS)}</td>
                           <td className="px-2 py-2 text-right">{formatMiles(c.IngresosTransfer)}</td>
                           <td className="px-2 py-2 text-right">{formatMiles(c.Egresos)}</td>
+                          <td className="px-2 py-2 text-right">{formatMiles(c.EgresosTransfer)}</td>
                           <td className="px-2 py-2 text-right">{montoONada(c.EfectivoEsperado)}</td>
                           <td className="px-2 py-2 text-right">{formatMiles(c.Cierre)}</td>
                           <td className={`px-2 py-2 text-right whitespace-nowrap ${colorDif}`}>
@@ -406,7 +411,7 @@ const ReporteCierres: React.FC = () => {
                         </tr>
                         {abierto === c.CierreId && (
                           <tr className="bg-gray-50">
-                            <td colSpan={11} className="px-4 py-3">
+                            <td colSpan={12} className="px-4 py-3">
                               <div className="text-xs text-gray-500 mb-2">
                                 Apertura: {formatearFecha(c.AperturaFecha)} - Cierre:{" "}
                                 {formatearFecha(c.Fecha)}

@@ -4,28 +4,19 @@ import ActionButton from "../../components/common/Button/ActionButton";
 import {
   aperturaCierreCaja,
   getEstadoAperturaPorUsuario,
+  getMiUltimoCierre,
+  type CierreCaja,
 } from "../../services/registrodiariocaja.service";
 import { useAuth } from "../../contexts/useAuth";
 import Swal from "sweetalert2";
 import { formatMiles } from "../../utils/formato";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getRegistrosDiariosCaja } from "../../services/registros.service";
 
 interface Caja {
   id: string | number;
   CajaId: string | number;
   CajaDescripcion: string;
   CajaMonto: number;
-}
-
-interface RegistroDiarioCaja {
-  RegistroDiarioCajaId: number;
-  CajaId: number;
-  UsuarioId: string;
-  RegistroDiarioCajaFecha: string;
-  RegistroDiarioCajaMonto: number;
-  TipoGastoId: number;
-  TipoGastoGrupoId: number;
 }
 
 export default function AperturaCierreCajaPage() {
@@ -42,7 +33,6 @@ export default function AperturaCierreCajaPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [cajaDisabled, setCajaDisabled] = useState(false);
-  const [registrosCaja, setRegistrosCaja] = useState<RegistroDiarioCaja[]>([]);
   const [descargarPDF, setDescargarPDF] = useState(false);
   const [operacionCompletada, setOperacionCompletada] = useState(false);
 
@@ -99,169 +89,54 @@ export default function AperturaCierreCajaPage() {
     }
   }, [error]);
 
-  // Obtener registros de la caja al cerrar
-  const fetchRegistrosCaja = async () => {
+  // Resumen del último cierre del usuario. La cuenta la hace la API (la
+  // misma del reporte de cierres), acá solo se arma el PDF
+  async function generarResumenCierrePDF() {
+    if (!user) return;
+
+    let resumen: CierreCaja;
     try {
-      // Traer todos los registros sin filtrar primero
-      const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
-
-      // Filtrar por caja y usuario
-      const registrosFiltrados = data.data.filter(
-        (r: RegistroDiarioCaja) =>
-          r.CajaId == cajaId && r.UsuarioId === user?.id
-      );
-
-      setRegistrosCaja(registrosFiltrados);
-    } catch (error) {
-      console.error("Error al cargar registros:", error);
-      setRegistrosCaja([]);
-    }
-  };
-
-  // Función para generar el PDF
-  async function generarResumenCierrePDF(
-    registrosPasados?: RegistroDiarioCaja[]
-  ) {
-    if (!user || !cajaId) return;
-
-    // Usar registros pasados como parámetro o cargar nuevos si no se proporcionan
-    let registrosParaUsar = registrosPasados || registrosCaja;
-
-    // Normalizar UsuarioId para comparar (eliminar espacios en blanco)
-    const normalizeUserId = (id: string | number) => String(id).trim();
-    const userNormalized = normalizeUserId(user.id);
-
-    if (registrosParaUsar.length === 0) {
-      try {
-        // Cargar todos los registros de la caja (sin filtrar por usuario)
-        // para asegurar que se incluyan todos los registros entre apertura y cierre
-        const data = await getRegistrosDiariosCaja(1, 1000, undefined, "desc");
-        const registrosFiltrados = data.data.filter(
-          (r: RegistroDiarioCaja) => r.CajaId == cajaId
-        );
-        registrosParaUsar = registrosFiltrados;
-
-        if (registrosParaUsar.length === 0) {
-          Swal.fire({
-            icon: "warning",
-            title: "No hay registros",
-            text: "No se han cargado los registros de caja. Intente descargar el PDF manualmente.",
-            confirmButtonColor: "#2563eb",
-          });
-          return;
-        }
-      } catch (error) {
-        console.error("Error al cargar registros para PDF:", error);
-        Swal.fire({
-          icon: "warning",
-          title: "Error al cargar registros",
-          text: "No se pudieron cargar los registros de caja.",
-          confirmButtonColor: "#2563eb",
-        });
-        return;
-      }
-    }
-
-    const cajaDescripcion =
-      cajas.find((c) => c.CajaId == cajaId)?.CajaDescripcion || "";
-    const fecha = new Date().toLocaleDateString();
-    const hora = new Date().toLocaleTimeString();
-
-    // --- Nueva lógica: buscar última apertura y cierre del usuario ---
-    // Filtrar registros del usuario (ya normalizado arriba)
-    const registros = registrosParaUsar.filter(
-      (r) => normalizeUserId(r.UsuarioId) === userNormalized
-    );
-
-    // Buscar la última apertura del usuario (ordenar por ID descendente y tomar el primero)
-    const aperturas = registros
-      .filter((reg) => reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 2)
-      .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
-
-    const aperturaReg = aperturas[0];
-    if (!aperturaReg) {
-      Swal.fire({
-        icon: "warning",
-        title: "No se encontró apertura",
-        text: "No se encontró una apertura de caja para este usuario. Los registros pueden estar en proceso de carga.",
-        confirmButtonColor: "#2563eb",
-      });
-      return;
-    }
-
-    // Buscar el último cierre del usuario (ordenar por ID descendente y tomar el primero)
-    const cierres = registros
-      .filter((reg) => reg.TipoGastoId === 1 && reg.TipoGastoGrupoId === 2)
-      .sort((a, b) => b.RegistroDiarioCajaId - a.RegistroDiarioCajaId);
-
-    const cierreReg = cierres[0];
-    if (!cierreReg) {
+      resumen = await getMiUltimoCierre();
+    } catch (err) {
       Swal.fire({
         icon: "warning",
         title: "No se encontró cierre",
-        text: "No se encontró un cierre de caja para este usuario.",
+        text:
+          (err as { message?: string })?.message ||
+          "No se encontró un cierre de caja para este usuario.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
-
-    // Verificar que el cierre sea posterior a la apertura
-    if (cierreReg.RegistroDiarioCajaId <= aperturaReg.RegistroDiarioCajaId) {
+    if (resumen.AperturaId === null || resumen.Diferencia === null) {
       Swal.fire({
         icon: "warning",
-        title: "Error en registros",
-        text: "El cierre debe ser posterior a la apertura. Verifique los registros.",
+        title: "No se encontró apertura",
+        text: "El último cierre de este usuario no tiene una apertura anterior.",
         confirmButtonColor: "#2563eb",
       });
       return;
     }
 
-    // Filtrar los registros entre apertura y cierre (inclusive)
-    const registrosFiltrados = registrosParaUsar.filter(
-      (reg) =>
-        normalizeUserId(reg.UsuarioId) === userNormalized &&
-        reg.RegistroDiarioCajaId >= aperturaReg.RegistroDiarioCajaId &&
-        reg.RegistroDiarioCajaId <= cierreReg.RegistroDiarioCajaId
-    );
-    // Calcular totales
-    const apertura = aperturaReg.RegistroDiarioCajaMonto;
-    const cierre = cierreReg.RegistroDiarioCajaMonto;
-    let egresos = 0;
-    let ingresos = 0;
-    let ingresosPOS = 0;
-    let ingresosVoucher = 0;
-    let ingresosTransfer = 0;
-    for (const reg of registrosFiltrados) {
-      if (
-        reg.TipoGastoId === 2 &&
-        reg.TipoGastoGrupoId !== 2 &&
-        reg.TipoGastoGrupoId !== 4 &&
-        reg.TipoGastoGrupoId !== 5 &&
-        reg.TipoGastoGrupoId !== 6
-      ) {
-        ingresos += reg.RegistroDiarioCajaMonto;
-      }
-      if (reg.TipoGastoId === 1 && reg.TipoGastoGrupoId !== 2) {
-        egresos += reg.RegistroDiarioCajaMonto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 4) {
-        ingresosPOS += reg.RegistroDiarioCajaMonto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 5) {
-        ingresosVoucher += reg.RegistroDiarioCajaMonto;
-      }
-      if (reg.TipoGastoId === 2 && reg.TipoGastoGrupoId === 6) {
-        ingresosTransfer += reg.RegistroDiarioCajaMonto;
-      }
-    }
-    const sobranteFaltante = ingresos + apertura - (cierre + egresos);
+    const cajaDescripcion = resumen.CajaDescripcion;
+    const fecha = new Date().toLocaleDateString();
+    const hora = new Date().toLocaleTimeString();
+    const apertura = resumen.Apertura ?? 0;
+    const cierre = resumen.Cierre;
+    // Egresos en efectivo (los que salen del cajón) y por transferencia
+    const egresos = resumen.Egresos;
+    const egresosTransfer = resumen.EgresosTransfer;
+    const ingresos = resumen.IngresosEfectivo;
+    const ingresosPOS = resumen.IngresosPOS;
+    const ingresosVoucher = resumen.IngresosVoucher;
+    const ingresosTransfer = resumen.IngresosTransfer;
+    // Diferencia negativa = faltante, positiva = sobrante
+    const dif = resumen.Diferencia;
     let txtSobranteFaltante = "";
-    if (sobranteFaltante > 0) {
-      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(sobranteFaltante)}`;
-    } else if (sobranteFaltante < 0) {
-      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(
-        Math.abs(sobranteFaltante)
-      )}`;
+    if (dif < 0) {
+      txtSobranteFaltante = `Faltante de: Gs. ${formatMiles(Math.abs(dif))}`;
+    } else if (dif > 0) {
+      txtSobranteFaltante = `Sobrante de: Gs. ${formatMiles(dif)}`;
     } else {
       txtSobranteFaltante = `Sobrante/Faltante: Gs. 0`;
     }
@@ -289,6 +164,8 @@ export default function AperturaCierreCajaPage() {
     y += 8;
     doc.text(`Egresos: ${formatMiles(egresos)}`, 10, y);
     y += 8;
+    doc.text(`Egresos Transfer: ${formatMiles(egresosTransfer)}`, 10, y);
+    y += 8;
     doc.line(10, y, 200, y);
     y += 8;
     doc.text(`Ingresos Efectivo: ${formatMiles(ingresos)}`, 10, y);
@@ -305,11 +182,10 @@ export default function AperturaCierreCajaPage() {
       ingresos + ingresosPOS + ingresosVoucher + ingresosTransfer;
     doc.text(`Total Ingresos: ${formatMiles(totalIngresos)}`, 10, y);
     y += 8;
-    // Línea nueva para Total Egresos
-    doc.text(`Total Egresos: ${formatMiles(egresos)}`, 10, y);
+    const totalEgresos = egresos + egresosTransfer;
+    doc.text(`Total Egresos: ${formatMiles(totalEgresos)}`, 10, y);
     y += 8;
-    // Línea nueva para Diferencia
-    const diferencia = totalIngresos - egresos;
+    const diferencia = totalIngresos - totalEgresos;
     doc.text(`Diferencia: ${formatMiles(diferencia)}`, 10, y);
     y += 8;
     doc.line(10, y, 200, y);
@@ -369,12 +245,20 @@ export default function AperturaCierreCajaPage() {
         navigate("/alquileres-venta");
       } else {
         setSuccess(result.message || "Operación realizada correctamente");
-        await fetchRegistrosCaja();
         setDescargarPDF(true);
-        // Descarga automática del PDF después de cargar registros
-        setTimeout(async () => {
+        // Descarga automática del resumen del cierre recién hecho. Si el PDF
+        // falla, el cierre ya está hecho: el botón sigue deshabilitado y
+        // queda "Descargar Resumen PDF" para reintentar
+        try {
           await generarResumenCierrePDF();
-        }, 2000); // Reducir el delay inicial
+        } catch {
+          Swal.fire({
+            icon: "warning",
+            title: "Cierre realizado",
+            text: "No se pudo generar el resumen PDF. Use el botón Descargar Resumen PDF.",
+            confirmButtonColor: "#2563eb",
+          });
+        }
       }
     } catch (err) {
       setError(

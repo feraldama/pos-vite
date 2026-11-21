@@ -64,7 +64,10 @@ export interface CierreCaja {
   IngresosEfectivo: number;
   IngresosPOS: number;
   IngresosTransfer: number;
+  IngresosVoucher: number;
+  // Egresos en efectivo (salen del cajón) y por transferencia
   Egresos: number;
+  EgresosTransfer: number;
   EfectivoEsperado: number | null;
   // Negativa = faltante, positiva = sobrante. null si no tiene apertura
   Diferencia: number | null;
@@ -92,6 +95,21 @@ export const getCierresCaja = async (filtros: {
     throw (
       axiosError.response?.data || {
         message: "Error al obtener los cierres de caja",
+      }
+    );
+  }
+};
+
+// Último cierre del usuario logueado, con la misma cuenta que el reporte
+export const getMiUltimoCierre = async (): Promise<CierreCaja> => {
+  try {
+    const response = await api.get("/registrodiariocaja/cierres/mio");
+    return response.data.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    throw (
+      axiosError.response?.data || {
+        message: "Error al obtener el cierre de caja",
       }
     );
   }

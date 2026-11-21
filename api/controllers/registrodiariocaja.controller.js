@@ -178,6 +178,30 @@ exports.getCierres = async (req, res) => {
   }
 };
 
+// Último cierre del usuario logueado, para su resumen PDF. Siempre el del
+// token: no acepta otro usuario
+exports.getMiUltimoCierre = async (req, res) => {
+  try {
+    const usuarioId = req.user?.id;
+    if (!usuarioId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Usuario no identificado" });
+    }
+    const data = await RegistroDiarioCaja.getUltimoCierreDeUsuario(
+      String(usuarioId)
+    );
+    if (!data) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No se encontró un cierre de caja" });
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.aperturaCierreCaja = async (req, res) => {
   try {
     const { apertura, CajaId, Monto } = req.body;

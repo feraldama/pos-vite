@@ -13,6 +13,8 @@ router.get("/", authMiddleware, registroDiarioCajaController.getAll);
 router.get("/search", authMiddleware, registroDiarioCajaController.search);
 // Reporte detallado de cierres: solo administrador. Va antes de "/:id"
 router.get("/cierres", soloAdmin, registroDiarioCajaController.getCierres);
+// Resumen del último cierre propio (cualquier usuario, solo el suyo)
+router.get("/cierres/mio", registroDiarioCajaController.getMiUltimoCierre);
 router.get(
   "/estado-apertura",
   registroDiarioCajaController.estadoAperturaPorUsuario
